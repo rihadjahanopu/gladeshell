@@ -1,6 +1,15 @@
 # Auto-label rules for fancybash pull requests
 # Docs: https://github.com/actions/labeler
 
+# ── Rust Source ────────────────────────────────────────────────
+rust:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/*.rs"
+          - "Cargo.toml"
+          - "Cargo.lock"
+          - "aliases.toml"
+
 # ── Shell Configs ──────────────────────────────────────────────
 bash:
   - changed-files:

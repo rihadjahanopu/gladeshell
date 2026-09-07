@@ -92,8 +92,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_self_uninstall_does_not_panic() {
         assert!(std::env::var("HOME").is_ok());

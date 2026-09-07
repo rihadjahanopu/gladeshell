@@ -47,8 +47,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_self_upgrade_cdn_url_valid() {
         const CDN_URL: &str = "https://fancybash.netlify.app/i.sh";

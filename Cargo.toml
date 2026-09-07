@@ -1,0 +1,96 @@
+[package]
+name = "fancybash"
+version = "0.1.0"
+edition = "2021"
+authors = ["Rihad Jahan Opu <rihadjahanopu@example.com>"]
+description = "Ultra-high-performance modular shell environment and prompt kit"
+license = "MIT"
+repository = "https://github.com/rihadjahanopu/fancybash"
+readme = "README.md"
+keywords = ["shell", "prompt", "zsh", "bash", "fish"]
+categories = ["command-line-utilities"]
+
+# ── Crate Targets ────────────────────────────────────────────────────────────
+# 1. Native binary  →  `fancybash` CLI (init, uup, uu, gen, ex, makecpp, …)
+[[bin]]
+name = "fancybash"
+path = "src/main.rs"
+
+# 2. C-ABI dynamic library  →  loaded in-process by the shell (zero-fork prompt)
+[lib]
+name = "fancybash_core"
+crate-type = ["cdylib", "rlib"]   # rlib keeps unit-tests functional
+path = "src/lib.rs"
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+[dependencies]
+# CLI framework
+clap = { version = "4", features = ["derive", "env", "string"] }
+
+# Serialization / config
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# Async runtime (optional, not needed for the daemon which uses std threads)
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time"], optional = true }
+
+# Git internals – gitoxide (zero-fork, pure Rust)
+# Features: revision + worktree-mutation for index reads; max-performance for SIMD
+gix = { version = "0.66", default-features = false, features = [
+    "revision",
+    "max-performance-safe",  # uses simdutf8 + fast SHA1 without unsafe AVX
+    "worktree-mutation",     # enables index/worktree status APIs
+], optional = true }
+
+# System info (Phase 2 prompt / Phase 4 tools)
+sysinfo = { version = "0.31", optional = true }
+
+# Interactive prompts (Phase 4 tools: uup, uu)
+inquire = { version = "0.7", optional = true }
+
+# Directory walking (Phase 4 tools: ex, makecpp)
+walkdir = { version = "2", optional = true }
+
+# String rendering helpers (zero-alloc ANSI)
+# We use the `ansi_term` crate only for the binary; the cdylib uses raw bytes.
+ansi_term = { version = "0.12", optional = true }
+
+# ── Feature Flags ─────────────────────────────────────────────────────────────
+[features]
+default = ["prompt-engine", "tools"]
+# Enable heavy Phase-2 prompt engine (git + async)
+prompt-engine = ["gix"]
+# Enable Phase-4 tool subcommands
+tools = ["sysinfo", "inquire", "walkdir", "ansi_term"]
+# Convenience: all features
+full = ["prompt-engine", "tools"]
+
+# ── Release Profile (strict performance constraints) ──────────────────────────
+# Cold Startup ≤ 25 ms | Prompt < 1 ms | 0 forks | RSS ≤ 3.9 MB
+[profile.release]
+opt-level     = 3          # Maximum speed optimisation
+lto           = true       # Whole-program link-time optimisation (thin by default; use "fat" for max)
+codegen-units = 1          # Single CGU → best inlining & dead-code elimination
+panic         = "abort"    # No unwinding machinery → smaller binary, faster panics
+strip         = true       # Strip debug symbols → minimal RSS
+debug         = false
+overflow-checks = false    # Omit overflow checks in release (same as C)
+incremental   = false      # Disable incremental saves (incompatible with LTO=fat)
+
+# Aggressive fat LTO for the absolute smallest / fastest artefact
+# Uncomment when you are doing a final production build:
+# lto = "fat"
+
+# ── Dev Profile ──────────────────────────────────────────────────────────────
+[profile.dev]
+opt-level = 1              # Faster compile, still debuggable
+debug     = true
+
+# ── Test / Bench profiles ────────────────────────────────────────────────────
+[profile.test]
+opt-level = 1
+
+[profile.bench]
+opt-level     = 3
+lto           = true
+codegen-units = 1

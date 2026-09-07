@@ -1,0 +1,719 @@
+
+================================================================================
+  ███████╗ █████╗ ███╗   ██╗ ██████╗██╗   ██╗██████╗  █████╗ ███████╗██╗  ██╗
+  ██╔════╝██╔══██╗████╗  ██║██╔════╝╚██╗ ██╔╝██╔══██╗██╔══██╗██╔════╝██║  ██║
+  █████╗  ███████║██╔██╗ ██║██║      ╚████╔╝ ██████╔╝███████║███████╗███████║
+  ██╔══╝  ██╔══██║██║╚██╗██║██║       ╚██╔╝  ██╔══██╗██╔══██║╚════██║██╔══██║
+  ██║     ██║  ██║██║ ╚████║╚██████╗   ██║   ██████╔╝██║  ██║███████║██║  ██║
+  ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+
+  PROJECT ARCHITECTURE DOCUMENT
+  Version: 2.0  |  Author: Rihad Jahan Opu  |  License: MIT
+  GitHub: https://github.com/rihadjahanopu/fancybash
+  Website: https://fancybash.netlify.app
+================================================================================
+
+
+TABLE OF CONTENTS
+─────────────────
+  1.  Project Overview
+  2.  Design Philosophy
+  3.  High-Level Architecture
+  4.  Repository Structure (Annotated)
+  5.  Core Components Explained
+        5a. Shell Configuration Layer  (config.sh / config.zsh / config.ps1)
+        5b. Installer Layer            (install.sh / install.zsh / install.ps1)
+        5c. Web Layer                  (web/)
+        5d. IDE Integration Layer      (zed/)
+        5e. CI/CD Layer                (.github/workflows/)
+  6.  Data Flow: How Installation Works
+  7.  Prompt System Architecture
+  8.  Alias & Function Taxonomy
+  9.  Cross-Platform Compatibility Matrix
+  10. Key Design Decisions & Trade-offs
+  11. Extension Points (How to Add New Features)
+  12. Coding Conventions & Style Guide
+  13. Testing & Verification
+  14. Glossary
+
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+fancybash is a SINGLE-FILE, ZERO-DEPENDENCY bash/zsh/powershell configuration
+system for modern web developers. It enhances the default terminal experience
+with a smart prompt, hundreds of productivity aliases, and interactive helper
+functions — without requiring any external plugin manager.
+
+  Target Users  : Web developers (Node.js, Bun, Docker, Git workflows)
+  Target Shells : Bash 4+ · Zsh 5+ · PowerShell 7+ · Fish 3+
+  Target OS     : Ubuntu/Debian · Fedora/RHEL · Arch Linux · macOS · Alpine
+  Install Method: One-line curl | Manual clone-and-source
+  Philosophy    : "One file. One install. Zero drama."
+
+
+================================================================================
+2. DESIGN PHILOSOPHY
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │  PRINCIPLE            │  IMPLEMENTATION                                 │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │  Zero Bloat           │  No plugin managers (no Oh My Zsh, no Antigen)  │
+  │  Safe by Default      │  Installer NEVER overwrites; always backs up     │
+  │  Idempotent Install   │  Boundary markers prevent duplicate installs     │
+  │  Single Source Truth  │  One config.sh controls everything               │
+  │  Speed First          │  No slow git parsing or heavy plugin loads       │
+  │  Cross-Platform       │  Same aliases work on Bash, Zsh, and PowerShell  │
+  │  Contributor Friendly │  Flat structure, clear sections, well-commented  │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+3. HIGH-LEVEL ARCHITECTURE
+================================================================================
+
+                        ┌──────────────────────────────┐
+                        │      CONTRIBUTOR / USER        │
+                        └──────────────┬───────────────┘
+                                       │  curl one-liner OR git clone
+                                       ▼
+                        ┌──────────────────────────────┐
+                        │    INSTALLER LAYER            │
+                        │  install.sh / install.zsh     │
+                        │  install.ps1                  │
+                        │                               │
+                        │  • Dependency check           │
+                        │  • Idempotency guard          │
+                        │  • Timestamped backup         │
+                        │  • Animated download spinner  │
+                        │  • HTML error guard           │
+                        │  • Boundary marker injection  │
+                        │  • Auto shell reload          │
+                        └──────────────┬───────────────┘
+                                       │  appends to ~/.bashrc / ~/.zshrc
+                                       ▼
+                        ┌──────────────────────────────┐
+                        │    SHELL CONFIG LAYER         │
+                        │  config.sh / config.zsh       │
+                        │  config.ps1                   │
+                        │                               │
+                        │  ┌────────────────────────┐  │
+                        │  │ 🎨 Color & Emoji Engine │  │
+                        │  ├────────────────────────┤  │
+                        │  │ 📟 Prompt System        │  │
+                        │  ├────────────────────────┤  │
+                        │  │ ⚡ Interactive Scripts  │  │
+                        │  ├────────────────────────┤  │
+                        │  │ 📂 Navigation Aliases   │  │
+                        │  ├────────────────────────┤  │
+                        │  │ 📦 Package Manager Cmds │  │
+                        │  ├────────────────────────┤  │
+                        │  │ 🌿 Git Shortcuts        │  │
+                        │  ├────────────────────────┤  │
+                        │  │ 🔧 System Maintenance   │  │
+                        │  ├────────────────────────┤  │
+                        │  │ 🐳 Docker Suite         │  │
+                        │  ├────────────────────────┤  │
+                        │  │ 🔨 Utility Functions    │  │
+                        │  └────────────────────────┘  │
+                        └──────────────┬───────────────┘
+                                       │
+                   ┌───────────────────┼───────────────────┐
+                   ▼                   ▼                   ▼
+         ┌──────────────┐   ┌──────────────────┐  ┌──────────────────┐
+         │  WEB LAYER   │   │  ZED IDE LAYER   │  │  CI/CD LAYER     │
+         │  web/        │   │  zed/            │  │  .github/        │
+         │              │   │                  │  │  workflows/      │
+         │ • Landing pg │   │ • settings.json  │  │                  │
+         │ • Linux Apps │   │   installer for  │  │ • label.yml      │
+         │ • Style sys  │   │   Flatpak+native │  │ • summary.yml    │
+         └──────────────┘   └──────────────────┘  └──────────────────┘
+
+
+================================================================================
+4. REPOSITORY STRUCTURE (ANNOTATED)
+================================================================================
+
+fancybash/
+│
+├── config.sh              ★ PRIMARY DELIVERABLE — Bash config (4000+ lines)
+│                            Appended to user's ~/.bashrc at install time.
+│                            Contains ALL functions, aliases, and the prompt.
+│
+├── config.zsh             ★ PRIMARY DELIVERABLE — Zsh variant of config.sh
+│                            Appended to user's ~/.zshrc at install time.
+│                            Adds zsh-specific features (autosuggestions,
+│                            syntax highlighting plugin auto-loading).
+│
+├── config.ps1             ★ PRIMARY DELIVERABLE — PowerShell variant
+│                            Appended to user's $PROFILE at install time.
+│                            Currently in development / coming soon.
+│
+├── install.sh             ← Bash installer script
+│                            Downloads config.sh from GitHub Gist and safely
+│                            appends it to ~/.bashrc with boundary markers.
+│
+├── install.zsh            ← Zsh installer script
+│                            Same logic as install.sh but targets ~/.zshrc.
+│
+├── install.ps1            ← PowerShell installer (in development)
+│                            Targets $PROFILE with backup and marker logic.
+│
+├── web/                   ← Static website (deployed on Netlify)
+│   ├── index.html         ←   Landing page — all HTML in one file (~76KB)
+│   ├── style.css          ←   Full design system (~41KB, glassmorphism UI)
+│   ├── main.js            ←   Interactive tabs, copy buttons, animations
+│   ├── linux-setup.html   ←   Linux App Ecosystem — separate sub-page
+│   ├── linux-setup.css    ←   Styles for linux-setup page
+│   └── linux-setup.js     ←   Search/filter logic for app ecosystem page
+│
+├── zed/
+│   └── install-settings.sh ← One-line installer for Zed IDE settings.json
+│                              Writes to both Flatpak and native config paths.
+│
+├── .github/
+│   └── workflows/
+│       ├── label.yml       ← Auto-labeler for pull requests
+│       └── summary.yml     ← PR/issue summary automation
+│
+├── .prettierrc             ← Prettier config for web/ files
+├── .prettierignore         ← Files excluded from Prettier formatting
+├── .vscode/                ← VS Code workspace settings
+├── README.md               ← Full user-facing documentation (796 lines)
+├── ARCHITECTURE.txt        ← THIS FILE — contributor architecture guide
+├── DSA.md                 ← Advanced Data Structures, Algorithms & Systems Manual
+└── LICENSE                 ← MIT License
+
+
+================================================================================
+5. CORE COMPONENTS EXPLAINED
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+5a. SHELL CONFIGURATION LAYER  (config.sh / config.zsh / config.ps1)
+────────────────────────────────────────────────────────────────────────────────
+
+This is the HEART of the project. When a user installs fancybash, this file
+gets appended to their shell config file. It is divided into clearly commented
+sections (look for the === banners):
+
+  SECTION 1: 🎨 RAINBOW COLOR & EMOJI SETUP
+  ───────────────────────────────────────────
+  • rainbow_colors[]   — Array of 12 ANSI color codes
+  • rand_color()       — Returns a random color code on each prompt render
+  • rand_emoji()       — Returns a context-aware emoji based on folder name
+                         (web→🌐, node→🟢, bun→🥐, py→🐍, else→random)
+
+  SECTION 2: HELPERS (System Monitoring Functions)
+  ─────────────────────────────────────────────────
+  These functions are called BY the prompt PS1 string. Each is designed to
+  be fast and fail silently (returns empty string if tool is unavailable).
+
+  • parse_git_branch()  — reads git symbolic-ref + status --porcelain
+  • node_version()      — checks 'command -v node' before running
+  • npm_version()       — checks 'command -v npm' before running
+  • bun_version()       — checks 'command -v bun' before running
+  • time_date()         — simple date format
+  • sys_info()          — CPU% via 'top' + RAM via 'free -h'
+  • battery_info()      — reads /sys/class/power_supply/BAT0/capacity
+  • kernel_version()    — uname -r trimmed
+  • cpu_temp()          — reads 'sensors', color-coded at 55C and 70C
+  • folder_size()       — du -sh on current dir
+  • disk_usage()        — df -h on /
+  • load_avg()          — uptime load average field
+  • timer_start()       — hooked via 'trap DEBUG' to time commands
+  • get_duration()      — computes elapsed seconds, shows if >= 1s
+  • check_readonly()    — [ ! -w . ] check
+  • pending_updates()   — multi-distro package update count (apt/pacman)
+
+  SECTION 3: 🎯 PROMPT SYSTEM
+  ─────────────────────────────
+  Default (minimal, fast):
+    PS1 = "[rand_emoji] [rand_color]DIRNAME[reset] \n blink-cursor "
+
+  Full two-line (opt-in by uncommenting):
+    LINE 1: emoji + colordir + folder_size + git_branch + cpu_temp +
+            disk_usage + load_avg + get_duration + check_readonly +
+            pending_updates
+    LINE 2: node | npm | bun | kernel | date | sys_info | battery
+    LINE 3: cursor
+
+  SECTION 4: ⚡ INTERACTIVE SETUP SCRIPTS
+  ─────────────────────────────────────────
+  These are shell functions that present interactive menus:
+
+  • init()     — Bun or NPM project init + auto .gitignore
+  • next()     — create-next-app via Bun or NPM
+  • vite()     — Vite scaffolder + optional Tailwind CSS v4 setup
+  • ui()       — Shadcn/UI installer with component picker (uses fzf)
+  • css()      — Auto-detects pkg manager, installs Tailwind + clsx + twmerge
+  • run()      — Interactive .js/.ts file runner via Bun
+  • pg()       — package.json generator (name from folder, asks for details)
+  • makecpp()  — C/C++ boilerplate generator (Makefile + git + VSCode tasks)
+  • setuppc()  — Bootstrap a new dev PC (curl, git, node, bun, tools, etc.)
+  • rt()       — Install Node.js via nvm, Bun, and Deno
+  • ut()       — Install and configure CLI productivity tools
+
+  SECTION 5: 📂 NAVIGATION ALIASES
+  ───────────────────────────────────
+  Simple alias definitions for quick directory jumps:
+  .., ..., ...., dev, fr, ba, fu, fig, ar, de, des, doc, dow
+
+  SECTION 6: 📦 PACKAGE MANAGER ALIASES
+  ────────────────────────────────────────
+  npm: ni, nid, nr, nrd, nrb, nrs
+  bun: bi, br, brd, brb, brs, html
+
+  SECTION 7: 🌿 GIT SHORTCUTS
+  ──────────────────────────────
+  gi, gs, ga, gcm, gps, gpl, gl, gco, gcb, gd, gst, gsta, gpop
+  Special: gwip() — smart WIP commit + push to current branch
+
+  SECTION 8: 🔧 SYSTEM & MAINTENANCE
+  ────────────────────────────────────
+  uup() — Mega Updater via fzf (OS + Snap + Flatpak + Bun + Node)
+  uu()  — Universal Uninstaller (fuzzy picks from apt/snap/flatpak/AppImage)
+  uc()  — Universal clean (cache + orphans + logs)
+  kp()  — Kill process by port number
+  rn()  — Rename files (strip special chars)
+  Various: update, clean, myip, iploc, ports, serve
+
+  SECTION 9: 🔨 UTILITY TOOLS
+  ─────────────────────────────
+  mkd, rmd, rmf, bak, trash, ex(), ff(), gen(), h(), to, v, c/cls, keep()
+
+  keep() is special: prints the full command reference cheatsheet inline.
+
+  SECTION 10: 🐳 DOCKER SUITE
+  ─────────────────────────────
+  ~50 aliases and functions for Docker management:
+
+  Monitoring : dps, dpsa, di, dvl, dnl, dsize, dtop
+  Sudo vars  : sdps, sdpsa, sdi, sdvl, sdnl, sdsize, sdtop
+  Services   : dstart, doff, dstatus, denable, ddisable
+  Lifecycle  : dstop, drm, drmi, drestart, dkill, dstopall, drmall
+  Debug/Build: dsh, dlogs, dbuild, dbuild-nocache, dhist, dports
+  Compose    : dcup, dcdn, dclogs, dcupb
+  Sandboxes  : dtest-ubuntu, dtest-node, dtest-alpine
+  Advanced   : dfind, droot, dip, dwatch, dnetstat, dtop-proc, dbackup,
+               dkill-force, dclean
+  Tab compl  : complete -F _docker_container_names dsh dlogs dstop ...
+
+
+────────────────────────────────────────────────────────────────────────────────
+5b. INSTALLER LAYER  (install.sh / install.zsh / install.ps1)
+────────────────────────────────────────────────────────────────────────────────
+
+All three installers share the same logical flow:
+
+  Step 1 — DEPENDENCY CHECK
+    Verifies 'curl' and 'grep' (bash/zsh) or Invoke-WebRequest (PS) exist.
+    Exits with a clear error message if missing.
+
+  Step 2 — IDEMPOTENCY GUARD
+    Checks if the START marker ("# >>> fancy-bashrc >>>") already exists
+    in the target config file. If found → exits early with a helpful message.
+
+  Step 3 — BACKUP
+    Copies the current shell config to a timestamped backup:
+      ~/.bashrc.backup.YYYYMMDD_HHMMSS
+
+  Step 4 — ANIMATED DOWNLOAD
+    Downloads the config from GitHub Gist in a background subshell.
+    Shows a Braille spinner animation while waiting.
+
+  Step 5 — VALIDATION
+    Checks that the downloaded file is NOT an HTML error page
+    (guards against CDN/GitHub serving 404 pages as valid HTTP 200).
+
+  Step 6 — APPEND WITH MARKERS
+    Wraps the config in boundary markers before appending:
+      # >>> fancy-bashrc >>>
+      # Installed: YYYY-MM-DD HH:MM:SS
+      [config content]
+      # <<< fancy-bashrc <<<
+
+  Step 7 — AUTO-RELOAD
+    Runs 'source ~/.bashrc' (or equivalent). If it fails, prints the
+    manual reload command for the user.
+
+  UNINSTALL is a simple one-liner using sed to delete between markers:
+    sed -i '/# >>> fancy-bashrc >>>/,/# <<< fancy-bashrc <<</d' ~/.bashrc
+
+
+────────────────────────────────────────────────────────────────────────────────
+5c. WEB LAYER  (web/)
+────────────────────────────────────────────────────────────────────────────────
+
+A static website deployed on Netlify (no build step, no framework).
+
+  web/index.html  (76KB)
+  ────────────────────────
+  • Single HTML file containing the entire landing page
+  • Sections: hero, features table, install tabs, command reference, prompt
+    system, project structure, Zed IDE, Linux apps, contributing
+  • Uses inline SVG icons and CSS custom properties for theming
+  • Tab system for Bash / Zsh / PowerShell install commands
+  • Copy-to-clipboard buttons for every code block
+
+  web/style.css  (41KB)
+  ────────────────────────
+  • Full design system: CSS custom properties for colors, spacing, fonts
+  • Glassmorphism cards with backdrop-filter: blur()
+  • Dark theme as default (no light mode toggle)
+  • Fully responsive layout (mobile → desktop)
+  • Smooth scroll, fade-in animations via @keyframes
+  • Terminal preview component with blinking cursor animation
+
+  web/main.js  (11KB)
+  ────────────────────────
+  • Tab switching logic for install command blocks
+  • Copy button functionality (clipboard API + feedback animation)
+  • Scroll-triggered fade-in for sections (IntersectionObserver)
+  • Smooth scroll for anchor links
+
+  web/linux-setup.html + linux-setup.css + linux-setup.js
+  ─────────────────────────────────────────────────────────
+  • Separate sub-page for the Linux App Ecosystem browser
+  • Searchable, filterable table of recommended Linux apps
+  • Filters: Creative · Development IDE · Browser · Dev Tools · Tools
+  • Color-coded package format badges (Flatpak, DEB, etc.)
+  • Connected to main navigation via a link in index.html
+
+
+────────────────────────────────────────────────────────────────────────────────
+5d. IDE INTEGRATION LAYER  (zed/)
+────────────────────────────────────────────────────────────────────────────────
+
+  zed/install-settings.sh
+  ─────────────────────────
+  • Downloads a curated Zed editor settings.json from GitHub Gist
+  • Writes to BOTH installation paths in one shot:
+      ~/.var/app/dev.zed.Zed/config/zed/settings.json  (Flatpak)
+      ~/.config/zed/settings.json                        (native)
+  • Backs up existing settings.json before overwriting
+  • Settings include: font, theme, keymap (VSCode-compatible), formatter,
+    inlay hints, inline diagnostics, git blame, minimap, autosave
+
+
+────────────────────────────────────────────────────────────────────────────────
+5e. CI/CD LAYER  (.github/workflows/)
+────────────────────────────────────────────────────────────────────────────────
+
+  label.yml   — GitHub Actions workflow to auto-label PRs based on paths:
+                (e.g., changes in web/ → "web", config.sh → "shell", etc.)
+
+  summary.yml — Workflow to post automated summaries on issues and PRs.
+                Helps maintainers quickly understand what changed.
+
+
+================================================================================
+6. DATA FLOW: HOW INSTALLATION WORKS
+================================================================================
+
+USER RUNS:
+  bash <(curl -fsSL https://gist.github.com/.../install.sh)
+
+        │
+        ▼
+  install.sh (runs in memory, never saved to disk)
+        │
+        ├─► check_deps()          → exits if curl/grep missing
+        │
+        ├─► grep START in ~/.bashrc → exits if already installed
+        │
+        ├─► cp ~/.bashrc → ~/.bashrc.backup.YYYYMMDD_HHMMSS
+        │
+        ├─► curl config.sh from Gist → /tmp/tmpXXXXXX (background)
+        │       spinner() shows animation while waiting
+        │
+        ├─► validate: not empty + not HTML error page
+        │
+        ├─► append to ~/.bashrc:
+        │     # >>> fancy-bashrc >>>
+        │     # Installed: DATE
+        │     [4000+ lines of config.sh]
+        │     # <<< fancy-bashrc <<<
+        │
+        ├─► rm /tmp/tmpXXXXXX
+        │
+        └─► source ~/.bashrc  (reload)
+
+
+================================================================================
+7. PROMPT SYSTEM ARCHITECTURE
+================================================================================
+
+The PS1 string is assembled by concatenating return values of helper functions.
+Each helper is designed with these rules:
+  • Uses 'command -v' to check for tool availability before calling it
+  • Returns empty string "" on failure (never errors out in prompt)
+  • Reads from /proc, /sys, or lightweight CLI tools (no heavy parsers)
+
+PROMPT RENDER SEQUENCE (default minimal mode):
+  ┌────────────────────────────────────────────────────────┐
+  │  [rand_emoji()] [rand_color()]DIRNAME[reset]           │  LINE 1
+  │  ❯❯❯(blink)                                           │  LINE 2
+  └────────────────────────────────────────────────────────┘
+
+PROMPT RENDER SEQUENCE (full two-line mode, opt-in):
+  ┌────────────────────────────────────────────────────────┐
+  │  [emoji] [color]DIR[/] [folder_size] [git_branch]     │  LINE 1
+  │  [cpu_temp] [disk_usage] [load_avg] [duration]        │  (cont.)
+  │  [readonly?] [updates?]                               │  (cont.)
+  │  [node] | [npm] | [bun] | [kernel] | [date]          │  LINE 2
+  │  [sys_info] | [battery]                               │  (cont.)
+  │  ❯❯❯                                                  │  LINE 3
+  └────────────────────────────────────────────────────────┘
+
+COLOR CODING for cpu_temp():
+  <= 55C  →  green  (\e[92m)
+  55-70C  →  yellow (\e[93m)
+  > 70C   →  red    (\e[91m)
+
+
+================================================================================
+8. ALIAS & FUNCTION TAXONOMY
+================================================================================
+
+fancybash defines two types of terminal extensions:
+
+  TYPE A: ALIASES  (simple string substitution, fast)
+  ────────────────────────────────────────────────────
+  Pattern: alias shortcmd='long command --with-flags'
+  Examples: gs, ga, gps, ni, nrd, .., dev
+
+  TYPE B: SHELL FUNCTIONS  (logic, interactivity, error handling)
+  ───────────────────────────────────────────────────────────────
+  Pattern: funcname() { ... local vars ... read input ... }
+  Examples: init(), vite(), uu(), uup(), ex(), gwip(), dbackup()
+
+  NAMING CONVENTIONS:
+  • 2-4 character aliases for speed (gs, ga, ni, br)
+  • Full English words for complex functions (init, vite, next)
+  • Docker aliases prefixed with d  (dps, drm, dsh)
+  • Sudo docker aliases prefixed with sd  (sdps, sdi)
+  • Docker compose aliases prefixed with dc  (dcup, dcdn)
+  • Internal/private helpers prefixed with _  (_ui_patch_tsconfig)
+
+
+================================================================================
+9. CROSS-PLATFORM COMPATIBILITY MATRIX
+================================================================================
+
+  ┌────────────────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+  │ Feature            │  Bash    │  Zsh     │  Fish    │ Pwsh     │  macOS   │
+  ├────────────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+  │ Prompt system      │  Full    │  Full    │  Full    │  WIP     │  Full    │
+  │ Navigation aliases │  Full    │  Full    │  Full    │  WIP     │  Full    │
+  │ Git shortcuts      │  Full    │  Full    │  Full    │  WIP     │  Full    │
+  │ NPM/Bun aliases    │  Full    │  Full    │  Full    │  WIP     │  Full    │
+  │ Docker suite       │  Full    │  Full    │  Full    │  N/A     │  Full    │
+  │ System maintenance │  Full    │  Full    │  Full    │  WIP     │  Partial │
+  │ uup/uu (fzf menu)  │  apt+    │  apt+    │  apt+    │  N/A     │  N/A     │
+  │ cpu_temp()         │  sensors │  sensors │  sensors │  N/A     │  N/A     │
+  │ pending_updates()  │  multi   │  multi   │  multi   │  N/A     │  N/A     │
+  │ Syntax highlight   │  N/A     │  plugin  │  Builtin │  N/A     │  zsh     │
+  │ Autosuggestions    │  N/A     │  plugin  │  Builtin │  N/A     │  zsh     │
+  │ Tab completion     │  Full    │  Full    │  Full    │  WIP     │  Full    │
+  │ ffmedia (FFmpeg)   │  Full    │  Full    │  Full    │  WIP     │  Full    │
+  └────────────────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+
+  Full = Fully supported  |  Partial = Tool-dependent  |  WIP = Planned
+
+
+================================================================================
+10. KEY DESIGN DECISIONS & TRADE-OFFS
+================================================================================
+
+  DECISION 1: Single large config file vs. modular files
+  ───────────────────────────────────────────────────────
+  CHOSEN: Single file (config.sh / config.zsh)
+  REASON: Simplicity of install (one append to .bashrc). A modular approach
+          would require a custom loader or symlinks, adding complexity.
+  TRADE-OFF: config.sh is 4000+ lines. Mitigated by clear section banners.
+
+  DECISION 2: GitHub Gist as config host vs. repo raw URL
+  ────────────────────────────────────────────────────────
+  CHOSEN: GitHub Gist for install.sh's curl URL
+  REASON: Gist URLs are more stable and shorter than raw GitHub repo URLs.
+          Gist also provides independent versioning.
+  TRADE-OFF: Gist must be kept in sync with repo's config.sh manually.
+
+  DECISION 3: Boundary markers vs. separate sourced file
+  ───────────────────────────────────────────────────────
+  CHOSEN: Boundary markers in the user's existing .bashrc
+  REASON: Keeps everything in one place — no extra files in $HOME.
+          sed-based uninstall is clean and requires no special tooling.
+  TRADE-OFF: If user edits the markers accidentally, uninstall might break.
+
+  DECISION 4: No plugin manager dependency
+  ──────────────────────────────────────────
+  CHOSEN: Pure shell, no Oh My Zsh, Antigen, Zinit, etc.
+  REASON: Plugin managers add startup latency and complexity. fancybash
+          loads in <10ms because it's just bash function definitions.
+  TRADE-OFF: Less discoverability for new contributors from Oh My Zsh world.
+
+  DECISION 5: Static website with no build step
+  ──────────────────────────────────────────────
+  CHOSEN: Vanilla HTML/CSS/JS, no bundler, no framework
+  REASON: Zero build complexity, instant deployment on Netlify, no
+          node_modules in the repo.
+  TRADE-OFF: HTML file is large (~76KB). No component reuse across pages.
+
+
+================================================================================
+11. EXTENSION POINTS (HOW TO ADD NEW FEATURES)
+================================================================================
+
+  ── Adding a new ALIAS ──────────────────────────────────────────────────────
+
+  1. Find the relevant section in config.sh (look for the === banners)
+  2. Add your alias following the naming conventions in Section 8
+  3. Add the same alias to config.zsh (and config.ps1 if applicable)
+  4. Document it in README.md under the appropriate table
+  5. If it's visible via 'keep', update the keep() function output
+
+  Example:
+    # In config.sh, under Package Manager section:
+    alias nt='npm test'
+
+  ── Adding a new INTERACTIVE FUNCTION ──────────────────────────────────────
+
+  1. Write the function in config.sh under INTERACTIVE SETUP SCRIPTS section
+  2. Use 'read -p' for user input
+  3. Use 'echo -e' with ANSI colors (reuse existing RED, GREEN patterns)
+  4. Always add a fallback/cancel path
+  5. Mirror the function in config.zsh
+
+  ── Adding a new PROMPT METRIC ─────────────────────────────────────────────
+
+  1. Write a new helper function following the pattern:
+       my_metric() {
+         command -v mytool >/dev/null 2>&1 || return
+         echo " [emoji] $(mytool --output)"
+       }
+  2. Call it inside the PS1 variable (in the TWO LINE PROMPT section)
+  3. Document it in README.md under "Smart Prompt System" table
+
+  ── Adding a new WEB PAGE ──────────────────────────────────────────────────
+
+  1. Create html/css/js files in web/ directory
+  2. Link from web/index.html navigation
+  3. Follow the same CSS variable system from style.css
+  4. Test on mobile (responsive breakpoints at 768px and 480px)
+
+  ── Adding a GitHub Actions workflow ───────────────────────────────────────
+
+  1. Create a .yml file in .github/workflows/
+  2. Trigger on: pull_request or push to main
+  3. Keep jobs minimal — this is a shell config project, not a compiled app
+
+
+================================================================================
+12. CODING CONVENTIONS & STYLE GUIDE
+================================================================================
+
+  BASH / ZSH
+  ──────────
+  • Indentation        : 2 spaces (no tabs)
+  • Variable names     : lowercase_with_underscores for locals
+  • Function names     : lowercase, verb-first (parse_git_branch, get_duration)
+  • Local variables    : always declare with 'local'
+  • Error suppression  : use 2>/dev/null, not 2>&1 >/dev/null
+  • Quoting            : always double-quote variables: "$var" not $var
+  • Conditional        : prefer [[ ]] over [ ] in bash/zsh
+  • Command check      : use 'command -v tool >/dev/null 2>&1' pattern
+  • Section headers    : use the ===/ --- banner style consistently
+  • Comments           : explain WHY, not WHAT. Add emoji for visual scanning.
+  • Shebang            : #!/bin/bash for .sh, #!/bin/zsh for .zsh
+  • Strict mode        : set -euo pipefail in installer scripts ONLY
+                         (NOT in config files — would break interactive shells)
+
+  HTML / CSS / JS  (web/)
+  ────────────────────────
+  • Formatter          : Prettier (see .prettierrc)
+  • CSS variables      : all design tokens in :root {}
+  • No inline styles   : use CSS classes
+  • JS                 : vanilla ES6+, no framework, no bundler
+  • Accessibility      : ARIA labels on interactive elements
+  • IDs                : all interactive elements must have unique IDs
+
+  COMMIT MESSAGES
+  ───────────────
+  Pattern: type(scope): description
+  Types  : feat · fix · docs · style · refactor · chore
+  Examples:
+    feat(docker): add dwatch function for container filesystem monitoring
+    fix(prompt): handle missing sensors gracefully on alpine linux
+    docs(readme): update vite example flow with tailwind v4 changes
+    chore(ci): add auto-label workflow for pull requests
+
+
+================================================================================
+13. TESTING & VERIFICATION
+================================================================================
+
+  There is no automated test suite (by design — shell config is inherently
+  environmental). Verification is done manually:
+
+  BEFORE SUBMITTING A PR:
+  ────────────────────────
+  □ Run shellcheck on config.sh:
+      shellcheck -s bash config.sh
+
+  □ Test the installer from scratch in a fresh Docker container:
+      docker run --rm -it ubuntu:latest bash
+      # Inside container:
+      apt update && apt install -y curl
+      bash <(curl -fsSL [your-gist-url])
+
+  □ Verify idempotency (run installer twice, second should exit gracefully):
+      bash <(curl -fsSL ...) && bash <(curl -fsSL ...)
+
+  □ Verify uninstall works cleanly:
+      sed -i '/# >>> fancy-bashrc >>>/,/# <<< fancy-bashrc <<</d' ~/.bashrc
+
+  □ Test in Zsh environment:
+      docker run --rm -it ubuntu:latest bash -c \
+        "apt update && apt install -y zsh curl && zsh"
+
+  □ For web/ changes: open web/index.html in browser at 375px, 768px, 1440px
+
+  TOOLS FOR CHECKING SHELL SCRIPTS:
+    shellcheck  — https://www.shellcheck.net/
+    shfmt       — shell script formatter (validates syntax)
+
+
+================================================================================
+14. GLOSSARY
+================================================================================
+
+  .bashrc         User's Bash startup file, sourced for every interactive shell
+  .zshrc          User's Zsh startup file, equivalent to .bashrc for Zsh
+  $PROFILE        PowerShell's equivalent of .bashrc
+  alias           Shell command substitution (short name → long command)
+  ANSI escape     Terminal color/formatting codes (\e[31m = red, \e[0m = reset)
+  fzf             Command-line fuzzy finder — used by uu() and uup()
+  Gist            GitHub's pastebin service — used to host install source
+  idempotent      Safe to run multiple times with the same result
+  PS1             The primary shell prompt string variable
+  sensors         Linux package for reading CPU/GPU/motherboard temperature
+  shellcheck      Static analysis tool for shell scripts
+  Bun             A fast JavaScript runtime and package manager (like Node.js)
+  nvm             Node Version Manager — manages Node.js versions
+  Flatpak         Linux universal application packaging format
+  Snap            Canonical's universal Linux application format
+  AppImage        Portable Linux application format (single executable)
+  Braille spinner Characters used to create terminal loading animation
+  Boundary marker Comment tags (>>> / <<<) used to demarcate fancybash block
+  Strict mode     set -euo pipefail — exits on error, undefined var, pipe fail
+
+
+================================================================================
+  END OF ARCHITECTURE DOCUMENT
+  Questions? Open an issue: https://github.com/rihadjahanopu/fancybash/issues
+  Made with ❤️  in Bangladesh by Rihad Jahan Opu
+================================================================================

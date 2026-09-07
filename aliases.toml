@@ -1,0 +1,697 @@
+# =============================================================================
+#  aliases.toml — Centralized static alias repository for fancybash
+#
+#  Schema:
+#    [[group]]
+#    name = "Category Name"
+#    only_shells = ["bash", "zsh"]   # optional: omit for all shells
+#
+#    [[group.aliases]]
+#    key         = "alias_name"
+#    value       = "full command string"
+#    description = "Optional human-readable description"
+#
+#  This file is the SINGLE SOURCE OF TRUTH for all shell aliases.
+#  Run `fancybash init <shell>` to regenerate shell-specific output.
+# =============================================================================
+
+# ── Navigation & Filesystem ──────────────────────────────────────────────────
+[[group]]
+name = "Navigation & Filesystem"
+
+[[group.aliases]]
+key         = "c"
+value       = "clear"
+description = "Clear terminal screen"
+
+[[group.aliases]]
+key         = "cls"
+value       = "clear"
+description = "Clear terminal screen (Windows-style alias)"
+
+[[group.aliases]]
+key         = ".."
+value       = "cd .."
+description = "Go up one directory"
+
+[[group.aliases]]
+key         = "..."
+value       = "cd ../.."
+description = "Go up two directories"
+
+[[group.aliases]]
+key         = "...."
+value       = "cd ../../.."
+description = "Go up three directories"
+
+[[group.aliases]]
+key         = "....."
+value       = "cd ../../../.."
+description = "Go up four directories"
+
+[[group.aliases]]
+key         = "rd"
+value       = "cd /"
+description = "Jump to filesystem root"
+
+[[group.aliases]]
+key         = "h"
+value       = "history"
+description = "Show command history"
+
+[[group.aliases]]
+key         = "path"
+value       = "echo $PATH | tr ':' '\\n'"
+description = "Display PATH entries line-by-line"
+only_shells = ["bash", "zsh"]
+
+# ── Developer Directory Shortcuts ────────────────────────────────────────────
+[[group]]
+name = "Developer Directories"
+
+[[group.aliases]]
+key         = "dev"
+value       = "cd ~/Developer"
+description = "Jump to Developer folder"
+
+[[group.aliases]]
+key         = "doc"
+value       = "cd ~/Documents"
+description = "Jump to Documents folder"
+
+[[group.aliases]]
+key         = "dow"
+value       = "cd ~/Downloads"
+description = "Jump to Downloads folder"
+
+[[group.aliases]]
+key         = "des"
+value       = "cd ~/Desktop"
+description = "Jump to Desktop folder"
+
+[[group.aliases]]
+key         = "pic"
+value       = "cd ~/Pictures"
+description = "Jump to Pictures folder"
+
+[[group.aliases]]
+key         = "vid"
+value       = "cd ~/Videos"
+description = "Jump to Videos folder"
+
+[[group.aliases]]
+key         = "mus"
+value       = "cd ~/Music"
+description = "Jump to Music folder"
+
+[[group.aliases]]
+key         = "ar"
+value       = "cd ~/Developer/archive"
+description = "Jump to Archive directory"
+
+[[group.aliases]]
+key         = "ba"
+value       = "cd ~/Developer/backend"
+description = "Jump to Backend directory"
+
+[[group.aliases]]
+key         = "de"
+value       = "cd ~/Developer/dev"
+description = "Jump to Dev playground"
+
+[[group.aliases]]
+key         = "fr"
+value       = "cd ~/Developer/frontend"
+description = "Jump to Frontend directory"
+
+[[group.aliases]]
+key         = "fu"
+value       = "cd ~/Developer/fullstack"
+description = "Jump to Fullstack directory"
+
+# ── Editor & Config ──────────────────────────────────────────────────────────
+[[group]]
+name = "Editor & Config"
+
+[[group.aliases]]
+key         = "to"
+value       = "code ."
+description = "Open current directory in VS Code"
+
+[[group.aliases]]
+key         = "v"
+value       = "vim ."
+description = "Open current directory in Vim"
+
+[[group.aliases]]
+key         = "nv"
+value       = "nvim ."
+description = "Open current directory in Neovim"
+
+[[group.aliases]]
+key         = "zed"
+value       = "zed ."
+description = "Open current directory in Zed"
+
+[[group.aliases]]
+key         = "zshrc"
+value       = "code ~/.zshrc"
+description = "Edit Zsh config in VS Code"
+only_shells = ["zsh"]
+
+[[group.aliases]]
+key         = "bashrc"
+value       = "code ~/.bashrc"
+description = "Edit Bash config in VS Code"
+only_shells = ["bash"]
+
+[[group.aliases]]
+key         = "rel"
+value       = "source ~/.zshrc && echo '✅ .zshrc reloaded!'"
+description = "Reload Zsh config"
+only_shells = ["zsh"]
+
+# ── Git Shortcuts ────────────────────────────────────────────────────────────
+[[group]]
+name = "Git"
+
+[[group.aliases]]
+key         = "gs"
+value       = "git status -sb"
+description = "Git status (short branch format)"
+
+[[group.aliases]]
+key         = "ga"
+value       = "git add ."
+description = "Stage all changes"
+
+[[group.aliases]]
+key         = "gc"
+value       = "git commit -m"
+description = "Git commit with message"
+
+[[group.aliases]]
+key         = "gp"
+value       = "git push"
+description = "Push to remote"
+
+[[group.aliases]]
+key         = "gpf"
+value       = "git push --force-with-lease"
+description = "Force push safely with lease"
+
+[[group.aliases]]
+key         = "gl"
+value       = "git log --oneline --graph --decorate -n 15"
+description = "Pretty git log (last 15 commits)"
+
+[[group.aliases]]
+key         = "gd"
+value       = "git diff"
+description = "Show unstaged diff"
+
+[[group.aliases]]
+key         = "gds"
+value       = "git diff --staged"
+description = "Show staged diff"
+
+[[group.aliases]]
+key         = "gst"
+value       = "git stash"
+description = "Stash working tree changes"
+
+[[group.aliases]]
+key         = "gsp"
+value       = "git stash pop"
+description = "Apply and drop most recent stash"
+
+[[group.aliases]]
+key         = "gf"
+value       = "git fetch --all --prune"
+description = "Fetch all remotes and prune deleted branches"
+
+[[group.aliases]]
+key         = "gco"
+value       = "git checkout"
+description = "Checkout branch or file"
+
+[[group.aliases]]
+key         = "gb"
+value       = "git branch -a"
+description = "List all local and remote branches"
+
+[[group.aliases]]
+key         = "gm"
+value       = "git merge"
+description = "Merge branch"
+
+[[group.aliases]]
+key         = "grb"
+value       = "git rebase"
+description = "Rebase current branch"
+
+[[group.aliases]]
+key         = "gsw"
+value       = "git switch"
+description = "Switch branch"
+
+[[group.aliases]]
+key         = "gcl"
+value       = "git clone"
+description = "Clone repository"
+
+[[group.aliases]]
+key         = "gwip"
+value       = "git add . && git commit -m '🚧 WIP: Save point' && git push"
+description = "Quick WIP commit and push"
+
+[[group.aliases]]
+key         = "gcommit"
+value       = "git add . && git commit -m '🚧 WIP: Save point' && git push"
+description = "Alias for gwip"
+
+# ── Node.js / npm ────────────────────────────────────────────────────────────
+[[group]]
+name = "npm"
+
+[[group.aliases]]
+key         = "ni"
+value       = "npm install"
+description = "Install all npm dependencies"
+
+[[group.aliases]]
+key         = "nid"
+value       = "npm install -D"
+description = "Install as devDependency"
+
+[[group.aliases]]
+key         = "nr"
+value       = "npm run"
+description = "Run an npm script"
+
+[[group.aliases]]
+key         = "nrd"
+value       = "npm run dev"
+description = "Start dev server"
+
+[[group.aliases]]
+key         = "nrb"
+value       = "npm run build"
+description = "Build for production"
+
+[[group.aliases]]
+key         = "nrs"
+value       = "npm run start"
+description = "Start production server"
+
+# ── Bun ──────────────────────────────────────────────────────────────────────
+[[group]]
+name = "Bun"
+
+[[group.aliases]]
+key         = "bi"
+value       = "bun install"
+description = "Install dependencies with Bun"
+
+[[group.aliases]]
+key         = "brd"
+value       = "bun run dev"
+description = "Run dev script with Bun"
+
+[[group.aliases]]
+key         = "brb"
+value       = "bun run build"
+description = "Build with Bun"
+
+[[group.aliases]]
+key         = "brs"
+value       = "bun run start"
+description = "Start production server with Bun"
+
+# ── pnpm & Yarn ──────────────────────────────────────────────────────────────
+[[group]]
+name = "pnpm & Yarn"
+
+[[group.aliases]]
+key         = "pi"
+value       = "pnpm install"
+description = "Install dependencies with pnpm"
+
+[[group.aliases]]
+key         = "prd"
+value       = "pnpm dev"
+description = "Run dev server with pnpm"
+
+[[group.aliases]]
+key         = "prb"
+value       = "pnpm build"
+description = "Build project with pnpm"
+
+[[group.aliases]]
+key         = "yi"
+value       = "yarn install"
+description = "Install dependencies with Yarn"
+
+[[group.aliases]]
+key         = "yrd"
+value       = "yarn dev"
+description = "Run dev server with Yarn"
+
+# ── Prisma (npx) ─────────────────────────────────────────────────────────────
+[[group]]
+name = "Prisma (npx)"
+
+[[group.aliases]]
+key         = "np"
+value       = "npx prisma"
+description = "npx prisma CLI"
+
+[[group.aliases]]
+key         = "npg"
+value       = "npx prisma generate"
+description = "Generate Prisma client"
+
+[[group.aliases]]
+key         = "nps"
+value       = "npx prisma studio"
+description = "Open Prisma Studio"
+
+[[group.aliases]]
+key         = "npmd"
+value       = "npx prisma migrate dev"
+description = "Run development migration"
+
+[[group.aliases]]
+key         = "npdp"
+value       = "npx prisma db push"
+description = "Push schema to DB without migration"
+
+[[group.aliases]]
+key         = "npf"
+value       = "npx prisma format"
+description = "Format schema.prisma"
+
+# ── Prisma (bunx) ────────────────────────────────────────────────────────────
+[[group]]
+name = "Prisma (bunx)"
+
+[[group.aliases]]
+key         = "bp"
+value       = "bunx prisma"
+description = "bunx prisma CLI"
+
+[[group.aliases]]
+key         = "bpg"
+value       = "bunx prisma generate"
+description = "Generate Prisma client via Bun"
+
+[[group.aliases]]
+key         = "bps"
+value       = "bunx prisma studio"
+description = "Open Prisma Studio via Bun"
+
+[[group.aliases]]
+key         = "bpmd"
+value       = "bunx prisma migrate dev"
+description = "Run development migration via Bun"
+
+# ── PostgreSQL ───────────────────────────────────────────────────────────────
+[[group]]
+name = "PostgreSQL"
+only_shells = ["bash", "zsh", "fish"]
+
+[[group.aliases]]
+key         = "pgstart"
+value       = "sudo systemctl start postgresql"
+description = "Start PostgreSQL service"
+
+[[group.aliases]]
+key         = "pgstop"
+value       = "sudo systemctl stop postgresql"
+description = "Stop PostgreSQL service"
+
+[[group.aliases]]
+key         = "pgrestart"
+value       = "sudo systemctl restart postgresql"
+description = "Restart PostgreSQL service"
+
+[[group.aliases]]
+key         = "pgstatus"
+value       = "sudo systemctl status postgresql"
+description = "Show PostgreSQL service status"
+
+[[group.aliases]]
+key         = "pgl"
+value       = "sudo -u postgres psql"
+description = "Login as postgres superuser"
+
+[[group.aliases]]
+key         = "pgls"
+value       = "psql -U postgres -c '\\l'"
+description = "List all databases"
+
+# ── Docker & Kubernetes ──────────────────────────────────────────────────────
+[[group]]
+name = "Docker & Kubernetes"
+
+[[group.aliases]]
+key         = "dps"
+value       = "docker ps -a"
+description = "Show all Docker containers"
+
+[[group.aliases]]
+key         = "dclean"
+value       = "docker system prune -af"
+description = "Remove all unused Docker resources"
+
+[[group.aliases]]
+key         = "dstop"
+value       = "docker stop"
+description = "Stop a container"
+
+[[group.aliases]]
+key         = "drm"
+value       = "docker rm"
+description = "Remove a container"
+
+[[group.aliases]]
+key         = "dim"
+value       = "docker images"
+description = "List Docker images"
+
+[[group.aliases]]
+key         = "dcup"
+value       = "docker compose up -d"
+description = "Start Docker compose services detached"
+
+[[group.aliases]]
+key         = "dcdown"
+value       = "docker compose down"
+description = "Stop Docker compose services"
+
+[[group.aliases]]
+key         = "dclogs"
+value       = "docker compose logs -f"
+description = "Follow Docker compose logs"
+
+[[group.aliases]]
+key         = "k"
+value       = "kubectl"
+description = "Kubectl shorthand"
+
+[[group.aliases]]
+key         = "kgp"
+value       = "kubectl get pods"
+description = "Kubectl get pods"
+
+[[group.aliases]]
+key         = "kgs"
+value       = "kubectl get services"
+description = "Kubectl get services"
+
+# ── Rust & Cargo ─────────────────────────────────────────────────────────────
+[[group]]
+name = "Rust & Cargo"
+
+[[group.aliases]]
+key         = "cg"
+value       = "cargo"
+description = "Cargo CLI"
+
+[[group.aliases]]
+key         = "cgb"
+value       = "cargo build"
+description = "Build debug binary"
+
+[[group.aliases]]
+key         = "cgbr"
+value       = "cargo build --release"
+description = "Build release binary"
+
+[[group.aliases]]
+key         = "cgr"
+value       = "cargo run"
+description = "Run debug binary"
+
+[[group.aliases]]
+key         = "cgt"
+value       = "cargo test"
+description = "Run all unit tests"
+
+[[group.aliases]]
+key         = "cgc"
+value       = "cargo check"
+description = "Check project compilation"
+
+[[group.aliases]]
+key         = "cgcl"
+value       = "cargo clippy"
+description = "Run Rust linter"
+
+# ── Python & Virtualenv ──────────────────────────────────────────────────────
+[[group]]
+name = "Python"
+
+[[group.aliases]]
+key         = "py"
+value       = "python3"
+description = "Python 3 interpreter"
+
+[[group.aliases]]
+key         = "venv"
+value       = "python3 -m venv .venv"
+description = "Create Python virtualenv in .venv"
+
+[[group.aliases]]
+key         = "act"
+value       = "source .venv/bin/activate"
+description = "Activate Python virtualenv"
+only_shells = ["bash", "zsh"]
+
+[[group.aliases]]
+key         = "deact"
+value       = "deactivate"
+description = "Deactivate virtualenv"
+
+# ── System & Utilities ───────────────────────────────────────────────────────
+[[group]]
+name = "System & Utilities"
+
+[[group.aliases]]
+key         = "serve"
+value       = "python3 -m http.server"
+description = "Start a simple HTTP server in current directory"
+
+[[group.aliases]]
+key         = "ports"
+value       = "ss -tulpn"
+description = "Show listening network ports"
+only_shells = ["bash", "zsh", "fish"]
+
+[[group.aliases]]
+key         = "myip"
+value       = "ip a | grep inet"
+description = "Show local IP addresses"
+only_shells = ["bash", "zsh", "fish"]
+
+[[group.aliases]]
+key         = "iploc"
+value       = "curl -s ipinfo.io/json"
+description = "Show public IP and location info"
+
+[[group.aliases]]
+key         = "sysinfo"
+value       = "uname -a && uptime && free -h"
+description = "Show system information summary"
+only_shells = ["bash", "zsh", "fish"]
+
+[[group.aliases]]
+key         = "bak"
+value       = "cp $1 $1.bak"
+description = "Quick backup of a file"
+only_shells = ["bash", "zsh"]
+
+# ── Modern CLI Tool Wrappers ──────────────────────────────────────────────────
+# Port of: bat, eza, z, tree, tldr, trash, fh wrappers in config.sh
+[[group]]
+name = "Modern CLI Wrappers"
+
+[[group.aliases]]
+key         = "bat"
+value       = "bat --paging=never"
+description = "bat (cat with syntax highlighting)"
+
+[[group.aliases]]
+key         = "cat"
+value       = "bat --paging=never --style=plain"
+description = "Drop-in cat replacement using bat"
+
+[[group.aliases]]
+key         = "ls"
+value       = "eza --icons --group-directories-first"
+description = "eza-powered ls with icons"
+
+[[group.aliases]]
+key         = "ll"
+value       = "eza -lah --icons --group-directories-first --git"
+description = "Long listing with hidden files, git status, icons"
+
+[[group.aliases]]
+key         = "la"
+value       = "eza -a --icons"
+description = "List all files including hidden"
+
+[[group.aliases]]
+key         = "lt"
+value       = "eza --tree --icons --level=2"
+description = "Tree view (depth 2) via eza"
+
+[[group.aliases]]
+key         = "tree"
+value       = "eza --tree --icons"
+description = "Full tree view via eza"
+
+[[group.aliases]]
+key         = "z"
+value       = "zoxide"
+description = "Smart cd with zoxide"
+
+[[group.aliases]]
+key         = "zi"
+value       = "zoxide query --interactive"
+description = "Interactive zoxide jump"
+
+[[group.aliases]]
+key         = "tldr"
+value       = "tldr"
+description = "Simplified man pages via tldr"
+
+[[group.aliases]]
+key         = "trash"
+value       = "gio trash"
+description = "Safe delete — moves files to system trash via GIO"
+
+[[group.aliases]]
+key         = "fh"
+value       = "eval \"$( (fc -l 1 2>/dev/null || history) | sed 's/^[ ]*[0-9]*[ ]*//' | fzf --reverse +s)\""
+description = "FZF interactive command history search and exec"
+only_shells = ["bash", "zsh"]
+
+# ── fancybash Maintenance ────────────────────────────────────────────────────
+[[group]]
+name = "fancybash Maintenance"
+
+[[group.aliases]]
+key         = "update"
+value       = "fancybash update"
+description = "Non-interactive system package update (APT, Pacman, DNF, Brew, Flatpak, Snap)"
+
+[[group.aliases]]
+key         = "upgrade"
+value       = "fancybash upgrade"
+description = "Self-upgrade fancybash to latest version"
+
+[[group.aliases]]
+key         = "clean"
+value       = "fancybash clean"
+description = "Universal system cache and log cleanup"

@@ -1,0 +1,47 @@
+name: Greetings
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+concurrency:
+  group: greetings-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/first-interaction@v1
+        continue-on-error: true
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            👋 Hey there, thanks for opening your first issue!
+
+            ⚡ **fancybash** is built by developers, for developers — and your feedback matters.
+
+            To help us resolve this quickly, please make sure you've included:
+            - Your OS and shell (Bash / Zsh / Fish / PowerShell)
+            - Steps to reproduce the issue
+            - The output of `echo $SHELL` and `bash --version`
+
+            We'll get back to you as soon as possible. In the meantime, check out the [README](../blob/main/README.md) and [wiki](../blob/main/wiki.md) for common solutions.
+
+            Made with ❤️ in Bangladesh 🇧🇩
+          pr-message: |
+            🎉 Thanks for your first pull request to **fancybash**!
+
+            Before we review, please make sure:
+            - [ ] Your changes are tested in a clean shell environment
+            - [ ] Shell scripts are lint-clean (`shellcheck your-script.sh`)
+            - [ ] You've followed the style in [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md)
+            - [ ] Commit messages follow the `feat:` / `fix:` / `docs:` convention
+
+            A maintainer will review your PR soon. Thank you for contributing! ⚡

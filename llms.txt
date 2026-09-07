@@ -1,0 +1,29 @@
+# fancybash — The Ultimate Shell Environment for Modern Developers
+
+> Production-ready, zero-bloat, opinionated shell configuration framework for Bash, Zsh, Fish, and PowerShell.
+
+## Core Resources
+
+- [AI Agent Full Specification (AGENT.md)](https://fancybash.netlify.app/AGENT.md): Complete machine-readable documentation, feature list, command reference, and developer guide for AI Agents.
+- [Official Website](https://fancybash.netlify.app/): Interactive landing page with theme previews, features, and quick setup instructions.
+- [Official Documentation](https://fancybash.netlify.app/docs.html): Comprehensive user manual, keyboard shortcuts, installation troubleshooting, and command reference.
+- [Linux Setup Guide](https://fancybash.netlify.app/linux-setup.html): Curated developer software installer for Linux ecosystems.
+- [GitHub Repository](https://github.com/rihadjahanopu/fancybash): Source code, issue tracker, release notes, and contribution guidelines.
+
+## Quick Installation
+
+```bash
+# Universal installer (Auto-detects OS and shell):
+curl -fsSL https://fancybash.netlify.app/i.sh | bash
+```
+
+## Highlights
+
+- ⚡ Fast & Zero Bloat (Loads instantly without heavy plugin overhead)
+- 🛡️ 100% Non-destructive (Automatic timestamped backups of user dotfiles)
+- 🎨 55 Built-in Prompt Themes (`fancy <theme>`)
+- 🟢 Node.js & Bun First-Class Support (`bi`, `brd`, `brb`, `brs`)
+- 📦 Universal Package Manager & App Updater (`uu`, `uup`)
+- 🎬 FFmedia Multimedia Suite & Interactive GUM/FZF Utilities (`ffmedia`, `todo`, `notes`, `vault`, `ex`)
+- 🔐 Hardened Multi-Vault Security Suite (`vault`, `secvault`, `fvault` - AES-256 memory guard & panic decoy)
+- 🐳 Docker & PostgreSQL Developer Toolkit (`dps`, `dlogs`, `dclean`, `pgstart`, `pgstop`)

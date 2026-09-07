@@ -1,0 +1,84 @@
+# Auto-label rules for fancybash pull requests
+# Docs: https://github.com/actions/labeler
+
+# ── Shell Configs ──────────────────────────────────────────────
+bash:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "config.sh"
+          - "install.sh"
+          - "uninstall.sh"
+          - "u.sh"
+          - "i.sh"
+
+zsh:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "config.zsh"
+          - "install.zsh"
+          - "uninstall.zsh"
+
+fish:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "config.fish"
+          - "install.fish"
+          - "uninstall.fish"
+
+powershell:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "config.ps1"
+          - "install.ps1"
+          - "uninstall.ps1"
+          - "i.ps1"
+
+windows:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "install.bat"
+          - "*.ps1"
+          - "i.ps1"
+
+installer:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "install.*"
+          - "i.sh"
+          - "i.ps1"
+          - "install.bat"
+
+uninstaller:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "uninstall.*"
+          - "u.sh"
+
+# ── Website ────────────────────────────────────────────────────
+website:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "web/**"
+
+# ── Documentation ──────────────────────────────────────────────
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.md"
+          - "*.txt"
+          - "wiki.md"
+
+# ── IDE / Editor ───────────────────────────────────────────────
+editor-config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".vscode/**"
+          - "zed/**"
+          - ".prettierrc"
+          - ".prettierignore"
+
+# ── CI / Automation ────────────────────────────────────────────
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"

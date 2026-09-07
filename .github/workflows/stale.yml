@@ -1,0 +1,71 @@
+name: Mark Stale Issues and PRs
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Runs daily at midnight UTC
+  workflow_dispatch:    # Allow manual trigger from GitHub UI
+
+concurrency:
+  group: stale-workflow
+  cancel-in-progress: true
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # ── Issues ────────────────────────────────────────────
+          days-before-issue-stale: 60
+          days-before-issue-close: 7
+          stale-issue-label: "stale"
+          stale-issue-message: |
+            👋 This issue has been inactive for **60 days**.
+
+            It will be automatically closed in **7 days** unless there's new activity.
+
+            If this is still relevant, please leave a comment or update the issue.
+            Feel free to reopen it at any time if needed!
+
+            — fancybash bot 🤖
+          close-issue-message: |
+            🔒 This issue has been closed due to **67 days of inactivity**.
+
+            If the problem still exists, please open a new issue with updated details.
+            Thank you for contributing to fancybash! ⚡
+
+          # ── Pull Requests ─────────────────────────────────────
+          days-before-pr-stale: 30
+          days-before-pr-close: 7
+          stale-pr-label: "stale"
+          stale-pr-message: |
+            👋 This pull request has been inactive for **30 days**.
+
+            It will be automatically closed in **7 days** unless there's new activity.
+
+            To keep it open:
+            - Rebase on `main` if there are conflicts
+            - Address any review comments
+            - Leave a comment with your status update
+
+            — fancybash bot 🤖
+          close-pr-message: |
+            🔒 This pull request has been closed due to **37 days of inactivity**.
+
+            If you'd like to continue with this work, please reopen the PR or submit a new one.
+            Thank you for contributing to fancybash! ⚡
+
+          # ── Exempt Labels ─────────────────────────────────────
+          exempt-issue-labels: "pinned,security,in-progress,help wanted"
+          exempt-pr-labels: "pinned,security,in-progress,work-in-progress,wip"
+
+          # ── Settings ──────────────────────────────────────────
+          remove-stale-when-updated: true
+          operations-per-run: 100

@@ -1,0 +1,62 @@
+name: ShellCheck
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - "**.sh"
+      - "**.zsh"
+      - "**.fish"
+      - "**.ps1"
+      - "**.bat"
+  pull_request:
+    branches: ['**']
+    paths:
+      - "**.sh"
+      - "**.zsh"
+      - "**.fish"
+      - "**.ps1"
+      - "**.bat"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    name: Lint Shell Scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+
+      - name: Run ShellCheck on Bash scripts
+        run: |
+          echo "🔍 Dynamically discovering and checking Bash scripts..."
+          mapfile -t BASH_FILES < <(git ls-files '*.sh')
+          if [ ${#BASH_FILES[@]} -gt 0 ]; then
+            shellcheck --severity=warning "${BASH_FILES[@]}"
+            echo "✅ ${#BASH_FILES[@]} Bash script(s) passed ShellCheck"
+          else
+            echo "ℹ️ No .sh files found to check."
+          fi
+
+      - name: Run ShellCheck on Zsh scripts
+        run: |
+          echo "🔍 Dynamically discovering and checking Zsh scripts..."
+          mapfile -t ZSH_FILES < <(git ls-files '*.zsh')
+          if [ ${#ZSH_FILES[@]} -gt 0 ]; then
+            shellcheck --shell=bash --severity=warning "${ZSH_FILES[@]}"
+            echo "✅ ${#ZSH_FILES[@]} Zsh script(s) passed ShellCheck"
+          else
+            echo "ℹ️ No .zsh files found to check."
+          fi

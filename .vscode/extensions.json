@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    // Formatting
+    "esbenp.prettier-vscode",
+
+    // Shell scripts
+    "foxundermoon.shell-format",
+    "timonwong.shellcheck",
+
+    // PowerShell
+    "ms-vscode.powershell",
+
+    // General productivity
+    "editorconfig.editorconfig",
+    "streetsidesoftware.code-spell-checker",
+    "usernamehw.errorlens",
+    "eamodio.gitlens"
+  ]
+}

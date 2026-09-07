@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fancybash-rs — The Ultra-Fast Rust Terminal Engine</title>
+  <meta name="description" content="A fast, beautiful, and productive terminal environment for Web Development powered by Rust. Cross-platform support for Linux, macOS, and Windows.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0c10;
+      --card-bg: rgba(22, 27, 34, 0.7);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --accent-cyan: #00f2fe;
+      --accent-purple: #9d4edd;
+      --accent-pink: #ff007f;
+      --accent-green: #39ff14;
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background Glow */
+    .glow-bg {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      background: 
+        radial-gradient(circle at 20% 20%, rgba(0, 242, 254, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 80% 40%, rgba(157, 78, 221, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 80%, rgba(255, 0, 127, 0.05) 0%, transparent 50%);
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header / Nav */
+    header {
+      padding: 32px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.4rem;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      color: #000;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 80px 0 60px;
+    }
+
+    .hero-tagline {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--accent-cyan);
+      margin-bottom: 24px;
+      font-weight: 600;
+    }
+
+    .hero-title {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 30%, var(--text-muted) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-title span {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto 40px;
+    }
+
+    /* Install Command Box */
+    .install-box {
+      max-width: 620px;
+      margin: 0 auto 60px;
+      background: rgba(15, 20, 28, 0.9);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 242, 254, 0.1);
+    }
+
+    .command-code {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.95rem;
+      color: var(--accent-cyan);
+    }
+
+    .copy-btn {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      color: #000;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    .copy-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    /* Terminal Mockup */
+    .terminal-window {
+      max-width: 850px;
+      margin: 0 auto 100px;
+      background: #0d1117;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+
+    .terminal-header {
+      background: #161b22;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+
+    .terminal-title {
+      margin-left: auto;
+      margin-right: auto;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: 'Fira Code', monospace;
+    }
+
+    .terminal-body {
+      padding: 24px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.9rem;
+      color: #e6edf3;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+
+    /* Feature Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 100px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 28px;
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0, 242, 254, 0.4);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 16px;
+    }
+
+    .feature-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .feature-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-bg"></div>
+
+  <div class="container">
+    <header>
+      <a href="#" class="logo">
+        🚀 fancybash-rs <span class="logo-badge">v2.0 Rust</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="https://github.com/rihadjahanopu/fancybash" target="_blank">GitHub</a>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-tagline">⚡ Blazing-Fast Rust Terminal Suite</div>
+      <h1 class="hero-title">The Ultimate <span>Terminal Engine</span> for Developers</h1>
+      <p class="hero-desc">
+        A fast, modern, and beautiful terminal environment for Web Development. Powered by Rust for instant startup times, cross-platform compatibility, and 25+ built-in developer tools.
+      </p>
+
+      <div class="install-box">
+        <span class="command-code" id="cmdText">curl -fsSL https://fancybash.netlify.app/i.sh | bash</span>
+        <button class="copy-btn" onclick="copyCmd()">Copy Install Command</button>
+      </div>
+    </section>
+
+    <!-- Terminal Showcase -->
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <div class="terminal-title">fancybash keep — Master Command Center</div>
+      </div>
+      <div class="terminal-body">
+<span style="color: #00f2fe">╔══════════════════════════════════════════════════════════════════════════╗</span>
+<span style="color: #00f2fe">║</span>  <span style="color: #ff007f; font-weight: bold">🚀 MASTER COMMAND CENTER</span> <span style="color: #00f2fe">│</span> <span style="color: #8b949e">Developer Rihad's Ultimate Environment</span>
+<span style="color: #00f2fe">╚══════════════════════════════════════════════════════════════════════════╝</span>
+
+  <span style="color: #00f2fe">┌── 📂 NAVIGATION & MOVEMENT ──────────────────────────────────────────────┐</span>
+     <span style="color: #ffbd2e; font-weight:bold">dev         </span> │ Jump to ~/Developer
+     <span style="color: #39ff14; font-weight:bold">fr / ba / fu</span> │ Frontend / Backend / Fullstack directories
+
+  <span style="color: #9d4edd">┌── ⚡ ADVANCED NATIVE RUST TOOLS ──────────────────────────────────────────┐</span>
+     <span style="color: #39ff14; font-weight:bold">dman        </span> │ Interactive Docker Desktop TUI Manager
+     <span style="color: #00f2fe; font-weight:bold">ffmedia     </span> │ 24-in-1 FFmpeg Multimedia Suite
+     <span style="color: #ff007f; font-weight:bold">vault       </span> │ Hardened AES-256 Multi-Vault Manager
+     <span style="color: #ffbd2e; font-weight:bold">gwip        </span> │ Interactive Git Stage, Commit & Push with Auto-Rebase
+     <span style="color: #39ff14; font-weight:bold">run         </span> │ Bun Interactive JS/TS File Runner (--hot, --watch)
+      </div>
+    </div>
+
+    <!-- Features -->
+    <section class="features-grid" id="features">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3 class="feature-title">Sub-Millisecond Speed</h3>
+        <p class="feature-desc">Replaced slow shell scripts with native Rust binaries. Instant prompt rendering with 0ms delay.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🐳</div>
+        <h3 class="feature-title">Docker Desktop TUI (dman)</h3>
+        <p class="feature-desc">Full terminal manager for containers, images, volumes, networks, compose, and live resource monitoring.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎬</div>
+        <h3 class="feature-title">24-in-1 FFmpeg Suite</h3>
+        <p class="feature-desc">Compress, trim, concat, rotate, add watermarks, extract audio, and record screen with intuitive TUI prompts.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <h3 class="feature-title">AES-256 RAM Vault</h3>
+        <p class="feature-desc">Encrypted secret directory vaults with RAM-mounting, auto-relock timers, and self-destruct panic passwords.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🌿</div>
+        <h3 class="feature-title">Smart Git Workflow</h3>
+        <p class="feature-desc">Interactive `gwip` and `gbranch` tools for fast staging, committing, auto-rebasing conflicts, and branch switching.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🛠️</div>
+        <h3 class="feature-title">PC Optimizer & Clean</h3>
+        <p class="feature-desc">Multi-distro CLI tool installer and universal system cleaner for Linux (Ubuntu, Debian, Fedora, Arch, openSUSE).</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>Created by <a href="https://github.com/rihadjahanopu" target="_blank">Rihad Jahan Opu</a> • Licensed under MIT</p>
+    </footer>
+  </div>
+
+  <script>
+    function copyCmd() {
+      const cmd = document.getElementById('cmdText').innerText;
+      navigator.clipboard.writeText(cmd).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.innerText = 'Copied! 🎉';
+        setTimeout(() => btn.innerText = 'Copy Install Command', 2000);
+      });
+    }
+  </script>
+</body>
+</html>

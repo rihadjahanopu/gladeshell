@@ -1,0 +1,21 @@
+[build]
+  command = "mkdir -p dist && cp web/index.html dist/index.html && cp i.sh dist/i.sh && cp i.sh dist/install.sh"
+  publish = "dist"
+
+[[headers]]
+  for = "/i.sh"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/install.sh"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "no-cache"
+
+[[redirects]]
+  from = "/install"
+  to = "/i.sh"
+  status = 200
+  force = true

@@ -1,0 +1,28 @@
+# CODEOWNERS — Automatically requests review from maintainers
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+*                           @rihadjahanopu
+
+# Shell configs — core files
+config.sh                   @rihadjahanopu
+config.zsh                  @rihadjahanopu
+config.fish                 @rihadjahanopu
+config.ps1                  @rihadjahanopu
+
+# Installers
+install.*                   @rihadjahanopu
+uninstall.*                 @rihadjahanopu
+i.sh                        @rihadjahanopu
+i.ps1                       @rihadjahanopu
+u.sh                        @rihadjahanopu
+
+# Documentation
+*.md                        @rihadjahanopu
+*.txt                       @rihadjahanopu
+
+# Website
+web/                        @rihadjahanopu
+
+# GitHub Actions & config
+.github/                    @rihadjahanopu

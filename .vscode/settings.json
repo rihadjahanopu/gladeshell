@@ -1,0 +1,57 @@
+{
+  // Editor basics
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Trim whitespace
+  "editor.trimAutoWhitespace": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // Line endings
+  "files.eol": "\n",
+
+  // Language-specific overrides
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format",
+    "editor.formatOnSave": true
+  },
+
+  // Shell script settings
+  "shellformat.flag": "-i 2 -bn",
+
+  // File associations
+  "files.associations": {
+    "*.sh": "shellscript",
+    "*.zsh": "shellscript",
+    "*.ps1": "powershell"
+  },
+
+  // Ruler at print width
+  "editor.rulers": [100],
+
+  // Misc
+  "editor.wordWrap": "off",
+  "breadcrumbs.enabled": true,
+  "editor.minimap.enabled": true
+}

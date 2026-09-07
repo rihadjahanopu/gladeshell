@@ -101,20 +101,15 @@ fn bench_render_no_git(c: &mut Criterion) {
     });
 }
 
-fn bench_render_all_themes(c: &mut Criterion) {
-    let mut group = c.benchmark_group("render/all_themes");
+fn bench_render_sample_themes(c: &mut Criterion) {
+    // Sample 3 representative themes instead of all 55 (keeps bench fast)
+    let mut group = c.benchmark_group("render/sample_themes");
     let mut buf = [0u8; 4096];
+    let sample_ids = [0usize, 10, 27]; // default, mid, late theme
 
-    for (i, theme) in THEMES.iter().enumerate() {
-        let ctx = make_ctx(
-            "/home/rihad/project",
-            "rihad",
-            "arch",
-            "main",
-            false,
-            0,
-            i,
-        );
+    for &id in &sample_ids {
+        let theme = &THEMES[id];
+        let ctx = make_ctx("/home/rihad/project", "rihad", "arch", "main", false, 0, id);
         group.bench_with_input(
             BenchmarkId::from_parameter(theme.name),
             &ctx,
@@ -133,6 +128,6 @@ criterion_group!(
     bench_render_default,
     bench_render_dirty,
     bench_render_no_git,
-    bench_render_all_themes,
+    bench_render_sample_themes,
 );
 criterion_main!(benches);

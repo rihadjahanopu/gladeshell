@@ -645,20 +645,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         pm.label()
     );
 
-    // 2. Ensure fzf is available
-    if !cmd_exists("fzf") {
-        println!("{YELLOW}📦 fzf not found — installing...{NC}");
-        let cmd = pm.install_cmd();
-        let ok = Command::new(&cmd[0])
-            .args(&cmd[1..])
-            .arg("fzf")
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false);
-        if !ok {
-            return Err("Failed to install fzf. Please install it manually.".into());
-        }
-    }
+
 
     // 3. Build display items
     let installed_count = TOOLS

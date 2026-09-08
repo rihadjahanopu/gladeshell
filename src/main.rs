@@ -108,7 +108,7 @@ enum Commands {
     /// Interactive Git Branch Switcher & Manager
     Gbranch,
 
-    /// Interactive Process Killer (sysinfo + fzf)
+    /// Interactive Process Killer (sysinfo)
     Fkill,
 
     /// Interactive Ratatui Fuzzy History Search (fh)

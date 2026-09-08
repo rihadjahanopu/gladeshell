@@ -1,5 +1,8 @@
 // =============================================================================
 //  src/tools/notes.rs — Plain-text notes manager (Phase 5)
+//
+//  Clipboard: native `arboard` crate (X11 + Wayland + macOS — zero external binary)
+//  No xclip, xsel, wl-copy or any 3rd-party CLI tools.
 // =============================================================================
 
 use inquire::{Confirm, Select, Text};
@@ -28,7 +31,8 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                     "1. ➕ Add New Note",
                     "2. 📋 List / View Notes",
                     "3. 🔍 Search Notes",
-                    "4. 🗑️ Delete Note",
+                    "4. 📋 Copy Note to Clipboard",
+                    "5. 🗑️ Delete Note",
                     "❌ Exit",
                 ],
             )
@@ -44,6 +48,8 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                 "list"
             } else if choice.contains("Search") {
                 "search"
+            } else if choice.contains("Copy") {
+                "copy"
             } else if choice.contains("Delete") {
                 "delete"
             } else {
@@ -97,22 +103,14 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                 }
             }
 
-            let content = Text::new("Note Content (or leave empty to open $EDITOR):").prompt()?;
-            if !content.trim().is_empty() {
-                fs::write(&file_path, &content)?;
-                println!("✅ Note saved: {}/{}", category, clean_title);
-            } else {
-                let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".into());
-                let status = std::process::Command::new(&editor)
-                    .arg(&file_path)
-                    .status();
-
-                if let Ok(s) = status {
-                    if s.success() {
-                        println!("✅ Note saved via {}: {}/{}", editor, category, clean_title);
-                    }
-                }
+            let content = Text::new("Note Content:").prompt()?;
+            let clean_content = content.trim();
+            if clean_content.is_empty() {
+                println!("❌ Note content cannot be empty!");
+                return Ok(());
             }
+            fs::write(&file_path, clean_content)?;
+            println!("✅ Note saved: {}/{}", category, clean_title);
         }
 
         "list" | "ls" => {
@@ -143,6 +141,12 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                             || entry.file_name().to_string_lossy().to_lowercase().contains(&clean_q)
                         {
                             println!("  📄 {}", entry.path().display());
+                            // Show matching lines inline
+                            for (lineno, line) in content.lines().enumerate() {
+                                if line.to_lowercase().contains(&clean_q) {
+                                    println!("    L{}: {}", lineno + 1, line.trim());
+                                }
+                            }
                             matches += 1;
                         }
                     }
@@ -152,6 +156,46 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                 println!("  No matching notes found.");
             } else {
                 println!("✅ Found {} matching note(s).", matches);
+            }
+        }
+
+        // ── Native clipboard copy — arboard (X11 + Wayland + macOS, zero external binary) ──
+        "copy" | "cp" => {
+            let note_files = collect_all_notes(&root_dir)?;
+            if note_files.is_empty() {
+                println!("📋 No notes found! Create one first with: fancybash notes add");
+                return Ok(());
+            }
+
+            let options: Vec<String> = note_files
+                .iter()
+                .map(|p| {
+                    p.strip_prefix(&root_dir)
+                        .unwrap_or(p)
+                        .display()
+                        .to_string()
+                })
+                .collect();
+
+            let selected = Select::new("📋 Select Note to Copy to Clipboard:", options).prompt()?;
+            let target_path = root_dir.join(&selected);
+
+            let content = fs::read_to_string(&target_path)?;
+            if content.is_empty() {
+                println!("⚠️ Note is empty.");
+                return Ok(());
+            }
+
+            match arboard::Clipboard::new() {
+                Ok(mut clipboard) => {
+                    clipboard.set_text(&content)?;
+                    println!("✅ Copied '{}' to clipboard ({} chars).", selected, content.len());
+                }
+                Err(e) => {
+                    eprintln!("❌ Clipboard unavailable: {e}");
+                    eprintln!("   Printing note content instead:");
+                    println!("{}", content);
+                }
             }
         }
 
@@ -185,7 +229,7 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
         }
 
         _ => {
-            println!("Usage: fancybash notes [add | list | search <query> | delete]");
+            println!("Usage: fancybash notes [add | list | search <query> | copy | delete]");
         }
     }
 
@@ -225,13 +269,27 @@ fn show_notes(root_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    let options: Vec<String> = note_files
+        .iter()
+        .map(|p| p.strip_prefix(root_dir).unwrap_or(p).display().to_string())
+        .collect();
+
     println!("\n📝 ALL NOTES ({} total):", note_files.len());
     println!("──────────────────────────────────────");
-    for f in note_files {
-        let rel = f.strip_prefix(root_dir).unwrap_or(&f);
-        println!("  📄 {}", rel.display());
+    for label in &options {
+        println!("  📄 {}", label);
     }
-    println!("──────────────────────────────────────\n");
+    println!("──────────────────────────────────────");
+
+    // Offer to view a note inline
+    if let Ok(selected) = Select::new("📖 View a note? (ESC to skip):", options).prompt() {
+        let path = root_dir.join(&selected);
+        let content = fs::read_to_string(&path).unwrap_or_else(|_| "(unreadable)".to_string());
+        println!("\n── {} ──", selected);
+        println!("{}", content);
+        println!("────────────────────────────────────────\n");
+    }
+
     Ok(())
 }
 
@@ -244,9 +302,30 @@ mod tests {
         let temp = std::env::temp_dir().join(format!("test_notes_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp);
         fs::create_dir_all(&temp).unwrap();
-
         let cats = list_categories(&temp).unwrap();
         assert!(cats.is_empty());
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_collect_all_notes_empty_dir() {
+        let temp = std::env::temp_dir().join(format!("test_notes_collect_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp);
+        fs::create_dir_all(&temp).unwrap();
+        let notes = collect_all_notes(&temp).unwrap();
+        assert!(notes.is_empty());
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_note_write_and_read() {
+        let temp = std::env::temp_dir().join(format!("test_note_rw_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp);
+        fs::create_dir_all(&temp).unwrap();
+        let file = temp.join("test.txt");
+        fs::write(&file, "hello fancybash notes").unwrap();
+        let content = fs::read_to_string(&file).unwrap();
+        assert_eq!(content, "hello fancybash notes");
         let _ = fs::remove_dir_all(&temp);
     }
 }

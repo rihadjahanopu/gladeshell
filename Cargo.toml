@@ -62,6 +62,9 @@ termcolor = { version = "1.4", optional = true }
 # Directory walking (Phase 4 tools: ex, makecpp)
 walkdir = { version = "2", optional = true }
 
+# Native cross-platform clipboard (X11 + Wayland + macOS — zero external binary)
+arboard = { version = "3", optional = true }
+
 # String rendering helpers (zero-alloc ANSI)
 # We use the `ansi_term` crate only for the binary; the cdylib uses raw bytes.
 ansi_term = { version = "0.12", optional = true }
@@ -79,6 +82,7 @@ tools = [
     "crossterm",
     "walkdir",
     "ansi_term",
+    "arboard",
     "ignore",
     "grep-regex",
     "grep-searcher",

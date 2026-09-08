@@ -673,9 +673,23 @@ description = "Safe delete — moves files to system trash via GIO"
 
 [[group.aliases]]
 key         = "fh"
-value       = "eval \"$( (fc -l 1 2>/dev/null || history) | sed 's/^[ ]*[0-9]*[ ]*//' | fzf --reverse +s)\""
-description = "FZF interactive command history search and exec"
-only_shells = ["bash", "zsh"]
+value       = "eval \"$(fancybash fh)\""
+description = "Native Ratatui interactive command history search and exec"
+
+[[group.aliases]]
+key         = "rg"
+value       = "fancybash grep"
+description = "Native high-performance ripgrep search engine"
+
+[[group.aliases]]
+key         = "grep"
+value       = "fancybash grep"
+description = "Native high-performance ripgrep search engine"
+
+[[group.aliases]]
+key         = "cf"
+value       = "fancybash cf"
+description = "Native interactive fuzzy directory navigator"
 
 # ── fancybash Maintenance ────────────────────────────────────────────────────
 [[group]]

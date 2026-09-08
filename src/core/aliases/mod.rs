@@ -1,26 +1,25 @@
 // =============================================================================
-//  src/core/aliases.rs — Parser for aliases.toml → multi-shell exporter
+//  src/core/aliases/mod.rs — Modular multi-shell alias system
 //
 //  Data flow:
-//    aliases.toml  →  Vec<AliasGroup>  →  target shell syntax string
-//
-//  Phase 1: TOML schema + serializer for all four shells.
-//  Phase 3: full migration of 10,000-line shell config aliases.
+//    Built-in category modules (.rs) OR TOML → Vec<AliasGroup> → shell script
 // =============================================================================
+
+pub mod categories;
 
 use serde::Deserialize;
 
-// ── TOML schema ───────────────────────────────────────────────────────────────
+// ── TOML / Rust Schema ────────────────────────────────────────────────────────
 
-/// Top-level structure of `aliases.toml`.
-#[derive(Debug, Deserialize)]
+/// Top-level container of alias groups.
+#[derive(Debug, Clone, Deserialize)]
 pub struct AliasFile {
-    /// Named groups of aliases (e.g. "navigation", "git", "npm")
+    /// Named groups of aliases (e.g. "Navigation & Filesystem", "Git", "npm")
     pub group: Vec<AliasGroup>,
 }
 
 /// A logical category of aliases with optional per-group shell restrictions.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AliasGroup {
     /// Human-readable category name
     pub name: String,
@@ -32,7 +31,7 @@ pub struct AliasGroup {
 }
 
 /// A single alias definition.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AliasEntry {
     /// The short alias name (e.g. `gs`)
     pub key: String,
@@ -41,6 +40,9 @@ pub struct AliasEntry {
     /// Optional human-readable description / comment
     #[serde(default)]
     pub description: String,
+    /// Optional: only emit for these shells (empty = all shells)
+    #[serde(default)]
+    pub only_shells: Vec<String>,
 }
 
 // ── Shell targets ─────────────────────────────────────────────────────────────
@@ -74,9 +76,16 @@ impl Shell {
     }
 }
 
-// ── Serializer ────────────────────────────────────────────────────────────────
+// ── Constructors & Serializer ─────────────────────────────────────────────────
 
 impl AliasFile {
+    /// Return built-in aliases constructed from category Rust modules.
+    pub fn builtin() -> Self {
+        Self {
+            group: categories::all_groups(),
+        }
+    }
+
     /// Load from a TOML string.
     pub fn from_toml(src: &str) -> Result<Self, toml::de::Error> {
         toml::from_str(src)
@@ -84,7 +93,7 @@ impl AliasFile {
 
     /// Render all aliases for `shell` as a valid shell script string.
     pub fn render(&self, shell: Shell) -> String {
-        let mut out = String::with_capacity(4096);
+        let mut out = String::with_capacity(8192);
 
         for group in &self.group {
             // Respect per-group shell restriction
@@ -97,20 +106,25 @@ impl AliasFile {
                 continue;
             }
 
-            // Section header comment
-            match shell {
-                Shell::Bash | Shell::Zsh => {
-                    out.push_str(&format!("\n# ── {} ──\n", group.name));
-                }
-                Shell::Fish => {
-                    out.push_str(&format!("\n# ── {} ──\n", group.name));
-                }
-                Shell::Pwsh => {
-                    out.push_str(&format!("\n# ── {} ──\n", group.name));
-                }
-            }
+            let mut group_header_pushed = false;
 
             for entry in &group.aliases {
+                // Respect per-entry shell restriction
+                if !entry.only_shells.is_empty()
+                    && !entry
+                        .only_shells
+                        .iter()
+                        .any(|s| Shell::from_str(s) == Some(shell))
+                {
+                    continue;
+                }
+
+                // Push group header once if not pushed yet
+                if !group_header_pushed {
+                    out.push_str(&format!("\n# ── {} ──\n", group.name));
+                    group_header_pushed = true;
+                }
+
                 match shell {
                     Shell::Bash | Shell::Zsh => {
                         if entry.description.is_empty() {
@@ -126,8 +140,6 @@ impl AliasFile {
                         }
                     }
                     Shell::Fish => {
-                        // Fish uses `abbr` for expandable aliases or `alias`
-                        // We default to `alias` for compatibility.
                         if entry.description.is_empty() {
                             out.push_str(&format!(
                                 "alias {} '{}'\n",
@@ -141,10 +153,7 @@ impl AliasFile {
                         }
                     }
                     Shell::Pwsh => {
-                        // PowerShell uses Set-Alias for simple command aliases;
-                        // for commands with arguments we emit a function wrapper.
                         if entry.value.contains(' ') {
-                            // Multi-word → function wrapper
                             let fname = pascal_case(&entry.key);
                             if entry.description.is_empty() {
                                 out.push_str(&format!(
@@ -158,7 +167,6 @@ impl AliasFile {
                                 ));
                             }
                         } else {
-                            // Single-command → Set-Alias
                             if entry.description.is_empty() {
                                 out.push_str(&format!(
                                     "Set-Alias -Name {} -Value {}\n",
@@ -183,7 +191,6 @@ impl AliasFile {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /// Convert a kebab/snake alias name to PascalCase for PowerShell function names.
-/// `gs` → `Gs`, `make-cpp` → `MakeCpp`
 fn pascal_case(s: &str) -> String {
     s.split(|c: char| c == '-' || c == '_')
         .filter(|p| !p.is_empty())
@@ -238,8 +245,14 @@ value = "git push"
     }
 
     #[test]
+    fn builtin_has_all_categories() {
+        let af = AliasFile::builtin();
+        assert!(af.group.len() >= 15, "Expected at least 15 categories, got {}", af.group.len());
+    }
+
+    #[test]
     fn render_bash() {
-        let af = AliasFile::from_toml(SAMPLE_TOML).unwrap();
+        let af = AliasFile::builtin();
         let out = af.render(Shell::Bash);
         assert!(out.contains("alias ..='cd ..'"));
         assert!(out.contains("alias gs='git status -sb'"));
@@ -247,16 +260,15 @@ value = "git push"
 
     #[test]
     fn render_fish() {
-        let af = AliasFile::from_toml(SAMPLE_TOML).unwrap();
+        let af = AliasFile::builtin();
         let out = af.render(Shell::Fish);
         assert!(out.contains("alias .. 'cd ..'"));
     }
 
     #[test]
     fn render_pwsh_multi_word_is_function() {
-        let af = AliasFile::from_toml(SAMPLE_TOML).unwrap();
+        let af = AliasFile::builtin();
         let out = af.render(Shell::Pwsh);
-        // "git status -sb" has spaces → must be a function wrapper
         assert!(out.contains("function Gs {"));
     }
 
@@ -265,12 +277,5 @@ value = "git push"
         assert_eq!(pascal_case("gs"), "Gs");
         assert_eq!(pascal_case("make-cpp"), "MakeCpp");
         assert_eq!(pascal_case("my_long_alias"), "MyLongAlias");
-    }
-
-    #[test]
-    fn parses_embedded_aliases_toml() {
-        let raw = include_str!("../../aliases.toml");
-        let af = AliasFile::from_toml(raw).expect("aliases.toml must be valid TOML");
-        assert!(af.group.len() >= 10, "must have at least 10 groups, got {}", af.group.len());
     }
 }

@@ -66,11 +66,7 @@ npx()  { _fb_lazy_load_nvm; npx  "$@"; }
 
     // ── Aliases ───────────────────────────────────────────────────────────────
     out.push_str("\n# ── Aliases ──\n");
-    out.push_str(&crate::core::aliases::AliasFile::from_toml(
-        include_str!("../../aliases.toml"),
-    )
-    .map(|af| af.render(Shell::Bash))
-    .unwrap_or_else(|e| format!("# aliases.toml parse error: {e}\n")));
+    out.push_str(&crate::core::aliases::AliasFile::builtin().render(Shell::Bash));
 
     // ── Prompt helper functions ───────────────────────────────────────────────
     out.push_str(r#"

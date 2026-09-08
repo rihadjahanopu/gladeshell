@@ -158,11 +158,7 @@ export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 
     // ── Aliases ───────────────────────────────────────────────────────────────
     out.push_str("\n# ── Aliases ──\n");
-    out.push_str(&crate::core::aliases::AliasFile::from_toml(
-        include_str!("../../aliases.toml"),
-    )
-    .map(|af| af.render(Shell::Zsh))
-    .unwrap_or_else(|e| format!("# aliases.toml parse error: {e}\n")));
+    out.push_str(&crate::core::aliases::AliasFile::builtin().render(Shell::Zsh));
 
     // ── Git cache & prompt functions ──────────────────────────────────────────
     out.push_str(r#"

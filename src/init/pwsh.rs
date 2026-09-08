@@ -57,11 +57,7 @@ if (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue) {
 
     // ── Aliases ───────────────────────────────────────────────────────────────
     out.push_str("\n# ── Aliases & Functions ──\n");
-    out.push_str(&crate::core::aliases::AliasFile::from_toml(
-        include_str!("../../aliases.toml"),
-    )
-    .map(|af| af.render(Shell::Pwsh))
-    .unwrap_or_else(|e| format!("# aliases.toml parse error: {e}\n")));
+    out.push_str(&crate::core::aliases::AliasFile::builtin().render(Shell::Pwsh));
 
     // ── Git helper ────────────────────────────────────────────────────────────
     out.push_str(r#"

@@ -34,15 +34,17 @@ pub fn run_fkill() -> Result<(), Box<dyn std::error::Error>> {
     let selected = Select::new("⚡ Select process to kill:", processes).prompt()?;
     let pid_str = selected.split_whitespace().next().unwrap_or("");
 
-    if let Ok(pid) = pid_str.parse::<i32>() {
-        if Confirm::new(&format!("Kill process PID {} ({})?", pid, selected.trim()))
+    if let Ok(pid_num) = pid_str.parse::<usize>() {
+        let target_pid = sysinfo::Pid::from(pid_num);
+        if Confirm::new(&format!("Kill process PID {} ({})?", pid_num, selected.trim()))
             .with_default(false)
             .prompt()?
         {
-            let status = Command::new("kill").arg("-9").arg(pid.to_string()).status();
-            match status {
-                Ok(s) if s.success() => println!("✅ Process {} terminated.", pid),
-                _ => eprintln!("❌ Failed to kill process {}.", pid),
+            if let Some(proc) = sys.process(target_pid) {
+                proc.kill();
+                println!("✅ Process {} terminated.", pid_num);
+            } else {
+                eprintln!("❌ Failed to locate process {}.", pid_num);
             }
         }
     }
@@ -75,9 +77,17 @@ pub fn run_kp(port_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> 
         return Ok(());
     }
 
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
     println!("⚡ Found process(es) on port {}: {}", port, pids.join(", "));
-    for pid in pids {
-        let _ = Command::new("kill").arg("-9").arg(pid).status();
+    for pid_str in pids {
+        if let Ok(pid_num) = pid_str.parse::<usize>() {
+            let target_pid = sysinfo::Pid::from(pid_num);
+            if let Some(proc) = sys.process(target_pid) {
+                proc.kill();
+            }
+        }
     }
     println!("✅ Successfully killed process(es) on port {}", port);
 

@@ -21,7 +21,7 @@ pub fn group() -> AliasGroup {
             },
             AliasEntry {
                 key: "myip".to_string(),
-                value: "ip a | grep inet".to_string(),
+                value: "ip -4 a".to_string(),
                 description: "Show local IP addresses".to_string(),
                 only_shells: vec!["bash".to_string(), "zsh".to_string(), "fish".to_string()],
             },

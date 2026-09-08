@@ -385,47 +385,14 @@ fn resolve_pkg<'a>(map: &'a str, pm: &PkgManager) -> &'a str {
 // ── fzf multi-select UI ───────────────────────────────────────────────────────
 
 fn launch_fzf(items: &[String], pm_label: &str) -> Result<Vec<usize>, Box<dyn std::error::Error>> {
-    let header = format!(
-        "  [TAB] Multi-select  |  [ENTER] Install  |  [ESC/Q] Exit  |  ({})\n  {}\n  STAT  CATEGORY  PACKAGE             DESCRIPTION",
-        pm_label,
-        "\u{2500}".repeat(68)
-    );
+    let prompt_msg = format!("⚡ Select tools to install/configure ({pm_label}):");
+    let chosen = match inquire::MultiSelect::new(&prompt_msg, items.to_vec()).prompt() {
+        Ok(v) => v,
+        Err(_) => return Ok(vec![]),
+    };
 
-    let input_block = items.join("\n");
-
-    let mut child = Command::new("fzf")
-        .args([
-            "--ansi",
-            "--multi",
-            "--height=90%",
-            "--layout=reverse",
-            "--border=rounded",
-            "--prompt=\u{1f50d} Arsenal > ",
-            &format!("--header={header}"),
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("fzf not found — install it first: {e}"))?;
-
-    if let Some(stdin) = child.stdin.as_mut() {
-        stdin.write_all(input_block.as_bytes())?;
-    }
-
-    let output = child.wait_with_output()?;
-    if !output.status.success() {
-        // ESC / q pressed — not an error
-        return Ok(vec![]);
-    }
-
-    let selected_lines: Vec<String> = String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(|l| l.to_string())
-        .collect();
-
-    // Match back to indices by full line equality
     let mut indices = vec![];
-    for sel in &selected_lines {
+    for sel in &chosen {
         if let Some(idx) = items.iter().position(|i| i == sel) {
             indices.push(idx);
         }

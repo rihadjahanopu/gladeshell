@@ -7,6 +7,7 @@ pub mod cpp_gen;
 pub mod dman;
 pub mod drive_jumper;
 pub mod extractor;
+pub mod fast_grep;
 pub mod ffmedia;
 pub mod file_renamer;
 pub mod fkill;

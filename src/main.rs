@@ -115,6 +115,10 @@ enum Commands {
     #[command(alias = "history")]
     Fh,
 
+    /// High-performance native ripgrep search engine (grep / rg)
+    #[command(alias = "rg")]
+    Grep(fancybash_core::tools::fast_grep::GrepArgs),
+
     /// Kill process running on a specific port (kp <port>)
     Kp(KpArgs),
 
@@ -350,6 +354,7 @@ fn main() {
         Commands::Gbranch => fancybash_core::tools::gbranch::run(),
         Commands::Fkill => fancybash_core::tools::fkill::run_fkill(),
         Commands::Fh => fancybash_core::tools::history_search::run(),
+        Commands::Grep(args) => fancybash_core::tools::fast_grep::run(args),
         Commands::Kp(args) => fancybash_core::tools::fkill::run_kp(args.port.as_deref()),
         Commands::Ii => fancybash_core::tools::project_setup::run_ii(),
         Commands::Next => fancybash_core::tools::project_setup::run_next(),

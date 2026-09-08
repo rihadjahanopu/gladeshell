@@ -79,6 +79,12 @@ pub fn group() -> AliasGroup {
                 description: "Native Ratatui interactive command history search and exec".to_string(),
                 only_shells: vec![],
             },
+            AliasEntry {
+                key: "rg".to_string(),
+                value: "fancybash grep".to_string(),
+                description: "Native high-performance ripgrep search engine".to_string(),
+                only_shells: vec![],
+            },
         ],
     }
 }

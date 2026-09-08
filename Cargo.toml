@@ -52,6 +52,13 @@ inquire = { version = "0.7", optional = true }
 ratatui = { version = "0.29", optional = true }
 crossterm = { version = "0.28", optional = true }
 
+# Fast Grep Engine (ripgrep crates)
+ignore = { version = "0.4", optional = true }
+grep-regex = { version = "0.1", optional = true }
+grep-searcher = { version = "0.1", optional = true }
+grep-printer = { version = "0.2", optional = true }
+termcolor = { version = "1.4", optional = true }
+
 # Directory walking (Phase 4 tools: ex, makecpp)
 walkdir = { version = "2", optional = true }
 
@@ -65,7 +72,19 @@ default = ["prompt-engine", "tools"]
 # Enable heavy Phase-2 prompt engine (git + async)
 prompt-engine = ["gix"]
 # Enable Phase-4 tool subcommands
-tools = ["sysinfo", "inquire", "ratatui", "crossterm", "walkdir", "ansi_term"]
+tools = [
+    "sysinfo",
+    "inquire",
+    "ratatui",
+    "crossterm",
+    "walkdir",
+    "ansi_term",
+    "ignore",
+    "grep-regex",
+    "grep-searcher",
+    "grep-printer",
+    "termcolor",
+]
 # Convenience: all features
 full = ["prompt-engine", "tools"]
 

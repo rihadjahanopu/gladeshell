@@ -111,6 +111,10 @@ enum Commands {
     /// Interactive Process Killer (sysinfo + fzf)
     Fkill,
 
+    /// Interactive Ratatui Fuzzy History Search (fh)
+    #[command(alias = "history")]
+    Fh,
+
     /// Kill process running on a specific port (kp <port>)
     Kp(KpArgs),
 
@@ -345,6 +349,7 @@ fn main() {
         Commands::Dman => fancybash_core::tools::dman::run(None),
         Commands::Gbranch => fancybash_core::tools::gbranch::run(),
         Commands::Fkill => fancybash_core::tools::fkill::run_fkill(),
+        Commands::Fh => fancybash_core::tools::history_search::run(),
         Commands::Kp(args) => fancybash_core::tools::fkill::run_kp(args.port.as_deref()),
         Commands::Ii => fancybash_core::tools::project_setup::run_ii(),
         Commands::Next => fancybash_core::tools::project_setup::run_next(),

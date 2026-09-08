@@ -13,6 +13,7 @@ pub mod fkill;
 pub mod fuzzy_cd;
 pub mod gbranch;
 pub mod git_wip;
+pub mod history_search;
 pub mod keep;
 pub mod notes;
 pub mod pc_optimizer;

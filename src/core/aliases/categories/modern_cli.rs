@@ -75,9 +75,9 @@ pub fn group() -> AliasGroup {
             },
             AliasEntry {
                 key: "fh".to_string(),
-                value: "eval \"$( (fc -l 1 2>/dev/null || history) | sed 's/^[ ]*[0-9]*[ ]*//' | fzf --reverse +s)\"".to_string(),
-                description: "FZF interactive command history search and exec".to_string(),
-                only_shells: vec!["bash".to_string(), "zsh".to_string()],
+                value: "eval \"$(fancybash fh)\"".to_string(),
+                description: "Native Ratatui interactive command history search and exec".to_string(),
+                only_shells: vec![],
             },
         ],
     }

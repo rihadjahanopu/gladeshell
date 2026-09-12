@@ -404,6 +404,7 @@ fn read_tasks(file_path: &PathBuf) -> Result<Vec<String>, Box<dyn std::error::Er
     Ok(tasks)
 }
 
+#[allow(dead_code)]
 fn remove_task(file_path: &PathBuf, index: usize) -> Result<(), Box<dyn std::error::Error>> {
     let tasks = read_tasks(file_path)?;
     let new: Vec<String> = tasks.into_iter().enumerate().filter(|(i, _)| *i != index).map(|(_, t)| t).collect();

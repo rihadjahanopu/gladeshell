@@ -114,7 +114,14 @@ fn handle_client(mut stream: UnixStream, buf: &mut [u8]) {
     }
 
     if parts.len() > 2 {
-        ctx.theme_id = parts[2].parse::<usize>().unwrap_or(0);
+        let raw_id = parts[2].parse::<usize>().unwrap_or(0);
+        // 0 = "use persisted theme" (the zsh/bash precmd hook always sends 0).
+        // Read from ~/.config/fancybash/theme so the user's choice survives reloads.
+        ctx.theme_id = if raw_id == 0 {
+            prompt::active_theme_id()
+        } else {
+            raw_id
+        };
     }
 
     if parts.len() > 3 {

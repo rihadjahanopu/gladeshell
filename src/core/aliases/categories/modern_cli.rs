@@ -91,12 +91,7 @@ pub fn group() -> AliasGroup {
                 description: "Native high-performance ripgrep search engine".to_string(),
                 only_shells: vec![],
             },
-            AliasEntry {
-                key: "cf".to_string(),
-                value: "fancybash cf".to_string(),
-                description: "Native interactive fuzzy directory navigator".to_string(),
-                only_shells: vec![],
-            },
+            // cf is a shell function — see render_cf_wrapper() in shared.rs
         ],
     }
 }

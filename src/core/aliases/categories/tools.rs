@@ -28,7 +28,7 @@ pub fn group() -> AliasGroup {
             AliasEntry { key: "rn".into(),      value: "fancybash rn".into(),      description: "Smart batch file renamer".into(), only_shells: vec![] },
             AliasEntry { key: "pg".into(),      value: "fancybash pg".into(),      description: "Universal package converter".into(), only_shells: vec![] },
             AliasEntry { key: "drive".into(),   value: "fancybash drive".into(),   description: "Smart external media drive jumper".into(), only_shells: vec![] },
-            AliasEntry { key: "cf".into(),      value: "fancybash cf".into(),      description: "Interactive fuzzy directory navigator".into(), only_shells: vec![] },
+            // cf is a shell function (not alias) — defined in render_cf_wrapper() so it can `cd`
             AliasEntry { key: "kp".into(),      value: "fancybash kp".into(),      description: "Kill process on port".into(), only_shells: vec![] },
             AliasEntry { key: "ii".into(),      value: "fancybash ii".into(),      description: "Interactive project setup".into(), only_shells: vec![] },
             AliasEntry { key: "keep".into(),    value: "fancybash keep".into(),    description: "Master Command Center Help Menu UI".into(), only_shells: vec![] },

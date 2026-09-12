@@ -4,7 +4,7 @@
 
 use std::error::Error;
 use std::fs;
-use std::io::stdout;
+use std::io::stderr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -18,7 +18,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Wrap},
     Terminal,
 };
 
@@ -105,7 +105,17 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let selected_idx = match run_video_tui(&videos)? {
+    let player_display_name = match player_info.0.as_str() {
+        "vlc" => "VLC Media Player",
+        "mpv" => "MPV Video Player",
+        "flatpak" => "VLC (Flatpak)",
+        "celluloid" => "Celluloid Player",
+        "totem" => "GNOME Videos (Totem)",
+        "xdg-open" => "Default OS Player",
+        other => other,
+    };
+
+    let selected_idx = match run_video_tui(&videos, player_display_name)? {
         Some(idx) => idx,
         None => return Ok(()),
     };
@@ -119,10 +129,25 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn format_size(bytes: u64) -> String {
+    if bytes < 1024 {
+        format!("{} B", bytes)
+    } else if bytes < 1024 * 1024 {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    } else if bytes < 1024 * 1024 * 1024 {
+        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    } else {
+        format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+    }
+}
+
 #[derive(Clone)]
 struct VideoItem {
+    path: PathBuf,
     folder: String,
     name: String,
+    ext: String,
+    size_str: String,
 }
 
 struct VideoApp {
@@ -148,9 +173,20 @@ impl VideoApp {
                     .and_then(|s| s.to_str())
                     .unwrap_or("")
                     .to_string();
+                let ext = p
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_uppercase();
+                let size_bytes = fs::metadata(p).map(|m| m.len()).unwrap_or(0);
+                let size_str = format_size(size_bytes);
+
                 VideoItem {
+                    path: p.clone(),
                     folder,
                     name,
+                    ext,
+                    size_str,
                 }
             })
             .collect();
@@ -174,6 +210,7 @@ impl VideoApp {
                 if q.is_empty()
                     || item.name.to_lowercase().contains(&q)
                     || item.folder.to_lowercase().contains(&q)
+                    || item.ext.to_lowercase().contains(&q)
                 {
                     Some(idx)
                 } else {
@@ -200,79 +237,85 @@ impl VideoApp {
             self.cursor += 1;
         }
     }
+
+    fn current_selected(&self) -> Option<&VideoItem> {
+        if self.filtered.is_empty() || self.cursor >= self.filtered.len() {
+            None
+        } else {
+            let real_idx = self.filtered[self.cursor];
+            Some(&self.all[real_idx])
+        }
+    }
 }
 
-fn run_video_tui(videos: &[PathBuf]) -> Result<Option<usize>, Box<dyn Error>> {
+fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>, Box<dyn Error>> {
     enable_raw_mode()?;
-    let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
+    let mut stderr_handle = stderr();
+    execute!(stderr_handle, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stderr_handle);
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = VideoApp::new(videos);
 
-    let c_blue = Color::Rgb(100, 160, 255);
+    // Modern Vibrant Color Palette
+    let c_violet = Color::Rgb(147, 112, 219);
+    let c_cyan = Color::Rgb(0, 220, 230);
+    let c_magenta = Color::Rgb(255, 105, 180);
+    let c_green = Color::Rgb(50, 205, 50);
     let c_yellow = Color::Rgb(255, 215, 0);
-    let c_magenta = Color::Rgb(255, 80, 220);
-    let c_cyan = Color::Rgb(0, 220, 220);
-    let c_green = Color::Rgb(80, 220, 120);
+    let c_card_bg = Color::Rgb(25, 28, 42);
 
     let res = loop {
         terminal.draw(|f| {
             let outer_block = Block::default()
+                .title(Span::styled(
+                    format!(" 🎬 FANCYBASH VIDEO VAULT & PLAYER  |  Engine: {} ", player_name),
+                    Style::default().fg(c_magenta).add_modifier(Modifier::BOLD),
+                ))
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::DarkGray));
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(c_violet));
 
-            let inner_area = outer_block.inner(f.area());
-            f.render_widget(outer_block, f.area());
+            let area = f.area();
+            f.render_widget(outer_block.clone(), area);
+            let inner_area = outer_block.inner(area);
 
-            let chunks = Layout::default()
+            let main_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(1), // Table Header (IDX   FOLDER        VIDEO NAME)
-                    Constraint::Length(1), // Search Input (🔍 Search: | query)
-                    Constraint::Length(1), // Count (9/9)
-                    Constraint::Length(1), // Divider (────)
-                    Constraint::Min(4),    // Items list
+                    Constraint::Length(1), // Top status bar (Search + Counts + Quick help)
+                    Constraint::Min(6),    // Main dual pane body
                 ])
                 .split(inner_area);
 
-            // 1. Table Column Titles
-            let header_line = Line::from(vec![
-                Span::raw("    "),
-                Span::styled("IDX", Style::default().fg(c_blue).add_modifier(Modifier::BOLD)),
-                Span::raw("   "),
-                Span::styled("FOLDER", Style::default().fg(c_yellow).add_modifier(Modifier::BOLD)),
-                Span::raw("        "),
-                Span::styled("VIDEO NAME", Style::default().fg(c_magenta).add_modifier(Modifier::BOLD)),
-            ]);
-            f.render_widget(Paragraph::new(header_line), chunks[0]);
-
-            // 2. Search Input Prompt
-            let search_line = Line::from(vec![
-                Span::styled("🔍 Search: ", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD)),
-                Span::styled(&app.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-                Span::styled("│", Style::default().fg(c_yellow)),
-            ]);
-            f.render_widget(Paragraph::new(search_line), chunks[1]);
-
-            // 3. Match Count (e.g., 9/9)
+            // 1. Search Bar & Status Header
             let count_str = format!("{}/{}", app.filtered.len(), app.all.len());
-            let count_line = Line::from(vec![
+            let search_line = Line::from(vec![
+                Span::styled("🔍 Filter: ", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD)),
+                Span::styled(&app.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                Span::styled("█ ", Style::default().fg(c_yellow)),
+                Span::styled(format!("({} matched)", count_str), Style::default().fg(c_green)),
                 Span::raw("   "),
-                Span::styled(count_str, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                Span::styled("[ENTER] Play  |  [ESC] Exit  |  [↑/↓] Select", Style::default().fg(Color::DarkGray)),
             ]);
-            f.render_widget(Paragraph::new(count_line), chunks[2]);
+            f.render_widget(Paragraph::new(search_line), main_chunks[0]);
 
-            // 4. Divider Line
-            let width = chunks[3].width as usize;
-            let divider_str = "─".repeat(width);
-            let divider_line = Line::from(vec![
-                Span::styled(divider_str, Style::default().fg(Color::DarkGray)),
-            ]);
-            f.render_widget(Paragraph::new(divider_line), chunks[3]);
+            // 2. Dual Pane Body (Left: Video List 55%, Right: Video Info Card 45%)
+            let body_chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(55),
+                    Constraint::Percentage(45),
+                ])
+                .split(main_chunks[1]);
 
-            // 5. Video List Items
+            // Left Pane: Video List
+            let list_block = Block::default()
+                .title(Span::styled(" 📁 Available Videos ", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD)))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::DarkGray));
+
             let items: Vec<ListItem> = app
                 .filtered
                 .iter()
@@ -282,42 +325,84 @@ fn run_video_tui(videos: &[PathBuf]) -> Result<Option<usize>, Box<dyn Error>> {
                     let is_selected = filtered_idx == app.cursor;
 
                     let pointer = if is_selected { "▶ " } else { "  " };
-                    let idx_str = format!("{:<3}", filtered_idx + 1);
-                    let folder_str = format!("{:<12}", item.folder);
+                    let idx_str = format!("{:02} ", filtered_idx + 1);
+                    let ext_badge = format!("[{}] ", item.ext);
+                    let size_badge = format!("[{}]", item.size_str);
 
-                    let pointer_span = Span::styled(pointer, Style::default().fg(c_green).add_modifier(Modifier::BOLD));
-                    let idx_span = Span::styled(idx_str, Style::default().fg(c_blue));
-                    let icon_span = Span::styled("📁 ", Style::default().fg(c_yellow));
-                    let folder_span = Span::styled(folder_str, Style::default().fg(c_yellow));
-                    let name_span = Span::styled(
-                        &item.name,
-                        if is_selected {
-                            Style::default().fg(Color::White).add_modifier(Modifier::BOLD)
-                        } else {
-                            Style::default().fg(c_green)
-                        },
-                    );
+                    let style_base = if is_selected {
+                        Style::default().fg(Color::White).bg(c_card_bg).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Gray)
+                    };
 
                     let line = Line::from(vec![
-                        pointer_span,
-                        idx_span,
+                        Span::styled(pointer, if is_selected { Style::default().fg(c_green).add_modifier(Modifier::BOLD) } else { Style::default().fg(Color::DarkGray) }),
+                        Span::styled(idx_str, Style::default().fg(c_cyan)),
+                        Span::styled(&item.name, style_base),
                         Span::raw(" "),
-                        icon_span,
-                        folder_span,
-                        Span::raw(" "),
-                        name_span,
+                        Span::styled(ext_badge, Style::default().fg(c_yellow)),
+                        Span::styled(size_badge, Style::default().fg(c_magenta)),
                     ]);
 
                     ListItem::new(line)
                 })
                 .collect();
 
-            let list_widget = List::new(items);
+            let list_widget = List::new(items).block(list_block);
             let mut state = ListState::default();
             if !app.filtered.is_empty() {
                 state.select(Some(app.cursor));
             }
-            f.render_stateful_widget(list_widget, chunks[4], &mut state);
+            f.render_stateful_widget(list_widget, body_chunks[0], &mut state);
+
+            // Right Pane: Live Media Preview & Info Card
+            let info_block = Block::default()
+                .title(Span::styled(" ℹ️ Media Details ", Style::default().fg(c_yellow).add_modifier(Modifier::BOLD)))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::DarkGray));
+
+            let info_inner = info_block.inner(body_chunks[1]);
+            f.render_widget(info_block, body_chunks[1]);
+
+            if let Some(sel) = app.current_selected() {
+                let info_lines = vec![
+                    Line::from(vec![
+                        Span::styled("🎬 Name: ", Style::default().fg(c_magenta).add_modifier(Modifier::BOLD)),
+                        Span::styled(&sel.name, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                    ]),
+                    Line::from(vec![
+                        Span::styled("📁 Folder: ", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD)),
+                        Span::styled(&sel.folder, Style::default().fg(Color::Yellow)),
+                    ]),
+                    Line::from(vec![
+                        Span::styled("💾 Size: ", Style::default().fg(c_green).add_modifier(Modifier::BOLD)),
+                        Span::styled(&sel.size_str, Style::default().fg(Color::White)),
+                    ]),
+                    Line::from(vec![
+                        Span::styled("🎞️ Format: ", Style::default().fg(c_yellow).add_modifier(Modifier::BOLD)),
+                        Span::styled(&sel.ext, Style::default().fg(c_cyan)),
+                    ]),
+                    Line::from(vec![
+                        Span::styled("📍 Path: ", Style::default().fg(Color::DarkGray)),
+                        Span::styled(sel.path.display().to_string(), Style::default().fg(Color::DarkGray)),
+                    ]),
+                    Line::raw(""),
+                    Line::from(Span::styled("┌────────────────────────────────────┐", Style::default().fg(c_violet))),
+                    Line::from(Span::styled("│   🎬  FANCYBASH MEDIA PLAYER       │", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD))),
+                    Line::from(Span::styled("│                                    │", Style::default().fg(c_violet))),
+                    Line::from(Span::styled("│     [▶] PRESS ENTER TO PLAY        │", Style::default().fg(c_green).add_modifier(Modifier::BOLD))),
+                    Line::from(Span::styled("│         VIDEO IN BACKGROUND        │", Style::default().fg(c_yellow))),
+                    Line::from(Span::styled("└────────────────────────────────────┘", Style::default().fg(c_violet))),
+                ];
+                let info_paragraph = Paragraph::new(info_lines).wrap(Wrap { trim: true });
+                f.render_widget(info_paragraph, info_inner);
+            } else {
+                let empty_para = Paragraph::new(vec![
+                    Line::from(Span::styled("❌ No video selected", Style::default().fg(Color::Red))),
+                ]);
+                f.render_widget(empty_para, info_inner);
+            }
         })?;
 
         if event::poll(std::time::Duration::from_millis(100))? {
@@ -377,5 +462,11 @@ mod tests {
     fn test_video_extensions_list() {
         assert!(VIDEO_EXTENSIONS.contains(&"mp4"));
         assert!(VIDEO_EXTENSIONS.contains(&"mkv"));
+    }
+
+    #[test]
+    fn test_format_size() {
+        assert_eq!(format_size(500), "500 B");
+        assert_eq!(format_size(1048576), "1.0 MB");
     }
 }

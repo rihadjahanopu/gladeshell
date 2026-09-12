@@ -3102,8 +3102,8 @@ function v {
 
     [ -z "$RAW_LIST" ] && echo "❌ No videos found" && return 1
 
-    # 🎨 UI Header
-    local HEADER_STR=$(printf "\e[1;34m%-5s \e[1;33m%-20s \e[1;35m%-s\e[0m" "IDX" "FOLDER" "VIDEO NAME")
+    # 🎨 Modern UI Header
+    local HEADER_STR=$(printf "\e[1;36m%-5s \e[1;33m%-22s \e[1;35m%-s\e[0m" "IDX" "FOLDER" "VIDEO FILE NAME")
 
     local SELECTED_LINE
     SELECTED_LINE=$(echo "$RAW_LIST" | awk -F/ '{
@@ -3112,18 +3112,20 @@ function v {
         filename = $NF;
         folder_with_icon = "📁 " folder;
         if (length(filename) > 55) filename = substr(filename, 1, 52) "...";
-        if (length(folder_with_icon) > 17) folder_with_icon = substr(folder_with_icon, 1, 14) "...";
-        printf "\033[34m%-5s \033[33m%-20s \033[0m%s\n", idx, folder_with_icon, filename
+        if (length(folder_with_icon) > 19) folder_with_icon = substr(folder_with_icon, 1, 16) "...";
+        printf "\033[36m%02d   \033[33m%-22s \033[1;37m%s\033[0m\n", idx, folder_with_icon, filename
     }' | fzf \
         --ansi \
         --reverse \
-        --height=60% \
-        --border=rounded \
+        --height=70% \
+        --border=double \
+        --border-label=" 🎬 FANCYBASH VIDEO VAULT & PLAYER " \
+        --border-label-pos=3 \
         --header="$HEADER_STR" \
         --header-first \
-        --prompt="🔍 Search: " \
-        --pointer="▶" \
-        --color="bg+:-1,fg+:white,hl:yellow,hl+:cyan,header:blue,prompt:cyan,pointer:green")
+        --prompt="🔍 Filter: " \
+        --pointer="▶ " \
+        --color="bg+:#1e1e2e,fg+:white,hl:#f9e2af,hl+:#89dceb,header:#cba6f7,prompt:#89b4fa,pointer:#a6e3a1,border:#cba6f7,label:#f5c2e7")
 
     if [ -n "$SELECTED_LINE" ]; then
         local INDEX=$(echo "$SELECTED_LINE" | sed 's/\x1b\[[0-9;]*m//g' | awk '{print $1}')
@@ -4949,7 +4951,7 @@ function ut {
             "neovim")
                 mkdir -p ~/.config/nvim
                 [[ ! -f ~/.config/nvim/init.vim ]] && echo -e "set number\nset relativenumber\nset mouse=a\nset termguicolors" > ~/.config/nvim/init.vim
-                add_config "Neovim Alias" "alias v='nvim'\nalias vim='nvim'"
+                add_config "Neovim Alias" "alias nv='nvim'\nalias vim='nvim'"
                 ;;
             "zram-tools")
                 if [[ "$PKG_MANAGER" == "apt" ]]; then

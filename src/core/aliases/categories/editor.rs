@@ -14,7 +14,7 @@ pub fn group() -> AliasGroup {
                 only_shells: vec![],
             },
             AliasEntry {
-                key: "v".to_string(),
+                key: "vm".to_string(),
                 value: "vim .".to_string(),
                 description: "Open current directory in Vim".to_string(),
                 only_shells: vec![],

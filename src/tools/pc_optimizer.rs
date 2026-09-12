@@ -746,7 +746,7 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                     "set number\nset relativenumber\nset mouse=a\nset termguicolors\n",
                 );
             }
-            add_config_to_rc(rc_file, "Neovim Alias", "alias v='nvim'\nalias vim='nvim'");
+            add_config_to_rc(rc_file, "Neovim Alias", "alias nv='nvim'\nalias vim='nvim'");
         }
         "zram-tools" => {
             if pm == &PkgManager::Apt {

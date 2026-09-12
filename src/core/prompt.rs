@@ -66,10 +66,10 @@ pub struct Theme {
 //  neon_pulse) are kept as-is to match the Zsh function suffix.
 
 pub static THEMES: &[Theme] = &[
-    // 00 ── minimal — random color per precmd (use cyan as static default)
-    Theme { name: "minimal",          emoji: "",   user_color: a8(36),          path_color: a8(36),          git_color: a8(32),          prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: ""   },
-    // 01 ── full — detailed two-line
-    Theme { name: "full",             emoji: "",   user_color: a8(36),          path_color: a8(36),          git_color: a8(32),          prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: ""   },
+    // 00 ── minimal — ultra-clean compact path prompt (user_color=0 hides user@host)
+    Theme { name: "minimal",          emoji: "",   user_color: 0,               path_color: a8(51),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    // 01 ── full — rich detailed theme with cyan/green/yellow accents
+    Theme { name: "full",             emoji: "⚡", user_color: a8(51),          path_color: a8(82),          git_color: a8(226),         prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: ""   },
     // 02 ── robbyrussell — %F{green}➜ cyan path green ❯
     Theme { name: "robbyrussell",     emoji: "➜",  user_color: a8(46),          path_color: a8(51),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
     // 03 ── p10k — blue ╭─/╰─, 🐧 green@host cyan path
@@ -317,8 +317,22 @@ pub fn active_theme_id() -> usize {
 }
 
 /// Saves the selected theme name to ~/.config/fancybash/theme.
+/// Saves the selected theme name to ~/.config/fancybash/theme.
 pub fn set_active_theme(name: &str) -> Result<usize, String> {
-    if let Some((i, theme)) = THEMES.iter().enumerate().find(|(_, t)| t.name.eq_ignore_ascii_case(name)) {
+    let name_trim = name.trim();
+    if let Ok(num) = name_trim.parse::<usize>() {
+        let idx = if num > 0 { num - 1 } else { 0 };
+        if idx < THEMES.len() {
+            let theme = &THEMES[idx];
+            let path = theme_config_path();
+            if let Some(parent) = path.parent() { let _ = std::fs::create_dir_all(parent); }
+            if std::fs::write(&path, theme.name).is_ok() {
+                return Ok(idx);
+            }
+        }
+    }
+
+    if let Some((i, theme)) = THEMES.iter().enumerate().find(|(_, t)| t.name.eq_ignore_ascii_case(name_trim)) {
         let path = theme_config_path();
         if let Some(parent) = path.parent() { let _ = std::fs::create_dir_all(parent); }
         if std::fs::write(&path, theme.name).is_ok() {
@@ -393,17 +407,19 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
         write_str(buf, &mut off, " ");
     }
 
-    // User@host in user_color (bold)
-    if !write_theme_color(buf, &mut off, theme.user_color, s) { return Err("buffer too small"); }
-    if !write_ansi(buf, &mut off, BOLD, s) { return Err("buffer too small"); }
+    // User@host in user_color (bold) — skipped if user_color == 0 (e.g. minimal theme)
+    if theme.user_color != 0 {
+        if !write_theme_color(buf, &mut off, theme.user_color, s) { return Err("buffer too small"); }
+        if !write_ansi(buf, &mut off, BOLD, s) { return Err("buffer too small"); }
 
-    let user = std::str::from_utf8(&ctx.user[..ctx.user_len]).unwrap_or("user");
-    let host = std::str::from_utf8(&ctx.host[..ctx.host_len]).unwrap_or("host");
-    write_str(buf, &mut off, user);
-    write_str(buf, &mut off, "@");
-    write_str(buf, &mut off, host);
-    write_ansi(buf, &mut off, RESET, s);
-    write_str(buf, &mut off, " ");
+        let user = std::str::from_utf8(&ctx.user[..ctx.user_len]).unwrap_or("user");
+        let host = std::str::from_utf8(&ctx.host[..ctx.host_len]).unwrap_or("host");
+        write_str(buf, &mut off, user);
+        write_str(buf, &mut off, "@");
+        write_str(buf, &mut off, host);
+        write_ansi(buf, &mut off, RESET, s);
+        write_str(buf, &mut off, " ");
+    }
 
     // CWD in path_color
     write_theme_color(buf, &mut off, theme.path_color, s);

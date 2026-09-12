@@ -82,16 +82,16 @@ impl FuzzyCdApp {
             size: 4096,
         });
 
-        let max_entries = 10000;
+        let max_entries = 3000;
         let walker = WalkDir::new(&self.current_dir)
-            .max_depth(5)
+            .max_depth(3)
             .into_iter()
             .filter_entry(|e| {
                 if let Some(name) = e.file_name().to_str() {
                     if name.starts_with('.') && name != "." && name != ".." {
                         return false;
                     }
-                    if name == "node_modules" || name == "target" || name == "vendor" || name == "dist" || name == "build" {
+                    if name == "node_modules" || name == "target" || name == "vendor" || name == "dist" || name == "build" || name == ".git" {
                         return false;
                     }
                 }
@@ -109,7 +109,7 @@ impl FuzzyCdApp {
             }
 
             let is_dir = entry.file_type().is_dir();
-            let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+            let size = 0;
 
             let rel_path = match path.strip_prefix(&self.current_dir) {
                 Ok(rel) => {
@@ -174,7 +174,7 @@ impl FuzzyCdApp {
 
         for path in candidates {
             let is_dir = path.is_dir();
-            let size = fs::metadata(&path).map(|m| m.len()).unwrap_or(4096);
+            let size = 4096;
             let rel_path = if let Ok(rel) = path.strip_prefix(&self.current_dir) {
                 format!("./{}/", rel.display())
             } else {
@@ -541,13 +541,14 @@ fn dirs_home() -> Option<PathBuf> {
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     let current_dir = std::env::current_dir()?;
-    let mut app = FuzzyCdApp::new(current_dir);
 
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
+    let mut stderr = io::stderr();
+    execute!(stderr, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
+
+    let mut app = FuzzyCdApp::new(current_dir);
 
     let res = app.run_loop(&mut terminal);
 

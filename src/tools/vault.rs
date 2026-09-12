@@ -51,6 +51,7 @@ const MENU_ITEMS: &[&str] = &[
     "  📋  List All Vaults",
 ];
 
+#[allow(dead_code)]
 #[derive(Clone, PartialEq)]
 enum Mode {
     Menu,
@@ -60,6 +61,7 @@ enum Mode {
     Processing,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, PartialEq)]
 enum VaultAction { Unlock, Lock, Create }
 

@@ -323,6 +323,7 @@ pub fn render_cf_wrapper(shell: Shell) -> String {
     match shell {
         Shell::Zsh | Shell::Bash => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
+unalias cf 2>/dev/null
 cf() {
     local target
     target="$(fancybash cf "$@")"
@@ -335,6 +336,7 @@ cf() {
 "#.to_string(),
         Shell::Fish => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
+functions -e cf 2>/dev/null
 function cf
     set -l target (fancybash cf $argv)
     if test -n "$target" -a -d "$target"
@@ -346,6 +348,7 @@ end
 "#.to_string(),
         Shell::Pwsh => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
+Remove-Item alias:cf -ErrorAction SilentlyContinue 2>$null
 function cf {
     $target = fancybash cf @args
     if ($target -and (Test-Path -Path $target -PathType Container)) {
@@ -407,5 +410,13 @@ mod tests {
     fn test_render_bun_setup() {
         assert!(render_bun_setup(Shell::Zsh).contains("BUN_INSTALL"));
         assert!(render_bun_setup(Shell::Fish).contains("BUN_INSTALL"));
+    }
+
+    #[test]
+    fn test_render_cf_wrapper() {
+        assert!(render_cf_wrapper(Shell::Bash).contains("unalias cf"));
+        assert!(render_cf_wrapper(Shell::Zsh).contains("unalias cf"));
+        assert!(render_cf_wrapper(Shell::Fish).contains("functions -e cf"));
+        assert!(render_cf_wrapper(Shell::Pwsh).contains("Remove-Item alias:cf"));
     }
 }

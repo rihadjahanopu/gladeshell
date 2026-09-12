@@ -139,7 +139,7 @@ value       = "code ."
 description = "Open current directory in VS Code"
 
 [[group.aliases]]
-key         = "v"
+key         = "vm"
 value       = "vim ."
 description = "Open current directory in Vim"
 
@@ -685,11 +685,6 @@ description = "Native high-performance ripgrep search engine"
 key         = "grep"
 value       = "fancybash grep"
 description = "Native high-performance ripgrep search engine"
-
-[[group.aliases]]
-key         = "cf"
-value       = "fancybash cf"
-description = "Native interactive fuzzy directory navigator"
 
 # ── fancybash Maintenance ────────────────────────────────────────────────────
 [[group]]

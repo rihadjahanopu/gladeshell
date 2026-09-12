@@ -2,6 +2,7 @@
 // Phase 4 & 5 tool subcommand modules.
 // Each module replaces a complex shell function with a native Rust implementation.
 
+pub mod auto_ls;
 pub mod bun_runner;
 pub mod cpp_gen;
 pub mod dep_installer;

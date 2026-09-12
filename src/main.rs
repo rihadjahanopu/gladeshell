@@ -203,6 +203,10 @@ enum Commands {
     /// Hidden command: Ensure a system dependency is installed (used from shell init)
     #[command(name = "ensure-dep", hide = true)]
     EnsureDep(fancybash_core::tools::dep_installer::DepArgs),
+
+    /// Native Rust Auto-LS directory change summary
+    #[command(name = "auto-ls")]
+    AutoLs,
 }
 
 #[derive(clap::Args, Debug)]
@@ -389,6 +393,10 @@ fn main() {
             Commands::Prompt(args) => cmd_prompt(args),
             Commands::InternalCleanRc => cmd_internal_clean_rc(),
             Commands::EnsureDep(args) => fancybash_core::tools::dep_installer::run(&args),
+            Commands::AutoLs => {
+                fancybash_core::tools::auto_ls::run();
+                Ok(())
+            }
         },
         None => fancybash_core::tools::keep::run(),
     };

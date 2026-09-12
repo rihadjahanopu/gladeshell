@@ -1,14 +1,14 @@
-#!/usr/bin/env zsh
+#!/bin/bash
 
 set -euo pipefail
 
-ZSHRC="$HOME/.zshrc"
-URL="https://raw.githubusercontent.com/rihadjahanopu/fancybash/refs/heads/main/config.zsh"
-FALLBACK_URL="https://fancybash.netlify.app/public/config.zsh"
-START="# >>> fancy-zshrc >>>"
-END="# <<< fancy-zshrc <<<"
-SCRIPT_DIR="$(cd "$(dirname "${(%):-%x}")" 2>/dev/null && pwd || echo "$PWD")"
-LOCAL_CONFIG="$SCRIPT_DIR/config.zsh"
+BASHRC="$HOME/.bashrc"
+URL="https://raw.githubusercontent.com/rihadjahanopu/fancybash/refs/heads/main/config.sh"
+FALLBACK_URL="https://fancybash.netlify.app/public/config.sh"
+START="# >>> fancy-bashrc >>>"
+END="# <<< fancy-bashrc <<<"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "$PWD")"
+LOCAL_CONFIG="$SCRIPT_DIR/config.sh"
 
 # ─── Colors & Formatting ───────────────────
 RED='\033[38;2;243;139;168m'
@@ -63,7 +63,7 @@ spinner() {
 # ─── Progress Bar ──────────────────────────
 draw_progress_bar() {
     local current=$1
-    local total=6
+    local total=5
     local width=30
     local percentage=$((current * 100 / total))
     local completed=$((width * current / total))
@@ -86,7 +86,7 @@ show_header() {
     echo -e "${BLUE}          ██║     ██║  ██║██║ ╚████║╚██████╗   ██║   ██████╔╝██║  ██║███████║██║  ██║${NC}"
     echo -e "${BLUE}          ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝${NC}"
     echo ""
-    echo -e "   ✨ ${BOLD}${CYAN}F A N C Y B A S H${NC}  •  ${BOLD}Zsh Config Installer${NC}"
+    echo -e "   ✨ ${BOLD}${CYAN}F A N C Y B A S H${NC}  •  ${BOLD}Bash Config Installer${NC}"
     echo ""
 }
 
@@ -112,17 +112,17 @@ show_sysinfo() {
             _ppid_cmd=$(sed 's/^-//' "/proc/$PPID/comm" 2>/dev/null)
         case "${_ppid_cmd:-}" in
             zsh|bash|fish|dash|sh) current_shell="$_ppid_cmd" ;;
-            *) current_shell=$(basename "${SHELL:-zsh}") ;;
+            *) current_shell=$(basename "${SHELL:-bash}") ;;
         esac
     fi
 
     echo -e "\n${BLUE}──────────────────────────────────────────────────${NC}"
-    echo -e " 🖥️  ${BOLD}SYSTEM INFORMATION${NC}"
-    echo -e "${BLUE}──────────────────────────────────────────────────${NC}\n"
+    echo -e " 🖥️   ${BOLD}SYSTEM INFORMATION${NC}"
+    echo -e "${BLUE}──────────────────────────────────────────────────${NC}"
     echo -e "  💻  ${BOLD}OS:${NC}      ${CYAN}$os_name${NC}"
     echo -e "  👤  ${BOLD}User:${NC}    ${CYAN}$user${NC}"
     echo -e "  🐚  ${BOLD}Shell:${NC}   ${CYAN}$current_shell${NC}"
-    echo -e "  ⚙️   ${BOLD}Arch:${NC}    ${CYAN}$arch${NC}\n"
+    echo -e "  ⚙️   ${BOLD}Arch:${NC}    ${CYAN}$arch${NC}"
     echo -e "${BLUE}──────────────────────────────────────────────────${NC}\n"
     echo ""
 }
@@ -252,10 +252,10 @@ check_and_install_fonts() {
                 echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | $sudo_cmd tee /etc/apt/sources.list.d/charm.list >/dev/null 2>&1 || true
             fi
             $sudo_cmd apt update -qq >/dev/null 2>&1 || true
-            $sudo_cmd apt install -y curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano fonts-noto-color-emoji fonts-firacode fonts-cascadia-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd apt install -y curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion fonts-noto-color-emoji fonts-firacode fonts-cascadia-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
             ;;
         pacman)
-            $sudo_cmd pacman -Sy --noconfirm curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano ttf-noto-emoji ttf-fira-code ttf-cascadia-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd pacman -Sy --noconfirm curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion ttf-noto-emoji ttf-fira-code ttf-cascadia-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
             ;;
         dnf)
             if ! command -v gum &>/dev/null || ! command -v glow &>/dev/null; then
@@ -266,13 +266,13 @@ enabled=1
 gpgcheck=1
 gpgkey=https://repo.charm.sh/yum/gpg.key' | $sudo_cmd tee /etc/yum.repos.d/charm.repo >/dev/null 2>&1 || true
             fi
-            $sudo_cmd dnf install -y curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano google-noto-emoji-fonts fira-code-fonts cascadia-code-fonts fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd dnf install -y curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion google-noto-emoji-fonts fira-code-fonts cascadia-code-fonts fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
             ;;
         apk)
-            $sudo_cmd apk add --no-cache curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano font-noto-emoji font-fira-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd apk add --no-cache curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion font-noto-emoji font-fira-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
             ;;
         brew)
-            brew install curl git fzf gum glow bat zoxide chafa nano font-fira-code font-cascadia-code font-noto-emoji >/dev/null 2>&1 || true
+            brew install curl git fzf gum glow bat zoxide chafa nano bash-completion font-fira-code font-cascadia-code font-noto-emoji >/dev/null 2>&1 || true
             ;;
         *)
             printf "  ${GRAY}ℹ Package manager not recognized. Skipping.${NC}\n"
@@ -320,71 +320,15 @@ EOF
     fi
 }
 
-# ─── Install Zsh Plugins ───────────────────
-install_zsh_plugins() {
-    printf "  ${CYAN}➜${NC} Setting up Zsh plugins...\n"
-
-    local zsh_dir="$HOME/.zsh"
-    mkdir -p "$zsh_dir"
-
-    # zsh-syntax-highlighting
-    if [ -d "$zsh_dir/zsh-syntax-highlighting" ]; then
-        printf "  ${GREEN}✔${NC} zsh-syntax-highlighting already exists, skipping.\n"
-    else
-        (
-            git clone --quiet https://github.com/zsh-users/zsh-syntax-highlighting.git \
-                "$zsh_dir/zsh-syntax-highlighting" 2>/dev/null
-        ) &
-        spinner $! "Cloning zsh-syntax-highlighting..."
-    fi
-
-    # zsh-autosuggestions
-    if [ -d "$zsh_dir/zsh-autosuggestions" ]; then
-        printf "  ${GREEN}✔${NC} zsh-autosuggestions already exists, skipping.\n"
-    else
-        (
-            git clone --quiet https://github.com/zsh-users/zsh-autosuggestions.git \
-                "$zsh_dir/zsh-autosuggestions" 2>/dev/null
-        ) &
-        spinner $! "Cloning zsh-autosuggestions..."
-    fi
-
-    # zsh-completions
-    if [ -d "$zsh_dir/zsh-completions" ]; then
-        printf "  ${GREEN}✔${NC} zsh-completions already exists, skipping.\n"
-    else
-        (
-            git clone --quiet https://github.com/zsh-users/zsh-completions.git \
-                "$zsh_dir/zsh-completions" 2>/dev/null
-        ) &
-        spinner $! "Cloning zsh-completions..."
-    fi
-
-    printf "  ${GREEN}✔${NC} Zsh plugins ready in ${PURPLE}~/.zsh/${NC}\n"
-}
-
 # ─── Remove Old Config Block ───────────────
 remove_old_config() {
-    # 1. Clean up standalone NVM/Bun auto-added lines outside the fancybash block
-    if grep -qF "$START" "$ZSHRC" 2>/dev/null; then
-        if [ "$(uname)" = "Darwin" ]; then
-            sed -i '' '/# >>> fancy-zshrc >>>/,/# <<< fancy-zshrc <<</!{ /nvm\.sh/d; /bash_completion/d; /_bun/d; /bun completions/d; }' "$ZSHRC" 2>/dev/null || true
-        else
-            sed -i '/# >>> fancy-zshrc >>>/,/# <<< fancy-zshrc <<</!{ /nvm\.sh/d; /bash_completion/d; /_bun/d; /bun completions/d; }' "$ZSHRC" 2>/dev/null || true
-        fi
-    fi
-
-    # 2. Remove old fancy-zshrc block
-    if grep -qF "$START" "$ZSHRC" 2>/dev/null; then
-        printf "  ${YELLOW}⚠${NC} Found existing fancy-zshrc block — removing old config first...\n"
-        local start_pattern end_pattern
-        start_pattern="$(printf '%s' "$START" | sed 's/[]\/\$*.^[]/\\&/g')"
-        end_pattern="$(printf '%s' "$END" | sed 's/[]\/\$*.^[]/\\&/g')"
-        while grep -qF "$START" "$ZSHRC" 2>/dev/null; do
+    if grep -qF "$START" "$BASHRC" 2>/dev/null; then
+        printf "  ${YELLOW}⚠${NC} Found existing fancy-bashrc block — removing old config first...\n"
+        while grep -qF "$START" "$BASHRC" 2>/dev/null; do
             if [ "$(uname)" = "Darwin" ]; then
-                sed -i '' "/${start_pattern}/,/${end_pattern}/d" "$ZSHRC"
+                sed -i '' '/# >>> fancy-bashrc >>>/,/# <<< fancy-bashrc <<</d' "$BASHRC"
             else
-                sed -i "/${start_pattern}/,/${end_pattern}/d" "$ZSHRC"
+                sed -i '/# >>> fancy-bashrc >>>/,/# <<< fancy-bashrc <<</d' "$BASHRC"
             fi
         done
         printf "  ${GREEN}✔${NC} Old config removed.\n"
@@ -394,18 +338,18 @@ remove_old_config() {
 # ─── Check Existing Installation ───────────
 check_existing_install() {
     printf "  ${CYAN}➜${NC} Checking existing configuration...\n"
-    if [ ! -f "$ZSHRC" ]; then
-        printf "  ${YELLOW}⚠ Creating $ZSHRC...${NC}\n"
-        touch "$ZSHRC"
+    if [ ! -f "$BASHRC" ]; then
+        printf "  ${YELLOW}⚠ Creating $BASHRC...${NC}\n"
+        touch "$BASHRC"
     fi
     printf "  ${GREEN}✔${NC} Ready for installation.\n"
 }
 
 # ─── Backup ────────────────────────────────
-backup_zshrc() {
+backup_bashrc() {
     printf "  ${CYAN}➜${NC} Creating backup...\n"
-    backup_file="$ZSHRC.backup.$(date +%Y%m%d_%H%M%S)"
-    cp "$ZSHRC" "$backup_file"
+    backup_file="$BASHRC.backup.$(date +%Y%m%d_%H%M%S)"
+    cp "$BASHRC" "$backup_file"
     printf "  ${GREEN}✔${NC} Backup created: ${PURPLE}$(basename "$backup_file")${NC}\n"
 }
 
@@ -457,7 +401,7 @@ setup_rust_binary() {
 
 # ─── Fetch & Append Config ─────────────────
 install_config() {
-    printf "  ${CYAN}➜${NC} Applying fancybash Zsh configuration...\n"
+    printf "  ${CYAN}➜${NC} Applying fancybash Bash configuration...\n"
     export PATH="$HOME/.local/bin:$PATH"
 
     {
@@ -468,39 +412,34 @@ install_config() {
         echo 'export PATH="$HOME/.local/bin:$PATH"'
         echo ""
         if command -v fancybash >/dev/null 2>&1; then
-            fancybash init zsh 2>/dev/null || echo 'eval "$(fancybash init zsh)"'
+            fancybash init bash 2>/dev/null || echo 'eval "$(fancybash init bash)"'
         else
             echo 'if command -v fancybash >/dev/null 2>&1; then'
-            echo '    eval "$(fancybash init zsh)"'
+            echo '    eval "$(fancybash init bash)"'
             echo 'fi'
         fi
         echo "$END"
-    } >> "$ZSHRC"
+    } >> "$BASHRC"
 
-    printf "  ${GREEN}✔${NC} Config successfully added to ~/.zshrc!\n"
-
-    # Pre-compile Zsh bytecode for sub-50ms initial launch
-    if command -v zcompile >/dev/null 2>&1; then
-        zcompile "$ZSHRC" 2>/dev/null || true
-    fi
+    printf "  ${GREEN}✔${NC} Config successfully added to ~/.bashrc!\n"
 }
 
 # ─── Reload & Summary ──────────────────────
 show_summary() {
     echo ""
-    if source "$ZSHRC" 2>/dev/null; then
+    if source "$BASHRC" 2>/dev/null; then
         printf "  ${GREEN}✨ Installation & auto-reload successful!${NC}\n\n"
     else
-        printf "  ${YELLOW}⚠ Auto-reload skipped.${NC} Please run: ${BOLD}source ~/.zshrc${NC}\n\n"
+        printf "  ${YELLOW}⚠ Auto-reload skipped.${NC} Please run: ${BOLD}source ~/.bashrc${NC}\n\n"
     fi
 
-    echo -e "\n${CYAN}──────────────────────────────────────────────────${NC}"
+    echo -e "\n${CYAN}──────────────────────────────────────────────────────────${NC}"
     echo -e " 🚀  ${BOLD}INSTALLATION SUMMARY${NC}"
-    echo -e "${CYAN}──────────────────────────────────────────────────${NC}\n"
-    echo -e "  📦  ${BOLD}Backup:${NC}   ${GREEN}$(basename "${backup_file:-none}")${NC}"
-    echo -e "  ⚙️   ${BOLD}Config:${NC}   ${GREEN}~/.zshrc${NC}"
-    echo -e "  🔄  ${BOLD}Reload:${NC}   ${PURPLE}source ~/.zshrc${NC}\n"
-    echo -e "${CYAN}──────────────────────────────────────────────────${NC}\n"
+    echo -e "${CYAN}──────────────────────────────────────────────────────────${NC}\n"
+    echo -e "  📦  ${BOLD}Backup:${NC}    ${GREEN}$(basename "${backup_file:-none}")${NC}"
+    echo -e "  ⚙️   ${BOLD}Config:${NC}    ${GREEN}~/.bashrc${NC}"
+    echo -e "  🔄  ${BOLD}Reload:${NC}    ${PURPLE}source ~/.bashrc${NC}"
+    echo -e "${CYAN}──────────────────────────────────────────────────────────${NC}\n"
     echo -e "  🎉  ${BOLD}Installation complete!${NC}\n"
     echo ""
 }
@@ -510,28 +449,25 @@ main() {
     show_header
     show_sysinfo
 
-    draw_progress_bar 1 7
+    draw_progress_bar 1 6
     if ! check_and_install_fonts; then
         exit 0
     fi
 
-    draw_progress_bar 2 7
+    draw_progress_bar 2 6
     setup_fontconfig
 
-    draw_progress_bar 3 7
-    install_zsh_plugins
-
-    draw_progress_bar 4 7
+    draw_progress_bar 3 6
     setup_rust_binary
 
-    draw_progress_bar 5 7
+    draw_progress_bar 4 6
     check_existing_install
     remove_old_config
 
-    draw_progress_bar 6 7
-    backup_zshrc
+    draw_progress_bar 5 6
+    backup_bashrc
 
-    draw_progress_bar 7 7
+    draw_progress_bar 6 6
     install_config
 
     show_summary

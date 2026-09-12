@@ -14,10 +14,11 @@
 // =============================================================================
 
 pub mod bash;
+pub mod cleaner;
 pub mod fish;
 pub mod pwsh;
+pub mod shared;
 pub mod zsh;
-pub mod cleaner;
 
 /// Dispatch table: map shell name → generator function.
 pub fn generate(shell: &str) -> Result<String, String> {

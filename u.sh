@@ -1,46 +1,63 @@
-#!/usr/bin/env bash
-# ==============================================================================
-# 🗑️ fancybash-rs — Universal Web Uninstaller
-# Usage: curl -fsSL https://fancybash.netlify.app/u.sh | bash
-# ==============================================================================
+#!/bin/bash
 
-set -e
+# ─── fancybash Universal Uninstaller (u.sh) ──────────────────────────────────
+# 1. Runs native Rust self-uninstaller `fancybash uninstall` if available
+# 2. Cleans fancybash blocks from shell configs (.zshrc, .bashrc, config.fish)
+# 3. Removes binary from ~/.local/bin and ~/.cargo/bin
+# ──────────────────────────────────────────────────────────────────────────────
 
-BOLD="\033[1m"
-CYAN="\033[38;5;51m"
-GREEN="\033[38;5;82m"
-YELLOW="\033[38;5;220m"
-RED="\033[38;5;203m"
-GRAY="\033[38;5;245m"
-RESET="\033[0m"
+set -euo pipefail
 
-echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════════════╗${RESET}"
-echo -e "${CYAN}║${RESET}  ${BOLD}${RED}🗑️  FANCYBASH-RS UNINSTALLER ${RESET}${CYAN}│${RESET} ${GRAY}Removing fancybash configurations${RESET}  ${CYAN}║${RESET}"
-echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════════════╝${RESET}\n"
+REPO_BASE_URL="https://raw.githubusercontent.com/rihadjahanopu/fancybash-rs/refs/heads/main"
+ALT_REPO_BASE_URL="https://raw.githubusercontent.com/rihadjahanopu/fancybash/refs/heads/main"
+FALLBACK_BASE_URL="https://fancybash.netlify.app/public"
 
-# Remove shell integration lines
-FILES=(
-  "$HOME/.bashrc"
-  "$HOME/.zshrc"
-  "$HOME/.config/fish/config.fish"
-)
+# ─── Colors ───────────────────────────────────────────────────────────────────
+RED='\033[38;2;243;139;168m'
+GREEN='\033[38;2;166;227;161m'
+YELLOW='\033[38;2;249;226;175m'
+CYAN='\033[38;2;148;226;213m'
+PURPLE='\033[38;2;203;166;247m'
+BOLD='\033[1m'
+NC='\033[0m'
 
-for file in "${FILES[@]}"; do
-  if [ -f "$file" ]; then
-    sed -i '/# >>> fancy-.* >>>/,/# <<< fancy-.* <<</d' "$file" 2>/dev/null || true
-    sed -i '/# fancybash shell initialization/d' "$file" 2>/dev/null || true
-    sed -i '/fancybash init/d' "$file" 2>/dev/null || true
-    echo -e "${GREEN}✅ Cleaned fancybash block from: ${file}${RESET}"
-  fi
-done
+printf "\n${BOLD}${PURPLE}🗑  fancybash Universal Uninstaller${NC}\n"
+printf "${CYAN}──────────────────────────────────────────${NC}\n\n"
 
-# Remove binary if present in user bin directories
-for bin in "$HOME/.cargo/bin/fancybash" "$HOME/.local/bin/fancybash"; do
-  if [ -f "$bin" ]; then
-    rm -f "$bin"
-    echo -e "${GREEN}✅ Removed binary: ${bin}${RESET}"
-  fi
-done
+# ─── 1. Try Native Rust Binary Uninstallation First ──────────────────────────
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
-echo -e "\n${BOLD}${GREEN}🎉 fancybash-rs uninstalled successfully!${RESET}"
-echo -e "${GRAY}Your original shell configuration has been restored.${RESET}\n"
+if command -v fancybash &>/dev/null; then
+    printf "  ${GREEN}✔${NC} Found fancybash binary. Running native self-uninstaller...\n\n"
+    fancybash uninstall
+    exit 0
+fi
+
+# ─── 2. Fallback: Shell Configuration Cleanup ────────────────────────────────
+printf "  ${CYAN}➜${NC} Cleaning fancybash configurations from shell rc files...\n"
+
+clean_file() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        if grep -qF "# >>> fancy-" "$file" 2>/dev/null || grep -qF "fancybash" "$file" 2>/dev/null; then
+            if [ "$(uname)" = "Darwin" ]; then
+                sed -i '' '/# >>> fancy-/,/# <<< fancy-/d' "$file" 2>/dev/null || true
+                sed -i '' '/fancybash init/d' "$file" 2>/dev/null || true
+            else
+                sed -i '/# >>> fancy-/,/# <<< fancy-/d' "$file" 2>/dev/null || true
+                sed -i '/fancybash init/d' "$file" 2>/dev/null || true
+            fi
+            printf "  ${GREEN}✔${NC} Cleaned config in: ${BOLD}%s${NC}\n" "$file"
+        fi
+    fi
+}
+
+clean_file "$HOME/.zshrc"
+clean_file "$HOME/.bashrc"
+clean_file "$HOME/.config/fish/config.fish"
+
+# Remove binaries
+rm -f "$HOME/.local/bin/fancybash" "$HOME/.cargo/bin/fancybash" 2>/dev/null || true
+
+printf "\n  ${GREEN}🎉 fancybash uninstalled successfully!${NC}\n"
+printf "  ${CYAN}💡 Please restart your shell or terminal for changes to take effect.${NC}\n\n"

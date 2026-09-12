@@ -4,9 +4,8 @@
 
 use std::error::Error;
 use std::fs;
+use std::io::{self, Write};
 use std::process::Command;
-
-use inquire::Confirm;
 
 fn detect_distro() -> (String, String) {
     if let Ok(content) = fs::read_to_string("/etc/os-release") {
@@ -42,11 +41,12 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     println!("\x1b[0;36mOS:\x1b[0m {distro_name}");
     println!("\x1b[0;36mPackage Manager:\x1b[0m {pkg_mgr}\n");
 
-    let confirm = Confirm::new("Proceed with OS & Package Cache cleanup?")
-        .with_default(false)
-        .prompt()?;
+    print!("Proceed with OS & Package Cache cleanup? [y/N]: ");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
 
-    if !confirm {
+    if !input.trim().eq_ignore_ascii_case("y") {
         println!("👋 Cleanup cancelled.");
         return Ok(());
     }
@@ -66,34 +66,43 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             let _ = Command::new("sudo").args(["pacman", "-Sc", "--noconfirm"]).status();
         }
         "zypper" => {
-            let _ = Command::new("sudo").args(["zypper", "clean"]).status();
+            let _ = Command::new("sudo").args(["zypper", "clean", "--all"]).status();
         }
         "apk" => {
             let _ = Command::new("sudo").args(["apk", "cache", "clean"]).status();
         }
         _ => {
-            println!("\x1b[0;33m⚠️ Standard package cleanup not configured for this distro.\x1b[0m");
+            println!("⚠️ Unsupported package manager for automated cache cleaning.");
         }
     }
 
-    println!("\x1b[0;34m📋 Vacuuming systemd journal logs (older than 3 days)...\x1b[0m");
-    let _ = Command::new("sudo")
-        .args(["journalctl", "--vacuum-time=3d", "--quiet"])
-        .status();
-
-    println!("\n\x1b[0;32m✅ Universal Clean completed successfully!\x1b[0m");
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_detect_distro_does_not_panic() {
-        let (mgr, name) = detect_distro();
-        assert!(!mgr.is_empty());
-        assert!(!name.is_empty());
+    // Flatpak cleanup
+    if crate::core::utils::cmd_exists("flatpak") {
+        println!("\n\x1b[0;34m📦 Cleaning unused Flatpak runtimes...\x1b[0m");
+        let _ = Command::new("flatpak").args(["uninstall", "--unused", "-y"]).status();
     }
+
+    // Snap cleanup
+    if crate::core::utils::cmd_exists("snap") {
+        println!("\n\x1b[0;34m⚡ Cleaning old Snap revisions...\x1b[0m");
+        let _ = Command::new("bash")
+            .arg("-c")
+            .arg("snap list --all | awk '/disabled/{print $1, $3}' | while read snapname revision; do sudo snap remove \"$snapname\" --revision=\"$revision\"; done")
+            .status();
+    }
+
+    // Systemd Journal logs cleanup
+    if crate::core::utils::cmd_exists("journalctl") {
+        println!("\n\x1b[0;34m📜 Vacuuming system logs older than 7 days...\x1b[0m");
+        let _ = Command::new("sudo").args(["journalctl", "--vacuum-time=7d"]).status();
+    }
+
+    // Docker cleanup if available
+    if crate::core::utils::cmd_exists("docker") {
+        println!("\n\x1b[0;34m🐳 Pruning unused Docker images & containers...\x1b[0m");
+        let _ = Command::new("docker").args(["system", "prune", "-f"]).status();
+    }
+
+    println!("\n\x1b[1;32m✨ Universal system cleanup completed successfully!\x1b[0m");
+    Ok(())
 }

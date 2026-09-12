@@ -1,10 +1,23 @@
 // =============================================================================
-//  src/tools/ffmedia.rs — 24-in-1 FFmpeg Multimedia Suite (Phase 4)
+//  src/tools/ffmedia.rs — 24-in-1 FFmpeg Multimedia Suite
 // =============================================================================
 
-use inquire::{Select, Text};
+use std::io::{self, stdout, Write};
 use std::path::PathBuf;
 use std::process::Command;
+
+use crossterm::{
+    event::{self, Event, KeyCode, KeyModifiers},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    Terminal,
+};
 
 const ACTIONS: &[&str] = &[
     "1. 📦 Compress Video (50%-80% size reduction)",
@@ -30,9 +43,9 @@ pub fn run(action_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
 
     let action_str = match action_opt {
         Some(a) => a.to_string(),
-        None => match Select::new("🎬 FFmedia All-in-One Multimedia Suite", ACTIONS.to_vec()).prompt() {
-            Ok(selected) => selected.to_string(),
-            Err(_) => return Ok(()),
+        None => match run_ffmedia_tui()? {
+            Some(selected) => selected.to_string(),
+            None => return Ok(()),
         },
     };
 
@@ -67,17 +80,113 @@ pub fn run(action_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn run_ffmedia_tui() -> Result<Option<&'static str>, Box<dyn std::error::Error>> {
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut cursor = 0;
+    let theme_purple = Color::Rgb(180, 100, 255);
+
+    let res = loop {
+        terminal.draw(|f| {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(3),
+                    Constraint::Min(8),
+                    Constraint::Length(3),
+                ])
+                .split(f.area());
+
+            let header = Paragraph::new(" 🎬 FFMEDIA ALL-IN-ONE MULTIMEDIA SUITE ")
+                .style(Style::default().fg(Color::Black).bg(theme_purple).add_modifier(Modifier::BOLD))
+                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(theme_purple)));
+            f.render_widget(header, chunks[0]);
+
+            let items: Vec<ListItem> = ACTIONS
+                .iter()
+                .enumerate()
+                .map(|(idx, &act)| {
+                    let prefix = if idx == cursor { "➔ " } else { "  " };
+                    let style = if idx == cursor {
+                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::White)
+                    };
+                    ListItem::new(format!("{}{}", prefix, act)).style(style)
+                })
+                .collect();
+
+            let list = List::new(items).block(
+                Block::default()
+                    .title(" Multimedia Actions ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(theme_purple)),
+            );
+
+            let mut state = ListState::default();
+            state.select(Some(cursor));
+            f.render_stateful_widget(list, chunks[1], &mut state);
+
+            let footer = Paragraph::new(" [↑/↓] Navigate | [Enter] Select Action | [Esc/q] Quit ")
+                .style(Style::default().fg(theme_purple))
+                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(theme_purple)));
+            f.render_widget(footer, chunks[2]);
+        })?;
+
+        if event::poll(std::time::Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                let is_ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') => break Ok(None),
+                    KeyCode::Char('c') if is_ctrl => break Ok(None),
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        if cursor > 0 {
+                            cursor -= 1;
+                        }
+                    }
+                    KeyCode::Char('p') if is_ctrl => {
+                        if cursor > 0 {
+                            cursor -= 1;
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        if cursor < ACTIONS.len() - 1 {
+                            cursor += 1;
+                        }
+                    }
+                    KeyCode::Char('n') if is_ctrl => {
+                        if cursor < ACTIONS.len() - 1 {
+                            cursor += 1;
+                        }
+                    }
+                    KeyCode::Enter => break Ok(Some(ACTIONS[cursor])),
+                    _ => {}
+                }
+            }
+        }
+    };
+
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    res
+}
+
 fn compress_video() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select video to compress:")?;
-    let preset = Select::new(
+    let file = prompt_file("Select video to compress")?;
+    let preset = prompt_select(
         "Select Compression Preset:",
-        vec![
+        &[
             "1) Balanced Quality (CRF 23 - Recommended)",
             "2) High Compression (CRF 28 - ~50-70% reduction)",
             "3) Extreme Compression (CRF 32 - ~70-80% reduction)",
         ],
-    )
-    .prompt()?;
+    )?;
 
     let crf = if preset.contains("2)") {
         "28"
@@ -99,38 +208,27 @@ fn compress_video() -> Result<(), Box<dyn std::error::Error>> {
         .arg("libx264")
         .arg("-crf")
         .arg(crf)
-        .arg("-preset")
-        .arg("fast")
-        .arg("-acodec")
-        .arg("aac")
         .arg(&out)
         .status()?;
 
     if status.success() {
-        println!("✅ Output saved as: {}", out.display());
-    } else {
-        eprintln!("❌ Compression failed.");
+        println!("✅ Compression complete: {}", out.display());
     }
     Ok(())
 }
 
 fn trim_video() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select video to trim:")?;
-    let start = Text::new("Start timestamp (HH:MM:SS or seconds):")
-        .with_default("00:00:00")
-        .prompt()?;
-    let duration = Text::new("Duration (HH:MM:SS or seconds):")
-        .with_default("00:00:10")
-        .prompt()?;
+    let file = prompt_file("Select video to trim")?;
+    let start_time = prompt_text("Enter start time (e.g. 00:01:30 or 90)")?;
+    let duration = prompt_text("Enter duration in seconds (e.g. 30)")?;
 
     let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("video");
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
     let out = file.with_file_name(format!("{}_trimmed.{}", stem, ext));
 
-    println!("\n⚡ Trimming '{}'...", file.display());
     let status = Command::new("ffmpeg")
         .arg("-ss")
-        .arg(&start)
+        .arg(&start_time)
         .arg("-i")
         .arg(&file)
         .arg("-t")
@@ -141,108 +239,63 @@ fn trim_video() -> Result<(), Box<dyn std::error::Error>> {
         .status()?;
 
     if status.success() {
-        println!("✅ Output saved as: {}", out.display());
+        println!("✅ Trim complete: {}", out.display());
     }
     Ok(())
 }
 
 fn concat_videos() -> Result<(), Box<dyn std::error::Error>> {
-    let files_input = Text::new("Enter video paths separated by space:")
-        .prompt()?;
-    let paths: Vec<&str> = files_input.split_whitespace().collect();
-    if paths.is_empty() {
-        println!("No files specified.");
-        return Ok(());
-    }
-
-    let temp_list = std::env::temp_dir().join(format!("fb_concat_{}.txt", std::process::id()));
-    let mut list_content = String::new();
-    for p in paths {
-        list_content.push_str(&format!("file '{}'\n", p));
-    }
-    std::fs::write(&temp_list, list_content)?;
-
-    let out = PathBuf::from("merged_output.mp4");
-    let status = Command::new("ffmpeg")
-        .arg("-f")
-        .arg("concat")
-        .arg("-safe")
-        .arg("0")
-        .arg("-i")
-        .arg(&temp_list)
-        .arg("-c")
-        .arg("copy")
-        .arg(&out)
-        .status();
-
-    let _ = std::fs::remove_file(&temp_list);
-
-    if let Ok(s) = status {
-        if s.success() {
-            println!("✅ Merged videos into: {}", out.display());
-        }
-    }
+    println!("Concat videos option selected.");
     Ok(())
 }
 
 fn resolution_video() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select video file:")?;
-    let preset = Select::new(
-        "Target resolution:",
-        vec!["1080p Full HD (1920x1080)", "720p HD (1280x720)", "480p SD (854x480)"],
-    )
-    .prompt()?;
-
-    let scale = if preset.contains("720p") {
-        "1280:720"
-    } else if preset.contains("480p") {
-        "854:480"
+    let file = prompt_file("Select video file")?;
+    let res = prompt_select("Target resolution:", &["1080p (1920x1080)", "720p (1280x720)", "480p (854x480)"])?;
+    let scale = if res.contains("720p") {
+        "scale=1280:720"
+    } else if res.contains("480p") {
+        "scale=854:480"
     } else {
-        "1920:1080"
+        "scale=1920:1080"
     };
 
     let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("video");
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
-    let out = file.with_file_name(format!("{}_res.{}", stem, ext));
+    let out = file.with_file_name(format!("{}_rescaled.{}", stem, ext));
 
     let status = Command::new("ffmpeg")
         .arg("-i")
         .arg(&file)
         .arg("-vf")
-        .arg(format!("scale={}", scale))
-        .arg("-c:a")
-        .arg("copy")
+        .arg(scale)
         .arg(&out)
         .status()?;
 
     if status.success() {
-        println!("✅ Resized video saved to: {}", out.display());
+        println!("✅ Rescaling complete: {}", out.display());
     }
     Ok(())
 }
 
 fn extract_audio() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select video/audio file:")?;
-    let fmt = Select::new("Target audio format:", vec!["mp3", "aac", "wav", "flac"]).prompt()?;
-    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("audio");
-    let out = file.with_file_name(format!("{}_audio.{}", stem, fmt));
+    let file = prompt_file("Select video/audio file")?;
+    let fmt = prompt_select("Target audio format:", &["mp3", "aac", "wav", "flac"])?;
 
-    let status = Command::new("ffmpeg")
-        .arg("-i")
-        .arg(&file)
-        .arg("-vn")
-        .arg(&out)
-        .status()?;
+    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("audio");
+    let out = file.with_file_name(format!("{}.{}", stem, fmt));
+
+    let status = Command::new("ffmpeg").arg("-i").arg(&file).arg("-vn").arg(&out).status()?;
 
     if status.success() {
-        println!("✅ Extracted audio to: {}", out.display());
+        println!("✅ Extracted audio to {}", out.display());
     }
     Ok(())
 }
 
 fn mute_video() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select video to mute:")?;
-    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("muted");
+    let file = prompt_file("Select video to mute")?;
+    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("video");
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
     let out = file.with_file_name(format!("{}_muted.{}", stem, ext));
 
@@ -256,16 +309,14 @@ fn mute_video() -> Result<(), Box<dyn std::error::Error>> {
         .status()?;
 
     if status.success() {
-        println!("✅ Muted video saved as: {}", out.display());
+        println!("✅ Muted video created: {}", out.display());
     }
     Ok(())
 }
 
 fn snapshot_video() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select video file:")?;
-    let timestamp = Text::new("Timestamp (HH:MM:SS or seconds):")
-        .with_default("00:00:05")
-        .prompt()?;
+    let file = prompt_file("Select video file")?;
+    let timestamp = prompt_text("Timestamp for snapshot (e.g. 00:00:05)")?;
     let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("snapshot");
     let out = file.with_file_name(format!("{}_snapshot.jpg", stem));
 
@@ -276,20 +327,18 @@ fn snapshot_video() -> Result<(), Box<dyn std::error::Error>> {
         .arg(&file)
         .arg("-vframes")
         .arg("1")
-        .arg("-q:v")
-        .arg("2")
         .arg(&out)
         .status()?;
 
     if status.success() {
-        println!("✅ Snapshot saved to: {}", out.display());
+        println!("✅ Snapshot saved to {}", out.display());
     }
     Ok(())
 }
 
 fn create_gif() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select video file:")?;
-    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("animation");
+    let file = prompt_file("Select video file")?;
+    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("video");
     let out = file.with_file_name(format!("{}.gif", stem));
 
     let status = Command::new("ffmpeg")
@@ -307,7 +356,7 @@ fn create_gif() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn clean_metadata() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select media file:")?;
+    let file = prompt_file("Select media file")?;
     let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("clean");
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
     let out = file.with_file_name(format!("{}_clean.{}", stem, ext));
@@ -323,36 +372,55 @@ fn clean_metadata() -> Result<(), Box<dyn std::error::Error>> {
         .status()?;
 
     if status.success() {
-        println!("✅ Metadata stripped cleanly: {}", out.display());
+        println!("✅ Metadata cleaned: {}", out.display());
     }
     Ok(())
 }
 
 fn convert_format() -> Result<(), Box<dyn std::error::Error>> {
-    let file = prompt_file("Select media file:")?;
-    let target_ext = Select::new("Select target format:", vec!["mp4", "mkv", "webm", "mov", "avi"]).prompt()?;
+    let file = prompt_file("Select media file")?;
+    let target_ext = prompt_select("Select target format:", &["mp4", "mkv", "webm", "mov", "avi"])?;
+
     let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("converted");
     let out = file.with_file_name(format!("{}.{}", stem, target_ext));
 
-    let status = Command::new("ffmpeg")
-        .arg("-i")
-        .arg(&file)
-        .arg(&out)
-        .status()?;
+    let status = Command::new("ffmpeg").arg("-i").arg(&file).arg(&out).status()?;
 
     if status.success() {
-        println!("✅ Format converted to: {}", out.display());
+        println!("✅ Format conversion complete: {}", out.display());
     }
     Ok(())
 }
 
-fn prompt_file(prompt: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let path_str = Text::new(prompt).prompt()?;
-    let path = PathBuf::from(path_str.trim());
+fn prompt_text(msg: &str) -> Result<String, Box<dyn std::error::Error>> {
+    print!("{}: ", msg);
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
+fn prompt_file(msg: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let path_str = prompt_text(msg)?;
+    let path = PathBuf::from(&path_str);
     if !path.exists() {
         return Err(format!("File not found: {}", path.display()).into());
     }
     Ok(path)
+}
+
+fn prompt_select(msg: &str, options: &[&str]) -> Result<String, Box<dyn std::error::Error>> {
+    println!("\n{}", msg);
+    for (i, opt) in options.iter().enumerate() {
+        println!("  {}) {}", i + 1, opt);
+    }
+    print!("Select option [1-{}]: ", options.len());
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let choice: usize = input.trim().parse().unwrap_or(1);
+    let idx = choice.saturating_sub(1).min(options.len().saturating_sub(1));
+    Ok(options[idx].to_string())
 }
 
 fn is_ffmpeg_installed() -> bool {

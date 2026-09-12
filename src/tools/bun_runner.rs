@@ -4,12 +4,23 @@
 
 use std::error::Error;
 use std::fs;
+use std::io::stdout;
 use std::process::Command;
 
-use inquire::Select;
+use crossterm::{
+    event::{self, Event, KeyCode, KeyModifiers},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    Terminal,
+};
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    // 1. Collect .js and .ts files in current directory
     let mut files = Vec::new();
     if let Ok(entries) = fs::read_dir(".") {
         for entry in entries.flatten() {
@@ -33,87 +44,122 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    // 2. Select file
-    println!("\n\x1b[0;36m╭──────────────────────────────────────────╮\x1b[0m");
-    println!("\x1b[0;36m│\x1b[0m  \x1b[1m⚡ BUN INTERACTIVE RUNNER\x1b[0m               \x1b[0;36m│\x1b[0m");
-    println!("\x1b[0;36m╰──────────────────────────────────────────╯\x1b[0m");
+    if files.len() == 1 {
+        let file = &files[0];
+        println!("\x1b[1;92m⚡ Running with Bun:\x1b[0m {}", file);
+        Command::new("bun").arg(file).status()?;
+        return Ok(());
+    }
 
-    let items: Vec<String> = files
-        .iter()
-        .map(|f| {
-            if f.ends_with(".ts") {
-                format!("📘 {f}")
-            } else {
-                format!("📒 {f}")
-            }
-        })
-        .collect();
-
-    let chosen_item = match Select::new("Select JS/TS file to run:", items).prompt() {
-        Ok(item) => item,
-        Err(_) => {
-            println!("👋 Cancelled.");
-            return Ok(());
-        }
+    let selected_idx = match run_bun_tui(&files)? {
+        Some(idx) => idx,
+        None => return Ok(()),
     };
 
-    // Extract filename from chosen_item ("📘 filename.ts" -> "filename.ts")
-    let selected_file = chosen_item
-        .trim_start_matches("📘 ")
-        .trim_start_matches("📒 ")
-        .to_string();
-
-    // 3. Select mode
-    let modes = vec![
-        "🚀 bun run     (default)",
-        "🔥 bun --hot   (hot reload)",
-        "👁 bun --watch (watch mode)",
-    ];
-
-    let chosen_mode = match Select::new("Choose run mode:", modes).prompt() {
-        Ok(mode) => mode,
-        Err(_) => {
-            println!("👋 Cancelled.");
-            return Ok(());
-        }
-    };
-
-    let (action, label, color) = if chosen_mode.contains("--hot") {
-        ("--hot", "HOT RELOAD", "\x1b[0;31m")
-    } else if chosen_mode.contains("--watch") {
-        ("--watch", "WATCH MODE", "\x1b[1;33m")
-    } else {
-        ("run", "RUN", "\x1b[1;32m")
-    };
-
-    println!("\n{color}⚙ {label}:\x1b[0m \x1b[1m{selected_file}\x1b[0m\n");
-
-    // 4. Run bun
-    let status = Command::new("bun")
-        .arg(action)
-        .arg(&selected_file)
-        .status();
-
-    match status {
-        Ok(s) => {
-            if !s.success() {
-                eprintln!("\x1b[0;31mProcess exited with status: {s}\x1b[0m");
-            }
-        }
-        Err(e) => {
-            eprintln!("\x1b[0;31mFailed to execute bun: {e}. Is Bun installed?\x1b[0m");
-        }
+    if selected_idx < files.len() {
+        let selected_file = &files[selected_idx];
+        println!("\x1b[1;92m⚡ Running with Bun:\x1b[0m {}", selected_file);
+        Command::new("bun").arg(selected_file).status()?;
     }
 
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_bun_runner_empty_dir_graceful() {
-        // Just verify file collection logic logic without blocking prompt
-        let files: Vec<String> = vec![];
-        assert!(files.is_empty());
-    }
+fn run_bun_tui(files: &[String]) -> Result<Option<usize>, Box<dyn Error>> {
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut cursor = 0;
+    let bun_gold = Color::Rgb(255, 215, 0);
+
+    let res = loop {
+        terminal.draw(|f| {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(3),
+                    Constraint::Min(8),
+                    Constraint::Length(3),
+                ])
+                .split(f.area());
+
+            let header = Paragraph::new(" ⚡ BUN INTERACTIVE RUNNER ")
+                .style(Style::default().fg(Color::Black).bg(bun_gold).add_modifier(Modifier::BOLD))
+                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(bun_gold)));
+            f.render_widget(header, chunks[0]);
+
+            let items: Vec<ListItem> = files
+                .iter()
+                .enumerate()
+                .map(|(idx, filename)| {
+                    let prefix = if idx == cursor { "➔ " } else { "  " };
+                    let icon = if filename.ends_with(".ts") { "📘" } else { "📒" };
+                    let text = format!("{}{} {}", prefix, icon, filename);
+                    let style = if idx == cursor {
+                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::White)
+                    };
+                    ListItem::new(text).style(style)
+                })
+                .collect();
+
+            let list = List::new(items).block(
+                Block::default()
+                    .title(format!(" JS/TS Files ({}) ", files.len()))
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(bun_gold)),
+            );
+
+            let mut state = ListState::default();
+            state.select(Some(cursor));
+            f.render_stateful_widget(list, chunks[1], &mut state);
+
+            let footer = Paragraph::new(" [↑/↓] Navigate | [Enter] Run File | [Esc/q] Quit ")
+                .style(Style::default().fg(bun_gold))
+                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(bun_gold)));
+            f.render_widget(footer, chunks[2]);
+        })?;
+
+        if event::poll(std::time::Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                let is_ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') => break Ok(None),
+                    KeyCode::Char('c') if is_ctrl => break Ok(None),
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        if cursor > 0 {
+                            cursor -= 1;
+                        }
+                    }
+                    KeyCode::Char('p') if is_ctrl => {
+                        if cursor > 0 {
+                            cursor -= 1;
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        if cursor < files.len() - 1 {
+                            cursor += 1;
+                        }
+                    }
+                    KeyCode::Char('n') if is_ctrl => {
+                        if cursor < files.len() - 1 {
+                            cursor += 1;
+                        }
+                    }
+                    KeyCode::Enter => break Ok(Some(cursor)),
+                    _ => {}
+                }
+            }
+        }
+    };
+
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    res
 }

@@ -23,6 +23,7 @@ pub fn generate() -> String {
     out.push_str(&shared::render_bun_setup(Shell::Fish));
     out.push_str(&shared::render_aliases(Shell::Fish));
     out.push_str(&shared::render_auto_ls_hook(Shell::Fish));
+    out.push_str(&shared::render_cf_wrapper(Shell::Fish));
 
     // ── Prompt function (Native Rust Engine) ──────────────────────────────────
     out.push_str(r#"

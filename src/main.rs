@@ -428,8 +428,6 @@ fn cmd_internal_clean_rc() -> Result<(), Box<dyn std::error::Error>> {
 
 fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
     use fancybash_core::core::prompt::{set_active_theme, THEMES};
-    use inquire::Select;
-
     match args.name.as_deref() {
         Some("list") => {
             println!("Available themes ({} total):\n", THEMES.len());
@@ -444,8 +442,18 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
         None => {
             let theme_names: Vec<String> = THEMES.iter().map(|t| t.name.to_string()).collect();
-            let selected = Select::new("🎨 Select Fancybash Theme:", theme_names).prompt()?;
-            let _idx = set_active_theme(&selected)?;
+            println!("\n🎨 Select Fancybash Theme:");
+            for (i, t) in theme_names.iter().enumerate() {
+                println!("  {}) {}", i + 1, t);
+            }
+            print!("Select theme [1-{}]: ", theme_names.len());
+            std::io::Write::flush(&mut std::io::stdout())?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            let choice: usize = input.trim().parse().unwrap_or(1);
+            let idx = choice.saturating_sub(1).min(theme_names.len().saturating_sub(1));
+            let selected = &theme_names[idx];
+            let _idx = set_active_theme(selected)?;
             println!("✨ Active theme updated to: {}", selected);
             println!("💡 Run 'source ~/.zshrc' or open a new terminal session.");
         }

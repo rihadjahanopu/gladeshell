@@ -158,6 +158,7 @@ add-zsh-hook preexec _fb_preexec
 add-zsh-hook precmd  _fb_precmd
 "#);
     out.push_str(&shared::render_auto_ls_hook(Shell::Zsh));
+    out.push_str(&shared::render_cf_wrapper(Shell::Zsh));
 
     out.push_str("\n# fancybash zsh init complete\n");
     out

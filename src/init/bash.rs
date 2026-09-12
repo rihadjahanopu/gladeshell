@@ -57,6 +57,7 @@ fi
 "#);
 
     out.push_str(&shared::render_auto_ls_hook(Shell::Bash));
+    out.push_str(&shared::render_cf_wrapper(Shell::Bash));
     out.push_str("\n# fancybash bash init complete\n");
     out
 }

@@ -9,9 +9,23 @@
 
 use std::{
     fs,
-    io::Write,
+    io::{self, Write},
     path::PathBuf,
     process::{Command, Stdio},
+};
+
+use crossterm::{
+    event::{self, Event, KeyCode, KeyModifiers},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    Terminal,
 };
 
 // ── Distro / package-manager detection ───────────────────────────────────────
@@ -194,6 +208,7 @@ impl Distro {
 // ── Tool database ─────────────────────────────────────────────────────────────
 
 /// Category colours (ANSI).
+#[allow(dead_code)]
 fn cat_ansi(cat: &str) -> &'static str {
     match cat {
         "PERF" => "\x1b[1;35m",
@@ -382,22 +397,290 @@ fn resolve_pkg<'a>(map: &'a str, pm: &PkgManager) -> &'a str {
     map.split('|').nth(idx).unwrap_or(map.split('|').next().unwrap_or(""))
 }
 
-// ── fzf multi-select UI ───────────────────────────────────────────────────────
+// ── Interactive TUI Multi-Select Engine (`ut`) ───────────────────────────────
 
-fn launch_fzf(items: &[String], pm_label: &str) -> Result<Vec<usize>, Box<dyn std::error::Error>> {
-    let prompt_msg = format!("⚡ Select tools to install/configure ({pm_label}):");
-    let chosen = match inquire::MultiSelect::new(&prompt_msg, items.to_vec()).prompt() {
-        Ok(v) => v,
-        Err(_) => return Ok(vec![]),
-    };
+#[derive(Debug, Clone)]
+pub struct UtToolItem {
+    pub idx: usize,
+    pub category: &'static str,
+    pub generic_name: &'static str,
+    pub description: &'static str,
+    pub pkg_name: String,
+    pub is_installed: bool,
+    pub selected: bool,
+}
 
-    let mut indices = vec![];
-    for sel in &chosen {
-        if let Some(idx) = items.iter().position(|i| i == sel) {
-            indices.push(idx);
+pub struct UtApp<'a> {
+    pub distro_id: &'a str,
+    pub pm_label: &'a str,
+    pub items: Vec<UtToolItem>,
+    pub filtered_indices: Vec<usize>,
+    pub list_state: ListState,
+    pub query: String,
+}
+
+impl<'a> UtApp<'a> {
+    pub fn new(distro_id: &'a str, pm: &'a PkgManager) -> Self {
+        let items: Vec<UtToolItem> = TOOLS
+            .iter()
+            .enumerate()
+            .map(|(idx, (cat, generic, desc, map))| {
+                let pkg = resolve_pkg(map, pm);
+                let installed = pm.is_installed(pkg);
+                UtToolItem {
+                    idx: idx + 1,
+                    category: cat,
+                    generic_name: generic,
+                    description: desc,
+                    pkg_name: pkg.to_string(),
+                    is_installed: installed,
+                    selected: installed,
+                }
+            })
+            .collect();
+
+        let filtered_indices: Vec<usize> = (0..items.len()).collect();
+        let mut list_state = ListState::default();
+        if !filtered_indices.is_empty() {
+            list_state.select(Some(0));
+        }
+
+        Self {
+            distro_id,
+            pm_label: pm.label(),
+            items,
+            filtered_indices,
+            list_state,
+            query: String::new(),
         }
     }
-    Ok(indices)
+
+    pub fn filter_items(&mut self) {
+        let q = self.query.to_lowercase();
+        if q.is_empty() {
+            self.filtered_indices = (0..self.items.len()).collect();
+        } else {
+            self.filtered_indices = self
+                .items
+                .iter()
+                .enumerate()
+                .filter(|(_, item)| {
+                    item.generic_name.to_lowercase().contains(&q)
+                        || item.description.to_lowercase().contains(&q)
+                        || item.category.to_lowercase().contains(&q)
+                        || item.pkg_name.to_lowercase().contains(&q)
+                })
+                .map(|(i, _)| i)
+                .collect();
+        }
+
+        if self.filtered_indices.is_empty() {
+            self.list_state.select(None);
+        } else {
+            self.list_state.select(Some(0));
+        }
+    }
+
+    pub fn run_loop<B: ratatui::backend::Backend>(
+        &mut self,
+        terminal: &mut Terminal<B>,
+    ) -> io::Result<Option<Vec<usize>>> {
+        loop {
+            terminal.draw(|f| self.render_ui(f))?;
+
+            if let Event::Key(key) = event::read()? {
+                if key.kind != event::KeyEventKind::Press {
+                    continue;
+                }
+
+                match (key.code, key.modifiers) {
+                    (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                        return Ok(None);
+                    }
+                    (KeyCode::Enter, _) => {
+                        let selected_indices: Vec<usize> = self
+                            .items
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, item)| item.selected)
+                            .map(|(idx, _)| idx)
+                            .collect();
+                        return Ok(Some(selected_indices));
+                    }
+                    (KeyCode::Tab, _) | (KeyCode::Char(' '), KeyModifiers::NONE) => {
+                        if let Some(sel) = self.list_state.selected() {
+                            if sel < self.filtered_indices.len() {
+                                let orig_idx = self.filtered_indices[sel];
+                                self.items[orig_idx].selected = !self.items[orig_idx].selected;
+                            }
+                        }
+                    }
+                    (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::CONTROL) => {
+                        self.move_select(-1);
+                    }
+                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::CONTROL) => {
+                        self.move_select(1);
+                    }
+                    (KeyCode::PageUp, _) => {
+                        self.move_select(-10);
+                    }
+                    (KeyCode::PageDown, _) => {
+                        self.move_select(10);
+                    }
+                    (KeyCode::Backspace, _) => {
+                        self.query.pop();
+                        self.filter_items();
+                    }
+                    (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                        self.query.push(c);
+                        self.filter_items();
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    fn move_select(&mut self, delta: i32) {
+        if self.filtered_indices.is_empty() {
+            return;
+        }
+        let current = self.list_state.selected().unwrap_or(0) as i32;
+        let len = self.filtered_indices.len() as i32;
+        let next = (current + delta).clamp(0, len - 1);
+        self.list_state.select(Some(next as usize));
+    }
+
+    fn render_ui(&mut self, frame: &mut ratatui::Frame) {
+        let area = frame.area();
+
+        let outer_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(outer_block, area);
+
+        let inner_margin = Rect {
+            x: area.x + 1,
+            y: area.y + 1,
+            width: area.width.saturating_sub(2),
+            height: area.height.saturating_sub(2),
+        };
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(1), // Search Arsenal > ...
+                Constraint::Length(1), // 76/76 (0)
+                Constraint::Length(1), // Divider
+                Constraint::Length(1), // [TAB] Select Multiple ...
+                Constraint::Length(1), // Divider
+                Constraint::Length(1), // Headers: STAT [IDX] CATEGORY PACKAGE DESCRIPTION
+                Constraint::Min(4),    // Items list
+            ])
+            .split(inner_margin);
+
+        // 1. Search Arsenal Input Line
+        let search_line = Line::from(vec![
+            Span::styled("🔍 Search Arsenal > ", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
+            Span::styled(&self.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+            Span::styled("|", Style::default().fg(Color::Green)),
+        ]);
+        frame.render_widget(Paragraph::new(search_line), chunks[0]);
+
+        // 2. Counter Line
+        let selected_count = self.items.iter().filter(|i| i.selected).count();
+        let counter_str = format!("{}/{} ({})", self.filtered_indices.len(), self.items.len(), selected_count);
+        let counter_line = Line::from(vec![
+            Span::styled(counter_str, Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)),
+        ]);
+        frame.render_widget(Paragraph::new(counter_line), chunks[1]);
+
+        // 3. Green Divider
+        let divider_len = chunks[2].width as usize;
+        let divider_str = "─".repeat(divider_len);
+        frame.render_widget(Paragraph::new(Line::from(Span::styled(&divider_str, Style::default().fg(Color::DarkGray)))), chunks[2]);
+
+        // 4. Shortcut Bar
+        let shortcuts = Line::from(vec![
+            Span::styled("  [TAB]", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
+            Span::raw(" Select Multiple  |  "),
+            Span::styled("[ENTER]", Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)),
+            Span::raw(" Process  |  "),
+            Span::styled("[Q]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            Span::raw(" Exit  |  ("),
+            Span::styled(self.pm_label, Style::default().fg(Color::Yellow)),
+            Span::raw(")"),
+        ]);
+        frame.render_widget(Paragraph::new(shortcuts), chunks[3]);
+
+        // 5. Green Divider
+        frame.render_widget(Paragraph::new(Line::from(Span::styled(&divider_str, Style::default().fg(Color::DarkGray)))), chunks[4]);
+
+        // 6. Column Headers
+        let header_line = Line::from(vec![
+            Span::styled("    STAT ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
+            Span::styled("[IDX]  ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
+            Span::styled("CATEGORY    ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
+            Span::styled("PACKAGE           ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
+            Span::styled("DESCRIPTION", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
+        ]);
+        frame.render_widget(Paragraph::new(header_line), chunks[5]);
+
+        // 7. List Items
+        let list_items: Vec<ListItem> = self
+            .filtered_indices
+            .iter()
+            .enumerate()
+            .map(|(i, &orig_idx)| {
+                let is_cursor = self.list_state.selected() == Some(i);
+                let item = &self.items[orig_idx];
+
+                let bar_span = if is_cursor {
+                    Span::styled("█ ", Style::default().fg(Color::Rgb(255, 0, 128)))
+                } else {
+                    Span::raw("  ")
+                };
+
+                let status_span = if item.selected {
+                    Span::styled("● ", Style::default().fg(Color::Green))
+                } else {
+                    Span::styled("○ ", Style::default().fg(Color::DarkGray))
+                };
+
+                let idx_str = format!("[{:>2}]  ", item.idx);
+                let idx_span = Span::styled(idx_str, Style::default().fg(Color::Green));
+
+                let cat_color = match item.category {
+                    "PERF" => Color::Magenta,
+                    "DISK" => Color::Red,
+                    "SECU" => Color::Green,
+                    "NET " => Color::Cyan,
+                    "DEV " => Color::Blue,
+                    "MOD " => Color::Yellow,
+                    _ => Color::Gray,
+                };
+                let cat_span = Span::styled(format!("{:<12}", item.category), Style::default().fg(cat_color).add_modifier(Modifier::BOLD));
+
+                let pkg_span = Span::styled(format!("{:<18}", item.generic_name), Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD));
+
+                let desc_span = Span::styled(item.description, Style::default().fg(Color::LightGreen));
+
+                ListItem::new(Line::from(vec![
+                    bar_span,
+                    status_span,
+                    idx_span,
+                    cat_span,
+                    pkg_span,
+                    desc_span,
+                ]))
+            })
+            .collect();
+
+        let list_widget = List::new(list_items)
+            .block(Block::default().borders(Borders::NONE));
+
+        frame.render_stateful_widget(list_widget, chunks[6], &mut self.list_state);
+    }
 }
 
 // ── Per-tool auto-configuration ───────────────────────────────────────────────
@@ -627,54 +910,39 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     const CYAN:   &str = "\x1b[1;36m";
     const RED:    &str = "\x1b[1;31m";
     const BOLD:   &str = "\x1b[1m";
-    const DIM:    &str = "\x1b[2m";
     const NC:     &str = "\x1b[0m";
 
     // 1. Distro detection
     let distro = Distro::detect()?;
     let pm = &distro.pkg_manager;
     println!(
-        "{CYAN}🖥️  Detected: {BOLD}{}{NC} | Package Manager: {BOLD}{}{NC}",
+        "\n{CYAN}🖥️  Detected: {BOLD}{}{NC} | Package Manager: {BOLD}{}{NC}\n",
         distro.id,
         pm.label()
     );
 
+    // 2. Launch UtApp Ratatui TUI
+    let mut app = UtApp::new(&distro.id, pm);
 
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
 
-    // 3. Build display items
-    let installed_count = TOOLS
-        .iter()
-        .filter(|(_, _, _, map)| pm.is_installed(resolve_pkg(map, pm)))
-        .count();
+    let res = app.run_loop(&mut terminal);
 
-    println!(
-        "\n{BOLD}⚡ PC Arsenal — {installed_count}/{} tools installed{NC}\n",
-        TOOLS.len()
-    );
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
 
-    let display_items: Vec<String> = TOOLS
-        .iter()
-        .enumerate()
-        .map(|(idx, (cat, generic, desc, map))| {
-            let pkg = resolve_pkg(map, pm);
-            let status_icon = if pm.is_installed(pkg) {
-                format!("{GREEN}●{NC}")
-            } else {
-                format!("{DIM}○{NC}")
-            };
-            let cat_color = cat_ansi(cat);
-            format!(
-                "{}  {DIM}[{:>3}]{NC}  {cat_color}{cat}{NC}  {BOLD}{:<18}{NC}  {DIM}{}{NC}",
-                status_icon,
-                idx + 1,
-                generic,
-                desc
-            )
-        })
-        .collect();
-
-    // 4. fzf multi-select
-    let selected_indices = launch_fzf(&display_items, pm.label())?;
+    let selected_indices = match res {
+        Ok(Some(indices)) => indices,
+        _ => {
+            println!("\n{YELLOW}👋 Operation cancelled or nothing selected.{NC}");
+            return Ok(());
+        }
+    };
 
     if selected_indices.is_empty() {
         println!("\n{YELLOW}👋 Operation cancelled or nothing selected.{NC}");

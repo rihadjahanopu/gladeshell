@@ -49,6 +49,8 @@ $MaximumHistoryCount = 50000
 $PSDefaultParameterValues['*:Encoding'] = 'UTF8'
 "#);
 
+    out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));
+
     out.push_str("\n# fancybash pwsh init complete\n");
     out
 }

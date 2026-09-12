@@ -318,6 +318,46 @@ if ($cwd -ne $global:_fb_last_pwd) {
     }
 }
 
+/// Render shell function wrapper for `cf` fuzzy directory navigator.
+pub fn render_cf_wrapper(shell: Shell) -> String {
+    match shell {
+        Shell::Zsh | Shell::Bash => r#"
+# ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
+cf() {
+    local target
+    target="$(fancybash cf "$@")"
+    if [[ -n "$target" && -d "$target" ]]; then
+        cd "$target" || return
+    elif [[ -n "$target" && -f "$target" ]]; then
+        cd "$(dirname "$target")" || return
+    fi
+}
+"#.to_string(),
+        Shell::Fish => r#"
+# ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
+function cf
+    set -l target (fancybash cf $argv)
+    if test -n "$target" -a -d "$target"
+        cd "$target"
+    else if test -n "$target" -a -f "$target"
+        cd (dirname "$target")
+    end
+end
+"#.to_string(),
+        Shell::Pwsh => r#"
+# ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
+function cf {
+    $target = fancybash cf @args
+    if ($target -and (Test-Path -Path $target -PathType Container)) {
+        Set-Location -Path $target
+    } elseif ($target -and (Test-Path -Path $target -PathType Leaf)) {
+        Set-Location -Path (Split-Path -Parent $target)
+    }
+}
+"#.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

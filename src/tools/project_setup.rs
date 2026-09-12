@@ -8,8 +8,8 @@
 //    run_ui()              — calls patch_tsconfig + patch_viteconfig for Vite
 // =============================================================================
 
-use inquire::{Confirm, Select, Text};
 use std::fs;
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 
@@ -175,16 +175,15 @@ pub fn patch_viteconfig() {
 
 /// `fancybash ii` — Interactive Project Initializer (Bun/NPM/PNPM/Yarn + .gitignore).
 pub fn run_ii() -> Result<(), Box<dyn std::error::Error>> {
-    let pm = Select::new(
+    let pm = prompt_select(
         "🚀 Select Package Manager:",
-        vec![
+        &[
             "1) 🥐 Bun (Fast)",
             "2) 📦 NPM (Standard)",
             "3) 🟡 PNPM (Strict)",
             "4) 🧶 Yarn (Classic)",
         ],
-    )
-    .prompt()?;
+    )?;
 
     if pm.contains("Bun") {
         Command::new("bun").arg("init").arg("-y").status()?;
@@ -208,7 +207,7 @@ pub fn run_ii() -> Result<(), Box<dyn std::error::Error>> {
 
 /// `fancybash next` — Interactive Next.js Project Generator.
 pub fn run_next() -> Result<(), Box<dyn std::error::Error>> {
-    let pm = Select::new("⚡ Setup Next.js with:", vec!["1) Bun", "2) NPM"]).prompt()?;
+    let pm = prompt_select("⚡ Setup Next.js with:", &["1) Bun", "2) NPM"])?;
 
     if pm.contains("Bun") {
         Command::new("bunx").arg("create-next-app@latest").arg(".").status()?;
@@ -222,16 +221,15 @@ pub fn run_next() -> Result<(), Box<dyn std::error::Error>> {
 ///
 /// On install failure, offers `--force` (Bun) or `--legacy-peer-deps` (NPM) retry.
 pub fn run_vite() -> Result<(), Box<dyn std::error::Error>> {
-    let pm     = Select::new("⚡ Setup Vite with:", vec!["1) Bun", "2) NPM"]).prompt()?;
-    let add_tw = Confirm::new("Add Tailwind CSS v4?").with_default(true).prompt()?;
+    let pm     = prompt_select("⚡ Setup Vite with:", &["1) Bun", "2) NPM"])?;
+    let add_tw = prompt_confirm("Add Tailwind CSS v4?", true)?;
 
     if pm.contains("Bun") {
         Command::new("bunx").arg("create-vite@latest").arg(".").status()?;
         if add_tw {
             let ok = cmd_ok("bun", &["add", "tailwindcss", "@tailwindcss/vite"]);
             if !ok {
-                let retry = Confirm::new("Install failed. Retry with --force?")
-                    .with_default(false).prompt().unwrap_or(false);
+                let retry = prompt_confirm("Install failed. Retry with --force?", false).unwrap_or(false);
                 if retry {
                     cmd_ok("bun", &["add", "tailwindcss", "@tailwindcss/vite", "--force"]);
                 }
@@ -242,8 +240,7 @@ pub fn run_vite() -> Result<(), Box<dyn std::error::Error>> {
         if add_tw {
             let ok = cmd_ok("npm", &["install", "tailwindcss", "@tailwindcss/vite"]);
             if !ok {
-                let retry = Confirm::new("Install failed (peer deps?). Retry with --legacy-peer-deps?")
-                    .with_default(false).prompt().unwrap_or(false);
+                let retry = prompt_confirm("Install failed (peer deps?). Retry with --legacy-peer-deps?", false).unwrap_or(false);
                 if retry {
                     cmd_ok("npm", &["install", "tailwindcss", "@tailwindcss/vite", "--legacy-peer-deps"]);
                 }
@@ -278,12 +275,12 @@ pub fn run_ui() -> Result<(), Box<dyn std::error::Error>> {
         "nextjs"
     } else {
         println!("  Could not auto-detect project type.");
-        let choice = Select::new("Choose manually:", vec!["1) Vite (React)", "2) Next.js"]).prompt()?;
+        let choice = prompt_select("Choose manually:", &["1) Vite (React)", "2) Next.js"])?;
         if choice.contains("Vite") { "vite" } else { "nextjs" }
     };
 
-    let pm         = Select::new("Package manager:", vec!["1) Bun", "2) NPM"]).prompt()?;
-    let components = Text::new("Add components (e.g. button card input, or empty for default):").prompt()?;
+    let pm         = prompt_select("Package manager:", &["1) Bun", "2) NPM"])?;
+    let components = prompt_text("Add components (e.g. button card input, or empty for default):")?;
 
     // STEP 1: patch tsconfig BEFORE shadcn init
     println!("\nPre-configuring path aliases before shadcn init...");
@@ -324,6 +321,42 @@ pub fn run_ui() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Shadcn UI setup complete! Happy coding!");
     println!("---------------------------------------------------");
     Ok(())
+}
+
+fn prompt_text(msg: &str) -> Result<String, Box<dyn std::error::Error>> {
+    print!("{}: ", msg);
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
+fn prompt_confirm(msg: &str, default_yes: bool) -> Result<bool, Box<dyn std::error::Error>> {
+    let suffix = if default_yes { "[Y/n]" } else { "[y/N]" };
+    print!("{} {}: ", msg, suffix);
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let val = input.trim();
+    if val.is_empty() {
+        Ok(default_yes)
+    } else {
+        Ok(val.eq_ignore_ascii_case("y"))
+    }
+}
+
+fn prompt_select(msg: &str, options: &[&str]) -> Result<String, Box<dyn std::error::Error>> {
+    println!("\n{}", msg);
+    for (i, opt) in options.iter().enumerate() {
+        println!("  {}) {}", i + 1, opt);
+    }
+    print!("Select option [1-{}]: ", options.len());
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let choice: usize = input.trim().parse().unwrap_or(1);
+    let idx = choice.saturating_sub(1).min(options.len().saturating_sub(1));
+    Ok(options[idx].to_string())
 }
 
 /// `fancybash css` — Tailwind CSS v4 Auto-Installer.

@@ -415,7 +415,37 @@ fn main() {
 
 fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
     let code = init::generate(&args.shell)?;
+    // ⚠️  stdout is captured by `eval "$(fancybash init <shell>)"` — only shell
+    //    code goes here. All user-visible messages must go to stderr.
     print!("{code}");
+
+    // Auto-inject the eval line into the shell RC file (idempotent).
+    let rc_file = match args.shell.to_ascii_lowercase().as_str() {
+        "zsh"  => "~/.zshrc",
+        "bash" => "~/.bashrc",
+        "fish" => "~/.config/fish/config.fish",
+        _      => "",
+    };
+
+    match init::cleaner::ensure_init_in_rc(&args.shell) {
+        Ok(true) if !rc_file.is_empty() => {
+            eprintln!(
+                "\x1b[1;32m✅ Added `fancybash init {}` to {rc_file}\x1b[0m",
+                args.shell
+            );
+            eprintln!(
+                "\x1b[1;36m💡 Run `source {rc_file}` or restart your shell to activate.\x1b[0m"
+            );
+        }
+        Ok(false) if !rc_file.is_empty() => {
+            // Already present — silent (idempotent)
+        }
+        Err(e) => {
+            eprintln!("\x1b[0;33m⚠️  Could not write to {rc_file}: {e}\x1b[0m");
+        }
+        _ => {}
+    }
+
     Ok(())
 }
 

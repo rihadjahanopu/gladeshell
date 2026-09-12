@@ -16,11 +16,14 @@ pub mod python;
 pub mod rust;
 pub mod system;
 
+pub mod tools;
+
 use super::AliasGroup;
 
 /// Return all built-in category alias groups in canonical order.
 pub fn all_groups() -> Vec<AliasGroup> {
     vec![
+        tools::group(),
         navigation::group(),
         developer::group(),
         editor::group(),

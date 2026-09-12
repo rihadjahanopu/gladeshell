@@ -595,13 +595,7 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn cmd_exists(name: &str) -> bool {
-    Command::new("which")
-        .arg(name)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    crate::core::utils::cmd_exists(name)
 }
 
 fn dirs_home() -> PathBuf {

@@ -101,7 +101,7 @@ trap '_fb_timer_start=$SECONDS' DEBUG
 # Prompt renderer
 __fb_prompt() {
     local exit_code=$?
-    PS1=$(fancybash prompt --cwd "$PWD" --exit-code "$exit_code" --user "$USER" --host "$HOSTNAME" 2>/dev/null)
+    PS1=$(fancybash prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --user "$USER" --host "$HOSTNAME" 2>/dev/null)
 }
 
 PROMPT_COMMAND="__fb_prompt"

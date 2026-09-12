@@ -356,13 +356,7 @@ fn prompt_file(prompt: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
 }
 
 fn is_ffmpeg_installed() -> bool {
-    Command::new("which")
-        .arg("ffmpeg")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    crate::core::utils::cmd_exists("ffmpeg")
 }
 
 #[cfg(test)]

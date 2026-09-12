@@ -8,6 +8,12 @@ pub fn group() -> AliasGroup {
         only_shells: vec![],
         aliases: vec![
             AliasEntry {
+                key: "fancy".to_string(),
+                value: "fancybash".to_string(),
+                description: "Fancybash Master CLI tool & Command Center".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
                 key: "update".to_string(),
                 value: "fancybash update".to_string(),
                 description: "Non-interactive system package update (APT, Pacman, DNF, Brew, Flatpak, Snap)".to_string(),

@@ -4,6 +4,7 @@
 
 pub mod bun_runner;
 pub mod cpp_gen;
+pub mod dep_installer;
 pub mod dman;
 pub mod drive_jumper;
 pub mod extractor;

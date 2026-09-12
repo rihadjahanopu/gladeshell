@@ -33,7 +33,7 @@ use fancybash_core::init;
 )]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -195,6 +195,14 @@ enum Commands {
 
     /// Request a prompt string from the running daemon (or render directly as fallback)
     Prompt(PromptArgs),
+
+    /// Hidden command: Clean and reorder the ~/.zshrc file using Native Rust
+    #[command(hide = true)]
+    InternalCleanRc,
+
+    /// Hidden command: Ensure a system dependency is installed (used from shell init)
+    #[command(name = "ensure-dep", hide = true)]
+    EnsureDep(fancybash_core::tools::dep_installer::DepArgs),
 }
 
 #[derive(clap::Args, Debug)]
@@ -222,6 +230,10 @@ struct PromptArgs {
     /// Command duration in milliseconds
     #[arg(long, default_value_t = 0)]
     cmd_duration: u64,
+
+    /// Target shell (zsh | bash | fish | pwsh)
+    #[arg(long, default_value = "zsh")]
+    shell: String,
 }
 
 // ── Sub-command argument structs ─────────────────────────────────────────────
@@ -330,50 +342,55 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Init(args) => cmd_init(args),
-        Commands::Version => {
-            println!("fancybash {}", env!("CARGO_PKG_VERSION"));
-            Ok(())
-        }
-        Commands::Theme(args) => cmd_theme(args),
-        Commands::Gen(args) => cmd_gen(args),
-        Commands::Ex(args) => cmd_ex(args),
-        Commands::Gwip { args } => cmd_gwip(args),
-        Commands::Uup => cmd_uup(),
-        Commands::Uu  => cmd_uu(),
-        Commands::Ut  => cmd_ut(),
-        Commands::Update => fancybash_core::tools::system_update::run(),
-        Commands::Upgrade => fancybash_core::tools::self_upgrade::run(),
-        Commands::Uninstall => fancybash_core::tools::self_uninstall::run(),
-        Commands::Makecpp(args) => cmd_makecpp(args),
-        Commands::Ffmedia(args) => cmd_ffmedia(args),
-        Commands::Todo(args) => cmd_todo(args),
-        Commands::Notes(args) => cmd_notes(args),
-        Commands::Vault(args) => cmd_vault(args),
-        Commands::Dman => fancybash_core::tools::dman::run(None),
-        Commands::Gbranch => fancybash_core::tools::gbranch::run(),
-        Commands::Fkill => fancybash_core::tools::fkill::run_fkill(),
-        Commands::Fh => fancybash_core::tools::history_search::run(),
-        Commands::Grep(args) => fancybash_core::tools::fast_grep::run(args),
-        Commands::Kp(args) => fancybash_core::tools::fkill::run_kp(args.port.as_deref()),
-        Commands::Ii => fancybash_core::tools::project_setup::run_ii(),
-        Commands::Next => fancybash_core::tools::project_setup::run_next(),
-        Commands::Vite => fancybash_core::tools::project_setup::run_vite(),
-        Commands::Ui => fancybash_core::tools::project_setup::run_ui(),
-        Commands::Css => fancybash_core::tools::project_setup::run_css(),
-        Commands::Keep => fancybash_core::tools::keep::run(),
-        Commands::Run => fancybash_core::tools::bun_runner::run(),
-        Commands::V { target } => fancybash_core::tools::video_player::run(target.as_deref()),
-        Commands::Uc => fancybash_core::tools::universal_clean::run(),
-        Commands::Clean => fancybash_core::tools::system_clean::run(),
-        Commands::Rt => fancybash_core::tools::runtime_installer::run(),
-        Commands::Rn { target } => fancybash_core::tools::file_renamer::run(target.as_deref()),
-        Commands::Pg { file, install } => fancybash_core::tools::pkg_converter::run(&file, install),
-        Commands::Drive { num } => fancybash_core::tools::drive_jumper::run(num.as_deref()),
-        Commands::Cf => fancybash_core::tools::fuzzy_cd::run(),
-        Commands::T { files } => fancybash_core::tools::touch_tool::run(&files),
-        Commands::Serve => cmd_serve(),
-        Commands::Prompt(args) => cmd_prompt(args),
+        Some(cmd) => match cmd {
+            Commands::Init(args) => cmd_init(args),
+            Commands::Version => {
+                println!("fancybash {}", env!("CARGO_PKG_VERSION"));
+                Ok(())
+            }
+            Commands::Theme(args) => cmd_theme(args),
+            Commands::Gen(args) => cmd_gen(args),
+            Commands::Ex(args) => cmd_ex(args),
+            Commands::Gwip { args } => cmd_gwip(args),
+            Commands::Uup => cmd_uup(),
+            Commands::Uu  => cmd_uu(),
+            Commands::Ut  => cmd_ut(),
+            Commands::Update => fancybash_core::tools::system_update::run(),
+            Commands::Upgrade => fancybash_core::tools::self_upgrade::run(),
+            Commands::Uninstall => fancybash_core::tools::self_uninstall::run(),
+            Commands::Makecpp(args) => cmd_makecpp(args),
+            Commands::Ffmedia(args) => cmd_ffmedia(args),
+            Commands::Todo(args) => cmd_todo(args),
+            Commands::Notes(args) => cmd_notes(args),
+            Commands::Vault(args) => cmd_vault(args),
+            Commands::Dman => fancybash_core::tools::dman::run(None),
+            Commands::Gbranch => fancybash_core::tools::gbranch::run(),
+            Commands::Fkill => fancybash_core::tools::fkill::run_fkill(),
+            Commands::Fh => fancybash_core::tools::history_search::run(),
+            Commands::Grep(args) => fancybash_core::tools::fast_grep::run(args),
+            Commands::Kp(args) => fancybash_core::tools::fkill::run_kp(args.port.as_deref()),
+            Commands::Ii => fancybash_core::tools::project_setup::run_ii(),
+            Commands::Next => fancybash_core::tools::project_setup::run_next(),
+            Commands::Vite => fancybash_core::tools::project_setup::run_vite(),
+            Commands::Ui => fancybash_core::tools::project_setup::run_ui(),
+            Commands::Css => fancybash_core::tools::project_setup::run_css(),
+            Commands::Keep => fancybash_core::tools::keep::run(),
+            Commands::Run => fancybash_core::tools::bun_runner::run(),
+            Commands::V { target } => fancybash_core::tools::video_player::run(target.as_deref()),
+            Commands::Uc => fancybash_core::tools::universal_clean::run(),
+            Commands::Clean => fancybash_core::tools::system_clean::run(),
+            Commands::Rt => fancybash_core::tools::runtime_installer::run(),
+            Commands::Rn { target } => fancybash_core::tools::file_renamer::run(target.as_deref()),
+            Commands::Pg { file, install } => fancybash_core::tools::pkg_converter::run(&file, install),
+            Commands::Drive { num } => fancybash_core::tools::drive_jumper::run(num.as_deref()),
+            Commands::Cf => fancybash_core::tools::fuzzy_cd::run(),
+            Commands::T { files } => fancybash_core::tools::touch_tool::run(&files),
+            Commands::Serve => cmd_serve(),
+            Commands::Prompt(args) => cmd_prompt(args),
+            Commands::InternalCleanRc => cmd_internal_clean_rc(),
+            Commands::EnsureDep(args) => fancybash_core::tools::dep_installer::run(&args),
+        },
+        None => fancybash_core::tools::keep::run(),
     };
 
     if let Err(e) = result {
@@ -394,26 +411,35 @@ fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn cmd_internal_clean_rc() -> Result<(), Box<dyn std::error::Error>> {
+    init::cleaner::clean_rc_file()?;
+    Ok(())
+}
+
 // ── theme ─────────────────────────────────────────────────────────────────────
 
 fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::core::prompt::THEMES;
+    use fancybash_core::core::prompt::{set_active_theme, THEMES};
+    use inquire::Select;
 
     match args.name.as_deref() {
-        None | Some("list") => {
+        Some("list") => {
             println!("Available themes ({} total):\n", THEMES.len());
             for (i, theme) in THEMES.iter().enumerate() {
                 println!("  {:02}  {}", i, theme.name);
             }
         }
         Some(name) => {
-            // TODO (Phase 2): write theme index to ~/.config/fancybash/theme
-            if let Some(theme) = THEMES.iter().find(|t| t.name.eq_ignore_ascii_case(name)) {
-                println!("Theme set to: {}", theme.name);
-                println!("(Restart your shell or run: eval \"$(fancybash init <shell>)\")");
-            } else {
-                return Err(format!("unknown theme '{name}'. Run 'fancybash theme list' to see options.").into());
-            }
+            let _idx = set_active_theme(name)?;
+            println!("✨ Theme set to: {}", name);
+            println!("💡 Run 'source ~/.zshrc' to apply new theme.");
+        }
+        None => {
+            let theme_names: Vec<String> = THEMES.iter().map(|t| t.name.to_string()).collect();
+            let selected = Select::new("🎨 Select Fancybash Theme:", theme_names).prompt()?;
+            let _idx = set_active_theme(&selected)?;
+            println!("✨ Active theme updated to: {}", selected);
+            println!("💡 Run 'source ~/.zshrc' or open a new terminal session.");
         }
     }
     Ok(())
@@ -532,22 +558,38 @@ fn cmd_prompt(args: PromptArgs) -> Result<(), Box<dyn std::error::Error>> {
         args.host
     };
 
+    let shell_id = match args.shell.to_lowercase().as_str() {
+        "zsh" => 0,
+        "bash" => 1,
+        "fish" => 2,
+        "pwsh" => 3,
+        _ => 0,
+    };
+
+    let theme_id = if args.theme_id == 0 {
+        fancybash_core::core::prompt::active_theme_id()
+    } else {
+        args.theme_id
+    };
+
     match client::request_prompt(
         &args.cwd,
         args.exit_code,
-        args.theme_id,
+        theme_id,
         &user,
         &host,
         args.cmd_duration,
+        shell_id,
     ) {
         Ok(prompt) => print!("{prompt}"),
         Err(_) => {
             let fallback = client::render_fallback(
                 &args.cwd,
                 args.exit_code,
-                args.theme_id,
+                theme_id,
                 &user,
                 &host,
+                shell_id,
             );
             print!("{fallback}");
         }

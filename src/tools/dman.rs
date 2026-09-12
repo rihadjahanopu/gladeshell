@@ -178,13 +178,7 @@ fn manage_compose() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn is_docker_installed() -> bool {
-    Command::new("which")
-        .arg("docker")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    crate::core::utils::cmd_exists("docker")
 }
 
 #[cfg(test)]

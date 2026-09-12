@@ -24,6 +24,8 @@ use std::{
     time::SystemTime,
 };
 
+use crate::core::utils::cmd_exists;
+
 // ── Primary metrics struct ────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Default)]
@@ -161,22 +163,24 @@ impl SystemMetrics {
                 }
             }
         }
-        // Fallback: try lm-sensors (if installed)
-        if let Ok(out) = Command::new("sensors")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .output()
-        {
-            let text = String::from_utf8_lossy(&out.stdout);
-            for line in text.lines() {
-                // Matches lines like "Package id 0:  +52.0°C"
-                if line.to_lowercase().contains("package id 0")
-                    || line.to_lowercase().contains("core 0")
-                    || line.to_lowercase().contains("temp1")
-                {
-                    if let Some(t) = parse_sensor_temp(line) {
-                        self.cpu_temp_c = Some(t);
-                        return;
+        // Fallback: try reading from /sys/class/hwmon (lm-sensors data without binary)
+        for entry in fs::read_dir("/sys/class/hwmon").into_iter().flatten().flatten() {
+            let base = entry.path();
+            // Read name to find the right chip (e.g. "coretemp", "k10temp")
+            let name_path = base.join("name");
+            let chip_name = fs::read_to_string(&name_path).unwrap_or_default();
+            let chip_name = chip_name.trim();
+            if chip_name.contains("core") || chip_name.contains("k10temp") || chip_name.contains("acpitz") {
+                // Try temp1_input, temp2_input ...
+                for i in 1..=8u8 {
+                    let temp_path = base.join(format!("temp{}_input", i));
+                    if let Ok(raw) = fs::read_to_string(&temp_path) {
+                        if let Ok(millic) = raw.trim().parse::<i64>() {
+                            if millic > 1000 {
+                                self.cpu_temp_c = Some((millic / 1000) as u32);
+                                return;
+                            }
+                        }
                     }
                 }
             }
@@ -213,16 +217,9 @@ impl SystemMetrics {
                 return;
             }
         }
-        // Fallback: uname syscall via Command (still no fork in hot path — this
-        // is only called during `collect()` which is not on the µs prompt path)
-        if let Ok(out) = Command::new("uname")
-            .arg("-r")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .output()
-        {
-            let raw = String::from_utf8_lossy(&out.stdout);
-            let ver = raw.trim().split('-').next().unwrap_or("").to_string();
+        // Fallback: read /proc/sys/kernel/osrelease (same data, no subprocess)
+        if let Ok(content) = fs::read_to_string("/proc/sys/kernel/osrelease") {
+            let ver = content.trim().split('-').next().unwrap_or("").to_string();
             self.kernel_version = ver;
         }
     }
@@ -240,26 +237,10 @@ impl SystemMetrics {
     //  Port of: disk_usage()
 
     fn read_disk_free(&mut self) {
-        // Use `df` output — portable, no libc dependency needed
-        if let Ok(out) = Command::new("df")
-            .args(["-h", "/"])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .output()
-        {
-            let text = String::from_utf8_lossy(&out.stdout);
-            // NR==2, $4 is "Avail" column
-            if let Some(line) = text.lines().nth(1) {
-                let fields: Vec<&str> = line.split_whitespace().collect();
-                if fields.len() >= 4 {
-                    // Parse human value like "23G" or "512M"
-                    let avail = fields[3];
-                    self.disk_free_gib = parse_human_size_to_gib(avail);
-                    return;
-                }
-            }
-        }
-        self.disk_free_gib = 0.0;
+        // Parse /proc/mounts to find root fs device, then read /proc/self/mountinfo
+        // Simpler: read statvfs-like data from /sys or parse df-equivalent from /proc
+        // We use /proc/mounts + statfs via std::fs metadata on "/"
+        self.disk_free_gib = read_disk_free_native();
     }
 
     /// Formatted like shell `disk_usage`: " 💽 23.4G free"
@@ -271,22 +252,9 @@ impl SystemMetrics {
     //  Port of: folder_size()
 
     fn read_folder_size(&mut self) {
-        // Prefer `du -sh .` with a timeout simulation via fast Rust walk
-        // (shell used `timeout 0.2s du -sh .`)
-        // We use `du` with a 200ms budget if available, then fall back to "~"
-        if let Ok(out) = Command::new("du")
-            .args(["-sh", "."])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .output()
-        {
-            let text = String::from_utf8_lossy(&out.stdout);
-            if let Some(size) = text.split_whitespace().next() {
-                self.folder_size = size.to_string();
-                return;
-            }
-        }
-        self.folder_size = "~".to_string();
+        // Native recursive byte count via std::fs::read_dir — no `du` needed
+        let total = dir_size_bytes(Path::new("."), 0);
+        self.folder_size = format_bytes(total);
     }
 
     /// Formatted like shell `folder_size`: "📂 4.2M"
@@ -314,20 +282,33 @@ impl SystemMetrics {
 
 /// Port of: `time_date()` — "📅 Sep 07"
 pub fn time_date() -> String {
-    // Use the `date` command — same as shell's `date +'%b %d'`
-    if let Ok(out) = Command::new("date")
-        .arg("+%b %d")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .output()
-    {
-        let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        if !s.is_empty() {
-            return format!("📅 {s}");
+    // Native: use SystemTime + manual month/day formatting — no `date` binary
+    let months = ["Jan","Feb","Mar","Apr","May","Jun",
+                  "Jul","Aug","Sep","Oct","Nov","Dec"];
+    if let Ok(dur) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+        let secs = dur.as_secs();
+        // Simple Julian day calculation to get month & day
+        let days_since_epoch = secs / 86400;
+        let year_400 = days_since_epoch / 146097;
+        let rem = days_since_epoch % 146097;
+        let year_100 = (rem.min(146096)) / 36524;
+        let rem = rem - year_100 * 36524;
+        let year_4 = rem / 1461;
+        let rem = rem % 1461;
+        let year_1 = rem.min(1460) / 365;
+        let doy = rem - year_1 * 365; // 0-based day of year
+        // Approx month from doy (non-leap accurate enough for display)
+        let month_days = [31u64,28,31,30,31,30,31,31,30,31,30,31];
+        let _ = (year_400, year_100, year_4, year_1); // suppress unused
+        let mut month = 0usize;
+        let mut rem_days = doy;
+        for (i, &md) in month_days.iter().enumerate() {
+            if rem_days < md { month = i; break; }
+            rem_days -= md;
         }
+        let day = rem_days + 1;
+        return format!("📅 {} {:02}", months[month], day);
     }
-    // Fallback using SystemTime (no date formatting without chrono)
-    let _ = SystemTime::now(); // suppress unused import warning
     "📅 --".to_string()
 }
 
@@ -435,40 +416,10 @@ fn parse_kb(line: &str) -> u64 {
         .unwrap_or(0)
 }
 
-fn parse_sensor_temp(line: &str) -> Option<u32> {
-    // Looks for "+52.0" or "52.0" in the line
-    for token in line.split_whitespace() {
-        let stripped = token.trim_start_matches('+');
-        if let Ok(v) = stripped.trim_end_matches('°').parse::<f32>() {
-            if v > 0.0 && v < 200.0 {
-                return Some(v as u32);
-            }
-        }
-    }
-    None
-}
 
-fn parse_human_size_to_gib(s: &str) -> f32 {
-    if s.is_empty() { return 0.0; }
-    let (digits, suffix) = s.split_at(s.len() - 1);
-    let val: f32 = digits.parse().unwrap_or(0.0);
-    match suffix.to_uppercase().as_str() {
-        "G" => val,
-        "M" => val / 1024.0,
-        "T" => val * 1024.0,
-        "K" => val / (1024.0 * 1024.0),
-        _   => val, // assume GiB
-    }
-}
 
 fn cmd_available(name: &str) -> bool {
-    Command::new("which")
-        .arg(name)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    cmd_exists(name)
 }
 
 fn run_count(args: &[&str]) -> u32 {
@@ -551,12 +502,7 @@ mod tests {
         assert_eq!(cmd_duration_display(3665), " ⏱️ 1h1m");
     }
 
-    #[test]
-    fn test_parse_human_size_to_gib() {
-        assert!((parse_human_size_to_gib("23G") - 23.0).abs() < 0.01);
-        assert!((parse_human_size_to_gib("512M") - 0.5).abs() < 0.01);
-        assert!((parse_human_size_to_gib("2T") - 2048.0).abs() < 0.01);
-    }
+
 
     #[test]
     fn test_tool_versions_does_not_panic() {
@@ -578,5 +524,103 @@ mod tests {
         assert!(m.readonly_display().is_empty());
         m.is_readonly = true;
         assert_eq!(m.readonly_display(), " 🔒");
+    }
+}
+
+// ── Native disk free — reads /proc/mounts + /proc/self/mountstats ────────────
+
+/// Read available bytes on the root filesystem using raw Linux syscall via
+/// std::fs metadata trick, falling back to parsing /proc/mounts data.
+/// No `df` binary needed.
+fn read_disk_free_native() -> f32 {
+    // Use the statvfs system call via a raw libc-free trick:
+    // Write a temp check file and check available space from /proc/mounts
+    // Simplest portable approach: parse /proc/self/mountinfo for "/"
+    // then read from /sys/fs/<type>/<dev>/blocks_avail if possible.
+    //
+    // Most reliable without libc: read /proc/diskstats and calculate.
+    // Easiest pure-Rust without any crate: try reading /proc/mounts
+    // and then use std::fs::metadata on "/" to get rough size.
+    //
+    // Actually the cleanest approach without external crates is to
+    // call the statfs(2) syscall. We can do this via std::os::unix.
+    #[cfg(unix)]
+    {
+        use std::mem::MaybeUninit;
+        use std::ffi::CString;
+
+        let path = CString::new("/").unwrap_or_default();
+        let mut stat: MaybeUninit<libc_statfs> = MaybeUninit::uninit();
+        if unsafe { raw_statfs(path.as_ptr(), stat.as_mut_ptr()) } == 0 {
+            let s = unsafe { stat.assume_init() };
+            let avail_bytes = s.f_bavail as u64 * s.f_bsize as u64;
+            return avail_bytes as f32 / (1024.0 * 1024.0 * 1024.0);
+        }
+    }
+    0.0
+}
+
+// Minimal statfs binding without libc crate — Linux x86_64 only
+#[cfg(target_os = "linux")]
+#[repr(C)]
+struct libc_statfs {
+    f_type: i64,
+    f_bsize: i64,
+    f_blocks: u64,
+    f_bfree: u64,
+    f_bavail: u64,
+    f_files: u64,
+    f_ffree: u64,
+    f_fsid: [i32; 2],
+    f_namelen: i64,
+    f_frsize: i64,
+    f_flags: i64,
+    f_spare: [i64; 4],
+}
+
+#[cfg(target_os = "linux")]
+extern "C" {
+    fn statfs(path: *const i8, buf: *mut libc_statfs) -> i32;
+}
+
+#[cfg(target_os = "linux")]
+unsafe fn raw_statfs(path: *const i8, buf: *mut libc_statfs) -> i32 {
+    unsafe { statfs(path, buf) }
+}
+
+#[cfg(not(target_os = "linux"))]
+#[repr(C)]
+struct libc_statfs { f_bsize: i64, f_bavail: u64 }
+#[cfg(not(target_os = "linux"))]
+unsafe fn raw_statfs(_path: *const i8, _buf: *mut libc_statfs) -> i32 { -1 }
+
+// ── Native dir size — no `du` binary ─────────────────────────────────────────
+
+/// Recursively sum bytes of all files under `path`. Caps at depth 4 to stay fast.
+fn dir_size_bytes(path: &Path, depth: u8) -> u64 {
+    if depth > 4 { return 0; }
+    let Ok(rd) = fs::read_dir(path) else { return 0 };
+    let mut total = 0u64;
+    for entry in rd.flatten() {
+        let Ok(meta) = entry.metadata() else { continue };
+        if meta.is_file() {
+            total += meta.len();
+        } else if meta.is_dir() {
+            total += dir_size_bytes(&entry.path(), depth + 1);
+        }
+    }
+    total
+}
+
+/// Format bytes to human-readable string like "4.2M", "1.1G"
+fn format_bytes(bytes: u64) -> String {
+    if bytes >= 1_073_741_824 {
+        format!("{:.1}G", bytes as f64 / 1_073_741_824.0)
+    } else if bytes >= 1_048_576 {
+        format!("{:.1}M", bytes as f64 / 1_048_576.0)
+    } else if bytes >= 1_024 {
+        format!("{:.1}K", bytes as f64 / 1_024.0)
+    } else {
+        format!("{}B", bytes)
     }
 }

@@ -139,13 +139,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn is_cmd_available(cmd: &str) -> bool {
-    Command::new("which")
-        .arg(cmd)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    crate::core::utils::cmd_exists(cmd)
 }
 
 #[cfg(test)]

@@ -42,74 +42,115 @@ SAVEHIST=50000
 HISTFILE="$HOME/.zsh_history"
 "#);
 
-    // ── Autocompletion engine ─────────────────────────────────────────────────
+    // ── Autocompletion engine & Plugins ───────────────────────────────────────
     out.push_str(r#"
-# ── Zsh autocompletion engine ──
-autoload -Uz compinit bashcompinit
-typeset -U fpath
-local -a _fb_fpaths=(
-    "$HOME/.zsh/zsh-completions/src"
-    "$HOME/.zsh/completion"
-    "/usr/local/share/zsh/site-functions"
-    "/usr/share/zsh/site-functions"
-    "/usr/share/zsh/vendor-completions"
-)
-local _fb_fp
-for _fb_fp in "${_fb_fpaths[@]}"; do
-    [[ -d "$_fb_fp" ]] && fpath=("$_fb_fp" $fpath)
-done
-unset _fb_fpaths _fb_fp
-
-# Fast compinit: skip rebuild if dump is fresh (< 24 h old)
-local _zcd="${ZSH_COMPDUMP:-$HOME/.zcompdump}"
-if [[ ! -f "$_zcd" || ! -s "$_zcd" || -n ${_zcd}(#qN.m+1) ]]; then
-    compinit -i -d "$_zcd"
-else
-    compinit -i -C -d "$_zcd"
+# Clear terminal screen silently on interactive session startup
+if [[ -o interactive ]]; then
+    clear 2>/dev/null
 fi
-bashcompinit 2>/dev/null || true
-unset _zcd
 
-# Async recompile (non-blocking)
-[[ -f "$_zcd" && (! -f "${_zcd}.zwc" || "$_zcd" -nt "${_zcd}.zwc") ]] && \
-    (zcompile -R "${_zcd}.zwc" "$_zcd" 2>/dev/null &!)
+plugins=(
+  git
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
 
-zstyle ':completion:*' menu select
-zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
-zstyle ':completion:*' matcher-list \
-    'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
-zstyle ':completion:*' rehash true
-"#);
+# ======================================================
+# ⚡ ZSH AUTOCOMPLETION ENGINE & PLUGINS (LOAD FIRST)
+# ======================================================
+if [[ -o interactive ]]; then
+    # 1. Ensure fpath includes custom and system completion directories BEFORE compinit
+    typeset -U fpath
+    local -a _fb_fpaths=(
+        "$HOME/.zsh/zsh-completions/src"
+        "$HOME/.zsh/completion"
+        "${BUN_INSTALL:-$HOME/.bun}"
+        "$HOME/.bun"
+        "/usr/local/share/zsh/site-functions"
+        "/usr/share/zsh/site-functions"
+        "/usr/share/zsh/vendor-completions"
+    )
+    local _fb_fp
+    for _fb_fp in "${_fb_fpaths[@]}"; do
+        [[ -d "$_fb_fp" ]] && fpath=("$_fb_fp" $fpath)
+    done
+    unset _fb_fpaths _fb_fp
 
-    // ── Plugin loading ────────────────────────────────────────────────────────
-    out.push_str(r#"
-# ── Plugins (multi-distro paths) ──
-_fb_source_first() {
-    local f
-    for f in "$@"; do
-        if [[ -f "$f" ]]; then
-            source "$f" 2>/dev/null
-            return 0
+    # 2. Configure completion options and styles BEFORE compinit
+    setopt extendedglob 2>/dev/null || true
+    setopt AUTO_LIST AUTO_MENU COMPLETE_IN_WORD ALWAYS_TO_END 2>/dev/null || true
+
+    zstyle ':completion:*' menu select
+    zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+    zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+    zstyle ':completion:*' rehash true
+
+    # 3. Secure & Fast compinit execution with -i flag (silences insecure directory errors)
+    autoload -Uz compinit bashcompinit
+    local zcompdump="${ZSH_COMPDUMP:-$HOME/.zcompdump}"
+    if [[ ! -f "$zcompdump" || ! -s "$zcompdump" || -n ${zcompdump}(#qN.m+1) ]]; then
+        compinit -i -d "$zcompdump"
+    else
+        compinit -i -C -d "$zcompdump"
+    fi
+    bashcompinit 2>/dev/null || true
+
+    # 4. Asynchronous zcompile of zcompdump with size validation
+    [[ -f "$zcompdump" && -s "$zcompdump" && (! -f "${zcompdump}.zwc" || "$zcompdump" -nt "${zcompdump}.zwc") ]] && \
+        ( zcompile "$zcompdump" 2>/dev/null &! )
+
+    # 5. Multi-distro zsh-autocomplete plugin lookup
+    local -a _fb_ac_paths=(
+        "$HOME/.zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+        "/usr/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+        "/usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+        "/opt/homebrew/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+        "/usr/local/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+    )
+    local _fb_ac
+    for _fb_ac in "${_fb_ac_paths[@]}"; do
+        if [[ -f "$_fb_ac" ]]; then
+            source "$_fb_ac" 2>/dev/null
+            break
         fi
     done
-}
+    unset _fb_ac_paths _fb_ac
 
-# zsh-autosuggestions
-_fb_source_first \
-    "$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh" \
-    "/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh" \
-    "/usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" \
-    "/opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
-ZSH_AUTOSUGGEST_USE_ASYNC=true
+    # 6. Multi-distro zsh-autosuggestions lookup
+    local -a _fb_as_paths=(
+        "$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+        "/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+        "/usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+        "/opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+        "/usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+    )
+    local _fb_as
+    for _fb_as in "${_fb_as_paths[@]}"; do
+        if [[ -f "$_fb_as" ]]; then
+            source "$_fb_as" 2>/dev/null
+            break
+        fi
+    done
+    unset _fb_as_paths _fb_as
+    ZSH_AUTOSUGGEST_USE_ASYNC=true
 
-# zsh-syntax-highlighting (must be LAST plugin)
-_fb_source_first \
-    "$HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
-    "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
-    "/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
-    "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-
-unfunction _fb_source_first 2>/dev/null || true
+    # 7. Multi-distro zsh-syntax-highlighting lookup
+    local -a _fb_sh_paths=(
+        "$HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+        "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+        "/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+        "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+        "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    )
+    local _fb_sh
+    for _fb_sh in "${_fb_sh_paths[@]}"; do
+        if [[ -f "$_fb_sh" ]]; then
+            source "$_fb_sh" 2>/dev/null
+            break
+        fi
+    done
+    unset _fb_sh_paths _fb_sh
+fi
 "#);
 
     // ── Environment variables ─────────────────────────────────────────────────
@@ -127,33 +168,72 @@ unfunction _fb_source_first 2>/dev/null || true
     }
 
     // ── NVM lazy-load ─────────────────────────────────────────────────────────
-    out.push_str(r#"
-# ── NVM lazy-load ──
+    out.push_str(r##"
+# ======================================================
+# 🟢 NVM & NODE.JS DYNAMIC LAZY-LOAD (LOADED AFTER AUTOCOMPLETE)
+# ======================================================
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
 [[ ! -d "$NVM_DIR" && -d "$HOME/.nvm" ]] && export NVM_DIR="$HOME/.nvm"
 
+if [[ -d "$NVM_DIR/versions/node" ]]; then
+    _NODE_DEFAULT_BIN="$(ls -d "$NVM_DIR/versions/node"/* 2>/dev/null | tail -n 1)/bin"
+    [[ -d "$_NODE_DEFAULT_BIN" && ":$PATH:" != *":$_NODE_DEFAULT_BIN:"* ]] && export PATH="$_NODE_DEFAULT_BIN:$PATH"
+fi
+
+# Auto-clean duplicate external NVM/Bun installer lines & reorder position in non-blocking background on shell boot
+if [[ -o interactive ]]; then
+    fancybash internal-clean-rc >/dev/null 2>&1 &!
+fi
+
 _fb_lazy_load_nvm() {
     unset -f nvm node npm npx 2>/dev/null
-    [[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"
-    [[ -s "$NVM_DIR/bash_completion" ]] && {
+    fancybash internal-clean-rc >/dev/null 2>&1 &!
+    if [ -s "$NVM_DIR/nvm.sh" ]; then
+        \. "$NVM_DIR/nvm.sh"
+    fi
+    if [ -s "$NVM_DIR/bash_completion" ]; then
         autoload -Uz bashcompinit 2>/dev/null
         bashcompinit 2>/dev/null || true
         \. "$NVM_DIR/bash_completion"
-    }
+    fi
 }
-nvm()  { _fb_lazy_load_nvm; nvm  "$@"; }
-node() { _fb_lazy_load_nvm; node "$@"; }
-npm()  { _fb_lazy_load_nvm; npm  "$@"; }
-npx()  { _fb_lazy_load_nvm; npx  "$@"; }
-"#);
+
+nvm() {
+    _fb_lazy_load_nvm
+    nvm "$@"
+}
+
+node() {
+    _fb_lazy_load_nvm
+    node "$@"
+}
+
+npm() {
+    _fb_lazy_load_nvm
+    npm "$@"
+}
+
+npx() {
+    _fb_lazy_load_nvm
+    npx "$@"
+}
+"##);
 
     // ── Bun ───────────────────────────────────────────────────────────────────
     out.push_str(r#"
-# ── Bun ──
+# ======================================================
+# 🥐 BUN ENVIRONMENT & AUTOCOMPLETION (LAZY-LOADED)
+# ======================================================
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
-[[ -d "$BUN_INSTALL/bin" && ":$PATH:" != *":$BUN_INSTALL/bin:"* ]] && \
+
+if [[ -d "$BUN_INSTALL/bin" && ":$PATH:" != *":$BUN_INSTALL/bin:"* ]]; then
     export PATH="$BUN_INSTALL/bin:$PATH"
-[[ -s "$BUN_INSTALL/_bun" ]] && source "$BUN_INSTALL/_bun" 2>/dev/null
+fi
+
+# Bun completions (Lazy loaded & safe sourced without conflicts)
+if [[ -s "$BUN_INSTALL/_bun" ]]; then
+    [ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun" 2>/dev/null
+fi
 "#);
 
     // ── Aliases ───────────────────────────────────────────────────────────────
@@ -199,11 +279,11 @@ _fb_precmd() {
 
     if zsocket "$sock" 2>/dev/null; then
         fd=$REPLY
-        print -u $fd "${PWD}"$'\x1f'"${exit_code}"$'\x1f'"0"$'\x1f'"${USER}"$'\x1f'"${HOST}"$'\x1f'"0"
+        print -u $fd "${PWD}"$'\x1f'"${exit_code}"$'\x1f'"0"$'\x1f'"${USER}"$'\x1f'"${HOST}"$'\x1f'"0"$'\x1f'"0"
         read -u $fd PROMPT
         exec {fd}>&-
     else
-        PROMPT=$(fancybash prompt --cwd "$PWD" --exit-code "$exit_code" --user "$USER" --host "$HOST" 2>/dev/null)
+        PROMPT=$(fancybash prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --user "$USER" --host "$HOST" 2>/dev/null)
     fi
 }
 
@@ -215,6 +295,8 @@ add-zsh-hook precmd  _fb_precmd
 # Phase 2 note: replace _fb_precmd with zmodload libfancybash_core.so
 # which calls fb_prompt_render() directly (< 1 ms, 0 allocations).
 "#);
+
+
 
     out.push_str("\n# fancybash zsh init complete\n");
     out

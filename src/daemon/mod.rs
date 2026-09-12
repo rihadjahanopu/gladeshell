@@ -131,6 +131,10 @@ fn handle_client(mut stream: UnixStream, buf: &mut [u8]) {
         ctx.host_len = hlen;
     }
 
+    if parts.len() > 6 {
+        ctx.shell = parts[6].parse::<u8>().unwrap_or(0);
+    }
+
     match prompt::render(&ctx, buf) {
         Ok(written) => {
             let _ = stream.write_all(&buf[..written]);

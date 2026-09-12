@@ -18,13 +18,14 @@ pub fn request_prompt(
     user: &str,
     host: &str,
     cmd_duration_ms: u64,
+    shell: u8,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let path = socket_path();
     let mut stream = UnixStream::connect(&path)?;
     stream.set_read_timeout(Some(Duration::from_millis(50)))?;
     stream.set_write_timeout(Some(Duration::from_millis(50)))?;
 
-    let req = format!("{cwd}\x1f{exit_code}\x1f{theme_id}\x1f{user}\x1f{host}\x1f{cmd_duration_ms}\n");
+    let req = format!("{cwd}\x1f{exit_code}\x1f{theme_id}\x1f{user}\x1f{host}\x1f{cmd_duration_ms}\x1f{shell}\n");
     stream.write_all(req.as_bytes())?;
 
     let mut reader = BufReader::new(stream);
@@ -41,6 +42,7 @@ pub fn render_fallback(
     theme_id: usize,
     user: &str,
     host: &str,
+    shell: u8,
 ) -> String {
     let mut ctx = PromptContext::default();
 
@@ -51,6 +53,7 @@ pub fn render_fallback(
 
     ctx.last_exit = exit_code;
     ctx.theme_id = theme_id;
+    ctx.shell = shell;
 
     let u_bytes = user.as_bytes();
     let ulen = u_bytes.len().min(ctx.user.len());

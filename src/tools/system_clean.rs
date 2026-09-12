@@ -5,14 +5,8 @@
 use std::error::Error;
 use std::process::Command;
 
-fn cmd_exists(cmd: &str) -> bool {
-    Command::new("which")
-        .arg(cmd)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+fn cmd_exists(name: &str) -> bool {
+    crate::core::utils::cmd_exists(name)
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {

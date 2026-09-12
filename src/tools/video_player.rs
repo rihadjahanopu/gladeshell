@@ -49,14 +49,8 @@ fn find_media_player() -> Option<(String, Vec<String>)> {
     None
 }
 
-fn cmd_exists(cmd: &str) -> bool {
-    Command::new("which")
-        .arg(cmd)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+fn cmd_exists(name: &str) -> bool {
+    crate::core::utils::cmd_exists(name)
 }
 
 fn collect_videos_recursive(dir: &Path, acc: &mut Vec<PathBuf>) {

@@ -145,6 +145,60 @@ const RESET: &str = "\x1b[0m";
 #[allow(dead_code)]
 const BOLD: &str = "\x1b[1m";
 
+// ── Active Theme Persistence ──────────────────────────────────────────────────
+
+/// Returns the path to the active theme configuration file (~/.config/fancybash/theme)
+pub fn theme_config_path() -> std::path::PathBuf {
+    if let Ok(home) = std::env::var("HOME") {
+        std::path::PathBuf::from(home).join(".config").join("fancybash").join("theme")
+    } else {
+        std::path::PathBuf::from(".fancybash_theme")
+    }
+}
+
+/// Reads the currently active theme index. Falls back to 0 (default).
+pub fn active_theme_id() -> usize {
+    let path = theme_config_path();
+    if let Ok(content) = std::fs::read_to_string(&path) {
+        let trimmed = content.trim();
+        if let Ok(id) = trimmed.parse::<usize>() {
+            if id < THEMES.len() {
+                return id;
+            }
+        }
+        if let Some((i, _)) = THEMES.iter().enumerate().find(|(_, t)| t.name.eq_ignore_ascii_case(trimmed)) {
+            return i;
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        let legacy_path = std::path::PathBuf::from(home).join(".fancybash_theme");
+        if let Ok(content) = std::fs::read_to_string(&legacy_path) {
+            let trimmed = content.trim();
+            if let Some((i, _)) = THEMES.iter().enumerate().find(|(_, t)| t.name.eq_ignore_ascii_case(trimmed)) {
+                return i;
+            }
+        }
+    }
+    0
+}
+
+/// Saves the selected theme name to ~/.config/fancybash/theme
+pub fn set_active_theme(name: &str) -> Result<usize, String> {
+    if let Some((i, theme)) = THEMES.iter().enumerate().find(|(_, t)| t.name.eq_ignore_ascii_case(name)) {
+        let path = theme_config_path();
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if std::fs::write(&path, theme.name).is_ok() {
+            Ok(i)
+        } else {
+            Err(format!("failed to write theme config to {}", path.display()))
+        }
+    } else {
+        Err(format!("unknown theme '{name}'"))
+    }
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /// Context passed to the renderer on every prompt call.
@@ -173,12 +227,30 @@ pub struct PromptContext {
     pub last_exit: i32,
     /// Theme index (into THEMES static table)
     pub theme_id: usize,
+    /// Target shell format: 0 = Zsh (%{...%}), 1 = Bash (\[...\]), 2 = Fish (raw), 3 = Pwsh (raw)
+    pub shell: u8,
 }
 
 impl Default for PromptContext {
     fn default() -> Self {
         // SAFETY: all fields are plain integer/bool types; zeroing is valid.
         unsafe { std::mem::zeroed() }
+    }
+}
+
+/// Helper to write non-printing ANSI escape sequence wrapped appropriately for target shell.
+#[inline(always)]
+fn write_ansi(dst: &mut [u8], offset: &mut usize, ansi: &str, shell: u8) -> bool {
+    match shell {
+        0 => { // Zsh: zero-width sequence enclosed in %{ and %}
+            write_str(dst, offset, "%{") && write_str(dst, offset, ansi) && write_str(dst, offset, "%}")
+        }
+        1 => { // Bash: non-printing sequence enclosed in \[ and \]
+            write_str(dst, offset, "\\[") && write_str(dst, offset, ansi) && write_str(dst, offset, "\\]")
+        }
+        _ => { // Fish / Pwsh / Raw
+            write_str(dst, offset, ansi)
+        }
     }
 }
 
@@ -196,6 +268,7 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
         .unwrap_or(&THEMES[0]);
 
     let mut off = 0usize;
+    let s = ctx.shell;
 
     // ── Line 1 ───────────────────────────────────────────────────────────────
     // Format:  <prefix> <bold+user_color>user@host<reset> <path_color>~/path<reset>  <git_color>[🌿 branch ❗]<reset>
@@ -208,30 +281,34 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
 
     // User+host with color
     let uc = theme.user_color;
-    // Build the ANSI sequence dynamically into a small stack buffer
     let user_ansi = ansi_fg(uc);
-    write_bytes(buf, &mut off, user_ansi.as_bytes());
-    write_bytes(buf, &mut off, BOLD.as_bytes());
+    if !write_ansi(buf, &mut off, user_ansi.as_str(), s)
+        || !write_ansi(buf, &mut off, BOLD, s)
+    {
+        return Err("buffer too small");
+    }
 
     let user = std::str::from_utf8(&ctx.user[..ctx.user_len]).unwrap_or("user");
     let host = std::str::from_utf8(&ctx.host[..ctx.host_len]).unwrap_or("host");
     write_str(buf, &mut off, user);
     write_str(buf, &mut off, "@");
     write_str(buf, &mut off, host);
-    write_str(buf, &mut off, RESET);
+    write_ansi(buf, &mut off, RESET, s);
     write_str(buf, &mut off, " ");
 
     // Path
     let pc = theme.path_color;
-    write_bytes(buf, &mut off, ansi_fg(pc).as_bytes());
+    let path_ansi = ansi_fg(pc);
+    write_ansi(buf, &mut off, path_ansi.as_str(), s);
     let cwd = std::str::from_utf8(&ctx.cwd[..ctx.cwd_len]).unwrap_or("~");
     write_str(buf, &mut off, cwd);
-    write_str(buf, &mut off, RESET);
+    write_ansi(buf, &mut off, RESET, s);
 
     // Git segment
     if ctx.git_branch_len > 0 {
         let gc = theme.git_color;
-        write_bytes(buf, &mut off, ansi_fg(gc).as_bytes());
+        let git_ansi = ansi_fg(gc);
+        write_ansi(buf, &mut off, git_ansi.as_str(), s);
         write_str(buf, &mut off, " [🌿 ");
         let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
         write_str(buf, &mut off, branch);
@@ -239,7 +316,7 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
             write_str(buf, &mut off, " ❗");
         }
         write_str(buf, &mut off, "]");
-        write_str(buf, &mut off, RESET);
+        write_ansi(buf, &mut off, RESET, s);
     }
 
     write_str(buf, &mut off, "\n");
@@ -251,12 +328,12 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
     write_str(buf, &mut off, " ");
 
     if ctx.last_exit == 0 {
-        write_str(buf, &mut off, "\x1b[1;32m"); // bold green
+        write_ansi(buf, &mut off, "\x1b[1;32m", s); // bold green
     } else {
-        write_str(buf, &mut off, "\x1b[1;31m"); // bold red
+        write_ansi(buf, &mut off, "\x1b[1;31m", s); // bold red
     }
     write_str(buf, &mut off, theme.prompt_char);
-    write_str(buf, &mut off, RESET);
+    write_ansi(buf, &mut off, RESET, s);
     write_str(buf, &mut off, " ");
 
     Ok(off)
@@ -330,6 +407,7 @@ impl AnsiSeq {
         for c in s.chars() { self.push(c); }
     }
     fn as_bytes(&self) -> &[u8] { &self.buf[..self.len] }
+    fn as_str(&self) -> &str { std::str::from_utf8(&self.buf[..self.len]).unwrap_or("") }
 }
 
 // =============================================================================

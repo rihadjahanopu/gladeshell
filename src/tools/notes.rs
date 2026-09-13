@@ -692,7 +692,25 @@ fn centered_rect(percent_x: u16, height: u16, r: Rect) -> Rect {
     Rect::new(x, y, popup_width.min(r.width), height.min(r.height))
 }
 
+fn is_dir_empty_or_no_notes(root_dir: &PathBuf) -> bool {
+    if let Ok(entries) = fs::read_dir(root_dir) {
+        for entry in entries.flatten() {
+            if entry.path().is_dir() {
+                if let Ok(sub) = fs::read_dir(entry.path()) {
+                    if sub.flatten().any(|e| e.path().is_file()) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    true
+}
+
 fn seed_sample_notes_if_empty(root_dir: &PathBuf) {
+    if !is_dir_empty_or_no_notes(root_dir) {
+        return;
+    }
     let general = root_dir.join("General");
     let work = root_dir.join("Work");
     let _ = fs::create_dir_all(&general);

@@ -43,6 +43,14 @@ pub enum SearchMode {
     RecentDirs,
 }
 
+/// Action the shell wrapper should take on the selected item.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CfAction {
+    CdInto,   // cd into directory
+    OpenCode, // open in VS Code (F2)
+    OpenFile, // open file with type-appropriate handler
+}
+
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     pub path: PathBuf,
@@ -224,10 +232,10 @@ impl FuzzyCdApp {
         }
     }
 
-    pub fn run_loop(
+    pub fn run_loop<B: ratatui::backend::Backend>(
         &mut self,
-        terminal: &mut Terminal<CrosstermBackend<io::Stderr>>,
-    ) -> Result<Option<String>, Box<dyn Error>> {
+        terminal: &mut Terminal<B>,
+    ) -> Result<Option<(String, CfAction)>, Box<dyn Error>> {
         loop {
             terminal.draw(|f| self.render_ui(f))?;
 
@@ -248,10 +256,26 @@ impl FuzzyCdApp {
                         if let Some(idx) = self.list_state.selected() {
                             if let Some(&orig_idx) = self.filtered_indices.get(idx) {
                                 let item = &self.all_items[orig_idx];
-                                return Ok(Some(item.path.to_string_lossy().to_string()));
+                                let path = item.path.to_string_lossy().to_string();
+                                let action = if item.is_dir {
+                                    CfAction::CdInto
+                                } else {
+                                    CfAction::OpenFile
+                                };
+                                return Ok(Some((path, action)));
                             }
                         }
                         return Ok(None);
+                    }
+                    // [F2] → Open selected item in VS Code
+                    (KeyCode::F(2), _) => {
+                        if let Some(idx) = self.list_state.selected() {
+                            if let Some(&orig_idx) = self.filtered_indices.get(idx) {
+                                let item = &self.all_items[orig_idx];
+                                let path = item.path.to_string_lossy().to_string();
+                                return Ok(Some((path, CfAction::OpenCode)));
+                            }
+                        }
                     }
                     (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
                         self.move_select(-1);
@@ -388,7 +412,29 @@ impl FuzzyCdApp {
                 let is_selected = self.list_state.selected() == Some(i);
                 let item = &self.all_items[orig_idx];
 
-                let icon = if item.is_dir { "📁 " } else { "📄 " };
+                let icon = if item.is_dir {
+                    "📁 "
+                } else {
+                    let ext = item.path.extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    match ext.as_str() {
+                        "mp4"|"mkv"|"avi"|"mov"|"webm"|"flv"|"wmv"|"m4v"|"ogv"|"m2ts"|"rmvb"|"3gp" => "🎬 ",
+                        "jpg"|"jpeg"|"png"|"gif"|"bmp"|"webp"|"svg"|"avif"|"heic"|"tiff"|"ico" => "🖼️  ",
+                        "mp3"|"flac"|"ogg"|"wav"|"aac"|"m4a"|"opus"|"wma" => "🎵 ",
+                        "pdf" => "📕 ",
+                        "docx"|"doc"|"odt" => "📝 ",
+                        "xlsx"|"xls"|"ods"|"csv" => "📊 ",
+                        "pptx"|"ppt"|"odp" => "📊 ",
+                        "zip"|"tar"|"gz"|"bz2"|"xz"|"7z"|"rar"|"zst" => "🗜️  ",
+                        "rs"|"py"|"js"|"ts"|"go"|"c"|"cpp"|"java"|"rb"|"php"|"swift"|"kt" => "⚡ ",
+                        "sh"|"bash"|"zsh"|"fish" => "🖥️  ",
+                        "md"|"txt"|"rst" => "📄 ",
+                        "json"|"yaml"|"yml"|"toml"|"xml" => "🔧 ",
+                        _ => "📄 ",
+                    }
+                };
 
                 if is_selected {
                     ListItem::new(Line::from(vec![
@@ -447,10 +493,12 @@ impl FuzzyCdApp {
         // ── 4. Bottom Status Bar ────────────────────────────────────────────────
         let status_line = Line::from(vec![
             Span::styled(" [ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("Cd / Open Target  │ ", Style::default().fg(C_TEXT)),
-            Span::styled(" [TAB / CTRL-Z] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled("Switch Mode  │ ", Style::default().fg(C_TEXT)),
-            Span::styled(" [ESC] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+            Span::styled("Open / Cd  │  ", Style::default().fg(C_TEXT)),
+            Span::styled("[F2] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("VS Code  │  ", Style::default().fg(C_TEXT)),
+            Span::styled("[TAB] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Switch Mode  │  ", Style::default().fg(C_TEXT)),
+            Span::styled("[ESC] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
             Span::styled("Cancel", Style::default().fg(C_TEXT)),
         ]);
 
@@ -612,13 +660,29 @@ fn dirs_home() -> Option<PathBuf> {
     std::env::var_os("HOME").map(PathBuf::from)
 }
 
+fn open_tty() -> Box<dyn io::Write + Send> {
+    #[cfg(unix)]
+    {
+        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("/dev/tty") {
+            return Box::new(file);
+        }
+    }
+    #[cfg(windows)]
+    {
+        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("CONOUT$") {
+            return Box::new(file);
+        }
+    }
+    Box::new(io::stderr())
+}
+
 pub fn run() -> Result<(), Box<dyn Error>> {
     let current_dir = std::env::current_dir()?;
 
     enable_raw_mode()?;
-    let mut stderr = io::stderr();
-    execute!(stderr, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stderr);
+    let mut tty = open_tty();
+    execute!(tty, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(tty);
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = FuzzyCdApp::new(current_dir);
@@ -629,8 +693,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
-    if let Ok(Some(selected_path)) = res {
-        println!("{}", selected_path);
+    if let Ok(Some((selected_path, action))) = res {
+        // Output tagged path so the shell wrapper can dispatch correctly
+        let tag = match action {
+            CfAction::CdInto   => "CD",
+            CfAction::OpenCode => "CODE",
+            CfAction::OpenFile => "OPEN",
+        };
+        println!("{}:{}", tag, selected_path);
     }
 
     Ok(())

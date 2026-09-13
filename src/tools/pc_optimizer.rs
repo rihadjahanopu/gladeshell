@@ -12,6 +12,7 @@ use std::{
     io::{self, Write},
     path::PathBuf,
     process::{Command, Stdio},
+    sync::mpsc,
 };
 
 use crossterm::{
@@ -21,10 +22,10 @@ use crossterm::{
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, ListState, Paragraph},
     Terminal,
 };
 
@@ -70,7 +71,7 @@ impl PkgManager {
     fn install_cmd(&self) -> Vec<String> {
         match self {
             PkgManager::Apt | PkgManager::Unknown => {
-                vec!["sudo".into(), "apt-get".into(), "install".into(), "-y".into()]
+                vec!["sudo".into(), "apt-get".into(), "install".into(), "-y".into(), "-o".into(), "Dpkg::Use-Pty=0".into()]
             }
             PkgManager::Dnf => vec!["sudo".into(), "dnf".into(), "install".into(), "-y".into()],
             PkgManager::Yum => vec!["sudo".into(), "yum".into(), "install".into(), "-y".into()],
@@ -518,13 +519,25 @@ impl<'a> UtApp<'a> {
                         return Ok(None);
                     }
                     (KeyCode::Enter, _) => {
-                        let selected_indices: Vec<usize> = self
+                        let mut selected_indices: Vec<usize> = self
                             .items
                             .iter()
                             .enumerate()
                             .filter(|(_, item)| item.selected)
                             .map(|(idx, _)| idx)
                             .collect();
+
+                        // Fallback: If user hits Enter without toggling Space/Tab checkboxes,
+                        // auto-select the item currently highlighted under cursor
+                        if selected_indices.is_empty() {
+                            if let Some(sel) = self.list_state.selected() {
+                                if sel < self.filtered_indices.len() {
+                                    let orig_idx = self.filtered_indices[sel];
+                                    selected_indices.push(orig_idx);
+                                }
+                            }
+                        }
+
                         return Ok(Some(selected_indices));
                     }
 
@@ -760,10 +773,10 @@ impl<'a> UtApp<'a> {
 
         // ── 4. Bottom Status Bar ────────────────────────────────────────────────
         let status_line = Line::from(vec![
-            Span::styled(" [SPACE / TAB] ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-            Span::styled("Select Multi-tools  │ ", Style::default().fg(C_TEXT)),
             Span::styled(" [ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("Install Selected  │ ", Style::default().fg(C_TEXT)),
+            Span::styled("Install Highlighted/Selected Tool  │ ", Style::default().fg(C_TEXT)),
+            Span::styled(" [SPACE / TAB] ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled("Toggle Multi-select  │ ", Style::default().fg(C_TEXT)),
             Span::styled(" [Q / ESC] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
             Span::styled("Cancel", Style::default().fg(C_TEXT)),
         ]);
@@ -794,16 +807,15 @@ fn add_config_to_rc(rc: &PathBuf, marker: &str, content: &str) {
     }
 }
 
-fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &str) {
-    const CYAN: &str = "\x1b[1;36m";
-    const NC: &str = "\x1b[0m";
-
+fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, _shell_name: &str) {
     match generic {
         "docker.io" => {
             let user = std::env::var("USER").unwrap_or_default();
             if !user.is_empty() {
                 let _ = Command::new("sudo")
                     .args(["usermod", "-aG", "docker", &user])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .status();
             }
             let _ = Command::new("sudo")
@@ -851,6 +863,8 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                 let _ = Command::new("sudo")
                     .args(["bash", "-c",
                         "echo -e 'PERCENT=60\\nALGO=zstd\\nPRIORITY=100' > /etc/default/zramswap"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .status();
                 let _ = Command::new("sudo")
                     .args(["systemctl", "restart", "zramswap"])
@@ -867,8 +881,14 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                     .args(["bash", "-c",
                         "echo -e '[zram0]\\nzram-size = ram / 2\\ncompression-algorithm = zstd' \
                          > /etc/systemd/zram-generator.conf"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .status();
-                let _ = Command::new("sudo").args(["systemctl", "daemon-reload"]).status();
+                let _ = Command::new("sudo")
+                    .args(["systemctl", "daemon-reload"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
             }
         }
         "micro" => {
@@ -881,8 +901,16 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
         }
         "ufw" => {
             if cmd_exists("ufw") {
-                let _ = Command::new("sudo").args(["ufw", "allow", "ssh"]).status();
-                let _ = Command::new("sudo").args(["ufw", "--force", "enable"]).status();
+                let _ = Command::new("sudo")
+                    .args(["ufw", "allow", "ssh"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
+                let _ = Command::new("sudo")
+                    .args(["ufw", "--force", "enable"])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status();
             }
         }
         "htop" => {
@@ -893,12 +921,7 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                 let _ = fs::write(&rc, "highlight_megabytes=1\nshow_program_path=1\n");
             }
         }
-        "acpi" => {}
-        "bat" => {}
-        "eza" => {}
-        "zoxide" => {}
         "preload" => {
-            println!("{CYAN}🔧 Enabling Preload service...{NC}");
             let _ = Command::new("sudo")
                 .args(["systemctl", "enable", "--now", "preload"])
                 .stdout(Stdio::null())
@@ -906,7 +929,6 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                 .status();
         }
         "earlyoom" => {
-            println!("{CYAN}🔧 Configuring EarlyOOM (Memory Protection)...{NC}");
             if std::path::Path::new("/etc/default/earlyoom").exists() {
                 let _ = Command::new("sudo")
                     .args([
@@ -914,6 +936,8 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                         "s/EARLYOOM_ARGS=.*/EARLYOOM_ARGS=\"-m 10 -s 5\"/",
                         "/etc/default/earlyoom",
                     ])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .status();
             }
             let _ = Command::new("sudo")
@@ -923,7 +947,6 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                 .status();
         }
         "lm-sensors" => {
-            println!("{CYAN}🔍 Detecting Hardware Sensors...{NC}");
             let _ = Command::new("sudo")
                 .args(["sensors-detect", "--auto"])
                 .stdout(Stdio::null())
@@ -935,7 +958,6 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                 .stderr(Stdio::null())
                 .status();
         }
-        "fzf" => {}
         _ => {}
     }
 }
@@ -968,6 +990,306 @@ fn rc_file_for(shell_name: &str) -> PathBuf {
     }
 }
 
+fn open_tty() -> Box<dyn io::Write + Send> {
+    #[cfg(unix)]
+    {
+        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("/dev/tty") {
+            return Box::new(file);
+        }
+    }
+    #[cfg(windows)]
+    {
+        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("CONOUT$") {
+            return Box::new(file);
+        }
+    }
+    Box::new(io::stdout())
+}
+
+// ── Interactive Installation Progress Dashboard ───────────────────────────────
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InstallItemStatus {
+    Pending,
+    Installing,
+    AlreadyInstalled,
+    Success,
+    Failed(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct UtInstallProgressItem {
+    pub generic_name: &'static str,
+    pub pkg_name: String,
+    pub status: InstallItemStatus,
+}
+
+pub enum InstallEvent {
+    StartTool { index: usize },
+    Log { line: String },
+    ToolFinished { index: usize, status: InstallItemStatus },
+    AllDone,
+}
+
+pub struct UtInstallProgressApp {
+    pub distro_id: String,
+    pub pm_label: String,
+    pub items: Vec<UtInstallProgressItem>,
+    pub current_tool_idx: Option<usize>,
+    pub spinner_idx: usize,
+    pub logs: Vec<String>,
+    pub is_done: bool,
+}
+
+impl UtInstallProgressApp {
+    pub fn new(distro_id: String, pm_label: String, selected_tools: Vec<(&'static str, String)>) -> Self {
+        let items = selected_tools
+            .into_iter()
+            .map(|(generic, pkg)| UtInstallProgressItem {
+                generic_name: generic,
+                pkg_name: pkg,
+                status: InstallItemStatus::Pending,
+            })
+            .collect();
+
+        Self {
+            distro_id,
+            pm_label,
+            items,
+            current_tool_idx: None,
+            spinner_idx: 0,
+            logs: vec!["🚀 Initializing installer pipeline...".to_string()],
+            is_done: false,
+        }
+    }
+
+    pub fn render_ui(&mut self, frame: &mut ratatui::Frame) {
+        let area = frame.area();
+        frame.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
+
+        let outer = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Banner
+                Constraint::Length(3), // Progress Bar
+                Constraint::Min(8),    // Split Body (List + Logs)
+                Constraint::Length(3), // Status Bar
+            ])
+            .split(area);
+
+        // 1. Top Banner
+        let spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let status_badge = if self.is_done {
+            Span::styled("  [✔ COMPLETED]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+        } else {
+            let frame_char = spinner_frames[self.spinner_idx % spinner_frames.len()];
+            Span::styled(
+                format!("  [{} INSTALLING]", frame_char),
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            )
+        };
+
+        let banner_text = Line::from(vec![
+            Span::styled("⚡  ", Style::default().fg(C_YELLOW)),
+            Span::styled(
+                "UT INSTALLER",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " — Live Arsenal Deployment Engine",
+                Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("  [Distro: {} | Pkg: {}]", self.distro_id, self.pm_label),
+                Style::default().fg(C_DIM),
+            ),
+            status_badge,
+        ]);
+
+        let banner = Paragraph::new(banner_text)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_BORDER))
+                    .style(Style::default().bg(C_BG)),
+            );
+        frame.render_widget(banner, outer[0]);
+
+        // 2. Progress Bar
+        let completed_count = self
+            .items
+            .iter()
+            .filter(|i| matches!(i.status, InstallItemStatus::AlreadyInstalled | InstallItemStatus::Success | InstallItemStatus::Failed(_)))
+            .count();
+        let total_count = self.items.len();
+        let percent = if total_count > 0 {
+            (completed_count * 100) / total_count
+        } else {
+            100
+        };
+
+        let gauge = Gauge::default()
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_ACCENT))
+                    .title(Span::styled(
+                        " Overall Deployment Progress ",
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
+                    .style(Style::default().bg(C_BG)),
+            )
+            .gauge_style(Style::default().fg(C_ACCENT).bg(Color::Rgb(20, 25, 35)))
+            .percent(percent as u16)
+            .label(format!("{}%  ({}/{} completed)", percent, completed_count, total_count));
+        frame.render_widget(gauge, outer[1]);
+
+        // 3. Middle split (Left: Tool Status List, Right: Live Logs)
+        let middle_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(50),
+                Constraint::Percentage(50),
+            ])
+            .split(outer[2]);
+
+        // ── Left: Tool List ──
+        let spinner = spinner_frames[self.spinner_idx % spinner_frames.len()];
+        let list_items: Vec<ListItem> = self
+            .items
+            .iter()
+            .enumerate()
+            .map(|(idx, item)| {
+                let is_active = self.current_tool_idx == Some(idx);
+                let (status_str, status_style) = match &item.status {
+                    InstallItemStatus::Pending => ("⏳ Pending".to_string(), Style::default().fg(C_DIM)),
+                    InstallItemStatus::Installing => (
+                        format!("{} Installing...", spinner),
+                        Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                    ),
+                    InstallItemStatus::AlreadyInstalled => (
+                        "✔ Up to date".to_string(),
+                        Style::default().fg(C_GREEN),
+                    ),
+                    InstallItemStatus::Success => (
+                        "✨ Installed".to_string(),
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ),
+                    InstallItemStatus::Failed(_) => (
+                        "❌ Failed".to_string(),
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    ),
+                };
+
+                let pointer = if is_active {
+                    Span::styled("❯ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD))
+                } else {
+                    Span::raw("  ")
+                };
+
+                let name_span = Span::styled(
+                    format!("{:<14} ", item.generic_name),
+                    Style::default()
+                        .fg(if is_active { C_WHITE } else { C_TEXT })
+                        .add_modifier(if is_active { Modifier::BOLD } else { Modifier::empty() }),
+                );
+
+                let pkg_span = Span::styled(
+                    format!("({:<12}) ", item.pkg_name),
+                    Style::default().fg(C_DIM),
+                );
+
+                let status_span = Span::styled(status_str, status_style);
+
+                ListItem::new(Line::from(vec![
+                    pointer,
+                    name_span,
+                    pkg_span,
+                    status_span,
+                ]))
+            })
+            .collect();
+
+        let list_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(if self.is_done { C_GREEN } else { C_BORDER }))
+            .title(Span::styled(
+                " 📦 Package Queue ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ))
+            .style(Style::default().bg(C_BG));
+
+        let list_widget = List::new(list_items).block(list_block);
+        frame.render_widget(list_widget, middle_chunks[0]);
+
+        // ── Right: Live Activity Log ──
+        let visible_capacity = middle_chunks[1].height.saturating_sub(2) as usize;
+        let start_idx = self.logs.len().saturating_sub(visible_capacity);
+        let recent_logs = &self.logs[start_idx..];
+
+        let log_lines: Vec<Line> = recent_logs
+            .iter()
+            .map(|l| {
+                let style = if l.contains('✔') || l.contains('✨') || l.contains("successfully") {
+                    Style::default().fg(C_GREEN)
+                } else if l.contains('❌') || l.contains("Failed") || l.contains("error") {
+                    Style::default().fg(Color::Red)
+                } else if l.contains('📦') || l.contains("Executing") {
+                    Style::default().fg(C_BORDER)
+                } else {
+                    Style::default().fg(C_DIM)
+                };
+                Line::from(Span::styled(l.clone(), style))
+            })
+            .collect();
+
+        let log_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_ACCENT))
+            .title(Span::styled(
+                " 📜 Live Installation Log ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ))
+            .style(Style::default().bg(C_BG));
+
+        let log_paragraph = Paragraph::new(log_lines).block(log_block);
+        frame.render_widget(log_paragraph, middle_chunks[1]);
+
+        // 4. Status Bar
+        let footer_text = if self.is_done {
+            Line::from(vec![
+                Span::styled(" ✅ Deployment Completed! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled("Press ", Style::default().fg(C_DIM)),
+                Span::styled("[ENTER]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(" or ", Style::default().fg(C_DIM)),
+                Span::styled("[Q]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(" to exit ", Style::default().fg(C_DIM)),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled(" ⚙️ Installing selected packages... ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled("Please wait for deployment to finish ", Style::default().fg(C_DIM)),
+            ])
+        };
+
+        let footer = Paragraph::new(footer_text)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(if self.is_done { C_GREEN } else { C_BORDER }))
+                    .style(Style::default().bg(C_BG)),
+            );
+        frame.render_widget(footer, outer[3]);
+    }
+}
+
 // ── Main entry point ──────────────────────────────────────────────────────────
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -981,22 +1303,17 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Distro detection
     let distro = Distro::detect()?;
     let pm = &distro.pkg_manager;
-    println!(
-        "\n{CYAN}🖥️  Detected: {BOLD}{}{NC} | Package Manager: {BOLD}{}{NC}\n",
-        distro.id,
-        pm.label()
-    );
 
-    // 2. Launch UtApp Ratatui TUI
-    let mut app = UtApp::new(&distro.id, pm);
+    // 2. Launch UtApp Ratatui TUI (Selection phase)
+    let mut selection_app = UtApp::new(&distro.id, pm);
 
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
+    let mut tty = open_tty();
+    execute!(tty, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(tty);
     let mut terminal = Terminal::new(backend)?;
 
-    let res = app.run_loop(&mut terminal);
+    let res = selection_app.run_loop(&mut terminal);
 
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
@@ -1015,114 +1332,261 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // 4. Authenticate sudo upfront so password prompt is visible
+    // 3. Authenticate sudo upfront so password prompt is visible
     println!("\n{CYAN}🔐 Requesting sudo permissions for tool installation...{NC}");
-    let _ = Command::new("sudo").arg("-v").status();
+    let sudo_ok = Command::new("sudo")
+        .arg("-v")
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
 
-    // 5. Sync package lists
-    println!("{CYAN}🔄 Syncing package lists...{NC}");
-    if let Some(cmd) = pm.update_cmd() {
-        let _ = Command::new(&cmd[0])
-            .args(&cmd[1..])
-            .status();
+    if !sudo_ok {
+        println!("\n{RED}❌ Sudo authentication failed or was cancelled. Installation aborted.{NC}");
+        return Ok(());
     }
 
     let shell_name = detect_shell_name();
     let rc = rc_file_for(&shell_name);
 
-    let mut installed_list: Vec<String> = vec![];
-    let mut failed_list:    Vec<String> = vec![];
+    let selected_tools: Vec<(&'static str, String)> = selected_indices
+        .iter()
+        .map(|&idx| {
+            let (_, generic, _, map) = TOOLS[idx];
+            let pkg = resolve_pkg(map, pm).to_string();
+            (generic, pkg)
+        })
+        .collect();
 
-    let total_selected = selected_indices.len();
-    println!(
-        "\n\x1b[1;36m⚡ Starting Arsenal Tool Installation ({} tool(s) selected for {})\x1b[0m\n",
-        total_selected,
-        distro.id
+    let mut progress_app = UtInstallProgressApp::new(
+        distro.id.clone(),
+        pm.label().to_string(),
+        selected_tools,
     );
 
-    let spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    // 4. Launch UtInstallProgressApp Ratatui TUI (Installation phase)
+    enable_raw_mode()?;
+    let mut tty = open_tty();
+    execute!(tty, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(tty);
+    let mut install_terminal = Terminal::new(backend)?;
 
-    // 6. Install loop with animated progress UI
-    for (step_idx, idx) in selected_indices.iter().enumerate() {
-        let current_num = step_idx + 1;
-        let (_, generic, _, map) = TOOLS[*idx];
-        let pkg = resolve_pkg(map, pm);
-        let frame = spinner_frames[step_idx % spinner_frames.len()];
+    let (tx, rx) = mpsc::channel();
+    let pm_clone = pm.clone();
+    let rc_path = rc.clone();
+    let shell_name_clone = shell_name.clone();
+    let selected_indices_clone = selected_indices.clone();
 
-        let percent = (current_num * 100) / total_selected;
-        let filled = (percent * 30) / 100;
-        let bar = format!("{}{}", "█".repeat(filled), "░".repeat(30 - filled));
+    std::thread::spawn(move || {
+        // Update package lists
+        if let Some(cmd) = pm_clone.update_cmd() {
+            let _ = tx.send(InstallEvent::Log {
+                line: "🔄 Syncing package manager repository lists...".into(),
+            });
+            let _ = Command::new(&cmd[0])
+                .args(&cmd[1..])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output();
+        }
 
-        println!(
-            "\x1b[1;36m[{}/{}] {}\x1b[0m \x1b[1;33m[{}]\x1b[0m \x1b[1;32m{}%\x1b[0m",
-            current_num, total_selected, frame, bar, percent
-        );
-        print!("  \x1b[1m📦 {} ({})\x1b[0m ... ", generic, pkg);
-        let _ = std::io::stdout().flush();
+        for (step_idx, &idx) in selected_indices_clone.iter().enumerate() {
+            let (_, generic, _, map) = TOOLS[idx];
+            let pkg = resolve_pkg(map, &pm_clone);
 
-        if pm.is_installed(pkg) {
-            println!("\x1b[1;36m✔ Already installed\x1b[0m");
-            installed_list.push(generic.to_string());
-        } else {
-            let cmd = pm.install_cmd();
-            let mut install_proc = Command::new(&cmd[0]);
-            install_proc.args(&cmd[1..]).arg(pkg);
-            if pm == &PkgManager::Apt {
-                install_proc.env("DEBIAN_FRONTEND", "noninteractive");
-            }
-            let ok = install_proc
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false);
+            let _ = tx.send(InstallEvent::StartTool { index: step_idx });
 
-            if ok {
-                println!("\x1b[1;32m✨ [INSTALLED SUCCESS]\x1b[0m");
-                installed_list.push(generic.to_string());
+            if pm_clone.is_installed(pkg) {
+                let _ = tx.send(InstallEvent::Log {
+                    line: format!("✔ Package '{}' ({}) is already installed", generic, pkg),
+                });
+                auto_config(generic, &pm_clone, &rc_path, &shell_name_clone);
+                let _ = tx.send(InstallEvent::ToolFinished {
+                    index: step_idx,
+                    status: InstallItemStatus::AlreadyInstalled,
+                });
             } else {
-                println!("\x1b[1;31m❌ [FAILED]\x1b[0m");
-                failed_list.push(format!("{generic} ({pkg})"));
-                continue; // skip auto-config on failure
+                let _ = tx.send(InstallEvent::Log {
+                    line: format!("📦 Installing {} ({}) via {}...", generic, pkg, pm_clone.label()),
+                });
+
+                let cmd = pm_clone.install_cmd();
+                let mut child = Command::new(&cmd[0]);
+                child.args(&cmd[1..]).arg(pkg);
+                if pm_clone == PkgManager::Apt {
+                    child.env("DEBIAN_FRONTEND", "noninteractive");
+                }
+                child.stdout(Stdio::piped()).stderr(Stdio::piped());
+
+                if let Ok(mut child_proc) = child.spawn() {
+                    let stdout_stream = child_proc.stdout.take();
+                    let stderr_stream = child_proc.stderr.take();
+
+                    let tx_out = tx.clone();
+                    let t_out = std::thread::spawn(move || {
+                        if let Some(stream) = stdout_stream {
+                            use std::io::{BufRead, BufReader};
+                            let reader = BufReader::new(stream);
+                            for line in reader.lines().flatten() {
+                                let trimmed = line.trim().to_string();
+                                if !trimmed.is_empty() {
+                                    let _ = tx_out.send(InstallEvent::Log { line: trimmed });
+                                }
+                            }
+                        }
+                    });
+
+                    let tx_err = tx.clone();
+                    let t_err = std::thread::spawn(move || {
+                        if let Some(stream) = stderr_stream {
+                            use std::io::{BufRead, BufReader};
+                            let reader = BufReader::new(stream);
+                            for line in reader.lines().flatten() {
+                                let trimmed = line.trim().to_string();
+                                if !trimmed.is_empty() {
+                                    let _ = tx_err.send(InstallEvent::Log { line: trimmed });
+                                }
+                            }
+                        }
+                    });
+
+                    let _ = t_out.join();
+                    let _ = t_err.join();
+
+                    let ok = child_proc.wait().map(|s| s.success()).unwrap_or(false);
+                    if ok {
+                        let _ = tx.send(InstallEvent::Log {
+                            line: format!("✨ Successfully installed {}!", generic),
+                        });
+                        auto_config(generic, &pm_clone, &rc_path, &shell_name_clone);
+                        let _ = tx.send(InstallEvent::ToolFinished {
+                            index: step_idx,
+                            status: InstallItemStatus::Success,
+                        });
+                    } else {
+                        let _ = tx.send(InstallEvent::Log {
+                            line: format!("❌ Failed to install {}", generic),
+                        });
+                        let _ = tx.send(InstallEvent::ToolFinished {
+                            index: step_idx,
+                            status: InstallItemStatus::Failed("Installation failed".into()),
+                        });
+                    }
+                } else {
+                    let _ = tx.send(InstallEvent::Log {
+                        line: format!("❌ Could not launch install process for {}", generic),
+                    });
+                    let _ = tx.send(InstallEvent::ToolFinished {
+                        index: step_idx,
+                        status: InstallItemStatus::Failed("Spawn error".into()),
+                    });
+                }
             }
         }
 
-        auto_config(generic, pm, &rc, &shell_name);
+        if shell_name_clone == "bash" {
+            add_config_to_rc(
+                &rc_path,
+                "HISTORY",
+                "export HISTFILE=\"$HOME/.bash_history\"\nexport HISTSIZE=50000\nexport HISTFILESIZE=50000\nshopt -s histappend 2>/dev/null || true",
+            );
+        }
+
+        if let Some(cmd) = pm_clone.cleanup_cmd() {
+            let _ = tx.send(InstallEvent::Log {
+                line: "🧹 Cleaning up package cache...".into(),
+            });
+            let _ = Command::new(&cmd[0])
+                .args(&cmd[1..])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+        }
+
+        let _ = tx.send(InstallEvent::Log {
+            line: "🎉 All installation tasks completed!".into(),
+        });
+        let _ = tx.send(InstallEvent::AllDone);
+    });
+
+    // Event loop for Install TUI
+    loop {
+        while let Ok(evt) = rx.try_recv() {
+            match evt {
+                InstallEvent::StartTool { index } => {
+                    progress_app.current_tool_idx = Some(index);
+                    if let Some(item) = progress_app.items.get_mut(index) {
+                        item.status = InstallItemStatus::Installing;
+                    }
+                }
+                InstallEvent::Log { line } => {
+                    progress_app.logs.push(line);
+                    if progress_app.logs.len() > 250 {
+                        progress_app.logs.remove(0);
+                    }
+                }
+                InstallEvent::ToolFinished { index, status } => {
+                    if let Some(item) = progress_app.items.get_mut(index) {
+                        item.status = status;
+                    }
+                }
+                InstallEvent::AllDone => {
+                    progress_app.is_done = true;
+                    progress_app.current_tool_idx = None;
+                }
+            }
+        }
+
+        progress_app.spinner_idx = (progress_app.spinner_idx + 1) % 10;
+        install_terminal.draw(|f| progress_app.render_ui(f))?;
+
+        if crossterm::event::poll(std::time::Duration::from_millis(50))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == event::KeyEventKind::Press {
+                    match (key.code, key.modifiers) {
+                        (KeyCode::Char('c'), KeyModifiers::CONTROL) => break,
+                        (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) | (KeyCode::Enter, _) => {
+                            if progress_app.is_done {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
 
+    disable_raw_mode()?;
+    execute!(install_terminal.backend_mut(), LeaveAlternateScreen)?;
+    install_terminal.show_cursor()?;
 
-    // 7. History env (only for bash — zsh is handled dynamically by fancybash init zsh)
-    if shell_name == "bash" {
-        add_config_to_rc(
-            &rc,
-            "HISTORY",
-            "export HISTFILE=\"$HOME/.bash_history\"\nexport HISTSIZE=50000\nexport HISTFILESIZE=50000\nshopt -s histappend 2>/dev/null || true",
-        );
-    }
+    // 5. Summary
+    let installed_count = progress_app
+        .items
+        .iter()
+        .filter(|i| matches!(i.status, InstallItemStatus::AlreadyInstalled | InstallItemStatus::Success))
+        .count();
+    let failed_tools: Vec<String> = progress_app
+        .items
+        .iter()
+        .filter(|i| matches!(i.status, InstallItemStatus::Failed(_)))
+        .map(|i| format!("{} ({})", i.generic_name, i.pkg_name))
+        .collect();
 
-
-    // 8. Cleanup
-    if let Some(cmd) = pm.cleanup_cmd() {
-        let _ = Command::new(&cmd[0])
-            .args(&cmd[1..])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-    }
-
-    // 9. Summary
     println!("\n{GREEN}✅ Deployment Complete on {}!{NC}", distro.id);
-    println!("{GREEN}📦 Installed/confirmed: {} tools{NC}", installed_list.len());
+    println!("{GREEN}📦 Installed/confirmed: {} tools{NC}", installed_count);
 
-    if !failed_list.is_empty() {
-        println!("{RED}❌ Failed ({}):{NC}", failed_list.len());
-        for f in &failed_list {
+    if !failed_tools.is_empty() {
+        println!("{RED}❌ Failed ({}):{NC}", failed_tools.len());
+        for f in &failed_tools {
             println!("  - {f}");
         }
     }
 
-    if installed_list.iter().any(|t| t == "docker.io") {
+    if progress_app.items.iter().any(|t| t.generic_name == "docker.io") {
         println!("{YELLOW}⚠️  Log out and back in for Docker group changes.{NC}");
     }
-    if installed_list.iter().any(|t| t == "zoxide") {
+    if progress_app.items.iter().any(|t| t.generic_name == "zoxide") {
         println!(
             "{CYAN}💡 Run 'source {}' to enable zoxide.{NC}",
             rc.display()

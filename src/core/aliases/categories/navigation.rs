@@ -50,6 +50,42 @@ pub fn group() -> AliasGroup {
                 only_shells: vec![],
             },
             AliasEntry {
+                key: "dow".to_string(),
+                value: "cd ~/Downloads".to_string(),
+                description: "Jump to ~/Downloads directory".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "des".to_string(),
+                value: "cd ~/Desktop".to_string(),
+                description: "Jump to ~/Desktop directory".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "doc".to_string(),
+                value: "cd ~/Documents".to_string(),
+                description: "Jump to ~/Documents directory".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "pic".to_string(),
+                value: "cd ~/Pictures".to_string(),
+                description: "Jump to ~/Pictures directory".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "vid".to_string(),
+                value: "cd ~/Videos".to_string(),
+                description: "Jump to ~/Videos directory".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "mus".to_string(),
+                value: "cd ~/Music".to_string(),
+                description: "Jump to ~/Music directory".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
                 key: "h".to_string(),
                 value: "history".to_string(),
                 description: "Show command history".to_string(),

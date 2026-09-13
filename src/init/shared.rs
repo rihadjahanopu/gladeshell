@@ -292,6 +292,7 @@ pub fn render_integrations(shell: Shell) -> String {
 # ======================================================
 # Zoxide Init & Smart CD
 if command -v zoxide &>/dev/null; then
+    unalias z zi 2>/dev/null
     eval "$(zoxide init zsh 2>/dev/null)"
     alias cd='z' 2>/dev/null
 fi
@@ -320,6 +321,7 @@ fi
 # ======================================================
 # Zoxide Init & Smart CD
 if command -v zoxide &>/dev/null; then
+    unalias z zi 2>/dev/null
     eval "$(zoxide init bash 2>/dev/null)"
     alias cd='z' 2>/dev/null
 fi
@@ -428,38 +430,199 @@ pub fn render_cf_wrapper(shell: Shell) -> String {
     match shell {
         Shell::Zsh | Shell::Bash => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
-unalias cf 2>/dev/null
+unalias cf _cf_open 2>/dev/null || true
+
+# File-type aware opener: videos → mpv/vlc, images → eog/feh, audio → mpv, docs → xdg-open
+_cf_open() {
+    local file="$1"
+    [[ -z "$file" ]] && return
+    local ext="${file##*.}"
+    ext="$(echo "$ext" | tr '[:upper:]' '[:lower:]')"
+    case "$ext" in
+        mp4|mkv|avi|mov|webm|flv|wmv|m4v|ogv|ts|rmvb|3gp)
+            if   command -v mpv    &>/dev/null; then mpv    "$file" >/dev/null 2>&1 &
+            elif command -v vlc    &>/dev/null; then vlc    "$file" >/dev/null 2>&1 &
+            elif command -v mplayer &>/dev/null; then mplayer "$file" >/dev/null 2>&1 &
+            else xdg-open "$file" >/dev/null 2>&1 &
+            fi ;;
+        jpg|jpeg|png|gif|bmp|webp|svg|ico|tiff|tif|avif|heic|raw)
+            if   command -v eog    &>/dev/null; then eog    "$file" >/dev/null 2>&1 &
+            elif command -v feh    &>/dev/null; then feh    "$file" >/dev/null 2>&1 &
+            elif command -v imv    &>/dev/null; then imv    "$file" >/dev/null 2>&1 &
+            elif command -v sxiv   &>/dev/null; then sxiv   "$file" >/dev/null 2>&1 &
+            elif command -v nomacs &>/dev/null; then nomacs "$file" >/dev/null 2>&1 &
+            else xdg-open "$file" >/dev/null 2>&1 &
+            fi ;;
+        mp3|flac|ogg|wav|aac|m4a|opus|wma)
+            if   command -v mpv &>/dev/null; then mpv "$file" >/dev/null 2>&1 &
+            elif command -v vlc &>/dev/null; then vlc "$file" >/dev/null 2>&1 &
+            else xdg-open "$file" >/dev/null 2>&1 &
+            fi ;;
+        pdf|docx|doc|odt|pptx|ppt|xlsx|xls|odp|ods|odf)
+            xdg-open "$file" >/dev/null 2>&1 & ;;
+        *)
+            xdg-open "$file" >/dev/null 2>&1 & ;;
+    esac
+}
+
 cf() {
-    local target
-    target="$(fancybash cf "$@")"
-    if [[ -n "$target" && -d "$target" ]]; then
-        cd "$target" || return
-    elif [[ -n "$target" && -f "$target" ]]; then
-        cd "$(dirname "$target")" || return
-    fi
+    local result action target
+    result="$(fancybash cf "$@")"
+    [[ -z "$result" ]] && return
+
+    action="${result%%:*}"
+    target="${result#*:}"
+
+    case "$action" in
+        CD)
+            [[ -d "$target" ]] && cd "$target" || return
+            ;;
+        CODE)
+            local open_path="$target"
+            [[ -f "$target" ]] && open_path="$(dirname "$target")"
+            if   command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
+            elif command -v codium &>/dev/null; then codium "$open_path" >/dev/null 2>&1 &
+            else [[ -d "$open_path" ]] && cd "$open_path" || return
+            fi
+            ;;
+        OPEN)
+            _cf_open "$target"
+            ;;
+        *)
+            # Legacy fallback: raw path (no tag)
+            if   [[ -d "$result" ]]; then cd "$result" || return
+            elif [[ -f "$result" ]]; then cd "$(dirname "$result")" || return
+            fi
+            ;;
+    esac
 }
 "#.to_string(),
         Shell::Fish => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
 functions -e cf 2>/dev/null
+function _cf_open
+    set -l file $argv[1]
+    test -z "$file"; and return
+    set -l ext (string lower (string split -r -m1 . -- $file)[-1])
+    switch $ext
+        case mp4 mkv avi mov wmv flv webm m4v
+            if type -q mpv; command mpv "$file" >/dev/null 2>&1 &
+            else if type -q vlc; command vlc "$file" >/dev/null 2>&1 &
+            else; xdg-open "$file" >/dev/null 2>&1 &
+            end
+        case png jpg jpeg gif webp bmp svg ico
+            if type -q eog; command eog "$file" >/dev/null 2>&1 &
+            else if type -q feh; command feh "$file" >/dev/null 2>&1 &
+            else if type -q imv; command imv "$file" >/dev/null 2>&1 &
+            else; xdg-open "$file" >/dev/null 2>&1 &
+            end
+        case mp3 flac ogg wav aac m4a opus wma
+            if type -q mpv; command mpv "$file" >/dev/null 2>&1 &
+            else if type -q vlc; command vlc "$file" >/dev/null 2>&1 &
+            else; xdg-open "$file" >/dev/null 2>&1 &
+            end
+        case pdf docx doc odt pptx ppt xlsx xls odp ods odf
+            xdg-open "$file" >/dev/null 2>&1 &
+        case '*'
+            xdg-open "$file" >/dev/null 2>&1 &
+    end
+end
+
 function cf
-    set -l target (fancybash cf $argv)
-    if test -n "$target" -a -d "$target"
-        cd "$target"
-    else if test -n "$target" -a -f "$target"
-        cd (dirname "$target")
+    set -l result (fancybash cf $argv)
+    test -z "$result"; and return
+
+    set -l parts (string split -m1 ":" -- $result)
+    set -l action $parts[1]
+    set -l target $parts[2]
+
+    switch $action
+        case CD
+            if test -d "$target"
+                cd "$target"
+            end
+        case CODE
+            set -l open_path "$target"
+            if test -f "$target"
+                set open_path (dirname "$target")
+            end
+            if type -q code
+                code "$open_path" >/dev/null 2>&1 &
+            else if type -q codium
+                codium "$open_path" >/dev/null 2>&1 &
+            else if test -d "$open_path"
+                cd "$open_path"
+            end
+        case OPEN
+            _cf_open "$target"
+        case '*'
+            if test -d "$result"
+                cd "$result"
+            else if test -f "$result"
+                cd (dirname "$result")
+            end
     end
 end
 "#.to_string(),
         Shell::Pwsh => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
 Remove-Item alias:cf -ErrorAction SilentlyContinue 2>$null
+function _cf_open($file) {
+    if (-not $file) { return }
+    $ext = [System.IO.Path]::GetExtension($file).ToLower().TrimStart('.')
+    switch ($ext) {
+        { $_ -in 'mp4','mkv','avi','mov','wmv','flv','webm','m4v' } {
+            if (Get-Command mpv -ErrorAction SilentlyContinue) { Start-Process mpv -ArgumentList "`"$file`"" }
+            elseif (Get-Command vlc -ErrorAction SilentlyContinue) { Start-Process vlc -ArgumentList "`"$file`"" }
+            else { Start-Process "$file" }
+            break
+        }
+        { $_ -in 'png','jpg','jpeg','gif','webp','bmp','svg','ico' } {
+            if (Get-Command eog -ErrorAction SilentlyContinue) { Start-Process eog -ArgumentList "`"$file`"" }
+            elseif (Get-Command feh -ErrorAction SilentlyContinue) { Start-Process feh -ArgumentList "`"$file`"" }
+            elseif (Get-Command imv -ErrorAction SilentlyContinue) { Start-Process imv -ArgumentList "`"$file`"" }
+            else { Start-Process "$file" }
+            break
+        }
+        { $_ -in 'mp3','flac','ogg','wav','aac','m4a','opus','wma' } {
+            if (Get-Command mpv -ErrorAction SilentlyContinue) { Start-Process mpv -ArgumentList "`"$file`"" }
+            elseif (Get-Command vlc -ErrorAction SilentlyContinue) { Start-Process vlc -ArgumentList "`"$file`"" }
+            else { Start-Process "$file" }
+            break
+        }
+        default { Start-Process "$file" }
+    }
+}
+
 function cf {
-    $target = fancybash cf @args
-    if ($target -and (Test-Path -Path $target -PathType Container)) {
-        Set-Location -Path $target
-    } elseif ($target -and (Test-Path -Path $target -PathType Leaf)) {
-        Set-Location -Path (Split-Path -Parent $target)
+    $result = fancybash cf @args
+    if (-not $result) { return }
+    $parts = $result -split ':', 2
+    if ($parts.Length -lt 2) {
+        if (Test-Path -Path $result -PathType Container) { Set-Location -Path $result }
+        elseif (Test-Path -Path $result -PathType Leaf) { Set-Location -Path (Split-Path -Parent $result) }
+        return
+    }
+    $action = $parts[0]
+    $target = $parts[1]
+    switch ($action) {
+        "CD" {
+            if (Test-Path -Path $target -PathType Container) { Set-Location -Path $target }
+        }
+        "CODE" {
+            $openPath = $target
+            if (Test-Path -Path $target -PathType Leaf) { $openPath = Split-Path -Parent $target }
+            if (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command codium -ErrorAction SilentlyContinue) { Start-Process codium -ArgumentList "`"$openPath`"" }
+            elseif (Test-Path -Path $openPath -PathType Container) { Set-Location -Path $openPath }
+        }
+        "OPEN" {
+            _cf_open $target
+        }
+        default {
+            if (Test-Path -Path $result -PathType Container) { Set-Location -Path $result }
+            elseif (Test-Path -Path $result -PathType Leaf) { Set-Location -Path (Split-Path -Parent $result) }
+        }
     }
 }
 "#.to_string(),
@@ -520,9 +683,10 @@ mod tests {
     #[test]
     fn test_render_cf_wrapper() {
         assert!(render_cf_wrapper(Shell::Bash).contains("unalias cf"));
-        assert!(render_cf_wrapper(Shell::Zsh).contains("unalias cf"));
-        assert!(render_cf_wrapper(Shell::Fish).contains("functions -e cf"));
-        assert!(render_cf_wrapper(Shell::Pwsh).contains("Remove-Item alias:cf"));
+        assert!(render_cf_wrapper(Shell::Zsh).contains("_cf_open"));
+        assert!(render_cf_wrapper(Shell::Fish).contains("_cf_open"));
+        assert!(render_cf_wrapper(Shell::Pwsh).contains("_cf_open"));
+        assert!(render_cf_wrapper(Shell::Bash).contains("OPEN)"));
     }
 
     #[test]

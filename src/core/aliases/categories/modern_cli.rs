@@ -50,18 +50,6 @@ pub fn group() -> AliasGroup {
                 only_shells: vec![],
             },
             AliasEntry {
-                key: "z".to_string(),
-                value: "zoxide".to_string(),
-                description: "Smart cd with zoxide".to_string(),
-                only_shells: vec![],
-            },
-            AliasEntry {
-                key: "zi".to_string(),
-                value: "zoxide query --interactive".to_string(),
-                description: "Interactive zoxide jump".to_string(),
-                only_shells: vec![],
-            },
-            AliasEntry {
                 key: "tldr".to_string(),
                 value: "tldr".to_string(),
                 description: "Simplified man pages via tldr".to_string(),

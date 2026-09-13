@@ -70,7 +70,7 @@ impl PkgManager {
     fn install_cmd(&self) -> Vec<String> {
         match self {
             PkgManager::Apt | PkgManager::Unknown => {
-                vec!["sudo".into(), "apt".into(), "install".into(), "-y".into()]
+                vec!["sudo".into(), "apt-get".into(), "install".into(), "-y".into()]
             }
             PkgManager::Dnf => vec!["sudo".into(), "dnf".into(), "install".into(), "-y".into()],
             PkgManager::Yum => vec!["sudo".into(), "yum".into(), "install".into(), "-y".into()],
@@ -92,7 +92,7 @@ impl PkgManager {
     fn update_cmd(&self) -> Option<Vec<String>> {
         match self {
             PkgManager::Apt | PkgManager::Unknown => {
-                Some(vec!["sudo".into(), "apt".into(), "update".into(), "-y".into()])
+                Some(vec!["sudo".into(), "apt-get".into(), "update".into(), "-qq".into()])
             }
             PkgManager::Dnf => Some(vec!["sudo".into(), "dnf".into(), "check-update".into()]),
             PkgManager::Yum => Some(vec!["sudo".into(), "yum".into(), "check-update".into()]),
@@ -108,7 +108,7 @@ impl PkgManager {
     fn cleanup_cmd(&self) -> Option<Vec<String>> {
         match self {
             PkgManager::Apt | PkgManager::Unknown => {
-                Some(vec!["sudo".into(), "apt".into(), "autoremove".into(), "-y".into()])
+                Some(vec!["sudo".into(), "apt-get".into(), "autoremove".into(), "-y".into()])
             }
             PkgManager::Dnf => {
                 Some(vec!["sudo".into(), "dnf".into(), "autoremove".into(), "-y".into()])
@@ -124,7 +124,11 @@ impl PkgManager {
     }
 
     fn is_installed(&self, pkg: &str) -> bool {
-        if cmd_exists(pkg) {
+        if cmd_exists(pkg)
+            || (pkg == "bat" && cmd_exists("batcat"))
+            || (pkg == "fd-find" && cmd_exists("fdfind"))
+            || (pkg == "eza" && cmd_exists("exa"))
+        {
             return true;
         }
         match self {
@@ -133,6 +137,7 @@ impl PkgManager {
                 .output()
                 .map(|o| String::from_utf8_lossy(&o.stdout).contains("ok installed"))
                 .unwrap_or(false),
+
             PkgManager::Dnf | PkgManager::Yum | PkgManager::Zypper => Command::new("rpm")
                 .args(["-q", pkg])
                 .stdout(Stdio::null())
@@ -448,8 +453,9 @@ impl<'a> UtApp<'a> {
                     description: desc,
                     pkg_name: pkg.to_string(),
                     is_installed: installed,
-                    selected: installed,
+                    selected: false,
                 }
+
             })
             .collect();
 
@@ -512,23 +518,16 @@ impl<'a> UtApp<'a> {
                         return Ok(None);
                     }
                     (KeyCode::Enter, _) => {
-                        let mut selected_indices: Vec<usize> = self
+                        let selected_indices: Vec<usize> = self
                             .items
                             .iter()
                             .enumerate()
                             .filter(|(_, item)| item.selected)
                             .map(|(idx, _)| idx)
                             .collect();
-                        if selected_indices.is_empty() {
-                            if let Some(sel) = self.list_state.selected() {
-                                if sel < self.filtered_indices.len() {
-                                    let orig_idx = self.filtered_indices[sel];
-                                    selected_indices.push(orig_idx);
-                                }
-                            }
-                        }
                         return Ok(Some(selected_indices));
                     }
+
                     (KeyCode::Tab, _) | (KeyCode::Char(' '), KeyModifiers::NONE) => {
                         if let Some(sel) = self.list_state.selected() {
                             if sel < self.filtered_indices.len() {
@@ -681,13 +680,15 @@ impl<'a> UtApp<'a> {
                 };
 
                 let status_span = if item.selected {
-                    Span::styled("● ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+                    Span::styled("● ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD))
+                } else if item.is_installed {
+                    Span::styled("✔ ", Style::default().fg(C_GREEN))
                 } else {
                     Span::styled("○ ", Style::default().fg(C_DIM))
                 };
 
                 let idx_str = format!("[{:>2}]  ", item.idx);
-                let idx_span = Span::styled(idx_str, Style::default().fg(C_GREEN));
+                let idx_span = Span::styled(idx_str, Style::default().fg(C_DIM));
 
                 let cat_color = match item.category {
                     "PERF" => Color::Magenta,
@@ -700,9 +701,19 @@ impl<'a> UtApp<'a> {
                 };
                 let cat_span = Span::styled(format!("{:<12}", item.category), Style::default().fg(cat_color).add_modifier(Modifier::BOLD));
 
+                let tag_str = if item.selected {
+                    "[INSTALL]"
+                } else if item.is_installed {
+                    "[INSTALLED]"
+                } else {
+                    ""
+                };
+                let tag_color = if item.selected { C_SELECTED } else { C_GREEN };
+                let pkg_display = format!("{:<16} {:<11}", item.generic_name, tag_str);
+
                 let pkg_span = Span::styled(
-                    format!("{:<18}", item.generic_name),
-                    Style::default().fg(if is_cursor { C_WHITE } else { C_ACCENT }).add_modifier(Modifier::BOLD),
+                    pkg_display,
+                    Style::default().fg(if is_cursor { C_WHITE } else if item.selected { C_SELECTED } else if item.is_installed { C_GREEN } else { C_ACCENT }).add_modifier(Modifier::BOLD),
                 );
 
                 let desc_span = Span::styled(item.description, Style::default().fg(C_TEXT));
@@ -715,6 +726,7 @@ impl<'a> UtApp<'a> {
                     pkg_span,
                     desc_span,
                 ]))
+
             })
             .collect();
 
@@ -881,34 +893,10 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                 let _ = fs::write(&rc, "highlight_megabytes=1\nshow_program_path=1\n");
             }
         }
-        "acpi" => {
-            add_config_to_rc(rc_file, "Battery Status", "alias battery='acpi -V'");
-        }
-        "bat" => {
-            let bat_cmd = if pm == &PkgManager::Apt { "batcat" } else { "bat" };
-            add_config_to_rc(
-                rc_file,
-                "Batcat Alias",
-                &format!("alias cat='{bat_cmd} -p'\nalias bat='{bat_cmd}'"),
-            );
-        }
-        "eza" => {
-            add_config_to_rc(
-                rc_file,
-                "Eza Alias",
-                "alias ls='eza --icons --group-directories-first'",
-            );
-        }
-        "zoxide" => {
-            add_config_to_rc(
-                rc_file,
-                "Zoxide Init",
-                &format!(
-                    "[ -x \"$(command -v zoxide)\" ] && eval \"$(zoxide init {shell_name})\""
-                ),
-            );
-            add_config_to_rc(rc_file, "Zoxide Alias", "alias cd='z'");
-        }
+        "acpi" => {}
+        "bat" => {}
+        "eza" => {}
+        "zoxide" => {}
         "preload" => {
             println!("{CYAN}🔧 Enabling Preload service...{NC}");
             let _ = Command::new("sudo")
@@ -946,20 +934,12 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, shell_name: &s
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status();
-            add_config_to_rc(rc_file, "Sensor Alias", "alias temp='sensors'");
         }
-        "fzf" => {
-            if shell_name == "bash" || shell_name == "zsh" {
-                add_config_to_rc(
-                    rc_file,
-                    "FZF Integration",
-                    &format!("eval \"$(fzf --{shell_name})\""),
-                );
-            }
-        }
+        "fzf" => {}
         _ => {}
     }
 }
+
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -1053,37 +1033,53 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut installed_list: Vec<String> = vec![];
     let mut failed_list:    Vec<String> = vec![];
 
+    let total_selected = selected_indices.len();
     println!(
-        "\n{CYAN}🔧 Processing {} tools on {}...{NC}\n",
-        selected_indices.len(),
+        "\n\x1b[1;36m⚡ Starting Arsenal Tool Installation ({} tool(s) selected for {})\x1b[0m\n",
+        total_selected,
         distro.id
     );
 
-    // 6. Install loop
-    for idx in &selected_indices {
+    let spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+    // 6. Install loop with animated progress UI
+    for (step_idx, idx) in selected_indices.iter().enumerate() {
+        let current_num = step_idx + 1;
         let (_, generic, _, map) = TOOLS[*idx];
         let pkg = resolve_pkg(map, pm);
+        let frame = spinner_frames[step_idx % spinner_frames.len()];
 
-        print!("{BOLD}📦 {generic} ({pkg})... {NC}");
+        let percent = (current_num * 100) / total_selected;
+        let filled = (percent * 30) / 100;
+        let bar = format!("{}{}", "█".repeat(filled), "░".repeat(30 - filled));
+
+        println!(
+            "\x1b[1;36m[{}/{}] {}\x1b[0m \x1b[1;33m[{}]\x1b[0m \x1b[1;32m{}%\x1b[0m",
+            current_num, total_selected, frame, bar, percent
+        );
+        print!("  \x1b[1m📦 {} ({})\x1b[0m ... ", generic, pkg);
         let _ = std::io::stdout().flush();
 
         if pm.is_installed(pkg) {
-            println!("{GREEN}✔ Already installed{NC}");
+            println!("\x1b[1;36m✔ Already installed\x1b[0m");
             installed_list.push(generic.to_string());
         } else {
             let cmd = pm.install_cmd();
-            let ok = Command::new(&cmd[0])
-                .args(&cmd[1..])
-                .arg(pkg)
+            let mut install_proc = Command::new(&cmd[0]);
+            install_proc.args(&cmd[1..]).arg(pkg);
+            if pm == &PkgManager::Apt {
+                install_proc.env("DEBIAN_FRONTEND", "noninteractive");
+            }
+            let ok = install_proc
                 .status()
                 .map(|s| s.success())
                 .unwrap_or(false);
 
             if ok {
-                println!("{GREEN}[INSTALLED]{NC}");
+                println!("\x1b[1;32m✨ [INSTALLED SUCCESS]\x1b[0m");
                 installed_list.push(generic.to_string());
             } else {
-                println!("{RED}[FAILED]{NC}");
+                println!("\x1b[1;31m❌ [FAILED]\x1b[0m");
                 failed_list.push(format!("{generic} ({pkg})"));
                 continue; // skip auto-config on failure
             }
@@ -1092,12 +1088,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         auto_config(generic, pm, &rc, &shell_name);
     }
 
-    // 7. History env
-    add_config_to_rc(
-        &rc,
-        "HISTORY",
-        "export HISTFILE=\"$HOME/.bash_history\"\nexport HISTSIZE=50000\nexport HISTFILESIZE=50000\nshopt -s histappend",
-    );
+
+    // 7. History env (only for bash — zsh is handled dynamically by fancybash init zsh)
+    if shell_name == "bash" {
+        add_config_to_rc(
+            &rc,
+            "HISTORY",
+            "export HISTFILE=\"$HOME/.bash_history\"\nexport HISTSIZE=50000\nexport HISTFILESIZE=50000\nshopt -s histappend 2>/dev/null || true",
+        );
+    }
+
 
     // 8. Cleanup
     if let Some(cmd) = pm.cleanup_cmd() {

@@ -529,11 +529,143 @@ fn truncate_str(s: &str, max_len: usize) -> String {
     }
 }
 
+fn format_size_kb(kb: u64) -> String {
+    if kb >= 1_048_576 {
+        format!("{:.1} GB", kb as f64 / 1_048_576.0)
+    } else if kb >= 1024 {
+        format!("{:.1} MB", kb as f64 / 1024.0)
+    } else {
+        format!("{} KB", kb)
+    }
+}
+
 fn collect_installed_apps() -> Vec<AppItem> {
     let mut apps = Vec::new();
     let mut idx = 1;
 
-    // 1. Flatpak apps
+    // 1. APT Packages (Debian / Ubuntu / Deepin / Mint)
+    if is_cmd_available("dpkg-query") {
+        let output_res = if is_cmd_available("apt-mark") {
+            if let Ok(manual) = Command::new("apt-mark").arg("showmanual").output() {
+                let manual_text = String::from_utf8_lossy(&manual.stdout);
+                let manual_pkgs: Vec<&str> = manual_text
+                    .lines()
+                    .map(|l| l.trim())
+                    .filter(|l| !l.is_empty())
+                    .collect();
+                if !manual_pkgs.is_empty() {
+                    Command::new("dpkg-query")
+                        .arg("-W")
+                        .arg("-f=${Package}\t${Version}\t${Installed-Size}\n")
+                        .args(&manual_pkgs)
+                        .output()
+                } else {
+                    Command::new("dpkg-query")
+                        .args(["-W", "-f=${Package}\t${Version}\t${Installed-Size}\n"])
+                        .output()
+                }
+            } else {
+                Command::new("dpkg-query")
+                    .args(["-W", "-f=${Package}\t${Version}\t${Installed-Size}\n"])
+                    .output()
+            }
+        } else {
+            Command::new("dpkg-query")
+                .args(["-W", "-f=${Package}\t${Version}\t${Installed-Size}\n"])
+                .output()
+        };
+
+
+        if let Ok(output) = output_res {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                let parts: Vec<&str> = line.split('\t').collect();
+                if parts.len() >= 2 {
+                    let name = parts[0].trim().to_string();
+                    if name.is_empty() {
+                        continue;
+                    }
+                    let version = parts[1].trim().to_string();
+                    let disk_size = if parts.len() >= 3 {
+                        if let Ok(kb) = parts[2].trim().parse::<u64>() {
+                            format_size_kb(kb)
+                        } else {
+                            "unknown".to_string()
+                        }
+                    } else {
+                        "unknown".to_string()
+                    };
+
+                    apps.push(AppItem {
+                        idx,
+                        name: name.clone(),
+                        pkg_id: name,
+                        source: "APT".to_string(),
+                        version,
+                        disk_size,
+                        inst_date: "N/A".to_string(),
+                        description: "Debian/Ubuntu system package".to_string(),
+                        selected: false,
+                    });
+                    idx += 1;
+                }
+            }
+        }
+    }
+
+    // 2. Pacman Packages (Arch Linux)
+    if is_cmd_available("pacman") {
+        if let Ok(output) = Command::new("pacman").args(["-Qe"]).output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let name = parts[0].trim().to_string();
+                    let version = parts[1].trim().to_string();
+                    apps.push(AppItem {
+                        idx,
+                        name: name.clone(),
+                        pkg_id: name,
+                        source: "Pacman".to_string(),
+                        version,
+                        disk_size: "unknown".to_string(),
+                        inst_date: "N/A".to_string(),
+                        description: "Arch Linux package".to_string(),
+                        selected: false,
+                    });
+                    idx += 1;
+                }
+            }
+        }
+    }
+
+    // 3. DNF Packages (Fedora / RHEL)
+    if is_cmd_available("dnf") {
+        if let Ok(output) = Command::new("dnf").args(["list", "installed", "--userinstalled"]).output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines().skip(1) {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let name = parts[0].split('.').next().unwrap_or(parts[0]).to_string();
+                    let version = parts[1].trim().to_string();
+                    apps.push(AppItem {
+                        idx,
+                        name: name.clone(),
+                        pkg_id: name,
+                        source: "DNF".to_string(),
+                        version,
+                        disk_size: "unknown".to_string(),
+                        inst_date: "N/A".to_string(),
+                        description: "Fedora/RHEL package".to_string(),
+                        selected: false,
+                    });
+                    idx += 1;
+                }
+            }
+        }
+    }
+
+    // 4. Flatpak apps
     if is_cmd_available("flatpak") {
         if let Ok(output) = Command::new("flatpak")
             .args(["list", "--columns=name,application,version,size"])
@@ -573,7 +705,7 @@ fn collect_installed_apps() -> Vec<AppItem> {
         }
     }
 
-    // 2. Snap apps
+    // 5. Snap apps
     if is_cmd_available("snap") {
         if let Ok(output) = Command::new("snap").arg("list").output() {
             let text = String::from_utf8_lossy(&output.stdout);
@@ -599,7 +731,33 @@ fn collect_installed_apps() -> Vec<AppItem> {
         }
     }
 
-    // 3. Cargo binaries
+    // 6. Homebrew apps
+    if is_cmd_available("brew") {
+        if let Ok(output) = Command::new("brew").args(["list", "--versions"]).output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let name = parts[0].trim().to_string();
+                    let version = parts[1].trim().to_string();
+                    apps.push(AppItem {
+                        idx,
+                        name: name.clone(),
+                        pkg_id: name,
+                        source: "Homebrew".to_string(),
+                        version,
+                        disk_size: "unknown".to_string(),
+                        inst_date: "N/A".to_string(),
+                        description: "Homebrew formula/cask".to_string(),
+                        selected: false,
+                    });
+                    idx += 1;
+                }
+            }
+        }
+    }
+
+    // 7. Cargo binaries
     if is_cmd_available("cargo") {
         if let Ok(output) = Command::new("cargo").args(["install", "--list"]).output() {
             let text = String::from_utf8_lossy(&output.stdout);
@@ -627,7 +785,7 @@ fn collect_installed_apps() -> Vec<AppItem> {
         }
     }
 
-    // 4. Pipx packages
+    // 8. Pipx packages
     if is_cmd_available("pipx") {
         if let Ok(output) = Command::new("pipx").arg("list").output() {
             let text = String::from_utf8_lossy(&output.stdout);
@@ -659,7 +817,7 @@ fn collect_installed_apps() -> Vec<AppItem> {
         }
     }
 
-    // Fallback if no GUI app managers returned results: populate with sample system list
+    // Fallback if no app managers returned results
     if apps.is_empty() {
         let samples = [
             ("nano", "APT", "6.2", "2.1MB"),
@@ -685,6 +843,7 @@ fn collect_installed_apps() -> Vec<AppItem> {
 
     apps
 }
+
 
 fn is_cmd_available(cmd: &str) -> bool {
     crate::core::utils::cmd_exists(cmd)

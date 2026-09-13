@@ -283,6 +283,108 @@ pub fn render_aliases(shell: Shell) -> String {
     out
 }
 
+/// Render modern CLI tool integrations (Zoxide, FZF, Bat, Sensors) per shell.
+pub fn render_integrations(shell: Shell) -> String {
+    match shell {
+        Shell::Zsh => r#"
+# ======================================================
+# 🚀 INTEGRATIONS (Zoxide, FZF, Bat, Sensors)
+# ======================================================
+# Zoxide Init & Smart CD
+if command -v zoxide &>/dev/null; then
+    eval "$(zoxide init zsh 2>/dev/null)"
+    alias cd='z' 2>/dev/null
+fi
+
+# FZF Integration
+if command -v fzf &>/dev/null; then
+    eval "$(fzf --zsh 2>/dev/null || fzf --completion 2>/dev/null)"
+fi
+
+# Bat / Batcat Aliases
+if command -v batcat &>/dev/null; then
+    alias bat='batcat'
+    alias cat='batcat -p'
+elif command -v bat &>/dev/null; then
+    alias cat='bat -p'
+fi
+
+# Sensor Alias
+if command -v sensors &>/dev/null; then
+    alias temp='sensors'
+fi
+"#.to_string(),
+        Shell::Bash => r#"
+# ======================================================
+# 🚀 INTEGRATIONS (Zoxide, FZF, Bat, Sensors)
+# ======================================================
+# Zoxide Init & Smart CD
+if command -v zoxide &>/dev/null; then
+    eval "$(zoxide init bash 2>/dev/null)"
+    alias cd='z' 2>/dev/null
+fi
+
+# FZF Integration
+if command -v fzf &>/dev/null; then
+    eval "$(fzf --bash 2>/dev/null)"
+fi
+
+# Bat / Batcat Aliases
+if command -v batcat &>/dev/null; then
+    alias bat='batcat'
+    alias cat='batcat -p'
+elif command -v bat &>/dev/null; then
+    alias cat='bat -p'
+fi
+
+# Sensor Alias
+if command -v sensors &>/dev/null; then
+    alias temp='sensors'
+fi
+"#.to_string(),
+        Shell::Fish => r#"
+# ======================================================
+# 🚀 INTEGRATIONS (Zoxide, FZF, Bat, Sensors)
+# ======================================================
+if command -v zoxide &>/dev/null
+    zoxide init fish | source 2>/dev/null
+    alias cd='z'
+end
+
+if command -v fzf &>/dev/null
+    fzf --fish | source 2>/dev/null
+end
+
+if command -v batcat &>/dev/null
+    alias bat='batcat'
+    alias cat='batcat -p'
+else if command -v bat &>/dev/null
+    alias cat='bat -p'
+end
+
+if command -v sensors &>/dev/null
+    alias temp='sensors'
+end
+"#.to_string(),
+        Shell::Pwsh => r#"
+# ======================================================
+# 🚀 INTEGRATIONS (Zoxide, FZF, Bat, Sensors)
+# ======================================================
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    Invoke-Expression (& { (zoxide init powershell | Out-String) })
+    Set-Alias -Name cd -Value z -Option AllScope -Force
+}
+if (Get-Command batcat -ErrorAction SilentlyContinue) {
+    Set-Alias -Name bat -Value batcat
+    function global:cat { batcat -p @args }
+} elseif (Get-Command bat -ErrorAction SilentlyContinue) {
+    function global:cat { bat -p @args }
+}
+"#.to_string(),
+    }
+}
+
+
 /// Render Native Rust Auto-LS hook snippet per shell.
 pub fn render_auto_ls_hook(shell: Shell) -> String {
     match shell {
@@ -422,4 +524,15 @@ mod tests {
         assert!(render_cf_wrapper(Shell::Fish).contains("functions -e cf"));
         assert!(render_cf_wrapper(Shell::Pwsh).contains("Remove-Item alias:cf"));
     }
+
+    #[test]
+    fn test_render_integrations() {
+        assert!(render_integrations(Shell::Zsh).contains("zoxide"));
+        assert!(render_integrations(Shell::Zsh).contains("fzf"));
+        assert!(render_integrations(Shell::Bash).contains("zoxide"));
+        assert!(render_integrations(Shell::Bash).contains("fzf"));
+        assert!(render_integrations(Shell::Fish).contains("zoxide"));
+        assert!(render_integrations(Shell::Pwsh).contains("zoxide"));
+    }
 }
+

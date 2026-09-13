@@ -121,6 +121,7 @@ if [[ -o interactive ]]; then
     out.push_str(&shared::render_nvm_lazy_load(Shell::Zsh));
     out.push_str(&shared::render_bun_setup(Shell::Zsh));
     out.push_str(&shared::render_aliases(Shell::Zsh));
+    out.push_str(&shared::render_integrations(Shell::Zsh));
 
     // ── Native Rust Prompt Engine & Command Duration Tracker ──────────────────
     out.push_str(r#"

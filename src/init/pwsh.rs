@@ -21,6 +21,7 @@ pub fn generate() -> String {
     out.push_str(&shared::render_guard(Shell::Pwsh));
     out.push_str(&shared::render_env_and_path(Shell::Pwsh));
     out.push_str(&shared::render_aliases(Shell::Pwsh));
+    out.push_str(&shared::render_integrations(Shell::Pwsh));
 
     out.push_str(r#"
 # ── PSReadLine ──

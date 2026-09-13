@@ -22,6 +22,7 @@ pub fn generate() -> String {
     out.push_str(&shared::render_nvm_lazy_load(Shell::Bash));
     out.push_str(&shared::render_bun_setup(Shell::Bash));
     out.push_str(&shared::render_aliases(Shell::Bash));
+    out.push_str(&shared::render_integrations(Shell::Bash));
 
     // ── Native Rust Prompt & Hook Engine ──────────────────────────────────────
     out.push_str(r#"

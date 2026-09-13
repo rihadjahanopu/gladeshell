@@ -412,6 +412,7 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
     let theme = THEMES.get(ctx.theme_id).unwrap_or(&THEMES[0]);
     let mut off = 0usize;
     let s = ctx.shell;
+    let cwd_raw = std::str::from_utf8(&ctx.cwd[..ctx.cwd_len]).unwrap_or("~");
 
     // ── Line 1 ───────────────────────────────────────────────────────────────
 
@@ -421,9 +422,17 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
         write_str(buf, &mut off, " ");
     }
 
-    // Decorative emoji (e.g. "🌌" for tokyonight, "🧛" for dracula)
-    if !theme.emoji.is_empty() {
-        write_str(buf, &mut off, theme.emoji);
+    // Decorative emoji: dynamic random icon for minimal & full themes, fixed emoji for others
+    let dynamic_emoji;
+    let emoji = if theme.name == "minimal" || theme.name == "full" {
+        dynamic_emoji = rand_emoji(cwd_raw);
+        dynamic_emoji
+    } else {
+        theme.emoji
+    };
+
+    if !emoji.is_empty() {
+        write_str(buf, &mut off, emoji);
         write_str(buf, &mut off, " ");
     }
 
@@ -441,9 +450,13 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
         write_str(buf, &mut off, " ");
     }
 
-    // CWD in path_color
-    write_theme_color(buf, &mut off, theme.path_color, s);
-    let cwd_raw = std::str::from_utf8(&ctx.cwd[..ctx.cwd_len]).unwrap_or("~");
+    // CWD in path_color (dynamic rainbow for full theme)
+    let path_color = if theme.name == "full" {
+        a8(rand_color(ctx.cwd_len))
+    } else {
+        theme.path_color
+    };
+    write_theme_color(buf, &mut off, path_color, s);
     let cwd_short = format_short_cwd(cwd_raw);
     write_str(buf, &mut off, cwd_short);
     write_ansi(buf, &mut off, RESET, s);
@@ -681,7 +694,7 @@ mod tests {
         assert_eq!(rand_emoji("/var/www/node-backend"), "🟢");
         assert_eq!(rand_emoji("/projects/bun-server"), "🥐");
         assert_eq!(rand_emoji("/home/user/py-script"), "🐍");
-        assert_eq!(rand_emoji("/home/user/myproj"), "💻");
+        assert!(RANDOM_EMOJIS.contains(&rand_emoji("/home/user/myproj")));
         assert!(RANDOM_EMOJIS.contains(&rand_emoji("/home/user/random_folder")));
     }
 

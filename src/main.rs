@@ -355,6 +355,12 @@ struct KpArgs {
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 fn main() {
+    let raw_args: Vec<String> = std::env::args().collect();
+    let _prog_name = raw_args
+        .get(0)
+        .map(|s| std::path::Path::new(s).file_name().unwrap_or_default().to_string_lossy().to_string())
+        .unwrap_or_default();
+
     let cli = Cli::parse();
 
     let result = match cli.command {
@@ -412,7 +418,12 @@ fn main() {
             }
             Commands::Setup => cmd_setup(),
         },
-        None => fancybash_core::tools::keep::run(),
+        None => {
+            // When invoked as `fancy`, `theme`, or plain `fancybash` with no
+            // subcommand → open the interactive theme picker TUI.
+            // Help menu is still available via `fancybash keep`.
+            cmd_theme(ThemeArgs { name: None })
+        }
     };
 
     if let Err(e) = result {

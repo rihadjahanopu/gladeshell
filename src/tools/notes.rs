@@ -822,7 +822,10 @@ mod tests {
     use super::*;
 
     fn tmp() -> PathBuf {
-        let p = std::env::temp_dir().join(format!("notes_test_{}", std::process::id()));
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        let c = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let p = std::env::temp_dir().join(format!("notes_test_{}_{c}", std::process::id()));
         let _ = fs::remove_dir_all(&p);
         fs::create_dir_all(&p).unwrap();
         p

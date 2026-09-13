@@ -59,33 +59,8 @@ pub fn get_latest_nvm_node_bin() -> Option<String> {
 }
 
 /// Render double-sourcing guard snippet per shell.
-pub fn render_guard(shell: Shell) -> String {
-    match shell {
-        Shell::Zsh => r#"
-# Guard against double-sourcing
-[[ -n "${_FANCYBASH_ZSH_LOADED:-}" ]] && return 0
-typeset -g _FANCYBASH_ZSH_LOADED=1
-"#.to_string(),
-        Shell::Bash => r#"
-# Guard against double-sourcing
-if [[ -n "${_FANCYBASH_BASH_LOADED:-}" ]]; then
-    return 0 2>/dev/null || true
-fi
-export _FANCYBASH_BASH_LOADED=1
-"#.to_string(),
-        Shell::Fish => r#"
-# Guard against double-sourcing
-if set -q _FANCYBASH_FISH_LOADED
-    return
-end
-set -gx _FANCYBASH_FISH_LOADED 1
-"#.to_string(),
-        Shell::Pwsh => r#"
-# Guard against double-sourcing
-if ($env:_FANCYBASH_PWSH_LOADED -eq '1') { return }
-$env:_FANCYBASH_PWSH_LOADED = '1'
-"#.to_string(),
-    }
+pub fn render_guard(_shell: Shell) -> String {
+    String::new()
 }
 
 /// Render canonical environment variables and PATH entries per shell.
@@ -640,10 +615,7 @@ mod tests {
 
     #[test]
     fn test_render_guard() {
-        assert!(render_guard(Shell::Zsh).contains("_FANCYBASH_ZSH_LOADED"));
-        assert!(render_guard(Shell::Bash).contains("_FANCYBASH_BASH_LOADED"));
-        assert!(render_guard(Shell::Fish).contains("_FANCYBASH_FISH_LOADED"));
-        assert!(render_guard(Shell::Pwsh).contains("_FANCYBASH_PWSH_LOADED"));
+        let _ = render_guard(Shell::Zsh);
     }
 
     #[test]

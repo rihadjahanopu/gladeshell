@@ -280,12 +280,12 @@ description = "Clone repository"
 
 [[group.aliases]]
 key         = "gwip"
-value       = "git add . && git commit -m '🚧 WIP: Save point' && git push"
-description = "Quick WIP commit and push"
+value       = "fancybash gwip"
+description = "Interactive Git stage, commit & push"
 
 [[group.aliases]]
 key         = "gcommit"
-value       = "git add . && git commit -m '🚧 WIP: Save point' && git push"
+value       = "fancybash gwip"
 description = "Alias for gwip"
 
 # ── Node.js / npm ────────────────────────────────────────────────────────────

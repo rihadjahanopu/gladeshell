@@ -111,13 +111,13 @@ pub fn group() -> AliasGroup {
             },
             AliasEntry {
                 key: "gwip".to_string(),
-                value: "git add . && git commit -m '🚧 WIP: Save point' && git push".to_string(),
-                description: "Quick WIP commit and push".to_string(),
+                value: "fancybash gwip".to_string(),
+                description: "Interactive Git stage, commit & push".to_string(),
                 only_shells: vec![],
             },
             AliasEntry {
                 key: "gcommit".to_string(),
-                value: "git add . && git commit -m '🚧 WIP: Save point' && git push".to_string(),
+                value: "fancybash gwip".to_string(),
                 description: "Alias for gwip".to_string(),
                 only_shells: vec![],
             },

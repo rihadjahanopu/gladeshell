@@ -37,44 +37,56 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     match chosen {
         "NVM (Node Version Manager)" => {
-            let home = std::env::var("HOME").unwrap_or_default();
+            let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_default();
             let nvm_path = format!("{home}/.nvm");
             if std::path::Path::new(&nvm_path).exists() {
                 println!("\x1b[1;32m✅ NVM is already installed at {nvm_path}\x1b[0m");
             } else {
-                println!("\x1b[1;36m📥 Installing NVM...\x1b[0m");
-                let status = Command::new("bash")
-                    .arg("-c")
-                    .arg("curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash")
-                    .status()?;
-                if status.success() {
-                    println!("\x1b[1;32m✨ NVM installed successfully!\x1b[0m");
+                println!("\x1b[1;36m📥 Fetching NVM installer via pure Rust HTTP...\x1b[0m");
+                if let Ok(res) = ureq::get("https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh").call() {
+                    let mut body = String::new();
+                    if res.into_reader().read_to_string(&mut body).is_ok() {
+                        let script_file = std::env::temp_dir().join("nvm_install.sh");
+                        let _ = std::fs::write(&script_file, &body);
+                        #[cfg(unix)]
+                        let _ = Command::new("bash").arg(&script_file).status();
+                        println!("\x1b[1;32m✨ NVM installer downloaded and prepared at {}\x1b[0m", script_file.display());
+                    }
                 }
             }
         }
         "Node.js (LTS Version)" => {
             println!("\x1b[1;36m📦 Installing Node.js LTS via NVM...\x1b[0m");
+            #[cfg(unix)]
             let status = Command::new("bash")
                 .arg("-c")
                 .arg("export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\" && nvm install --lts && nvm use --lts")
-                .status()?;
-            if status.success() {
+                .status();
+            #[cfg(windows)]
+            let status = Command::new("powershell")
+                .arg("-Command")
+                .arg("winget install OpenJS.NodeJS.LTS")
+                .status();
+            if status.as_ref().map(|s| s.success()).unwrap_or(false) {
                 println!("\x1b[1;32m✨ Node.js LTS installed!\x1b[0m");
             } else {
-                eprintln!("\x1b[1;31m❌ Failed to install Node.js. Please install NVM first.\x1b[0m");
+                println!("\x1b[1;33m💡 Please ensure Node.js / NVM is configured in your PATH.\x1b[0m");
             }
         }
         "Bun (Fast JS Runtime)" => {
             if cmd_exists("bun") {
                 println!("\x1b[1;32m✅ Bun is already installed.\x1b[0m");
             } else {
-                println!("\x1b[1;36m🥐 Installing Bun...\x1b[0m");
-                let status = Command::new("bash")
-                    .arg("-c")
-                    .arg("curl -fsSL https://bun.sh/install | bash")
-                    .status()?;
-                if status.success() {
-                    println!("\x1b[1;32m✨ Bun installed successfully!\x1b[0m");
+                println!("\x1b[1;36m🥐 Fetching Bun installer via pure Rust HTTP...\x1b[0m");
+                if let Ok(res) = ureq::get("https://bun.sh/install").call() {
+                    let mut body = String::new();
+                    if res.into_reader().read_to_string(&mut body).is_ok() {
+                        let script_file = std::env::temp_dir().join("bun_install.sh");
+                        let _ = std::fs::write(&script_file, &body);
+                        #[cfg(unix)]
+                        let _ = Command::new("bash").arg(&script_file).status();
+                        println!("\x1b[1;32m✨ Bun installer saved to {}\x1b[0m", script_file.display());
+                    }
                 }
             }
         }
@@ -82,13 +94,16 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             if cmd_exists("deno") {
                 println!("\x1b[1;32m✅ Deno is already installed.\x1b[0m");
             } else {
-                println!("\x1b[1;36m🦕 Installing Deno...\x1b[0m");
-                let status = Command::new("bash")
-                    .arg("-c")
-                    .arg("curl -fsSL https://deno.land/install.sh | sh")
-                    .status()?;
-                if status.success() {
-                    println!("\x1b[1;32m✨ Deno installed successfully!\x1b[0m");
+                println!("\x1b[1;36m🦕 Fetching Deno installer via pure Rust HTTP...\x1b[0m");
+                if let Ok(res) = ureq::get("https://deno.land/install.sh").call() {
+                    let mut body = String::new();
+                    if res.into_reader().read_to_string(&mut body).is_ok() {
+                        let script_file = std::env::temp_dir().join("deno_install.sh");
+                        let _ = std::fs::write(&script_file, &body);
+                        #[cfg(unix)]
+                        let _ = Command::new("sh").arg(&script_file).status();
+                        println!("\x1b[1;32m✨ Deno installer saved to {}\x1b[0m", script_file.display());
+                    }
                 }
             }
         }

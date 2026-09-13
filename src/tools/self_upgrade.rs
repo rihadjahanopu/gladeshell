@@ -3,7 +3,8 @@
 // =============================================================================
 
 use std::error::Error;
-use std::process::Command;
+use std::fs;
+use std::io::Read;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     const CDN_URL: &str = "https://fancybash.netlify.app/i.sh";
@@ -13,32 +14,27 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     println!("\x1b[1;35m⚡ Upgrading fancybash to latest version...\x1b[0m");
 
     for url in [CDN_URL, GH_URL] {
-        let curl = Command::new("curl")
-            .args(["-fsSL", url])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null())
-            .spawn();
-
-        if let Ok(mut curl_child) = curl {
-            let curl_stdout = curl_child.stdout.take().expect("curl stdout");
-            let bash = Command::new("bash")
-                .stdin(curl_stdout)
-                .status();
-
-            let _ = curl_child.wait();
-
-            match bash {
-                Ok(s) if s.success() => {
-                    println!("\x1b[1;32m✨ fancybash upgraded successfully!\x1b[0m");
-                    println!(
-                        "\x1b[1;36m💡 Restart your shell or run: eval \"$(fancybash init <shell>)\"\x1b[0m"
-                    );
-                    return Ok(());
-                }
-                _ => {
-                    continue;
+        match ureq::get(url).call() {
+            Ok(response) => {
+                let mut reader = response.into_reader();
+                let mut script_content = String::new();
+                if reader.read_to_string(&mut script_content).is_ok() && !script_content.is_empty() {
+                    let temp_dir = std::env::temp_dir();
+                    let script_path = temp_dir.join("fancybash_install.sh");
+                    if fs::write(&script_path, &script_content).is_ok() {
+                        println!("\x1b[1;32m✨ fancybash upgrade script fetched successfully!\x1b[0m");
+                        println!(
+                            "\x1b[1;36m💡 Script downloaded to: {}\x1b[0m",
+                            script_path.display()
+                        );
+                        println!(
+                            "\x1b[1;36m💡 Restart your shell or run: eval \"$(fancybash init <shell>)\"\x1b[0m"
+                        );
+                        return Ok(());
+                    }
                 }
             }
+            Err(_) => continue,
         }
     }
 

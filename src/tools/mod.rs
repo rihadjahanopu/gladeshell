@@ -2,6 +2,7 @@
 // Phase 4 & 5 tool subcommand modules.
 // Each module replaces a complex shell function with a native Rust implementation.
 
+pub mod theme_picker;
 pub mod auto_ls;
 pub mod bun_runner;
 pub mod cpp_gen;
@@ -27,6 +28,7 @@ pub mod secret_gen_tool;
 pub mod self_uninstall;
 pub mod self_upgrade;
 pub mod system_clean;
+pub mod system_monitor;
 pub mod system_update;
 pub mod todo;
 pub mod touch_tool;

@@ -722,3 +722,8 @@ description = "Self-upgrade fancybash to latest version"
 key         = "clean"
 value       = "fancybash clean"
 description = "Universal system cache and log cleanup"
+
+[[group.aliases]]
+key         = "ftop"
+value       = "fancybash ftop"
+description = "Native Ratatui interactive TUI System & Process Monitor"

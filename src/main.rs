@@ -155,6 +155,10 @@ enum Commands {
     /// Non-interactive System Maintenance Cache Cleaner (clean)
     Clean,
 
+    /// FANCYBASH TUI System & Process Monitor (ftop / sysmon / monitor)
+    #[command(alias = "ftop", alias = "monitor")]
+    Sysmon,
+
     /// Interactive JS Runtime & NVM Installer (rt)
     Rt,
 
@@ -390,6 +394,7 @@ fn main() {
             Commands::V { target } => fancybash_core::tools::video_player::run(target.as_deref()),
             Commands::Uc => fancybash_core::tools::universal_clean::run(),
             Commands::Clean => fancybash_core::tools::system_clean::run(),
+            Commands::Sysmon => fancybash_core::tools::system_monitor::run(),
             Commands::Rt => fancybash_core::tools::runtime_installer::run(),
             Commands::Rn { target } => fancybash_core::tools::file_renamer::run(target.as_deref()),
             Commands::Pg { file, install } => fancybash_core::tools::pkg_converter::run(&file, install),
@@ -503,35 +508,44 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
 // ── theme ─────────────────────────────────────────────────────────────────────
 
 fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::core::prompt::{set_active_theme, THEMES};
+    use fancybash_core::core::prompt::{active_theme_id, set_active_theme, THEMES};
+
     match args.name.as_deref() {
+        // ── fancybash theme list  →  styled table ─────────────────────────────
         Some("list") => {
-            println!("Available themes ({} total):\n", THEMES.len());
-            for (i, theme) in THEMES.iter().enumerate() {
-                println!("  {:02}  {}", i, theme.name);
+            let active = active_theme_id();
+            println!("\n\x1b[1;35m🎨 Fancybash Themes ({} total)\x1b[0m\n", THEMES.len());
+            println!("  \x1b[2m{:<4} {:<3} {:<20} {}\x1b[0m", "IDX", "  ", "NAME", "PROMPT");
+            println!("  \x1b[2m{}\x1b[0m", "─".repeat(48));
+            for (i, t) in THEMES.iter().enumerate() {
+                let active_mark = if i == active { "\x1b[1;32m✓\x1b[0m" } else { " " };
+                let name_color  = if i == active { "\x1b[1;36m" } else { "\x1b[0;37m" };
+                println!(
+                    "  {} \x1b[2m{:02}\x1b[0m  {:<3} {}{:<20}\x1b[0m  \x1b[33m{}\x1b[0m",
+                    active_mark, i, t.emoji, name_color, t.name, t.prompt_char
+                );
             }
+            println!();
         }
+
+        // ── fancybash theme <name>  →  set directly ───────────────────────────
         Some(name) => {
-            let _idx = set_active_theme(name)?;
-            println!("✨ Theme set to: {}", name);
-            println!("💡 Run 'source ~/.zshrc' to apply new theme.");
+            let idx = set_active_theme(name)?;
+            let t = &THEMES[idx];
+            println!("\x1b[1;32m✅ Theme '{}' {} applied!\x1b[0m", t.name, t.emoji);
+            println!("\x1b[2m💡 Run 'source ~/.zshrc' to apply in this session.\x1b[0m");
         }
+
+        // ── fancybash theme  →  launch interactive TUI picker ─────────────────
         None => {
-            let theme_names: Vec<String> = THEMES.iter().map(|t| t.name.to_string()).collect();
-            println!("\n🎨 Select Fancybash Theme:");
-            for (i, t) in theme_names.iter().enumerate() {
-                println!("  {}) {}", i + 1, t);
+            #[cfg(feature = "tools")]
+            {
+                fancybash_core::tools::theme_picker::run_theme_picker()?;
             }
-            print!("Select theme [1-{}]: ", theme_names.len());
-            std::io::Write::flush(&mut std::io::stdout())?;
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            let choice: usize = input.trim().parse().unwrap_or(1);
-            let idx = choice.saturating_sub(1).min(theme_names.len().saturating_sub(1));
-            let selected = &theme_names[idx];
-            let _idx = set_active_theme(selected)?;
-            println!("✨ Active theme updated to: {}", selected);
-            println!("💡 Run 'source ~/.zshrc' or open a new terminal session.");
+            #[cfg(not(feature = "tools"))]
+            {
+                println!("Theme TUI requires the 'tools' feature. Run with: cargo build --features tools");
+            }
         }
     }
     Ok(())

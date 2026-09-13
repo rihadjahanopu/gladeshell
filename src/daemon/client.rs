@@ -6,8 +6,10 @@ use super::socket_path;
 use crate::core::prompt::{self, PromptContext};
 use crate::git;
 use std::io::{BufRead, BufReader, Write};
-use std::os::unix::net::UnixStream;
 use std::time::Duration;
+
+#[cfg(unix)]
+use std::os::unix::net::UnixStream;
 
 /// Request a prompt from the running daemon.
 /// Returns `Ok(rendered_string)` or `Err` if the daemon is unreachable.
@@ -20,19 +22,28 @@ pub fn request_prompt(
     cmd_duration_ms: u64,
     shell: u8,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let path = socket_path();
-    let mut stream = UnixStream::connect(&path)?;
-    stream.set_read_timeout(Some(Duration::from_millis(50)))?;
-    stream.set_write_timeout(Some(Duration::from_millis(50)))?;
+    #[cfg(unix)]
+    {
+        let path = socket_path();
+        let mut stream = UnixStream::connect(&path)?;
+        stream.set_read_timeout(Some(Duration::from_millis(50)))?;
+        stream.set_write_timeout(Some(Duration::from_millis(50)))?;
 
-    let req = format!("{cwd}\x1f{exit_code}\x1f{theme_id}\x1f{user}\x1f{host}\x1f{cmd_duration_ms}\x1f{shell}\n");
-    stream.write_all(req.as_bytes())?;
+        let req = format!("{cwd}\x1f{exit_code}\x1f{theme_id}\x1f{user}\x1f{host}\x1f{cmd_duration_ms}\x1f{shell}\n");
+        stream.write_all(req.as_bytes())?;
 
-    let mut reader = BufReader::new(stream);
-    let mut response = String::new();
-    reader.read_line(&mut response)?;
+        let mut reader = BufReader::new(stream);
+        let mut response = String::new();
+        reader.read_line(&mut response)?;
 
-    Ok(response)
+        return Ok(response);
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = (cmd_duration_ms,);
+        Err("Daemon sockets not supported on non-unix OS; falling back to in-process rendering".into())
+    }
 }
 
 /// Fallback renderer when daemon is offline: renders prompt in-process synchronously.

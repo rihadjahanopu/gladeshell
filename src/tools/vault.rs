@@ -15,10 +15,20 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
-use std::fs;
-use std::io::{self, Write};
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Key, Nonce,
+};
+use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use pbkdf2::pbkdf2_hmac;
+use rand::{RngCore, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+use sha2::Sha256;
+use std::fs::{self, OpenOptions};
+use std::io::{self, Cursor, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use tar::{Archive, Builder};
+use zeroize::Zeroizing;
 
 // ── palette ───────────────────────────────────────────────────────────────────
 const C_BG: Color = Color::Rgb(8, 10, 20);
@@ -503,6 +513,191 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
     f.render_widget(status_bar, layout[2]);
 }
 
+// ── Pure Rust Cryptography & In-Memory Archiving ──────────────────────────────
+const SALT_LEN: usize = 16;
+const NONCE_LEN: usize = 12;
+const PBKDF2_ROUNDS: u32 = 500_000;
+
+fn derive_key(password: &str, salt: &[u8; SALT_LEN]) -> Zeroizing<[u8; 32]> {
+    let mut key = Zeroizing::new([0u8; 32]);
+    pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, PBKDF2_ROUNDS, key.as_mut());
+    key
+}
+
+fn encrypt_vault_payload(plaintext: &[u8], password: &str) -> Result<Vec<u8>, String> {
+    let mut rng = ChaCha20Rng::from_entropy();
+    let mut salt = [0u8; SALT_LEN];
+    rng.fill_bytes(&mut salt);
+
+    let mut nonce_bytes = [0u8; NONCE_LEN];
+    rng.fill_bytes(&mut nonce_bytes);
+
+    let derived_key = derive_key(password, &salt);
+    let key = Key::<Aes256Gcm>::from_slice(derived_key.as_ref());
+    let cipher = Aes256Gcm::new(key);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+
+    let ciphertext = cipher
+        .encrypt(nonce, plaintext)
+        .map_err(|e| format!("AES-256-GCM encryption error: {}", e))?;
+
+    let mut payload = Vec::with_capacity(SALT_LEN + NONCE_LEN + ciphertext.len());
+    payload.extend_from_slice(&salt);
+    payload.extend_from_slice(&nonce_bytes);
+    payload.extend_from_slice(&ciphertext);
+
+    Ok(payload)
+}
+
+fn decrypt_vault_payload(vault_data: &[u8], password: &str) -> Result<Zeroizing<Vec<u8>>, String> {
+    if vault_data.len() < SALT_LEN + NONCE_LEN {
+        return Err("Vault file is truncated or invalid header format".into());
+    }
+
+    let (salt_bytes, rest) = vault_data.split_at(SALT_LEN);
+    let (nonce_bytes, ciphertext) = rest.split_at(NONCE_LEN);
+
+    let mut salt = [0u8; SALT_LEN];
+    salt.copy_from_slice(salt_bytes);
+
+    let derived_key = derive_key(password, &salt);
+    let key = Key::<Aes256Gcm>::from_slice(derived_key.as_ref());
+    let cipher = Aes256Gcm::new(key);
+    let nonce = Nonce::from_slice(nonce_bytes);
+
+    let decrypted = cipher
+        .decrypt(nonce, ciphertext)
+        .map_err(|_| "Decryption failed: Incorrect password or corrupted vault file".to_string())?;
+
+    Ok(Zeroizing::new(decrypted))
+}
+
+fn create_in_memory_tarball(dir_path: &Path) -> Result<Zeroizing<Vec<u8>>, String> {
+    if !dir_path.exists() || !dir_path.is_dir() {
+        return Err(format!("Directory path '{}' does not exist", dir_path.display()));
+    }
+
+    let buffer = Vec::new();
+    let encoder = GzEncoder::new(buffer, Compression::default());
+    let mut builder = Builder::new(encoder);
+
+    let folder_name = dir_path.file_name().ok_or("Invalid directory name")?;
+    builder
+        .append_dir_all(folder_name, dir_path)
+        .map_err(|e| format!("Tar build error: {}", e))?;
+
+    let encoder = builder.into_inner().map_err(|e| format!("Tar finalize error: {}", e))?;
+    let compressed_bytes = encoder.finish().map_err(|e| format!("Gz finish error: {}", e))?;
+
+    Ok(Zeroizing::new(compressed_bytes))
+}
+
+fn extract_in_memory_tarball(tarball_data: &[u8], target_dir: &Path) -> Result<(), String> {
+    fs::create_dir_all(target_dir).map_err(|e| format!("Failed to create output dir: {}", e))?;
+
+    let cursor = Cursor::new(tarball_data);
+    let decoder = GzDecoder::new(cursor);
+    let mut archive = Archive::new(decoder);
+
+    for entry_res in archive.entries().map_err(|e| format!("Tar read error: {}", e))? {
+        let mut entry = entry_res.map_err(|e| format!("Tar entry error: {}", e))?;
+
+        // ZipSlip mitigation
+        let entry_path = entry.path().map_err(|e| e.to_string())?;
+        let unpacked_target = target_dir.join(&entry_path);
+        if let Some(parent) = unpacked_target.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+
+        entry.unpack_in(target_dir).map_err(|e| format!("Tar unpack error: {}", e))?;
+    }
+
+    Ok(())
+}
+
+fn shred_file(path: &Path) -> Result<(), String> {
+    if !path.exists() || !path.is_file() {
+        return Ok(());
+    }
+
+    let meta = fs::metadata(path).map_err(|e| e.to_string())?;
+    let file_len = meta.len();
+    let mut file = OpenOptions::new().write(true).open(path).map_err(|e| e.to_string())?;
+    let mut rng = ChaCha20Rng::from_entropy();
+
+    let buf_size = 64 * 1024;
+    let zeros = vec![0u8; buf_size];
+    let ones = vec![0xFFu8; buf_size];
+
+    // Pass 1: Zeros
+    overwrite_bytes(&mut file, file_len, &zeros)?;
+    // Pass 2: Ones
+    overwrite_bytes(&mut file, file_len, &ones)?;
+
+    // Pass 3: CSPRNG Random bytes
+    use std::io::Seek;
+    file.seek(std::io::SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+    let mut remaining = file_len;
+    let mut rand_buf = vec![0u8; buf_size];
+    while remaining > 0 {
+        let chunk = (remaining as usize).min(buf_size);
+        rng.fill_bytes(&mut rand_buf[..chunk]);
+        file.write_all(&rand_buf[..chunk]).map_err(|e| e.to_string())?;
+        remaining -= chunk as u64;
+    }
+    file.sync_all().map_err(|e| e.to_string())?;
+
+    file.set_len(0).map_err(|e| e.to_string())?;
+    file.sync_all().map_err(|e| e.to_string())?;
+    drop(file);
+
+    let temp_name = format!(".shred_{}", rng.next_u64());
+    let temp_path = path.with_file_name(temp_name);
+    fs::rename(path, &temp_path).map_err(|e| e.to_string())?;
+    fs::remove_file(temp_path).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+fn overwrite_bytes(file: &mut fs::File, mut remaining: u64, buf: &[u8]) -> Result<(), String> {
+    use std::io::Seek;
+    file.seek(std::io::SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+    while remaining > 0 {
+        let chunk = (remaining as usize).min(buf.len());
+        file.write_all(&buf[..chunk]).map_err(|e| e.to_string())?;
+        remaining -= chunk as u64;
+    }
+    file.sync_all().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn shred_directory(path: &Path) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+
+    if path.is_file() {
+        return shred_file(path);
+    }
+
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                let _ = shred_directory(&p);
+            } else {
+                let _ = shred_file(&p);
+            }
+        }
+    }
+
+    let temp_name = format!(".shred_dir_{}", rand::random::<u64>());
+    let temp_path = path.with_file_name(temp_name);
+    let _ = fs::rename(path, &temp_path);
+    let _ = fs::remove_dir(temp_path);
+    Ok(())
+}
+
 // ── vault operations ──────────────────────────────────────────────────────────
 fn vault_create(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     let enc_file = store_dir.join(format!("{}.enc", name));
@@ -515,43 +710,124 @@ fn vault_create(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
         return ("❌ Failed to create temp directory".into(), true);
     }
     let _ = fs::write(ram_vault.join("README.txt"), format!("Vault '{}'", name));
-    let archive = ram_base.join(format!(".tmp_{}.tar.gz", std::process::id()));
-    let tar_ok = Command::new("tar").args(["-czf", &archive.display().to_string(), "-C", &ram_vault.display().to_string(), "."]).status().map(|s| s.success()).unwrap_or(false);
-    if !tar_ok { let _ = fs::remove_dir_all(&ram_vault); return ("❌ tar failed".into(), true); }
-    let enc_ok = Command::new("openssl").args(["enc", "-aes-256-cbc", "-pbkdf2", "-iter", "500000", "-pass", &format!("pass:{}", pass), "-in", &archive.display().to_string(), "-out", &enc_file.display().to_string()]).status().map(|s| s.success()).unwrap_or(false);
-    let _ = fs::remove_file(&archive);
-    let _ = fs::remove_dir_all(&ram_vault);
-    if enc_ok { (format!("✅ Created vault: {}.enc", name), false) } else { ("❌ Encryption failed!".into(), true) }
+    
+    let tarball = match create_in_memory_tarball(&ram_vault) {
+        Ok(t) => t,
+        Err(e) => {
+            let _ = fs::remove_dir_all(&ram_vault);
+            return (format!("❌ Tar build failed: {}", e), true);
+        }
+    };
+    let _ = shred_directory(&ram_vault);
+
+    let encrypted_payload = match encrypt_vault_payload(&tarball, pass) {
+        Ok(p) => p,
+        Err(e) => return (format!("❌ Encryption failed: {}", e), true),
+    };
+
+    if fs::write(&enc_file, &encrypted_payload).is_err() {
+        return ("❌ Failed to write vault file".into(), true);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&enc_file, fs::Permissions::from_mode(0o700));
+    }
+
+    (format!("✅ Created vault: {}.enc", name), false)
 }
 
 fn vault_unlock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     let enc_file = store_dir.join(format!("{}.enc", name));
-    if !enc_file.exists() { return (format!("❌ Vault file not found: {}.enc", name), true); }
-    let ram_base = ram_base_dir();
-    let archive = ram_base.join(format!(".tmp_dec_{}.tar.gz", std::process::id()));
-    let dec_ok = Command::new("openssl").args(["enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "500000", "-pass", &format!("pass:{}", pass), "-in", &enc_file.display().to_string(), "-out", &archive.display().to_string()]).status().map(|s| s.success()).unwrap_or(false);
-    if !dec_ok { let _ = fs::remove_file(&archive); return ("❌ Invalid password or corrupted vault!".into(), true); }
-    let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
+    if !enc_file.exists() {
+        return (format!("❌ Vault file not found: {}.enc", name), true);
+    }
+
+    let encrypted_data = match fs::read(&enc_file) {
+        Ok(data) => data,
+        Err(e) => return (format!("❌ Failed to read vault file: {}", e), true),
+    };
+
+    let decrypted_tarball = match decrypt_vault_payload(&encrypted_data, pass) {
+        Ok(t) => t,
+        Err(e) => return (format!("❌ {}", e), true),
+    };
+
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
     let target = home.join(name);
     let _ = fs::remove_dir_all(&target);
-    let _ = fs::create_dir_all(&target);
-    let tar_ok = Command::new("tar").args(["-xzf", &archive.display().to_string(), "-C", &target.display().to_string()]).status().map(|s| s.success()).unwrap_or(false);
-    let _ = fs::remove_file(&archive);
-    if tar_ok { (format!("🔓 Unlocked to: ~/{}", name), false) } else { ("❌ Tar extraction failed!".into(), true) }
+
+    if let Err(e) = extract_in_memory_tarball(&decrypted_tarball, &target) {
+        return (format!("❌ Tar extraction failed: {}", e), true);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&target, fs::Permissions::from_mode(0o700));
+    }
+
+    (format!("🔓 Unlocked to: ~/{}", name), false)
 }
 
 fn vault_lock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
-    let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
     let target = home.join(name);
-    if !target.exists() { return (format!("❌ Vault directory ~/{} not found", name), true); }
+    if !target.exists() {
+        return (format!("❌ Vault directory ~/{} not found", name), true);
+    }
+
     let enc_file = store_dir.join(format!("{}.enc", name));
-    let ram_base = ram_base_dir();
-    let archive = ram_base.join(format!(".tmp_enc_{}.tar.gz", std::process::id()));
-    let tar_ok = Command::new("tar").args(["-czf", &archive.display().to_string(), "-C", &target.display().to_string(), "."]).status().map(|s| s.success()).unwrap_or(false);
-    if !tar_ok { return ("❌ tar failed".into(), true); }
-    let enc_ok = Command::new("openssl").args(["enc", "-aes-256-cbc", "-pbkdf2", "-iter", "500000", "-pass", &format!("pass:{}", pass), "-in", &archive.display().to_string(), "-out", &enc_file.display().to_string()]).status().map(|s| s.success()).unwrap_or(false);
-    let _ = fs::remove_file(&archive);
-    if enc_ok { let _ = fs::remove_dir_all(&target); (format!("🔒 Locked: {}.enc", name), false) } else { ("❌ Encryption failed!".into(), true) }
+    let tarball = match create_in_memory_tarball(&target) {
+        Ok(t) => t,
+        Err(e) => return (format!("❌ Tar archive failed: {}", e), true),
+    };
+
+    let encrypted_payload = match encrypt_vault_payload(&tarball, pass) {
+        Ok(p) => p,
+        Err(e) => return (format!("❌ Encryption failed: {}", e), true),
+    };
+
+    if fs::write(&enc_file, &encrypted_payload).is_err() {
+        return ("❌ Failed to write encrypted vault file".into(), true);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&enc_file, fs::Permissions::from_mode(0o700));
+    }
+
+    let _ = shred_directory(&target);
+    (format!("🔒 Locked: {}.enc", name), false)
+}
+
+fn vault_delete(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+    let enc_file = store_dir.join(format!("{}.enc", name));
+    if !enc_file.exists() {
+        return (format!("❌ Vault file not found: {}.enc", name), true);
+    }
+
+    let encrypted_data = match fs::read(&enc_file) {
+        Ok(data) => data,
+        Err(e) => return (format!("❌ Failed to read vault file: {}", e), true),
+    };
+
+    // Verify password first before destruction
+    if let Err(e) = decrypt_vault_payload(&encrypted_data, pass) {
+        return (format!("❌ Password verification failed: {}", e), true);
+    }
+
+    if let Err(e) = shred_file(&enc_file) {
+        return (format!("❌ Shredding failed: {}", e), true);
+    }
+
+    (format!("💥 Securely deleted vault: {}.enc", name), false)
 }
 
 fn list_encrypted_vaults(store_dir: &PathBuf) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -559,7 +835,9 @@ fn list_encrypted_vaults(store_dir: &PathBuf) -> Result<Vec<String>, Box<dyn std
     if let Ok(entries) = fs::read_dir(store_dir) {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.ends_with(".enc") { vaults.push(name); }
+            if name.ends_with(".enc") {
+                vaults.push(name);
+            }
         }
     }
     vaults.sort();
@@ -569,31 +847,46 @@ fn list_encrypted_vaults(store_dir: &PathBuf) -> Result<Vec<String>, Box<dyn std
 fn run_cli(action: &str, args: &[String], store_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         "create" | "new" => {
-            let name = args.first().cloned().unwrap_or_else(|| { print!("Vault name: "); io::stdout().flush().unwrap(); let mut s = String::new(); io::stdin().read_line(&mut s).unwrap(); s.trim().replace(' ', "_") });
-            print!("Password: "); io::stdout().flush()?;
-            let mut p = String::new(); io::stdin().read_line(&mut p)?;
+            let name = args.first().cloned().unwrap_or_else(|| {
+                print!("Vault name: ");
+                io::stdout().flush().unwrap();
+                let mut s = String::new();
+                io::stdin().read_line(&mut s).unwrap();
+                s.trim().replace(' ', "_")
+            });
+            let p = rpassword::prompt_password("Master Password: ")?;
             let (msg, _) = vault_create(name.trim(), p.trim(), store_dir);
             println!("{}", msg);
         }
         "unlock" | "open" => {
             let name = args.first().cloned().unwrap_or_default();
-            print!("Password: "); io::stdout().flush()?;
-            let mut p = String::new(); io::stdin().read_line(&mut p)?;
+            let p = rpassword::prompt_password("Master Password: ")?;
             let (msg, _) = vault_unlock(name.trim(), p.trim(), store_dir);
             println!("{}", msg);
         }
         "lock" | "close" => {
             let name = args.first().cloned().unwrap_or_default();
-            print!("Password: "); io::stdout().flush()?;
-            let mut p = String::new(); io::stdin().read_line(&mut p)?;
+            let p = rpassword::prompt_password("Master Password: ")?;
             let (msg, _) = vault_lock(name.trim(), p.trim(), store_dir);
+            println!("{}", msg);
+        }
+        "delete" | "rm" => {
+            let name = args.first().cloned().unwrap_or_default();
+            let p = rpassword::prompt_password("Master Password (to confirm deletion): ")?;
+            let (msg, _) = vault_delete(name.trim(), p.trim(), store_dir);
             println!("{}", msg);
         }
         "list" | "ls" => {
             let vaults = list_encrypted_vaults(store_dir)?;
-            if vaults.is_empty() { println!("📋 No vaults found."); } else { for v in vaults { println!("  🔒 {}", v); } }
+            if vaults.is_empty() {
+                println!("📋 No vaults found.");
+            } else {
+                for v in vaults {
+                    println!("  🔒 {}", v);
+                }
+            }
         }
-        _ => println!("Usage: fancybash vault [create <name> | lock <name> | unlock <name> | list]"),
+        _ => println!("Usage: fancybash vault [create <name> | lock <name> | unlock <name> | delete <name> | list]"),
     }
     Ok(())
 }
@@ -606,5 +899,16 @@ mod tests {
     fn test_vault_store_path_exists() {
         let store = vault_store_dir();
         assert!(store.to_string_lossy().contains(".secret_vaults"));
+    }
+
+    #[test]
+    fn test_crypto_roundtrip() {
+        let secret_data = b"Test secret payload data 12345";
+        let password = "SuperSecretPassword123!";
+
+        let encrypted = encrypt_vault_payload(secret_data, password).expect("Encryption failed");
+        let decrypted = decrypt_vault_payload(&encrypted, password).expect("Decryption failed");
+
+        assert_eq!(&decrypted[..], secret_data);
     }
 }

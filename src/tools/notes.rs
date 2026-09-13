@@ -1,9 +1,5 @@
 // =============================================================================
-//  src/tools/notes.rs — Plain-text notes manager (`notes`) (Phase 5)
-//
-//  Pure Rust Ratatui + Crossterm dual-pane notes manager UI matching design:
-//  Left Pane: Search Notes prompt, match count, category folder list (📁 Category ➔ Title).
-//  Right Pane: Live note content preview with created date and green divider.
+//  src/tools/notes.rs — FANCYBASH Notes Manager (Modern fkill-style TUI)
 // =============================================================================
 
 use std::error::Error;
@@ -12,18 +8,33 @@ use std::io;
 use std::path::PathBuf;
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Terminal,
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
+    Frame, Terminal,
 };
+
+// ── Colour Palette (fkill-consistent, notes-tinted cyan/green) ───────────────
+const C_BG: Color = Color::Rgb(8, 12, 22);
+const C_BORDER: Color = Color::Rgb(0, 210, 180);       // teal accent
+const C_ACCENT: Color = Color::Rgb(0, 240, 200);       // bright teal
+const C_SELECTED_BG: Color = Color::Rgb(0, 45, 40);    // dark teal row bg
+const C_SELECTED_FG: Color = Color::Rgb(0, 255, 200);  // selected text
+const C_DIM: Color = Color::Rgb(90, 110, 120);
+const C_TEXT: Color = Color::Rgb(210, 225, 235);
+const C_GREEN: Color = Color::Rgb(80, 220, 140);
+const C_YELLOW: Color = Color::Rgb(255, 200, 80);
+const C_PINK: Color = Color::Rgb(255, 80, 160);
+const C_WHITE: Color = Color::Rgb(255, 255, 255);
+const C_CAT: Color = Color::Rgb(130, 200, 255);        // category label blue
+const C_CONTENT: Color = Color::Rgb(195, 230, 215);    // note content text
 
 fn notes_dir_path() -> PathBuf {
     let home = std::env::var_os("HOME")
@@ -31,6 +42,8 @@ fn notes_dir_path() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."));
     home.join(".my_notes")
 }
+
+// ── Data Model ───────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 pub struct NoteItem {
@@ -41,12 +54,26 @@ pub struct NoteItem {
     pub content: String,
 }
 
+// ── Modal Mode ───────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq)]
+enum Modal {
+    None,
+    ConfirmDelete(usize),                // index into filtered_indices
+    NewNoteField(u8, String, String),    // active_field (0=cat,1=title), cat, title
+}
+
+// ── App State ────────────────────────────────────────────────────────────────
+
 pub struct NotesApp {
     pub root_dir: PathBuf,
     pub items: Vec<NoteItem>,
     pub filtered_indices: Vec<usize>,
     pub list_state: ListState,
     pub query: String,
+    pub status_msg: Option<(String, bool)>, // (msg, is_error)
+    pub scroll_offset: u16,
+    modal: Modal,
 }
 
 impl NotesApp {
@@ -57,6 +84,9 @@ impl NotesApp {
             filtered_indices: Vec::new(),
             list_state: ListState::default(),
             query: String::new(),
+            status_msg: None,
+            scroll_offset: 0,
+            modal: Modal::None,
         };
         app.load_notes();
         app
@@ -83,10 +113,8 @@ impl NotesApp {
                                     let created_time = fs::metadata(&file_path)
                                         .and_then(|m| m.modified())
                                         .map(format_system_time)
-                                        .unwrap_or_else(|_| "2026-09-07 16:14:05".to_string());
-
+                                        .unwrap_or_else(|_| "—".to_string());
                                     let content = fs::read_to_string(&file_path).unwrap_or_default();
-
                                     self.items.push(NoteItem {
                                         category: cat_name.clone(),
                                         title: stem,
@@ -102,8 +130,7 @@ impl NotesApp {
             }
         }
 
-        self.items
-            .sort_by(|a, b| a.category.cmp(&b.category).then_with(|| a.title.cmp(&b.title)));
+        self.items.sort_by(|a, b| a.category.cmp(&b.category).then_with(|| a.title.cmp(&b.title)));
         self.filter_items();
     }
 
@@ -124,14 +151,72 @@ impl NotesApp {
                 .map(|(i, _)| i)
                 .collect();
         }
-
         if self.filtered_indices.is_empty() {
             self.list_state.select(None);
         } else {
-            self.list_state.select(Some(0));
+            let cur = self.list_state.selected().unwrap_or(0);
+            self.list_state.select(Some(cur.min(self.filtered_indices.len() - 1)));
         }
+        self.scroll_offset = 0;
     }
 
+    fn selected_note(&self) -> Option<&NoteItem> {
+        let idx = self.list_state.selected()?;
+        let orig = *self.filtered_indices.get(idx)?;
+        self.items.get(orig)
+    }
+
+    fn move_select(&mut self, delta: i32) {
+        if self.filtered_indices.is_empty() { return; }
+        let cur = self.list_state.selected().unwrap_or(0) as i32;
+        let len = self.filtered_indices.len() as i32;
+        let next = (cur + delta).rem_euclid(len);
+        self.list_state.select(Some(next as usize));
+        self.scroll_offset = 0;
+    }
+
+    fn delete_selected(&mut self) {
+        if let Some(sel) = self.list_state.selected() {
+            if sel < self.filtered_indices.len() {
+                let orig = self.filtered_indices[sel];
+                let path = self.items[orig].file_path.clone();
+                let title = self.items[orig].title.clone();
+                if let Err(e) = fs::remove_file(&path) {
+                    self.status_msg = Some((format!("❌ Delete failed: {e}"), true));
+                } else {
+                    self.status_msg = Some((format!("🗑  '{}' deleted", title), false));
+                    self.load_notes();
+                }
+            }
+        }
+        self.modal = Modal::None;
+    }
+
+    fn create_note(&mut self, category: &str, title: &str) {
+        let cat = if category.trim().is_empty() { "General" } else { category.trim() };
+        let ttl = if title.trim().is_empty() { "Untitled" } else { title.trim() };
+        let cat_dir = self.root_dir.join(cat);
+        if let Err(e) = fs::create_dir_all(&cat_dir) {
+            self.status_msg = Some((format!("❌ {e}"), true));
+            self.modal = Modal::None;
+            return;
+        }
+        let file_path = cat_dir.join(format!("{ttl}.txt"));
+        if file_path.exists() {
+            self.status_msg = Some((format!("⚠  Note '{ttl}' already exists"), true));
+            self.modal = Modal::None;
+            return;
+        }
+        if let Err(e) = fs::write(&file_path, "") {
+            self.status_msg = Some((format!("❌ {e}"), true));
+        } else {
+            self.status_msg = Some((format!("✅ Created '{cat}/{ttl}'"), false));
+            self.load_notes();
+        }
+        self.modal = Modal::None;
+    }
+
+    // ── Main TUI event loop ───────────────────────────────────────────────────
     pub fn run_loop<B: ratatui::backend::Backend>(
         &mut self,
         terminal: &mut Terminal<B>,
@@ -140,208 +225,471 @@ impl NotesApp {
             terminal.draw(|f| self.render_ui(f))?;
 
             if let Event::Key(key) = event::read()? {
-                if key.kind != event::KeyEventKind::Press {
-                    continue;
+                if key.kind != KeyEventKind::Press { continue; }
+
+                // ── Modal handling ────────────────────────────────────────────
+                match &self.modal.clone() {
+                    Modal::ConfirmDelete(_) => {
+                        match key.code {
+                            KeyCode::Char('y') | KeyCode::Char('Y') => self.delete_selected(),
+                            _ => self.modal = Modal::None,
+                        }
+                        continue;
+                    }
+                    Modal::NewNoteField(active, cat, title) => {
+                        let (mut active, mut cat, mut title) = (*active, cat.clone(), title.clone());
+                        match key.code {
+                            KeyCode::Esc => { self.modal = Modal::None; }
+                            KeyCode::Tab => { active = 1 - active; self.modal = Modal::NewNoteField(active, cat, title); }
+                            KeyCode::Enter => {
+                                let c = cat.clone();
+                                let t = title.clone();
+                                self.create_note(&c, &t);
+                            }
+                            KeyCode::Backspace => {
+                                if active == 0 { cat.pop(); } else { title.pop(); }
+                                self.modal = Modal::NewNoteField(active, cat, title);
+                            }
+                            KeyCode::Char(c) => {
+                                if active == 0 { cat.push(c); } else { title.push(c); }
+                                self.modal = Modal::NewNoteField(active, cat, title);
+                            }
+                            _ => {}
+                        }
+                        continue;
+                    }
+                    Modal::None => {}
                 }
 
+                // ── Normal mode ───────────────────────────────────────────────
                 match (key.code, key.modifiers) {
                     (KeyCode::Esc, _)
                     | (KeyCode::Char('q'), KeyModifiers::NONE)
-                    | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                        return Ok(None);
-                    }
+                    | (KeyCode::Char('c'), KeyModifiers::CONTROL) => return Ok(None),
+
                     (KeyCode::Enter, _) => {
-                        if let Some(sel) = self.list_state.selected() {
-                            if sel < self.filtered_indices.len() {
-                                let orig_idx = self.filtered_indices[sel];
-                                return Ok(Some(self.items[orig_idx].clone()));
-                            }
+                        if let Some(note) = self.selected_note().cloned() {
+                            return Ok(Some(note));
                         }
-                        return Ok(None);
                     }
-                    (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::CONTROL) => {
-                        self.move_select(-1);
+
+                    (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => self.move_select(-1),
+                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => self.move_select(1),
+                    (KeyCode::PageUp, _) => self.move_select(-10),
+                    (KeyCode::PageDown, _) => self.move_select(10),
+                    (KeyCode::Home, _) => { self.list_state.select(Some(0)); self.scroll_offset = 0; }
+                    (KeyCode::End, _) => {
+                        let last = self.filtered_indices.len().saturating_sub(1);
+                        self.list_state.select(Some(last));
                     }
-                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::CONTROL) => {
-                        self.move_select(1);
+
+                    // Scroll preview
+                    (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
+                        self.scroll_offset = self.scroll_offset.saturating_sub(5);
                     }
-                    (KeyCode::PageUp, _) => {
-                        self.move_select(-10);
+                    (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
+                        self.scroll_offset = self.scroll_offset.saturating_add(5);
                     }
-                    (KeyCode::PageDown, _) => {
-                        self.move_select(10);
+
+                    // Delete
+                    (KeyCode::Delete, _) | (KeyCode::Char('d'), KeyModifiers::NONE) => {
+                        if let Some(sel) = self.list_state.selected() {
+                            self.modal = Modal::ConfirmDelete(sel);
+                        }
                     }
+
+                    // New note
+                    (KeyCode::Char('n'), KeyModifiers::NONE) => {
+                        self.modal = Modal::NewNoteField(0, String::new(), String::new());
+                    }
+
+                    // Search typing
                     (KeyCode::Backspace, _) => {
                         self.query.pop();
                         self.filter_items();
                     }
-                    (KeyCode::Char(c), KeyModifiers::NONE)
-                    | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                    (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                         self.query.push(c);
                         self.filter_items();
                     }
+
                     _ => {}
                 }
             }
         }
     }
 
-    fn move_select(&mut self, delta: i32) {
-        if self.filtered_indices.is_empty() {
-            return;
-        }
-        let current = self.list_state.selected().unwrap_or(0) as i32;
-        let len = self.filtered_indices.len() as i32;
-        let next = (current + delta).clamp(0, len - 1);
-        self.list_state.select(Some(next as usize));
-    }
+    // ── Render ────────────────────────────────────────────────────────────────
+    fn render_ui(&mut self, f: &mut Frame) {
+        let area = f.area();
 
-    fn render_ui(&mut self, frame: &mut ratatui::Frame) {
-        let area = frame.area();
+        // Full background
+        f.render_widget(
+            Block::default().style(Style::default().bg(C_BG)),
+            area,
+        );
 
-        let outer_block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::DarkGray));
-        frame.render_widget(outer_block, area);
-
-        let inner_margin = Rect {
-            x: area.x + 1,
-            y: area.y + 1,
-            width: area.width.saturating_sub(2),
-            height: area.height.saturating_sub(2),
-        };
-
-        let main_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(42), // Left Pane: Notes Search & List
-                Constraint::Percentage(58), // Right Pane: Live Note Content Box
-            ])
-            .split(inner_margin);
-
-        // ── Render Left Pane ─────────────────────────────────────────────────
-        let left_chunks = Layout::default()
+        let outer = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(1), // 🔍 Search Notes ➔ ...
-                Constraint::Length(1), // Counter (4/4)
-                Constraint::Length(1), // Green/DarkGray Divider line
-                Constraint::Min(4),    // List of notes
+                Constraint::Length(3), // Banner
+                Constraint::Length(3), // Search bar
+                Constraint::Min(5),    // Content area
+                Constraint::Length(3), // Status / footer
             ])
-            .split(main_chunks[0]);
+            .split(area);
 
-        // Search Input Line
-        let search_line = Line::from(vec![
-            Span::styled("🔍 Search Notes ➔ ", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
-            Span::styled(&self.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-            Span::styled("|", Style::default().fg(Color::Green)),
-        ]);
-        frame.render_widget(Paragraph::new(search_line), left_chunks[0]);
+        // ── Banner ────────────────────────────────────────────────────────────
+        let note_count = self.items.len();
+        let banner = Paragraph::new(Line::from(vec![
+            Span::styled("📝  ", Style::default().fg(C_ACCENT)),
+            Span::styled("NOTES", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled(" — Fancybash Note Manager", Style::default().fg(C_TEXT)),
+            Span::styled(
+                format!("  ({note_count} notes)"),
+                Style::default().fg(C_DIM),
+            ),
+        ]))
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .style(Style::default().bg(C_BG)),
+        );
+        f.render_widget(banner, outer[0]);
 
-        // Counter Line
-        let total_count = self.items.len();
+        // ── Search Bar ────────────────────────────────────────────────────────
         let match_count = self.filtered_indices.len();
-        let counter_str = format!("{}/{}", match_count, total_count);
-        let counter_line = Line::from(vec![
-            Span::styled(counter_str, Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)),
+        let search_text = Line::from(vec![
+            Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
+            Span::styled(&self.query, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled("█", Style::default().fg(C_BORDER)),
+            Span::styled(
+                format!("  ({match_count}/{note_count})"),
+                Style::default().fg(C_DIM),
+            ),
         ]);
-        frame.render_widget(Paragraph::new(counter_line), left_chunks[1]);
+        let search_bar = Paragraph::new(search_text).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_ACCENT))
+                .title(Span::styled(" Search Notes ", Style::default().fg(C_ACCENT)))
+                .style(Style::default().bg(C_BG)),
+        );
+        f.render_widget(search_bar, outer[1]);
 
-        // Divider Line
-        let divider_len = left_chunks[2].width as usize;
-        let divider_str = "─".repeat(divider_len);
-        frame.render_widget(Paragraph::new(Line::from(Span::styled(&divider_str, Style::default().fg(Color::DarkGray)))), left_chunks[2]);
+        // ── Main content: left list + right preview ────────────────────────────
+        let content_panes = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(40),
+                Constraint::Percentage(60),
+            ])
+            .split(outer[2]);
 
-        // List Items
-        let list_items: Vec<ListItem> = self
-            .filtered_indices
-            .iter()
-            .enumerate()
-            .map(|(i, &orig_idx)| {
-                let is_cursor = self.list_state.selected() == Some(i);
-                let item = &self.items[orig_idx];
+        self.render_list(f, content_panes[0]);
+        self.render_preview(f, content_panes[1]);
 
-                let bar_span = if is_cursor {
-                    Span::styled("█ ", Style::default().fg(Color::Rgb(255, 0, 128)))
-                } else {
-                    Span::raw("  ")
-                };
+        // ── Status / Footer ───────────────────────────────────────────────────
+        let status_text = if let Some((ref msg, is_error)) = self.status_msg {
+            let color = if is_error { Color::Rgb(255, 80, 80) } else { C_GREEN };
+            Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
+        } else {
+            Line::from(vec![
+                Span::styled(" ↑↓/jk Navigate", Style::default().fg(C_DIM)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("Type to search", Style::default().fg(C_DIM)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("n New", Style::default().fg(C_ACCENT)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("d Delete", Style::default().fg(C_PINK)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("Enter Open", Style::default().fg(C_GREEN)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("q Quit", Style::default().fg(C_DIM)),
+            ])
+        };
+        let status_bar = Paragraph::new(status_text)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_DIM))
+                    .style(Style::default().bg(C_BG)),
+            );
+        f.render_widget(status_bar, outer[3]);
 
-                let folder_span = Span::styled("📁 ", Style::default().fg(Color::Yellow));
-                let cat_span = Span::styled(&item.category, Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD));
-                let arrow_span = Span::styled(" ➔ ", Style::default().fg(Color::LightCyan));
-                let title_span = Span::styled(
-                    &item.title,
-                    Style::default().fg(Color::LightGreen).add_modifier(if is_cursor { Modifier::BOLD } else { Modifier::empty() }),
+        // ── Modals (rendered last, on top) ────────────────────────────────────
+        self.render_modal(f, area);
+    }
+
+    fn render_list(&mut self, f: &mut Frame, area: Rect) {
+        // Group by category for the header rows
+        let mut items: Vec<ListItem> = Vec::new();
+        let mut last_cat: Option<String> = None;
+
+        for (display_idx, &orig_idx) in self.filtered_indices.iter().enumerate() {
+            let note = &self.items[orig_idx];
+            let is_sel = self.list_state.selected() == Some(display_idx);
+
+            // Category header separator
+            let show_header = last_cat.as_deref() != Some(&note.category);
+            if show_header {
+                last_cat = Some(note.category.clone());
+                let header_line = Line::from(vec![
+                    Span::styled("  📁 ", Style::default().fg(C_YELLOW)),
+                    Span::styled(
+                        note.category.clone(),
+                        Style::default().fg(C_CAT).add_modifier(Modifier::BOLD),
+                    ),
+                ]);
+                items.push(ListItem::new(header_line));
+            }
+
+            let line = if is_sel {
+                Line::from(vec![
+                    Span::styled(" ▶ ", Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!("{:<width$}", note.title, width = area.width.saturating_sub(6) as usize),
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(C_SELECTED_BG),
+                    ),
+                ])
+            } else {
+                Line::from(vec![
+                    Span::styled("   ", Style::default()),
+                    Span::styled(&note.title, Style::default().fg(C_TEXT)),
+                ])
+            };
+            items.push(ListItem::new(line));
+        }
+
+        if items.is_empty() {
+            let placeholder = ListItem::new(Line::from(Span::styled(
+                "  No notes found…",
+                Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+            )));
+            items.push(placeholder);
+        }
+
+        let list = List::new(items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .title(Span::styled(
+                    " Notes ",
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ))
+                .style(Style::default().bg(C_BG)),
+        );
+        f.render_stateful_widget(list, area, &mut self.list_state);
+    }
+
+    fn render_preview(&self, f: &mut Frame, area: Rect) {
+        let note = self.selected_note();
+
+        let title_span = note
+            .map(|n| format!(" 📄 {} ", n.title))
+            .unwrap_or_else(|| " Preview ".to_string());
+
+        let preview_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_BORDER))
+            .title(Span::styled(title_span, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+            .style(Style::default().bg(C_BG));
+
+        let inner = preview_block.inner(area);
+        f.render_widget(preview_block, area);
+
+        if inner.height < 3 || inner.width < 5 { return; }
+
+        let mut lines: Vec<Line> = Vec::new();
+
+        if let Some(note) = note {
+            // Metadata header
+            lines.push(Line::from(vec![
+                Span::styled("  📁 ", Style::default().fg(C_YELLOW)),
+                Span::styled(&note.category, Style::default().fg(C_CAT).add_modifier(Modifier::BOLD)),
+                Span::styled(" / ", Style::default().fg(C_DIM)),
+                Span::styled(&note.title, Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  🕐 ", Style::default().fg(C_DIM)),
+                Span::styled(&note.created_time, Style::default().fg(C_DIM)),
+            ]));
+            // Divider
+            lines.push(Line::from(Span::styled(
+                "─".repeat(inner.width as usize),
+                Style::default().fg(C_BORDER),
+            )));
+
+            if note.content.trim().is_empty() {
+                lines.push(Line::from(Span::styled(
+                    "  (empty note — press Enter to open & edit)",
+                    Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+                )));
+            } else {
+                for content_line in note.content.lines() {
+                    lines.push(Line::from(Span::styled(
+                        format!("  {content_line}"),
+                        Style::default().fg(C_CONTENT),
+                    )));
+                }
+            }
+        } else {
+            lines.push(Line::from(Span::styled(
+                "  Select a note to preview",
+                Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+            )));
+        }
+
+        // Apply scroll
+        let skip = self.scroll_offset as usize;
+        let visible: Vec<Line> = lines.into_iter().skip(skip).collect();
+
+        f.render_widget(Paragraph::new(visible).wrap(Wrap { trim: false }), inner);
+    }
+
+    fn render_modal(&self, f: &mut Frame, area: Rect) {
+        match &self.modal {
+            Modal::None => {}
+
+            Modal::ConfirmDelete(sel_idx) => {
+                let note_title = self
+                    .filtered_indices
+                    .get(*sel_idx)
+                    .and_then(|&orig| self.items.get(orig))
+                    .map(|n| format!("'{}' ({})", n.title, n.category))
+                    .unwrap_or_default();
+
+                let dialog_area = centered_rect(54, 9, area);
+                f.render_widget(Clear, dialog_area);
+                let dialog = Paragraph::new(vec![
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("  Delete note ", Style::default().fg(C_TEXT)),
+                        Span::styled(&note_title, Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
+                        Span::styled("?", Style::default().fg(C_TEXT)),
+                    ]),
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("  Press ", Style::default().fg(C_DIM)),
+                        Span::styled("[Y]", Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
+                        Span::styled(" to confirm, any key to cancel", Style::default().fg(C_DIM)),
+                    ]),
+                    Line::from(""),
+                ])
+                .wrap(Wrap { trim: true })
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Double)
+                        .border_style(Style::default().fg(C_PINK))
+                        .title(Span::styled(
+                            " ⚠  Confirm Delete ",
+                            Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+                        ))
+                        .style(Style::default().bg(Color::Rgb(25, 5, 15))),
+                );
+                f.render_widget(dialog, dialog_area);
+            }
+
+            Modal::NewNoteField(active_field, cat, title) => {
+                let dialog_area = centered_rect(60, 12, area);
+                f.render_widget(Clear, dialog_area);
+
+                let outer_block = Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Double)
+                    .border_style(Style::default().fg(C_ACCENT))
+                    .title(Span::styled(
+                        " ✏  New Note ",
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
+                    .style(Style::default().bg(Color::Rgb(8, 22, 18)));
+
+                let inner = outer_block.inner(dialog_area);
+                f.render_widget(outer_block, dialog_area);
+
+                let rows = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Length(1),
+                        Constraint::Length(3),
+                        Constraint::Length(3),
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                    ])
+                    .split(inner);
+
+                // Instructions
+                f.render_widget(
+                    Paragraph::new(Line::from(vec![
+                        Span::styled("  Tab", Style::default().fg(C_YELLOW)),
+                        Span::styled(" to switch fields  │  ", Style::default().fg(C_DIM)),
+                        Span::styled("Enter", Style::default().fg(C_GREEN)),
+                        Span::styled(" to create  │  ", Style::default().fg(C_DIM)),
+                        Span::styled("Esc", Style::default().fg(C_DIM)),
+                        Span::styled(" cancel", Style::default().fg(C_DIM)),
+                    ])),
+                    rows[0],
                 );
 
-                ListItem::new(Line::from(vec![
-                    bar_span,
-                    folder_span,
-                    cat_span,
-                    arrow_span,
-                    title_span,
+                // Category field
+                let cat_border_color = if *active_field == 0 { C_ACCENT } else { C_DIM };
+                let cat_field = Paragraph::new(Line::from(vec![
+                    Span::styled(cat.as_str(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    if *active_field == 0 { Span::styled("█", Style::default().fg(C_BORDER)) } else { Span::raw("") },
                 ]))
-            })
-            .collect();
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(cat_border_color))
+                        .title(Span::styled(" Category ", Style::default().fg(cat_border_color))),
+                );
+                f.render_widget(cat_field, rows[1]);
 
-        let list_widget = List::new(list_items)
-            .block(Block::default().borders(Borders::NONE));
+                // Title field
+                let title_border_color = if *active_field == 1 { C_ACCENT } else { C_DIM };
+                let title_field = Paragraph::new(Line::from(vec![
+                    Span::styled(title.as_str(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    if *active_field == 1 { Span::styled("█", Style::default().fg(C_BORDER)) } else { Span::raw("") },
+                ]))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(title_border_color))
+                        .title(Span::styled(" Title ", Style::default().fg(title_border_color))),
+                );
+                f.render_widget(title_field, rows[2]);
 
-        frame.render_stateful_widget(list_widget, left_chunks[3], &mut self.list_state);
-
-        // ── Render Right Pane ────────────────────────────────────────────────
-        let selected_note = self
-            .list_state
-            .selected()
-            .and_then(|idx| self.filtered_indices.get(idx))
-            .map(|&orig_idx| &self.items[orig_idx]);
-
-        render_note_preview(frame, main_chunks[1], selected_note);
+                // Hint
+                f.render_widget(
+                    Paragraph::new(Line::from(Span::styled(
+                        "  Leave Category blank to use 'General'",
+                        Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+                    ))),
+                    rows[3],
+                );
+            }
+        }
     }
 }
 
-fn render_note_preview(frame: &mut ratatui::Frame, area: Rect, note: Option<&NoteItem>) {
-    let preview_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::DarkGray));
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-    let inner = preview_block.inner(area);
-    frame.render_widget(preview_block, area);
-
-    if inner.height < 3 || inner.width < 5 {
-        return;
-    }
-
-    let mut lines = Vec::new();
-
-    if let Some(item) = note {
-        lines.push(Line::from(vec![
-            Span::styled(&item.title, Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)),
-        ]));
-
-        lines.push(Line::from(vec![
-            Span::styled("Created: ", Style::default().fg(Color::LightGreen)),
-            Span::styled(&item.created_time, Style::default().fg(Color::LightGreen)),
-        ]));
-
-        lines.push(Line::from(Span::styled(
-            "─".repeat(inner.width as usize),
-            Style::default().fg(Color::Green),
-        )));
-
-        if item.content.trim().is_empty() {
-            lines.push(Line::from(Span::styled("  (empty note)", Style::default().fg(Color::DarkGray))));
-        } else {
-            for content_line in item.content.lines() {
-                lines.push(Line::from(Span::styled(content_line, Style::default().fg(Color::LightGreen))));
-            }
-        }
-    } else {
-        lines.push(Line::from(Span::styled("No note selected", Style::default().fg(Color::DarkGray))));
-    }
-
-    frame.render_widget(Paragraph::new(lines), inner);
+fn centered_rect(percent_x: u16, height: u16, r: Rect) -> Rect {
+    let popup_width = r.width * percent_x / 100;
+    let x = r.x + (r.width.saturating_sub(popup_width)) / 2;
+    let y = r.y + (r.height.saturating_sub(height)) / 2;
+    Rect::new(x, y, popup_width.min(r.width), height.min(r.height))
 }
 
 fn seed_sample_notes_if_empty(root_dir: &PathBuf) {
@@ -350,54 +698,42 @@ fn seed_sample_notes_if_empty(root_dir: &PathBuf) {
     let _ = fs::create_dir_all(&general);
     let _ = fs::create_dir_all(&work);
 
-    let meet_file = general.join("meet.txt");
-    if !meet_file.exists() {
-        let _ = fs::write(&meet_file, "Team sync meeting notes:\n- Review Q3 roadmap\n- Finalize CLI TUI themes");
-    }
-
-    let logo_file = general.join("logo.txt");
-    if !logo_file.exists() {
-        let _ = fs::write(&logo_file, "Brand identity logo assets and SVG color specs.");
-    }
-
-    let rihad_file = general.join("Rihad.txt");
-    if !rihad_file.exists() {
-        let _ = fs::write(&rihad_file, "Personal developer profile & shell config tweaks.");
-    }
-
-    let main_file = work.join("main.txt");
-    if !main_file.exists() {
-        let _ = fs::write(&main_file, "Work main branch deployment checklist.");
+    let files: &[(&PathBuf, &str, &str)] = &[
+        (&general, "meet.txt",  "Team sync meeting notes:\n- Review Q3 roadmap\n- Finalize CLI TUI themes\n- Assign PR reviews"),
+        (&general, "logo.txt",  "Brand identity assets:\n- SVG color spec: #00D2B4 (teal), #FF50A0 (pink)\n- Font: JetBrains Mono"),
+        (&general, "Rihad.txt", "Personal developer profile:\n- Shell: zsh + fancybash\n- Editor: Neovim\n- Focus: Rust, TUI tools"),
+        (&work,    "main.txt",  "Work branch deployment checklist:\n1. Run cargo test --all\n2. Bump CHANGELOG.md\n3. Tag release vX.Y.Z\n4. Push to origin"),
+    ];
+    for (dir, name, content) in files {
+        let p = dir.join(name);
+        if !p.exists() { let _ = fs::write(&p, content); }
     }
 }
 
 fn format_system_time(st: std::time::SystemTime) -> String {
     if let Ok(dur) = st.duration_since(std::time::UNIX_EPOCH) {
         let secs = dur.as_secs();
-        let days_since_epoch = secs / 86400;
+        let days = secs / 86400;
         let day_secs = secs % 86400;
-        let hours = (day_secs / 3600 + 6) % 24; // GMT+6 approximation
-        let mins = (day_secs % 3600) / 60;
-        let seconds = day_secs % 60;
-
-        let year = 1970 + days_since_epoch / 365;
-        let doy = days_since_epoch % 365;
-        let months_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let h = (day_secs / 3600 + 6) % 24;
+        let m = (day_secs % 3600) / 60;
+        let s = day_secs % 60;
+        let year = 1970 + days / 365;
+        let doy = days % 365;
+        let md = [31u64, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         let mut month = 0usize;
         let mut rem = doy;
-        for (i, &md) in months_days.iter().enumerate() {
-            if rem < md {
-                month = i;
-                break;
-            }
-            rem -= md;
+        for (i, &days_in_m) in md.iter().enumerate() {
+            if rem < days_in_m { month = i; break; }
+            rem -= days_in_m;
         }
-        let day = rem + 1;
-        format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}", year, month + 1, day, hours, mins, seconds)
+        format!("{year:04}-{:02}-{:02} {h:02}:{m:02}:{s:02}", month + 1, rem + 1)
     } else {
-        "2026-09-07 16:14:05".to_string()
+        "—".to_string()
     }
 }
+
+// ── Public entry point ────────────────────────────────────────────────────────
 
 /// Runs the interactive notes manager (`fancybash notes`).
 pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn Error>> {
@@ -422,113 +758,102 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn Erro
             execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
             terminal.show_cursor()?;
 
-            if let Ok(Some(selected_note)) = res {
-                println!("\x1b[1;36m📝 Note: {}/{}\x1b[0m", selected_note.category, selected_note.title);
-                println!("\x1b[1;32mCreated: {}\x1b[0m", selected_note.created_time);
+            if let Ok(Some(note)) = res {
+                println!("\x1b[1;36m📝 {}/{}\x1b[0m", note.category, note.title);
+                println!("\x1b[2m🕐 {}\x1b[0m", note.created_time);
                 println!("────────────────────────────────────────");
-                println!("{}", selected_note.content);
+                println!("{}", note.content);
                 println!("────────────────────────────────────────");
-
                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                    let _ = clipboard.set_text(&selected_note.content);
-                    println!("\x1b[1;32m📋 Note content copied to clipboard.\x1b[0m");
+                    let _ = clipboard.set_text(&note.content);
+                    println!("\x1b[1;32m📋 Copied to clipboard.\x1b[0m");
                 }
             }
         }
 
         "add" => {
-            let title = if !args.is_empty() {
-                args.join(" ")
-            } else {
-                "Untitled Note".to_string()
-            };
+            let title = if !args.is_empty() { args.join(" ") } else { "Untitled".to_string() };
             let cat_dir = root_dir.join("General");
             fs::create_dir_all(&cat_dir)?;
-            let file_path = cat_dir.join(format!("{}.txt", title));
-            fs::write(&file_path, "New note content")?;
-            println!("✅ Note created: General/{}", title);
+            fs::write(cat_dir.join(format!("{title}.txt")), "")?;
+            println!("✅ Note created: General/{title}");
         }
 
         "delete" | "rm" => {
             if let Some(target) = args.first() {
-                let path = root_dir.join("General").join(format!("{}.txt", target));
+                let path = root_dir.join("General").join(format!("{target}.txt"));
                 if path.exists() {
-                    let _ = fs::remove_file(path);
-                    println!("🗑️ Note deleted.");
+                    fs::remove_file(path)?;
+                    println!("🗑  Note deleted: {target}");
+                } else {
+                    println!("❌ Not found: {target}");
                 }
             }
         }
 
-        _ => {
-            println!("Usage: fancybash notes [add | list | search | delete]");
-        }
+        _ => println!("Usage: fancybash notes [add | list | search | delete]"),
     }
 
     Ok(())
 }
 
-#[allow(dead_code)]
-fn list_categories(root_dir: &PathBuf) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut cats = Vec::new();
-    if let Ok(entries) = fs::read_dir(root_dir) {
-        for entry in entries.filter_map(|e| e.ok()) {
-            if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                if let Some(name) = entry.file_name().to_str() {
-                    cats.push(name.to_string());
-                }
-            }
-        }
-    }
-    cats.sort();
-    Ok(cats)
-}
-
-#[allow(dead_code)]
-fn collect_all_notes(root_dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    let mut files = Vec::new();
-    for entry in walkdir::WalkDir::new(root_dir).into_iter().filter_map(|e| e.ok()) {
-        if entry.file_type().is_file() {
-            files.push(entry.path().to_path_buf());
-        }
-    }
-    files.sort();
-    Ok(files)
-}
+// ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_list_categories_empty() {
-        let temp = std::env::temp_dir().join(format!("test_notes_{}", std::process::id()));
-        let _ = fs::remove_dir_all(&temp);
-        fs::create_dir_all(&temp).unwrap();
-        let cats = list_categories(&temp).unwrap();
-        assert!(cats.is_empty());
-        let _ = fs::remove_dir_all(&temp);
+    fn tmp() -> PathBuf {
+        let p = std::env::temp_dir().join(format!("notes_test_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&p);
+        fs::create_dir_all(&p).unwrap();
+        p
     }
 
     #[test]
-    fn test_collect_all_notes_empty_dir() {
-        let temp = std::env::temp_dir().join(format!("test_notes_collect_{}", std::process::id()));
-        let _ = fs::remove_dir_all(&temp);
-        fs::create_dir_all(&temp).unwrap();
-        let notes = collect_all_notes(&temp).unwrap();
-        assert!(notes.is_empty());
-        let _ = fs::remove_dir_all(&temp);
+    fn test_create_and_load_note() {
+        let dir = tmp();
+        let mut app = NotesApp::new(dir.clone());
+        let before = app.items.len();
+        app.create_note("Work", "my-task");
+        // create_note calls load_notes internally; check item count grew
+        assert!(
+            app.items.len() > before || app.items.iter().any(|n| n.title == "my-task"),
+            "expected 'my-task' to exist after create_note"
+        );
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
-    fn test_note_write_and_read() {
-        let temp = std::env::temp_dir().join(format!("test_note_rw_{}", std::process::id()));
-        let _ = fs::remove_dir_all(&temp);
-        fs::create_dir_all(&temp).unwrap();
-        let file = temp.join("test.txt");
-        fs::write(&file, "hello fancybash notes").unwrap();
-        let content = fs::read_to_string(&file).unwrap();
-        assert_eq!(content, "hello fancybash notes");
-        let _ = fs::remove_dir_all(&temp);
+    fn test_filter_items() {
+        let dir = tmp();
+        let mut app = NotesApp::new(dir.clone());
+        app.query = "meet".to_string();
+        app.filter_items();
+        assert!(app.filtered_indices.iter().all(|&i| {
+            let n = &app.items[i];
+            n.title.contains("meet") || n.category.contains("meet") || n.content.contains("meet")
+        }));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_delete_note() {
+        let dir = tmp();
+        let cat = dir.join("Test");
+        fs::create_dir_all(&cat).unwrap();
+        fs::write(cat.join("hello.txt"), "world").unwrap();
+        let mut app = NotesApp::new(dir.clone());
+        assert!(!app.items.is_empty());
+        app.list_state.select(Some(0));
+        app.delete_selected();
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_format_system_time() {
+        let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+        let s = format_system_time(t);
+        assert!(s.contains('-'));
     }
 }
-

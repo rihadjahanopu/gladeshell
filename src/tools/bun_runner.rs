@@ -20,6 +20,14 @@ use ratatui::{
     Terminal,
 };
 
+fn bun_cmd() -> String {
+    if cfg!(target_os = "windows") {
+        "bun.exe".to_string()
+    } else {
+        "bun".to_string()
+    }
+}
+
 pub fn run() -> Result<(), Box<dyn Error>> {
     let mut files = Vec::new();
     if let Ok(entries) = fs::read_dir(".") {
@@ -47,7 +55,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     if files.len() == 1 {
         let file = &files[0];
         println!("\x1b[1;92m⚡ Running with Bun:\x1b[0m {}", file);
-        Command::new("bun").arg(file).status()?;
+        Command::new(bun_cmd()).arg(file).status()?;
         return Ok(());
     }
 
@@ -59,7 +67,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     if selected_idx < files.len() {
         let selected_file = &files[selected_idx];
         println!("\x1b[1;92m⚡ Running with Bun:\x1b[0m {}", selected_file);
-        Command::new("bun").arg(selected_file).status()?;
+        Command::new(bun_cmd()).arg(selected_file).status()?;
     }
 
     Ok(())

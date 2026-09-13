@@ -15,8 +15,30 @@ use std::process::Command;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+fn resolve_cmd(program: &str) -> String {
+    if cfg!(target_os = "windows") {
+        match program {
+            "npm" => "npm.cmd".to_string(),
+            "npx" => "npx.cmd".to_string(),
+            "pnpm" => "pnpm.cmd".to_string(),
+            "yarn" => "yarn.cmd".to_string(),
+            "bunx" => "bunx.cmd".to_string(),
+            other => {
+                if other.ends_with(".cmd") || other.ends_with(".exe") {
+                    other.to_string()
+                } else {
+                    format!("{other}.exe")
+                }
+            }
+        }
+    } else {
+        program.to_string()
+    }
+}
+
 fn cmd_ok(program: &str, args: &[&str]) -> bool {
-    Command::new(program)
+    let resolved = resolve_cmd(program);
+    Command::new(&resolved)
         .args(args)
         .status()
         .map(|s| s.success())
@@ -186,13 +208,13 @@ pub fn run_ii() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     if pm.contains("Bun") {
-        Command::new("bun").arg("init").arg("-y").status()?;
+        Command::new(resolve_cmd("bun")).arg("init").arg("-y").status()?;
     } else if pm.contains("NPM") {
-        Command::new("npm").arg("init").arg("-y").status()?;
+        Command::new(resolve_cmd("npm")).arg("init").arg("-y").status()?;
     } else if pm.contains("PNPM") {
-        Command::new("pnpm").arg("init").status()?;
+        Command::new(resolve_cmd("pnpm")).arg("init").status()?;
     } else {
-        Command::new("yarn").arg("init").arg("-y").status()?;
+        Command::new(resolve_cmd("yarn")).arg("init").arg("-y").status()?;
     }
 
     if !Path::new(".gitignore").exists() {
@@ -210,9 +232,9 @@ pub fn run_next() -> Result<(), Box<dyn std::error::Error>> {
     let pm = prompt_select("⚡ Setup Next.js with:", &["1) Bun", "2) NPM"])?;
 
     if pm.contains("Bun") {
-        Command::new("bunx").arg("create-next-app@latest").arg(".").status()?;
+        Command::new(resolve_cmd("bunx")).arg("create-next-app@latest").arg(".").status()?;
     } else {
-        Command::new("npx").arg("create-next-app@latest").arg(".").status()?;
+        Command::new(resolve_cmd("npx")).arg("create-next-app@latest").arg(".").status()?;
     }
     Ok(())
 }
@@ -225,7 +247,7 @@ pub fn run_vite() -> Result<(), Box<dyn std::error::Error>> {
     let add_tw = prompt_confirm("Add Tailwind CSS v4?", true)?;
 
     if pm.contains("Bun") {
-        Command::new("bunx").arg("create-vite@latest").arg(".").status()?;
+        Command::new(resolve_cmd("bunx")).arg("create-vite@latest").arg(".").status()?;
         if add_tw {
             let ok = cmd_ok("bun", &["add", "tailwindcss", "@tailwindcss/vite"]);
             if !ok {
@@ -236,7 +258,7 @@ pub fn run_vite() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     } else {
-        Command::new("npx").arg("create-vite@latest").arg(".").status()?;
+        Command::new(resolve_cmd("npx")).arg("create-vite@latest").arg(".").status()?;
         if add_tw {
             let ok = cmd_ok("npm", &["install", "tailwindcss", "@tailwindcss/vite"]);
             if !ok {
@@ -289,16 +311,16 @@ pub fn run_ui() -> Result<(), Box<dyn std::error::Error>> {
     let use_bun = pm.contains("Bun");
 
     // Build shadcn command args
-    let runner = if use_bun { "bunx" } else { "npx" };
+    let runner = resolve_cmd(if use_bun { "bunx" } else { "npx" });
     let init_prefix: &[&str] = if use_bun { &["--bun", "shadcn@latest", "init"] } else { &["shadcn@latest", "init"] };
     let add_prefix:  &[&str] = if use_bun { &["--bun", "shadcn@latest", "add"] } else { &["shadcn@latest", "add"] };
     let vite_flag:   &[&str] = if project_type == "vite" { &["-t", "vite"] } else { &[] };
 
     // Init
-    let _ = Command::new(runner).args(init_prefix).args(vite_flag).status();
+    let _ = Command::new(&runner).args(init_prefix).args(vite_flag).status();
 
     // Add components
-    let mut add_cmd = Command::new(runner);
+    let mut add_cmd = Command::new(&runner);
     add_cmd.args(add_prefix);
     if components.trim().is_empty() {
         add_cmd.arg("button");
@@ -370,11 +392,11 @@ pub fn run_css() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("📦 Installing Tailwind CSS v4 via {pm}...");
     if is_bun {
-        Command::new("bun")
+        Command::new(resolve_cmd("bun"))
             .args(["add", "-D", "tailwindcss", "@tailwindcss/vite", "clsx", "tailwind-merge"])
             .status()?;
     } else {
-        Command::new("npm")
+        Command::new(resolve_cmd("npm"))
             .args(["install", "-D", "tailwindcss", "@tailwindcss/vite", "clsx", "tailwind-merge"])
             .status()?;
     }

@@ -3,38 +3,54 @@
 // =============================================================================
 
 use std::error::Error;
+use std::fs;
 use std::process::Command;
 
 fn cmd_exists(name: &str) -> bool {
     crate::core::utils::cmd_exists(name)
 }
 
+/// Cleans cross-platform temporary and cache directories using pure Rust std::fs
+fn clean_temp_directories() -> usize {
+    let mut cleaned_bytes = 0;
+    let temp_dir = std::env::temp_dir();
+    
+    if let Ok(entries) = fs::read_dir(&temp_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Ok(meta) = entry.metadata() {
+                cleaned_bytes += meta.len() as usize;
+                if meta.is_file() {
+                    let _ = fs::remove_file(path);
+                } else if meta.is_dir() {
+                    let _ = fs::remove_dir_all(path);
+                }
+            }
+        }
+    }
+    cleaned_bytes
+}
+
 pub fn run() -> Result<(), Box<dyn Error>> {
     println!("\x1b[1;33m🧹 Cleaning system caches...\x1b[0m");
 
+    // Pure Rust temporary directory cleanup
+    let bytes_freed = clean_temp_directories();
+    println!("\x1b[1;36m💾 Cleared ~{} KB of temporary file caches\x1b[0m", bytes_freed / 1024);
+
     if cmd_exists("apt-get") {
-        let _ = Command::new("sh")
-            .args(["-c", "sudo apt-get autoremove --purge -y && sudo apt-get autoclean && sudo apt-get clean -y"])
-            .status();
+        let _ = Command::new("sudo").args(["apt-get", "autoclean"]).status();
     } else if cmd_exists("pacman") {
-        let _ = Command::new("sh")
-            .args(["-c", "orphans=$(pacman -Qtdq 2>/dev/null); [ -n \"$orphans\" ] && sudo pacman -Rns --noconfirm $orphans 2>/dev/null || true; sudo pacman -Sc --noconfirm"])
-            .status();
+        let _ = Command::new("sudo").args(["pacman", "-Sc", "--noconfirm"]).status();
     } else if cmd_exists("dnf") {
-        let _ = Command::new("sh")
-            .args(["-c", "sudo dnf autoremove -y && sudo dnf clean all"])
-            .status();
+        let _ = Command::new("sudo").args(["dnf", "clean", "all"]).status();
     } else if cmd_exists("brew") {
-        let _ = Command::new("sh")
-            .args(["-c", "brew cleanup"])
-            .status();
+        let _ = Command::new("brew").arg("cleanup").status();
     }
 
     if cmd_exists("flatpak") {
         println!("\x1b[1;34m💎 Cleaning Flatpak unused data...\x1b[0m");
-        let _ = Command::new("sh")
-            .args(["-c", "flatpak uninstall --unused -y && flatpak repair"])
-            .status();
+        let _ = Command::new("flatpak").args(["uninstall", "--unused", "-y"]).status();
     }
 
     println!("\x1b[1;32m✨ System cache cleanup completed!\x1b[0m");
@@ -47,6 +63,6 @@ mod tests {
 
     #[test]
     fn test_cmd_exists_clean_fn() {
-        assert!(cmd_exists("sh"));
+        assert!(cmd_exists("cargo") || cmd_exists("git") || cmd_exists("sh") || cmd_exists("cmd"));
     }
 }

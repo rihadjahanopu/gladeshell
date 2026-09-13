@@ -16,7 +16,13 @@ categories = ["command-line-utilities"]
 name = "fancybash"
 path = "src/main.rs"
 
-# 2. C-ABI dynamic library  →  loaded in-process by the shell (zero-fork prompt)
+# 2. `ftop` standalone TUI system monitor binary (alias for `fancybash sysmon`)
+[[bin]]
+name = "ftop"
+path = "src/bin/ftop.rs"
+required-features = ["tools"]
+
+# 3. C-ABI dynamic library  →  loaded in-process by the shell (zero-fork prompt)
 [lib]
 name = "fancybash_core"
 crate-type = ["cdylib", "rlib"]   # rlib keeps unit-tests functional
@@ -69,6 +75,18 @@ arboard = { version = "3", optional = true }
 # We use the `ansi_term` crate only for the binary; the cdylib uses raw bytes.
 ansi_term = { version = "0.12", optional = true }
 
+# Pure Rust Cryptography & Vault Archiving Dependencies (Zero external binary)
+aes-gcm = { version = "0.10", optional = true }
+pbkdf2 = { version = "0.12", optional = true }
+sha2 = { version = "0.10", optional = true }
+tar = { version = "0.4", optional = true }
+flate2 = { version = "1.0", optional = true }
+zeroize = { version = "1.8", features = ["zeroize_derive"], optional = true }
+rpassword = { version = "7.3", optional = true }
+rand = { version = "0.8", optional = true }
+rand_chacha = { version = "0.3", optional = true }
+ureq = { version = "2.9", optional = true }
+
 # ── Feature Flags ─────────────────────────────────────────────────────────────
 [features]
 default = ["prompt-engine", "tools"]
@@ -88,6 +106,16 @@ tools = [
     "grep-searcher",
     "grep-printer",
     "termcolor",
+    "aes-gcm",
+    "pbkdf2",
+    "sha2",
+    "tar",
+    "flate2",
+    "zeroize",
+    "rpassword",
+    "rand",
+    "rand_chacha",
+    "ureq",
 ]
 # Convenience: all features
 full = ["prompt-engine", "tools"]

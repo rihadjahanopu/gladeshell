@@ -277,10 +277,9 @@ function rand_emoji {
     *node* )  echo "🟢" ;;
     *bun* )   echo "🥐" ;;
     *py* )    echo "🐍" ;;
-    *proj* )  echo "💻" ;;
     * )
         local -a emojis
-        emojis=(🔥 ⚡️ 🚀 💫 🌈 🌀 ✨ 🧠)
+        emojis=(🔥 ⚡️ 🚀 💫 🌈 🌀 ✨ 🧠 🎯 🌟 👾 🦊 🎨 💎 🔮 👑 🦄 🐉)
         local idx=$(( (RANDOM % ${#emojis}) + 1 ))
         echo "${emojis[$idx]}" ;;
   esac
@@ -1710,217 +1709,24 @@ unalias gwip 2>/dev/null
 unalias gcommit 2>/dev/null
 
 function gwip {
-    if ! command -v git &>/dev/null; then
-        echo "❌ Git is not installed."
-        return 1
-    fi
-
-    if ! git rev-parse --is-inside-work-tree &>/dev/null; then
-        echo "❌ Not a git repository."
-        return 1
-    fi
-
-    # 1. Auto stage files
-    git add .
-
-    local TYPE MSG FULL_MSG
-
-    # Direct CLI argument mode (e.g. gwip "my commit message" or gwip feat "new feature")
-    if [ $# -gt 0 ]; then
-        local first_arg="$1"
-        local prefix="🚧 WIP"
-        local rest_msg=""
-
-        case "$first_arg" in
-            feat|✨)     prefix="✨ feat"; shift; rest_msg="$*" ;;
-            fix|🐛)      prefix="🐛 fix"; shift; rest_msg="$*" ;;
-            docs|📝)     prefix="📝 docs"; shift; rest_msg="$*" ;;
-            style|💄)    prefix="💄 style"; shift; rest_msg="$*" ;;
-            refactor|♻️) prefix="♻️ refactor"; shift; rest_msg="$*" ;;
-            test|🧪)     prefix="🧪 test"; shift; rest_msg="$*" ;;
-            chore|🔧)    prefix="🔧 chore"; shift; rest_msg="$*" ;;
-            wip|🚧)      prefix="🚧 WIP"; shift; rest_msg="$*" ;;
-            -m)          shift; rest_msg="$*" ;;
-            *)           rest_msg="$*" ;;
-        esac
-
-        FULL_MSG="$prefix: ${rest_msg:-Save point ($(date +'%Y-%m-%d %H:%M'))}"
-        git commit -m "$FULL_MSG" || return 1
-
-        local cur_branch push_cmd push_log
-        cur_branch=$(git branch --show-current 2>/dev/null)
-
-        if [ -n "$cur_branch" ]; then
-            push_cmd="git push -u origin \"$cur_branch\""
-        else
-            push_cmd="git push -u"
-        fi
-
-        push_log=$(mktemp 2>/dev/null || echo "/tmp/gwip_push.log")
-
-        if command -v gum &>/dev/null; then
-            if gum spin --spinner dot --title "Pushing to remote..." -- sh -c "$push_cmd >\"$push_log\" 2>&1"; then
-                printf '\033[1;32m✅ Everything committed and pushed successfully!\033[0m\n'
-                rm -f "$push_log" 2>/dev/null
-            else
-                if grep -qE "(non-fast-forward|fetch first|behind)" "$push_log" 2>/dev/null; then
-                    echo -e "\033[1;33m🔄 Remote has new commits. Auto-syncing (git pull --rebase)...\033[0m"
-                    rm -f "$push_log" 2>/dev/null
-                    if git pull --rebase origin "${cur_branch:-HEAD}"; then
-                        echo -e "\033[1;36m🚀 Retrying push...\033[0m"
-                        if git push -u origin "${cur_branch:-HEAD}"; then
-                            printf '\033[1;32m✅ Synced and pushed successfully!\033[0m\n'
-                            return 0
-                        fi
-                    else
-                        echo -e "\033[0;31m⚠️ Merge Conflict detected!\033[0m"
-                        echo -e "\033[1;33mPlease resolve conflicts in VS Code, then run:\033[0m"
-                        echo -e "  1) \033[1;36mgit add .\033[0m"
-                        echo -e "  2) \033[1;36mgit rebase --continue\033[0m"
-                        echo -e "  3) \033[1;36mgwip\033[0m"
-                        return 1
-                    fi
-                fi
-
-                echo -e "\033[0;31m❌ Push failed!\033[0m"
-                if [ -s "$push_log" ]; then
-                    echo -e "\033[1;33mGit Error Details:\033[0m"
-                    cat "$push_log"
-                fi
-                rm -f "$push_log" 2>/dev/null
-                echo -e "\033[1;33m💡 Note: Your local commit was created successfully.\033[0m"
-                return 1
-            fi
-        else
-            if sh -c "$push_cmd"; then
-                echo -e "\033[1;32m✅ Everything committed and pushed successfully!\033[0m"
-            else
-                echo -e "\033[0;31m❌ Push failed!\033[0m"
-                echo -e "\033[1;33m💡 Note: Your local commit was created successfully.\033[0m"
-                return 1
-            fi
-        fi
-        return 0
-    fi
-
-    if command -v gum &>/dev/null; then
-        # 2. Select Commit Type
-        local term_rows
-        term_rows=$(stty size 2>/dev/null | awk '{print $1}')
-        term_rows=${term_rows:-$(tput lines 2>/dev/null)}
-        term_rows=${term_rows:-${LINES:-15}}
-        local choose_h=$(( term_rows - 2 ))
-        (( choose_h > 10 )) && choose_h=10
-        (( choose_h < 3 )) && choose_h=3
-
-        TYPE=$(gum choose --height "$choose_h" \
-            "✏️  Custom..." \
-            "🚧 WIP: Work in progress" \
-            "✨ feat: New feature" \
-            "🐛 fix: Bug fix" \
-            "📝 docs: Documentation" \
-            "💄 style: Styling" \
-            "♻️ refactor: Refactoring" \
-            "🧪 test: Adding tests" \
-            "🔧 chore: Maintenance")
-
-        [ -z "$TYPE" ] && { echo "⚠️ Commit cancelled."; return 0; }
-
-        local TYPE_PREFIX CUSTOM_NAME
-
-        # Handle the custom-name WIP case
-        if [[ "$TYPE" == *"Custom"* ]]; then
-            CUSTOM_NAME=$(gum input --placeholder "Type your custom commit prefix (e.g. 🚧 WIP:: login-ui)...")
-            local custom_status=$?
-            if [ $custom_status -ne 0 ] || [ -z "$CUSTOM_NAME" ]; then
-                echo "⚠️ Commit cancelled."
-                { while IFS= read -t 0.05 -k 1 _ 2>/dev/null; do :; done; }
-                return 0
-            fi
-            TYPE_PREFIX="$CUSTOM_NAME"
-        else
-            TYPE_PREFIX=$(echo "$TYPE" | awk '{print $1 " " $2}')
-            TYPE_PREFIX="${TYPE_PREFIX%:}"
-        fi
-
-        # 3. Input Commit Message
-        MSG=$(gum input --placeholder "Enter commit message (Leave empty for default)...")
-        local msg_status=$?
-
-        # Flush leftover stdin response bytes before committing
-        { while IFS= read -t 0.05 -k 1 _ 2>/dev/null; do :; done; }
-
-        if [ $msg_status -ne 0 ]; then
-            echo "⚠️ Commit cancelled."
-            return 0
-        fi
-
-        if [ -z "$MSG" ]; then
-            FULL_MSG="$TYPE_PREFIX: Save point ($(date +'%Y-%m-%d %H:%M'))"
-        else
-            FULL_MSG="$TYPE_PREFIX: $MSG"
-        fi
-
-        # 4. Commit
-        git commit -m "$FULL_MSG" || return 1
-
-        # 5. Push with Gum Spinner
-        local cur_branch push_cmd push_log
-        cur_branch=$(git branch --show-current 2>/dev/null)
-
-        if [ -n "$cur_branch" ]; then
-            push_cmd="git push -u origin \"$cur_branch\""
-        else
-            push_cmd="git push -u"
-        fi
-
-        push_log=$(mktemp 2>/dev/null || echo "/tmp/gwip_push.log")
-
-        if gum spin --spinner dot --title "Pushing to remote..." -- sh -c "$push_cmd >\"$push_log\" 2>&1"; then
-            printf '\033[1;32m✅ Everything committed and pushed successfully!\033[0m\n'
-            rm -f "$push_log" 2>/dev/null
-        else
-            if grep -qE "(non-fast-forward|fetch first|behind)" "$push_log" 2>/dev/null; then
-                echo -e "\033[1;33m🔄 Remote has new commits. Auto-syncing (git pull --rebase)...\033[0m"
-                rm -f "$push_log" 2>/dev/null
-                if git pull --rebase origin "${cur_branch:-HEAD}"; then
-                    echo -e "\033[1;36m🚀 Retrying push...\033[0m"
-                    if git push -u origin "${cur_branch:-HEAD}"; then
-                        printf '\033[1;32m✅ Synced and pushed successfully!\033[0m\n'
-                        return 0
-                    fi
-                else
-                    echo -e "\033[0;31m⚠️ Merge Conflict detected!\033[0m"
-                    echo -e "\033[1;33mPlease resolve conflicts in VS Code, then run:\033[0m"
-                    echo -e "  1) \033[1;36mgit add .\033[0m"
-                    echo -e "  2) \033[1;36mgit rebase --continue\033[0m"
-                    echo -e "  3) \033[1;36mgwip\033[0m"
-                    return 1
-                fi
-            fi
-
-            echo -e "\033[0;31m❌ Push failed!\033[0m"
-            if [ -s "$push_log" ]; then
-                echo -e "\033[1;33mGit Error Details:\033[0m"
-                cat "$push_log"
-            fi
-            rm -f "$push_log" 2>/dev/null
-            echo -e "\033[1;33m💡 Note: Your local commit was created successfully.\033[0m"
-            { while IFS= read -t 0.05 -k 1 _ 2>/dev/null; do :; done; }
+    if command -v fancybash &>/dev/null; then
+        fancybash gwip "$@"
+    else
+        if ! command -v git &>/dev/null; then
+            echo "❌ Git is not installed."
             return 1
         fi
 
-        # Final stdin flush to prevent escape sequence leakage into shell prompt
-        { while IFS= read -t 0.05 -k 1 _ 2>/dev/null; do :; done; }
-    else
-        # Fallback if gum is not installed
-        echo -e "\033[1;36m🚀 Git Quick Push Mode\033[0m"
-        read -r "msg?📝 Enter commit message [Enter for default]: "
-        local final_msg="${msg:-Work in progress (Save Point)}"
-        git commit -m "🚧 WIP: $final_msg" || return 1
+        if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+            echo "❌ Not a git repository."
+            return 1
+        fi
 
+        git add .
         local cur_branch
         cur_branch=$(git branch --show-current 2>/dev/null)
+        git commit -m "🚧 WIP: Save point ($(date +'%Y-%m-%d %H:%M'))" || return 1
+
         if [ -n "$cur_branch" ]; then
             git push -u origin "$cur_branch"
         else

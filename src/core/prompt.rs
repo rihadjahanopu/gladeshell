@@ -482,12 +482,20 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
     Ok(off)
 }
 
-pub static RAINBOW_COLORS: &[u8] = &[31, 32, 33, 34, 35, 36, 91, 92, 93, 94, 95, 96];
-pub static RANDOM_EMOJIS: &[&'static str] = &["🔥", "⚡️", "🚀", "💫", "🌈", "🌀", "✨", "🧠"];
+pub static RAINBOW_COLORS: &[u8] = &[31, 32, 33, 34, 35, 36, 91, 92, 93, 94, 95, 96, 147, 178, 208, 117, 213, 141];
+pub static RANDOM_EMOJIS: &[&'static str] = &[
+    "🔥", "⚡️", "🚀", "💫", "🌈", "🌀", "✨", "🧠",
+    "🎯", "🌟", "👾", "🦊", "🎨", "💎", "🔮", "👑", "🦄", "🐉"
+];
 
 /// Dynamic folder-aware emoji generator matching Zsh `rand_emoji`.
 pub fn rand_emoji(cwd: &str) -> &'static str {
     let folder = format_short_cwd(cwd).to_lowercase();
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as usize)
+        .unwrap_or(0);
+
     if folder.contains("web") {
         "🌐"
     } else if folder.contains("node") {
@@ -496,20 +504,22 @@ pub fn rand_emoji(cwd: &str) -> &'static str {
         "🥐"
     } else if folder.contains("py") {
         "🐍"
-    } else if folder.contains("proj") {
-        "💻"
     } else {
         let mut hash: usize = 5381;
         for b in folder.bytes() {
             hash = hash.wrapping_mul(33).wrapping_add(b as usize);
         }
-        RANDOM_EMOJIS[hash % RANDOM_EMOJIS.len()]
+        RANDOM_EMOJIS[(hash.wrapping_add(nanos)) % RANDOM_EMOJIS.len()]
     }
 }
 
 /// Dynamic rainbow color generator matching Zsh `rand_color`.
 pub fn rand_color(seed: usize) -> u8 {
-    RAINBOW_COLORS[seed % RAINBOW_COLORS.len()]
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as usize)
+        .unwrap_or(0);
+    RAINBOW_COLORS[(seed.wrapping_add(nanos)) % RAINBOW_COLORS.len()]
 }
 
 // ── C-ABI shim used by lib.rs ─────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 // =============================================================================
-//  src/tools/git_wip.rs — `gwip` / `gcommit`: Interactive Git Stage & Push
+//  src/tools/git_wip.rs — `gwip` / `gcommit`: Modern Interactive Git Stage & Push
 // =============================================================================
 
 use std::io::stdout;
@@ -12,20 +12,25 @@ use crossterm::{
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Terminal,
 };
 
-// ── Design tokens ────────────────────────────────────────────────────────────
-const C_ACCENT: Color = Color::Rgb(80, 200, 120);  // mint green
-const C_GOLD: Color   = Color::Rgb(255, 200, 60);  // highlight
-const C_DIM: Color    = Color::Rgb(120, 130, 140); // muted text
-const C_DARK: Color   = Color::Rgb(18, 22, 30);    // near-black bg
-const C_WHITE: Color  = Color::Rgb(230, 235, 245); // text
-const C_BLUE: Color   = Color::Rgb(100, 160, 255); // info
+// ── Modern Dark Violet Design Tokens ─────────────────────────────────────────
+const C_BG: Color     = Color::Rgb(10, 10, 18);     // #0A0A12 Deep space dark
+const C_CARD: Color   = Color::Rgb(18, 18, 32);   // #121220 Card background
+const C_VIOLET: Color = Color::Rgb(180, 100, 255); // #B464FF Primary accent violet
+const C_CYAN: Color   = Color::Rgb(0, 229, 255);   // #00E5FF Neon cyan highlight
+const C_PINK: Color   = Color::Rgb(255, 100, 200); // #FF64C8 Pink accent
+const C_GOLD: Color   = Color::Rgb(255, 200, 60);  // #FFC83C Gold warning
+const C_GREEN: Color  = Color::Rgb(80, 220, 140);  // #50DC8C Success green
+const C_RED: Color    = Color::Rgb(255, 85, 85);   // #FF5555 Red error
+const C_TEXT: Color   = Color::Rgb(235, 240, 255); // Crisp text
+const C_MUTED: Color  = Color::Rgb(110, 120, 145); // Slate muted text
+const C_BORDER: Color = Color::Rgb(40, 42, 65);     // Card border
 
 struct CommitType {
     label:  &'static str,
@@ -54,16 +59,32 @@ enum WipStep {
     EnterMessage,
 }
 
+struct StagedFile {
+    status: String,
+    path:   String,
+}
+
 struct WipApp {
-    step:       WipStep,
-    cursor:     usize,
-    msg_input:  String,
-    msg_cursor: usize,
+    step:         WipStep,
+    cursor:       usize,
+    msg_input:    String,
+    msg_cursor:   usize,
+    staged_files: Vec<StagedFile>,
+    branch:       String,
 }
 
 impl WipApp {
     fn new() -> Self {
-        Self { step: WipStep::SelectType, cursor: 0, msg_input: String::new(), msg_cursor: 0 }
+        let staged_files = fetch_staged_files();
+        let branch = current_branch().unwrap_or_else(|| "HEAD".to_string());
+        Self {
+            step: WipStep::SelectType,
+            cursor: 0,
+            msg_input: String::new(),
+            msg_cursor: 0,
+            staged_files,
+            branch,
+        }
     }
 
     fn selected_type(&self) -> &CommitType { &COMMIT_TYPES[self.cursor] }
@@ -71,7 +92,11 @@ impl WipApp {
     fn preview_commit(&self) -> String {
         let prefix = self.selected_type().prefix;
         let msg = self.msg_input.trim();
-        if msg.is_empty() { format!("{prefix}: <auto timestamp>") } else { format!("{prefix}: {msg}") }
+        if msg.is_empty() {
+            format!("{prefix}: <auto timestamp>")
+        } else {
+            format!("{prefix}: {msg}")
+        }
     }
 
     fn insert_char(&mut self, ch: char) {
@@ -101,34 +126,32 @@ impl WipApp {
     }
 }
 
-// ── Public entry point ────────────────────────────────────────────────────────
+// ── Public Entry Point ────────────────────────────────────────────────────────
 pub fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if !cmd_ok("git", &["rev-parse", "--is-inside-work-tree"]) {
         return Err("Not inside a git repository!".into());
     }
 
-    println!("\x1b[1;36m📦 Auto-staging all changes (git add .)…\x1b[0m");
-    run_git(&["add", "."])?;
+    // Auto-stage files silently
+    let _ = run_git(&["add", "."]);
 
     let full_msg = if args.is_empty() {
         match run_wip_tui()? {
             Some(msg) => msg,
             None => {
-                println!("⚠️  Commit cancelled.");
-                std::process::exit(0);
+                println!("\x1b[38;2;110;120;145m⚠️ Commit cancelled.\x1b[0m");
+                return Ok(());
             }
         }
     } else {
         cli_commit_msg(args)
     };
 
-    println!("\x1b[1;36m📝 Committing: {full_msg}\x1b[0m");
     run_git(&["commit", "-m", &full_msg])?;
-
     push_with_retry()
 }
 
-// ── Full 2-step TUI ───────────────────────────────────────────────────────────
+// ── Interactive 2-Step Ratatui TUI ────────────────────────────────────────────
 fn run_wip_tui() -> Result<Option<String>, Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = stdout();
@@ -149,12 +172,10 @@ fn run_wip_tui() -> Result<Option<String>, Box<dyn std::error::Error>> {
                     WipStep::SelectType => match key.code {
                         KeyCode::Esc | KeyCode::Char('q') => break Ok(None),
                         KeyCode::Char('c') if ctrl => break Ok(None),
-                        KeyCode::Up | KeyCode::Char('k') => { if app.cursor > 0 { app.cursor -= 1; } }
-                        KeyCode::Char('p') if ctrl => { if app.cursor > 0 { app.cursor -= 1; } }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            if app.cursor < COMMIT_TYPES.len() - 1 { app.cursor += 1; }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            if app.cursor > 0 { app.cursor -= 1; }
                         }
-                        KeyCode::Char('n') if ctrl => {
+                        KeyCode::Down | KeyCode::Char('j') => {
                             if app.cursor < COMMIT_TYPES.len() - 1 { app.cursor += 1; }
                         }
                         KeyCode::Enter | KeyCode::Tab => { app.step = WipStep::EnterMessage; }
@@ -202,10 +223,10 @@ fn run_wip_tui() -> Result<Option<String>, Box<dyn std::error::Error>> {
 fn draw_ui(f: &mut ratatui::Frame, app: &WipApp) {
     let area = f.area();
 
-    // Background fill
-    f.render_widget(Block::default().style(Style::default().bg(C_DARK)), area);
+    // Deep space background fill
+    f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
 
-    // Outer layout: header | body | footer
+    // Outer vertical layout: Header (3) | Content (Min) | Footer (3)
     let outer = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)])
@@ -213,133 +234,172 @@ fn draw_ui(f: &mut ratatui::Frame, app: &WipApp) {
         .split(area);
 
     // ── Header ────────────────────────────────────────────────────────────────
-    let step_label = match app.step {
-        WipStep::SelectType   => " Step 1/2: Choose Type ",
-        WipStep::EnterMessage => " Step 2/2: Write Message ",
+    let step_pill = match app.step {
+        WipStep::SelectType   => Span::styled(" STEP 1/2: CHOOSE COMMIT TYPE ", Style::default().fg(C_BG).bg(C_CYAN).add_modifier(Modifier::BOLD)),
+        WipStep::EnterMessage => Span::styled(" STEP 2/2: ENTER COMMIT MESSAGE ", Style::default().fg(C_BG).bg(C_PINK).add_modifier(Modifier::BOLD)),
     };
+
     let header = Paragraph::new(Line::from(vec![
-        Span::styled(" 🚀 GIT WIP COMMIT  ", Style::default().fg(C_DARK).bg(C_ACCENT).add_modifier(Modifier::BOLD)),
-        Span::styled(step_label, Style::default().fg(C_ACCENT).add_modifier(Modifier::ITALIC)),
+        Span::styled(" ⚡ FANCYBASH GWIP  ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD)),
+        Span::raw("  "),
+        step_pill,
+        Span::raw("  "),
+        Span::styled(format!("🌿 {}", app.branch), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+        Span::raw("  •  "),
+        Span::styled(format!("📦 {} files staged", app.staged_files.len()), Style::default().fg(C_MUTED)),
     ]))
-    .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(C_ACCENT)));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_VIOLET))
+            .style(Style::default().bg(C_CARD)),
+    )
+    .alignment(Alignment::Left);
     f.render_widget(header, outer[0]);
 
-    // ── Body: [type list 42% | detail+input 58%] ─────────────────────────────
+    // ── Body Layout: Left Pane (38%) | Right Pane (62%) ───────────────────────
     let body = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .constraints([Constraint::Percentage(38), Constraint::Percentage(62)])
         .split(outer[1]);
 
     draw_type_list(f, app, body[0]);
     draw_right_panel(f, app, body[1]);
 
     // ── Footer ────────────────────────────────────────────────────────────────
-    let hint = match app.step {
-        WipStep::SelectType   => " [↑↓ / j k]  Navigate   [Enter / Tab]  Confirm Type   [Esc / q]  Cancel ",
-        WipStep::EnterMessage => " [Enter]  Commit & Push   [Esc]  Back   [Ctrl+W]  Del Word   [Ctrl+U]  Clear ",
+    let hint_spans = match app.step {
+        WipStep::SelectType => vec![
+            Span::styled(" [↑/↓ or k/j] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled("Navigate Types  ", Style::default().fg(C_TEXT)),
+            Span::styled(" [Enter/Tab] ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled("Select Type  ", Style::default().fg(C_TEXT)),
+            Span::styled(" [Esc/q] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled("Cancel", Style::default().fg(C_MUTED)),
+        ],
+        WipStep::EnterMessage => vec![
+            Span::styled(" [Enter] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Commit & Auto-Push  ", Style::default().fg(C_TEXT)),
+            Span::styled(" [Esc] ", Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD)),
+            Span::styled("Back  ", Style::default().fg(C_TEXT)),
+            Span::styled(" [Ctrl+W] ", Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
+            Span::styled("Del Word  ", Style::default().fg(C_MUTED)),
+            Span::styled(" [Ctrl+U] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled("Clear", Style::default().fg(C_MUTED)),
+        ],
     };
-    let footer = Paragraph::new(hint)
-        .style(Style::default().fg(C_DIM))
+
+    let footer = Paragraph::new(Line::from(hint_spans))
         .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(C_DIM)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .style(Style::default().bg(C_CARD)),
+        );
     f.render_widget(footer, outer[2]);
 }
 
-fn draw_type_list(f: &mut ratatui::Frame, app: &WipApp, area: ratatui::layout::Rect) {
+fn draw_type_list(f: &mut ratatui::Frame, app: &WipApp, area: Rect) {
     let active = app.step == WipStep::SelectType;
-    let bc = if active { C_ACCENT } else { C_DIM };
+    let border_color = if active { C_VIOLET } else { C_BORDER };
 
     let items: Vec<ListItem> = COMMIT_TYPES.iter().enumerate().map(|(idx, ct)| {
         let sel = idx == app.cursor;
-        let (arrow, style) = if sel {
-            ("▶ ", Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD))
+        if sel {
+            let prefix_style = if active {
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)
+            };
+            ListItem::new(Line::from(vec![
+                Span::styled("❯ ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+                Span::styled(ct.emoji, Style::default().fg(C_TEXT)),
+                Span::raw(" "),
+                Span::styled(format!("{:<8}", ct.label), prefix_style),
+                Span::styled(ct.desc, Style::default().fg(C_MUTED)),
+            ])).style(Style::default().bg(C_CARD))
         } else {
-            ("  ", Style::default().fg(C_WHITE))
-        };
-        ListItem::new(Line::from(vec![
-            Span::styled(arrow, style),
-            Span::styled(ct.emoji, style),
-            Span::raw(" "),
-            Span::styled(ct.label, style),
-        ]))
+            ListItem::new(Line::from(vec![
+                Span::raw("  "),
+                Span::styled(ct.emoji, Style::default().fg(C_MUTED)),
+                Span::raw(" "),
+                Span::styled(format!("{:<8}", ct.label), Style::default().fg(C_MUTED)),
+                Span::styled(ct.desc, Style::default().fg(Color::Rgb(70, 78, 100))),
+            ]))
+        }
     }).collect();
 
-    let title_str = if active { " ◉ Commit Type " } else { " ○ Commit Type " };
+    let title_span = if active {
+        Span::styled(" 📌 COMMIT TYPE (ACTIVE) ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD))
+    } else {
+        Span::styled(" 📌 COMMIT TYPE ", Style::default().fg(C_MUTED))
+    };
+
     let mut state = ListState::default();
     state.select(Some(app.cursor));
 
     f.render_stateful_widget(
         List::new(items).block(
             Block::default()
-                .title(Span::styled(title_str, Style::default().fg(bc).add_modifier(Modifier::BOLD)))
+                .title(title_span)
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(bc)),
+                .border_style(Style::default().fg(border_color))
+                .style(Style::default().bg(C_CARD)),
         ),
         area,
         &mut state,
     );
 }
 
-fn draw_right_panel(f: &mut ratatui::Frame, app: &WipApp, area: ratatui::layout::Rect) {
+fn draw_right_panel(f: &mut ratatui::Frame, app: &WipApp, area: Rect) {
     let msg_active = app.step == WipStep::EnterMessage;
-    let bc = if msg_active { C_ACCENT } else { C_DIM };
 
-    // Outer border for right panel
-    f.render_widget(
-        Block::default()
-            .title(Span::styled(" Details & Message ", Style::default().fg(bc).add_modifier(Modifier::BOLD)))
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(bc)),
-        area,
-    );
-
-    // Inner layout
-    let inner = Layout::default()
+    let inner_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5), // type info card
-            Constraint::Length(3), // message input
-            Constraint::Length(3), // preview bar
-            Constraint::Min(0),    // padding
+            Constraint::Length(5), // Type summary info card
+            Constraint::Length(3), // Interactive message input box
+            Constraint::Length(3), // Live commit preview box
+            Constraint::Min(0),    // Staged files list card
         ])
-        .margin(1)
         .split(area);
 
     let ct = app.selected_type();
 
-    // ── Type info card ────────────────────────────────────────────────────────
+    // ── 1. Type Info Card ─────────────────────────────────────────────────────
     f.render_widget(
         Paragraph::new(vec![
             Line::from(vec![
                 Span::raw("  "),
-                Span::styled(ct.emoji, Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD)),
-                Span::raw("  "),
-                Span::styled(ct.label, Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+                Span::styled(format!("{} {}", ct.emoji, ct.label), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+                Span::styled("  •  ", Style::default().fg(C_MUTED)),
+                Span::styled(ct.desc, Style::default().fg(C_TEXT)),
             ]),
+            Line::from(""),
             Line::from(vec![
                 Span::raw("  "),
-                Span::styled(ct.desc, Style::default().fg(C_WHITE)),
-            ]),
-            Line::from(vec![
-                Span::raw("  "),
-                Span::styled("prefix: ", Style::default().fg(C_DIM)),
-                Span::styled(ct.prefix, Style::default().fg(C_BLUE).add_modifier(Modifier::ITALIC)),
+                Span::styled("Git Prefix: ", Style::default().fg(C_MUTED)),
+                Span::styled(ct.prefix, Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
             ]),
         ])
-        .block(Block::default()
-            .title(Span::styled(" ℹ  Type Info ", Style::default().fg(C_ACCENT)))
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(C_ACCENT))),
-        inner[0],
+        .block(
+            Block::default()
+                .title(Span::styled(" ℹ  SELECTED TYPE DETAILS ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .style(Style::default().bg(C_CARD)),
+        ),
+        inner_layout[0],
     );
 
-    // ── Message input ─────────────────────────────────────────────────────────
-    let input_display = if msg_active {
+    // ── 2. Message Input Box ──────────────────────────────────────────────────
+    let input_border = if msg_active { C_PINK } else { C_BORDER };
+
+    let input_line = if msg_active {
         let chars: Vec<char> = app.msg_input.chars().collect();
         let before: String = chars[..app.msg_cursor].iter().collect();
         let after:  String = chars[app.msg_cursor..].iter().collect();
@@ -350,51 +410,104 @@ fn draw_right_panel(f: &mut ratatui::Frame, app: &WipApp, area: ratatui::layout:
         };
         Line::from(vec![
             Span::raw("  "),
-            Span::styled(before, Style::default().fg(C_WHITE)),
-            Span::styled(cursor_ch, Style::default().fg(C_DARK).bg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled(after, Style::default().fg(C_WHITE)),
+            Span::styled(before, Style::default().fg(C_TEXT)),
+            Span::styled(cursor_ch, Style::default().fg(C_BG).bg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(after, Style::default().fg(C_TEXT)),
         ])
     } else if app.msg_input.is_empty() {
         Line::from(vec![
             Span::raw("  "),
             Span::styled(
-                "(select a type first, then press Enter)",
-                Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+                "(press Enter to type commit message, or leave empty for auto timestamp)",
+                Style::default().fg(C_MUTED).add_modifier(Modifier::ITALIC),
             ),
         ])
     } else {
-        Line::from(vec![Span::raw("  "), Span::styled(app.msg_input.clone(), Style::default().fg(C_WHITE))])
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled(app.msg_input.clone(), Style::default().fg(C_TEXT)),
+        ])
     };
 
+    let char_count = app.msg_input.chars().count();
     let msg_title = if msg_active {
-        Span::styled(" ◉ Commit Message ", Style::default().fg(bc).add_modifier(Modifier::BOLD))
+        Span::styled(
+            format!(" ✏️ COMMIT MESSAGE [{char_count} chars] (EDITING) "),
+            Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+        )
     } else {
-        Span::styled(" ○ Commit Message ", Style::default().fg(bc))
+        Span::styled(" ✏️ COMMIT MESSAGE ", Style::default().fg(C_MUTED))
     };
 
     f.render_widget(
-        Paragraph::new(input_display)
-            .block(Block::default().title(msg_title).borders(Borders::ALL)
-                .border_type(BorderType::Rounded).border_style(Style::default().fg(bc))),
-        inner[1],
+        Paragraph::new(input_line).block(
+            Block::default()
+                .title(msg_title)
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(input_border))
+                .style(Style::default().bg(C_CARD)),
+        ),
+        inner_layout[1],
     );
 
-    // ── Preview bar ───────────────────────────────────────────────────────────
+    // ── 3. Live Commit Preview Box ───────────────────────────────────────────
     f.render_widget(
         Paragraph::new(Line::from(vec![
-            Span::styled("  ➜  ", Style::default().fg(C_DIM)),
-            Span::styled(app.preview_commit(), Style::default().fg(C_BLUE).add_modifier(Modifier::ITALIC)),
+            Span::raw("  ➜  "),
+            Span::styled(app.preview_commit(), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
         ]))
-        .block(Block::default()
-            .title(Span::styled(" 👁  Preview ", Style::default().fg(C_DIM)))
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(C_DIM))),
-        inner[2],
+        .block(
+            Block::default()
+                .title(Span::styled(" 👁  LIVE COMMIT PREVIEW ", Style::default().fg(C_MUTED)))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .style(Style::default().bg(C_CARD)),
+        ),
+        inner_layout[2],
+    );
+
+    // ── 4. Staged Files Card ─────────────────────────────────────────────────
+    let file_items: Vec<ListItem> = if app.staged_files.is_empty() {
+        vec![ListItem::new(Line::from(vec![
+            Span::raw("  "),
+            Span::styled("All changes clean / no modified files detected.", Style::default().fg(C_MUTED).add_modifier(Modifier::ITALIC)),
+        ]))]
+    } else {
+        app.staged_files.iter().map(|f| {
+            let (status_color, status_badge) = match f.status.as_str() {
+                "M" => (C_GOLD, " MODIFIED "),
+                "A" => (C_GREEN, " ADDED    "),
+                "D" => (C_RED, " DELETED  "),
+                _   => (C_VIOLET, " STAGED   "),
+            };
+            ListItem::new(Line::from(vec![
+                Span::raw("  "),
+                Span::styled(status_badge, Style::default().fg(C_BG).bg(status_color).add_modifier(Modifier::BOLD)),
+                Span::raw("  "),
+                Span::styled(f.path.as_str(), Style::default().fg(C_TEXT)),
+            ]))
+        }).collect()
+    };
+
+    f.render_widget(
+        List::new(file_items).block(
+            Block::default()
+                .title(Span::styled(
+                    format!(" 📦 STAGED FILES ({}) ", app.staged_files.len()),
+                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+                ))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .style(Style::default().bg(C_CARD)),
+        ),
+        inner_layout[3],
     );
 }
 
-// ── CLI fast path (args provided) ─────────────────────────────────────────────
+// ── CLI Fast Path ─────────────────────────────────────────────────────────────
 fn cli_commit_msg(args: &[String]) -> String {
     if args.is_empty() { return default_wip_msg(); }
     let first = args[0].as_str();
@@ -426,7 +539,11 @@ fn arg_to_prefix(arg: &str) -> Option<&'static str> {
 
 fn build_full_msg(prefix: &str, msg: &str) -> String {
     let msg = msg.trim();
-    if msg.is_empty() { default_wip_msg_with_prefix(prefix) } else { format!("{prefix}: {msg}") }
+    if msg.is_empty() {
+        default_wip_msg_with_prefix(prefix)
+    } else {
+        format!("{prefix}: {msg}")
+    }
 }
 
 fn default_wip_msg() -> String { default_wip_msg_with_prefix("🚧 wip") }
@@ -444,13 +561,12 @@ fn default_wip_msg_with_prefix(prefix: &str) -> String {
     format!("{prefix}: save point ({year}-{month:02}-{day:02} {h:02}:{m:02})")
 }
 
-// ── Git helpers ───────────────────────────────────────────────────────────────
-
+// ── Git & Push Logic ──────────────────────────────────────────────────────────
 #[derive(Debug)]
 enum PushOutcome {
-    Success(String),                  // branch pushed
-    Conflict(Vec<String>),            // rebase conflict
-    Failed(String, Vec<String>),      // error msg + git stderr lines
+    Success(String),             // Branch pushed
+    Conflict(Vec<String>),       // Merge conflict
+    Failed(String, Vec<String>), // Error msg + git stderr lines
 }
 
 fn push_with_retry() -> Result<(), Box<dyn std::error::Error>> {
@@ -459,14 +575,12 @@ fn push_with_retry() -> Result<(), Box<dyn std::error::Error>> {
     let outcome = match push_once(&cur_branch) {
         Ok(true)  => PushOutcome::Success(cur_branch.clone().unwrap_or_default()),
         Ok(false) => {
-            // remote is ahead — try rebase
             let origin = cur_branch.as_deref().unwrap_or("HEAD");
             let rebase_out = Command::new("git")
                 .args(["pull", "--rebase", "origin", origin])
                 .stdout(Stdio::piped()).stderr(Stdio::piped()).output();
             match rebase_out {
                 Ok(o) if o.status.success() => {
-                    // retry push after rebase
                     match push_once(&cur_branch) {
                         Ok(true) => PushOutcome::Success(cur_branch.clone().unwrap_or_default()),
                         _ => {
@@ -504,7 +618,7 @@ fn push_once(branch: &Option<String>) -> Result<bool, (String, Vec<String>)> {
         Ok(false)
     } else {
         let lines: Vec<String> = stderr.lines().map(|l| l.to_string()).collect();
-        Err(("push failed".into(), lines))
+        Err(("Push command rejected by git remote".into(), lines))
     }
 }
 
@@ -541,21 +655,23 @@ fn show_push_result(outcome: &PushOutcome) -> Result<(), Box<dyn std::error::Err
 
 fn draw_push_result(f: &mut ratatui::Frame, outcome: &PushOutcome) {
     let area = f.area();
-    f.render_widget(Block::default().style(Style::default().bg(C_DARK)), area);
+    f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
 
     let (border_color, icon, title, body_lines): (Color, &str, &str, Vec<Line>) = match outcome {
         PushOutcome::Success(branch) => (
-            C_ACCENT, "✅", " Push Successful ",
+            C_GREEN, "✅", " PUSH SUCCESSFUL ",
             vec![
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("  Branch  ", Style::default().fg(C_DIM)),
-                    Span::styled(branch.as_str(), Style::default().fg(C_BLUE).add_modifier(Modifier::BOLD)),
+                    Span::raw("  "),
+                    Span::styled("Target Branch: ", Style::default().fg(C_MUTED)),
+                    Span::styled(format!("🌿 {branch}"), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
                 ]),
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("  ✅ ", Style::default().fg(C_ACCENT)),
-                    Span::styled("Everything committed and pushed successfully!", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::raw("  "),
+                    Span::styled("✅ ", Style::default().fg(C_GREEN)),
+                    Span::styled("Everything committed and pushed successfully!", Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
                 ]),
             ],
         ),
@@ -563,63 +679,66 @@ fn draw_push_result(f: &mut ratatui::Frame, outcome: &PushOutcome) {
             let mut body = vec![
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("  ⚠️  Merge Conflict detected — resolve manually:", Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD)),
+                    Span::raw("  "),
+                    Span::styled("⚠️ MERGE CONFLICT DETECTED — RESOLVE MANUALLY:", Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD)),
                 ]),
                 Line::from(""),
-                Line::from(vec![Span::styled("  Steps to resolve:", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::raw("  "), Span::styled("Steps to resolve:", Style::default().fg(C_MUTED))]),
                 Line::from(vec![
-                    Span::styled("    1) ", Style::default().fg(C_BLUE)),
-                    Span::styled("git add .", Style::default().fg(C_WHITE)),
+                    Span::raw("    1) "),
+                    Span::styled("git add .", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
                 ]),
                 Line::from(vec![
-                    Span::styled("    2) ", Style::default().fg(C_BLUE)),
-                    Span::styled("git rebase --continue", Style::default().fg(C_WHITE)),
+                    Span::raw("    2) "),
+                    Span::styled("git rebase --continue", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
                 ]),
                 Line::from(vec![
-                    Span::styled("    3) ", Style::default().fg(C_BLUE)),
-                    Span::styled("fancybash gwip", Style::default().fg(C_ACCENT)),
+                    Span::raw("    3) "),
+                    Span::styled("fancybash gwip", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
                 ]),
             ];
             if !lines.is_empty() {
                 body.push(Line::from(""));
-                body.push(Line::from(vec![Span::styled("  Git output:", Style::default().fg(C_DIM))]));
-                for l in lines.iter().take(12) {
+                body.push(Line::from(vec![Span::raw("  "), Span::styled("Git Output:", Style::default().fg(C_MUTED))]));
+                for l in lines.iter().take(10) {
                     body.push(Line::from(vec![
-                        Span::styled("  ", Style::default()),
-                        Span::styled(l.as_str(), Style::default().fg(C_DIM)),
+                        Span::raw("    "),
+                        Span::styled(l.as_str(), Style::default().fg(C_MUTED)),
                     ]));
                 }
             }
-            (Color::Rgb(255, 160, 60), "⚠️", " Merge Conflict ", body)
+            (C_GOLD, "⚠️", " MERGE CONFLICT ", body)
         }
         PushOutcome::Failed(msg, lines) => {
             let mut body = vec![
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("  ❌ Push failed: ", Style::default().fg(Color::Rgb(255, 90, 90)).add_modifier(Modifier::BOLD)),
-                    Span::styled(msg.as_str(), Style::default().fg(C_WHITE)),
+                    Span::raw("  "),
+                    Span::styled("❌ PUSH FAILED: ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+                    Span::styled(msg.as_str(), Style::default().fg(C_TEXT)),
                 ]),
                 Line::from(""),
                 Line::from(vec![
-                    Span::styled("  💡 ", Style::default().fg(C_GOLD)),
-                    Span::styled("Your local commit was created successfully.", Style::default().fg(C_DIM)),
+                    Span::raw("  "),
+                    Span::styled("💡 Note: ", Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD)),
+                    Span::styled("Your local commit was created successfully.", Style::default().fg(C_MUTED)),
                 ]),
                 Line::from(vec![
-                    Span::styled("     To push later, run: ", Style::default().fg(C_DIM)),
-                    Span::styled("git push", Style::default().fg(C_ACCENT)),
+                    Span::raw("     To push manually later, run: "),
+                    Span::styled("git push", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
                 ]),
             ];
             if !lines.is_empty() {
                 body.push(Line::from(""));
-                body.push(Line::from(vec![Span::styled("  Git error details:", Style::default().fg(C_DIM))]));
-                for l in lines.iter().take(14) {
+                body.push(Line::from(vec![Span::raw("  "), Span::styled("Git Error Details:", Style::default().fg(C_MUTED))]));
+                for l in lines.iter().take(12) {
                     body.push(Line::from(vec![
-                        Span::styled("    ", Style::default()),
-                        Span::styled(l.as_str(), Style::default().fg(Color::Rgb(255, 90, 90))),
+                        Span::raw("    "),
+                        Span::styled(l.as_str(), Style::default().fg(C_RED)),
                     ]));
                 }
             }
-            (Color::Rgb(255, 90, 90), "❌", " Push Failed ", body)
+            (C_RED, "❌", " PUSH FAILED ", body)
         }
     };
 
@@ -632,7 +751,7 @@ fn draw_push_result(f: &mut ratatui::Frame, outcome: &PushOutcome) {
     // Header
     let header = Paragraph::new(Line::from(vec![
         Span::styled(format!(" {icon}  "), Style::default().fg(border_color).add_modifier(Modifier::BOLD)),
-        Span::styled("GIT WIP", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled("GIT PUSH STATUS  :: ", Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
         Span::styled(title, Style::default().fg(border_color).add_modifier(Modifier::BOLD)),
     ]))
     .block(
@@ -640,7 +759,7 @@ fn draw_push_result(f: &mut ratatui::Frame, outcome: &PushOutcome) {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(border_color))
-            .style(Style::default().bg(C_DARK)),
+            .style(Style::default().bg(C_CARD)),
     )
     .alignment(Alignment::Center);
     f.render_widget(header, outer[0]);
@@ -652,24 +771,46 @@ fn draw_push_result(f: &mut ratatui::Frame, outcome: &PushOutcome) {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(border_color))
-                .style(Style::default().bg(C_DARK)),
+                .style(Style::default().bg(C_CARD)),
         );
     f.render_widget(body_widget, outer[1]);
 
     // Footer
     let footer = Paragraph::new(Line::from(vec![
-        Span::styled(" [Enter / q / Esc] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-        Span::styled("Dismiss", Style::default().fg(C_DIM)),
+        Span::styled(" [Enter / Esc / q] ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+        Span::styled("Dismiss Result Screen", Style::default().fg(C_MUTED)),
     ]))
     .block(
         Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(C_DIM))
-            .style(Style::default().bg(C_DARK)),
+            .border_style(Style::default().fg(C_BORDER))
+            .style(Style::default().bg(C_CARD)),
     )
     .alignment(Alignment::Center);
     f.render_widget(footer, outer[2]);
+}
+
+fn fetch_staged_files() -> Vec<StagedFile> {
+    let out = Command::new("git")
+        .args(["status", "--porcelain"])
+        .stdout(Stdio::piped()).stderr(Stdio::null()).output();
+
+    if let Ok(o) = out {
+        let stdout_str = String::from_utf8_lossy(&o.stdout);
+        stdout_str.lines().filter_map(|line| {
+            if line.len() >= 4 {
+                let status = line[..2].trim().to_string();
+                let path = line[3..].to_string();
+                let display_status = if status.is_empty() { "M".to_string() } else { status };
+                Some(StagedFile { status: display_status, path })
+            } else {
+                None
+            }
+        }).collect()
+    } else {
+        vec![]
+    }
 }
 
 fn current_branch() -> Option<String> {
@@ -689,7 +830,7 @@ fn run_git(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     if status.success() { Ok(()) } else { Err(format!("git {} failed", args.join(" ")).into()) }
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// ── Unit Tests ────────────────────────────────────────────────────────────────
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -2,7 +2,7 @@
 //  src/tools/git_wip.rs — `gwip` / `gcommit`: Interactive Git Stage & Push
 // =============================================================================
 
-use std::io::{self, stdout, Write};
+use std::io::stdout;
 use std::process::{Command, Stdio};
 
 use crossterm::{
@@ -445,60 +445,231 @@ fn default_wip_msg_with_prefix(prefix: &str) -> String {
 }
 
 // ── Git helpers ───────────────────────────────────────────────────────────────
-fn push_with_retry() -> Result<(), Box<dyn std::error::Error>> {
-    let cur_branch = current_branch();
-    print!("\x1b[1;36m🚀 Pushing to remote");
-    io::stdout().flush().ok();
 
-    match push_to_remote(&cur_branch) {
-        Ok(true) => {
-            println!("\r\x1b[1;32m✅ Everything committed and pushed successfully!\x1b[0m");
-            Ok(())
-        }
-        Ok(false) => {
-            println!("\r\x1b[1;33m🔄 Remote has new commits. Auto-syncing (git pull --rebase)…\x1b[0m");
-            let origin = cur_branch.as_deref().unwrap_or("HEAD");
-            let rebase_ok = Command::new("git").args(["pull", "--rebase", "origin", origin])
-                .status().map(|s| s.success()).unwrap_or(false);
-
-            if rebase_ok {
-                println!("\x1b[1;36m🚀 Retrying push…\x1b[0m");
-                let retry_ok = Command::new("git").args(["push", "-u", "origin", origin])
-                    .status().map(|s| s.success()).unwrap_or(false);
-                if retry_ok {
-                    println!("\x1b[1;32m✅ Synced and pushed successfully!\x1b[0m");
-                    return Ok(());
-                }
-                Err("❌ Push failed after rebase sync.".into())
-            } else {
-                eprintln!("\x1b[0;31m⚠️  Merge Conflict detected!\x1b[0m");
-                eprintln!("\x1b[1;33mPlease resolve conflicts, then run:\x1b[0m");
-                eprintln!("  1) \x1b[1;36mgit add .\x1b[0m");
-                eprintln!("  2) \x1b[1;36mgit rebase --continue\x1b[0m");
-                eprintln!("  3) \x1b[1;36mfancybash gwip\x1b[0m");
-                Err("Merge conflict — manual resolution required.".into())
-            }
-        }
-        Err(e) => {
-            eprintln!("\x1b[0;31m❌ Push failed: {e}\x1b[0m");
-            eprintln!("\x1b[1;33m💡 Your local commit was created successfully.\x1b[0m");
-            Err(e)
-        }
-    }
+#[derive(Debug)]
+enum PushOutcome {
+    Success(String),                  // branch pushed
+    Conflict(Vec<String>),            // rebase conflict
+    Failed(String, Vec<String>),      // error msg + git stderr lines
 }
 
-fn push_to_remote(branch: &Option<String>) -> Result<bool, Box<dyn std::error::Error>> {
+fn push_with_retry() -> Result<(), Box<dyn std::error::Error>> {
+    let cur_branch = current_branch();
+
+    let outcome = match push_once(&cur_branch) {
+        Ok(true)  => PushOutcome::Success(cur_branch.clone().unwrap_or_default()),
+        Ok(false) => {
+            // remote is ahead — try rebase
+            let origin = cur_branch.as_deref().unwrap_or("HEAD");
+            let rebase_out = Command::new("git")
+                .args(["pull", "--rebase", "origin", origin])
+                .stdout(Stdio::piped()).stderr(Stdio::piped()).output();
+            match rebase_out {
+                Ok(o) if o.status.success() => {
+                    // retry push after rebase
+                    match push_once(&cur_branch) {
+                        Ok(true) => PushOutcome::Success(cur_branch.clone().unwrap_or_default()),
+                        _ => {
+                            let lines = vec!["Retry push failed after rebase.".into()];
+                            PushOutcome::Failed("Push failed after rebase sync.".into(), lines)
+                        }
+                    }
+                }
+                Ok(o) => {
+                    let lines: Vec<String> = String::from_utf8_lossy(&o.stderr)
+                        .lines().map(|l| l.to_string()).collect();
+                    PushOutcome::Conflict(lines)
+                }
+                Err(e) => PushOutcome::Failed(e.to_string(), vec![]),
+            }
+        }
+        Err((msg, lines)) => PushOutcome::Failed(msg, lines),
+    };
+
+    show_push_result(&outcome)
+}
+
+fn push_once(branch: &Option<String>) -> Result<bool, (String, Vec<String>)> {
     let mut cmd = Command::new("git");
     cmd.arg("push").arg("-u");
     if let Some(b) = branch { cmd.args(["origin", b.as_str()]); }
-    let output = cmd.stdout(Stdio::inherit()).stderr(Stdio::piped()).output()?;
-    if output.status.success() { return Ok(true); }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let is_nff = stderr.contains("non-fast-forward") || stderr.contains("fetch first") || stderr.contains("behind");
-    if is_nff { Ok(false) } else {
-        if !stderr.is_empty() { eprintln!("\x1b[1;33mGit Error Details:\x1b[0m\n{stderr}"); }
-        Err("push failed".into())
+    let out = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).output()
+        .map_err(|e| (e.to_string(), vec![]))?;
+    if out.status.success() { return Ok(true); }
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    let is_nff = stderr.contains("non-fast-forward")
+        || stderr.contains("fetch first")
+        || stderr.contains("behind");
+    if is_nff {
+        Ok(false)
+    } else {
+        let lines: Vec<String> = stderr.lines().map(|l| l.to_string()).collect();
+        Err(("push failed".into(), lines))
     }
+}
+
+fn show_push_result(outcome: &PushOutcome) -> Result<(), Box<dyn std::error::Error>> {
+    enable_raw_mode()?;
+    let mut out = stdout();
+    execute!(out, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(out);
+    let mut terminal = Terminal::new(backend)?;
+
+    loop {
+        terminal.draw(|f| draw_push_result(f, outcome))?;
+        if event::poll(std::time::Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Enter | KeyCode::Esc | KeyCode::Char('q') => break,
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => break,
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    match outcome {
+        PushOutcome::Success(_) => Ok(()),
+        PushOutcome::Conflict(_) => Err("Merge conflict — manual resolution required.".into()),
+        PushOutcome::Failed(msg, _) => Err(msg.clone().into()),
+    }
+}
+
+fn draw_push_result(f: &mut ratatui::Frame, outcome: &PushOutcome) {
+    let area = f.area();
+    f.render_widget(Block::default().style(Style::default().bg(C_DARK)), area);
+
+    let (border_color, icon, title, body_lines): (Color, &str, &str, Vec<Line>) = match outcome {
+        PushOutcome::Success(branch) => (
+            C_ACCENT, "✅", " Push Successful ",
+            vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("  Branch  ", Style::default().fg(C_DIM)),
+                    Span::styled(branch.as_str(), Style::default().fg(C_BLUE).add_modifier(Modifier::BOLD)),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("  ✅ ", Style::default().fg(C_ACCENT)),
+                    Span::styled("Everything committed and pushed successfully!", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                ]),
+            ],
+        ),
+        PushOutcome::Conflict(lines) => {
+            let mut body = vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("  ⚠️  Merge Conflict detected — resolve manually:", Style::default().fg(C_GOLD).add_modifier(Modifier::BOLD)),
+                ]),
+                Line::from(""),
+                Line::from(vec![Span::styled("  Steps to resolve:", Style::default().fg(C_DIM))]),
+                Line::from(vec![
+                    Span::styled("    1) ", Style::default().fg(C_BLUE)),
+                    Span::styled("git add .", Style::default().fg(C_WHITE)),
+                ]),
+                Line::from(vec![
+                    Span::styled("    2) ", Style::default().fg(C_BLUE)),
+                    Span::styled("git rebase --continue", Style::default().fg(C_WHITE)),
+                ]),
+                Line::from(vec![
+                    Span::styled("    3) ", Style::default().fg(C_BLUE)),
+                    Span::styled("fancybash gwip", Style::default().fg(C_ACCENT)),
+                ]),
+            ];
+            if !lines.is_empty() {
+                body.push(Line::from(""));
+                body.push(Line::from(vec![Span::styled("  Git output:", Style::default().fg(C_DIM))]));
+                for l in lines.iter().take(12) {
+                    body.push(Line::from(vec![
+                        Span::styled("  ", Style::default()),
+                        Span::styled(l.as_str(), Style::default().fg(C_DIM)),
+                    ]));
+                }
+            }
+            (Color::Rgb(255, 160, 60), "⚠️", " Merge Conflict ", body)
+        }
+        PushOutcome::Failed(msg, lines) => {
+            let mut body = vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("  ❌ Push failed: ", Style::default().fg(Color::Rgb(255, 90, 90)).add_modifier(Modifier::BOLD)),
+                    Span::styled(msg.as_str(), Style::default().fg(C_WHITE)),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("  💡 ", Style::default().fg(C_GOLD)),
+                    Span::styled("Your local commit was created successfully.", Style::default().fg(C_DIM)),
+                ]),
+                Line::from(vec![
+                    Span::styled("     To push later, run: ", Style::default().fg(C_DIM)),
+                    Span::styled("git push", Style::default().fg(C_ACCENT)),
+                ]),
+            ];
+            if !lines.is_empty() {
+                body.push(Line::from(""));
+                body.push(Line::from(vec![Span::styled("  Git error details:", Style::default().fg(C_DIM))]));
+                for l in lines.iter().take(14) {
+                    body.push(Line::from(vec![
+                        Span::styled("    ", Style::default()),
+                        Span::styled(l.as_str(), Style::default().fg(Color::Rgb(255, 90, 90))),
+                    ]));
+                }
+            }
+            (Color::Rgb(255, 90, 90), "❌", " Push Failed ", body)
+        }
+    };
+
+    let outer = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)])
+        .margin(1)
+        .split(area);
+
+    // Header
+    let header = Paragraph::new(Line::from(vec![
+        Span::styled(format!(" {icon}  "), Style::default().fg(border_color).add_modifier(Modifier::BOLD)),
+        Span::styled("GIT WIP", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(title, Style::default().fg(border_color).add_modifier(Modifier::BOLD)),
+    ]))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(border_color))
+            .style(Style::default().bg(C_DARK)),
+    )
+    .alignment(Alignment::Center);
+    f.render_widget(header, outer[0]);
+
+    // Body
+    let body_widget = Paragraph::new(body_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(border_color))
+                .style(Style::default().bg(C_DARK)),
+        );
+    f.render_widget(body_widget, outer[1]);
+
+    // Footer
+    let footer = Paragraph::new(Line::from(vec![
+        Span::styled(" [Enter / q / Esc] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled("Dismiss", Style::default().fg(C_DIM)),
+    ]))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_DIM))
+            .style(Style::default().bg(C_DARK)),
+    )
+    .alignment(Alignment::Center);
+    f.render_widget(footer, outer[2]);
 }
 
 fn current_branch() -> Option<String> {

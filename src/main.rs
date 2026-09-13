@@ -51,6 +51,7 @@ enum Commands {
     Version,
 
     /// Theme management (list available themes or set active theme)
+    #[command(alias = "fancy")]
     Theme(ThemeArgs),
 
     /// Generate a cryptographically-secure secret key

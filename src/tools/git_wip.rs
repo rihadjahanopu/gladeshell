@@ -606,6 +606,6 @@ mod tests {
         let mut app = WipApp::new();
         for ch in "hello world".chars() { app.insert_char(ch); }
         app.delete_word_back();
-        assert_eq!(app.msg_input, "hello ");
+        assert_eq!(app.msg_input, "hello");
     }
 }

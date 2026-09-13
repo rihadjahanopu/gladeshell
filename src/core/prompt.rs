@@ -482,6 +482,36 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
     Ok(off)
 }
 
+pub static RAINBOW_COLORS: &[u8] = &[31, 32, 33, 34, 35, 36, 91, 92, 93, 94, 95, 96];
+pub static RANDOM_EMOJIS: &[&'static str] = &["🔥", "⚡️", "🚀", "💫", "🌈", "🌀", "✨", "🧠"];
+
+/// Dynamic folder-aware emoji generator matching Zsh `rand_emoji`.
+pub fn rand_emoji(cwd: &str) -> &'static str {
+    let folder = format_short_cwd(cwd).to_lowercase();
+    if folder.contains("web") {
+        "🌐"
+    } else if folder.contains("node") {
+        "🟢"
+    } else if folder.contains("bun") {
+        "🥐"
+    } else if folder.contains("py") {
+        "🐍"
+    } else if folder.contains("proj") {
+        "💻"
+    } else {
+        let mut hash: usize = 5381;
+        for b in folder.bytes() {
+            hash = hash.wrapping_mul(33).wrapping_add(b as usize);
+        }
+        RANDOM_EMOJIS[hash % RANDOM_EMOJIS.len()]
+    }
+}
+
+/// Dynamic rainbow color generator matching Zsh `rand_color`.
+pub fn rand_color(seed: usize) -> u8 {
+    RAINBOW_COLORS[seed % RAINBOW_COLORS.len()]
+}
+
 // ── C-ABI shim used by lib.rs ─────────────────────────────────────────────────
 
 /// Write a prompt rendered with a default context into a raw C buffer.
@@ -633,6 +663,22 @@ mod tests {
             };
             let result = render(&ctx, &mut buf);
             assert!(result.is_ok(), "theme '{}' (idx {}) failed to render", theme.name, i);
+        }
+    }
+    #[test]
+    fn rand_emoji_matches_folder_keywords() {
+        assert_eq!(rand_emoji("/home/user/my-web-app"), "🌐");
+        assert_eq!(rand_emoji("/var/www/node-backend"), "🟢");
+        assert_eq!(rand_emoji("/projects/bun-server"), "🥐");
+        assert_eq!(rand_emoji("/home/user/py-script"), "🐍");
+        assert_eq!(rand_emoji("/home/user/myproj"), "💻");
+        assert!(RANDOM_EMOJIS.contains(&rand_emoji("/home/user/random_folder")));
+    }
+
+    #[test]
+    fn rand_color_returns_valid_rainbow_color() {
+        for i in 0..20 {
+            assert!(RAINBOW_COLORS.contains(&rand_color(i)));
         }
     }
 }

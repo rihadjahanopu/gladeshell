@@ -498,10 +498,12 @@ _fb_precmd() {
   local theme_body="$(typeset -f fb_theme_${target_theme} 2>/dev/null)"
   [[ -z "$theme_body" ]] && theme_body="$(typeset -f fb_theme_minimal 2>/dev/null)"
 
+  # Always refresh dynamic emoji and color for responsive prompt reload
+  _fb_emoji=$(rand_emoji)
+  _fb_color=$(rand_color)
+
   # Only run each expensive command if the active theme function body actually references it
   [[ "$theme_body" == *'_fb_git'* ]]   && _fb_git=$(parse_git_branch)
-  [[ "$theme_body" == *'_fb_emoji'* ]] && _fb_emoji=$(rand_emoji)
-  [[ "$theme_body" == *'_fb_color'* ]] && _fb_color=$(rand_color)
   [[ "$theme_body" == *'_fb_size'* ]]  && _fb_size=$(folder_size)
   [[ "$theme_body" == *'_fb_node'* ]]  && _fb_node=$(node_version)
   [[ "$theme_body" == *'_fb_npm'* ]]   && _fb_npm=$(npm_version)
@@ -512,7 +514,7 @@ _fb_precmd() {
 
 # --- Theme 1: Minimal (Default) ---
 fb_theme_minimal() {
-  PROMPT="💫 %F{147}%1~%f"$'\n'
+  PROMPT="${_fb_emoji} %F{147}%1~%f"$'\n'
   PROMPT+="%F{147}❯❯❯%f "
 }
 
@@ -928,10 +930,14 @@ function fancy_theme {
   fi
 }
 
-# Shortcut function: typing 'fancy' opens theme selector menu
+# Shortcut function: typing 'fancy' opens interactive TUI theme picker
 unalias fancy 2>/dev/null
 function fancy {
-  fancy_theme "$@"
+  if command -v fancybash >/dev/null 2>&1; then
+    fancybash theme "$@"
+  else
+    fancy_theme "$@"
+  fi
 }
 
 # --- Auto-load Saved Theme on Startup ---

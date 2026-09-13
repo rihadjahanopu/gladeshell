@@ -32,6 +32,8 @@ pub fn group() -> AliasGroup {
             AliasEntry { key: "kp".into(),      value: "fancybash kp".into(),      description: "Kill process on port".into(), only_shells: vec![] },
             AliasEntry { key: "ii".into(),      value: "fancybash ii".into(),      description: "Interactive project setup".into(), only_shells: vec![] },
             AliasEntry { key: "keep".into(),    value: "fancybash keep".into(),    description: "Master Command Center Help Menu UI".into(), only_shells: vec![] },
+            AliasEntry { key: "fancy".into(),   value: "fancybash theme".into(),   description: "Interactive TUI theme picker & switcher".into(), only_shells: vec![] },
+            AliasEntry { key: "theme".into(),   value: "fancybash theme".into(),   description: "Interactive TUI theme picker & switcher".into(), only_shells: vec![] },
         ],
     }
 }

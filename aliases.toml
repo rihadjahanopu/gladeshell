@@ -727,3 +727,14 @@ description = "Universal system cache and log cleanup"
 key         = "ftop"
 value       = "fancybash ftop"
 description = "Native Ratatui interactive TUI System & Process Monitor"
+
+[[group.aliases]]
+key         = "fancy"
+value       = "fancybash theme"
+description = "Interactive TUI theme picker & switcher"
+
+[[group.aliases]]
+key         = "theme"
+value       = "fancybash theme"
+description = "Interactive TUI theme picker & switcher"
+

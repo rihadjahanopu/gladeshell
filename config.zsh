@@ -512,9 +512,8 @@ _fb_precmd() {
 
 # --- Theme 1: Minimal (Default) ---
 fb_theme_minimal() {
-  local col=${_fb_color:-$(rand_color)}
-  PROMPT="${_fb_emoji} %F{$col}%1~%f "$'\n'
-  PROMPT+=$'%{\e[5m%}❯❯❯%{\e[25m%} '
+  PROMPT="💫 %F{147}%1~%f"$'\n'
+  PROMPT+="%F{147}❯❯❯%f "
 }
 
 # --- Theme 2: Full (Detailed Two-Line) ---

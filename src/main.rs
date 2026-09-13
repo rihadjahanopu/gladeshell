@@ -207,6 +207,13 @@ enum Commands {
     /// Native Rust Auto-LS directory change summary
     #[command(name = "auto-ls")]
     AutoLs,
+
+    /// Auto-inject `eval "$(fancybash init <shell>)"` into your shell RC file
+    ///
+    /// Detects your current shell and writes the eval line into ~/.zshrc,
+    /// ~/.bashrc, or ~/.config/fish/config.fish automatically.
+    /// Idempotent — safe to run multiple times.
+    Setup,
 }
 
 #[derive(clap::Args, Debug)]
@@ -397,6 +404,7 @@ fn main() {
                 fancybash_core::tools::auto_ls::run();
                 Ok(())
             }
+            Commands::Setup => cmd_setup(),
         },
         None => fancybash_core::tools::keep::run(),
     };
@@ -451,6 +459,44 @@ fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
 
 fn cmd_internal_clean_rc() -> Result<(), Box<dyn std::error::Error>> {
     init::cleaner::clean_rc_file()?;
+    Ok(())
+}
+
+// ── setup ─────────────────────────────────────────────────────────────────────
+
+fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
+    // Detect current shell from $SHELL env var
+    let shell_bin = std::env::var("SHELL").unwrap_or_default();
+    let shell = if shell_bin.contains("zsh") {
+        "zsh"
+    } else if shell_bin.contains("fish") {
+        "fish"
+    } else {
+        "bash"
+    };
+
+    let rc_label = match shell {
+        "zsh"  => "~/.zshrc",
+        "fish" => "~/.config/fish/config.fish",
+        _      => "~/.bashrc",
+    };
+
+    eprintln!("\x1b[1;36m🔧 fancybash setup — detected shell: {shell}\x1b[0m");
+
+    match init::cleaner::ensure_init_in_rc(shell) {
+        Ok(true) => {
+            eprintln!("\x1b[1;32m✅ Successfully injected `fancybash init {shell}` into {rc_label}\x1b[0m");
+            eprintln!("\x1b[1;36m💡 Run:  source {rc_label}  (or open a new terminal)\x1b[0m");
+        }
+        Ok(false) => {
+            eprintln!("\x1b[1;33m✔  fancybash is already configured in {rc_label} — nothing to do.\x1b[0m");
+        }
+        Err(e) => {
+            eprintln!("\x1b[1;31m❌ Could not write to {rc_label}: {e}\x1b[0m");
+            return Err(e.into());
+        }
+    }
+
     Ok(())
 }
 

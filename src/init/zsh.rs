@@ -38,10 +38,6 @@ HISTFILE="$HOME/.zsh_history"
     // ── Autocompletion engine & Plugins (Native Rust Resolved) ─────────────────
     let home = shared::home_dir();
     out.push_str(r#"
-if [[ -o interactive ]]; then
-    clear 2>/dev/null
-fi
-
 # ======================================================
 # ⚡ ZSH AUTOCOMPLETION ENGINE & PLUGINS
 # ======================================================

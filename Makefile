@@ -11,13 +11,13 @@ all: build
 build:
 	cargo build --release
 
-## install: Install fancybash binary to ~/.cargo/bin
+## install: Install fancybash binary to ~/.cargo/bin and auto-configure shell
 install:
 	cargo install --path . --force
-	@echo "\n✨ fancybash installed successfully to ~/.cargo/bin/fancybash"
-	@echo "💡 Add this to your shell config file (~/.bashrc or ~/.zshrc):"
-	@echo "   eval \"\$$(fancybash init zsh)\"   # for Zsh"
-	@echo "   eval \"\$$(fancybash init bash)\"  # for Bash"
+	@echo "\n✨ fancybash installed to ~/.cargo/bin/fancybash"
+	@echo "🔧 Auto-configuring your shell..."
+	@fancybash setup || true
+	@echo ""
 
 ## update: Pull latest code and re-install
 update:

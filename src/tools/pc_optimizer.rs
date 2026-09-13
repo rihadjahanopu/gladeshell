@@ -21,12 +21,23 @@ use crossterm::{
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Terminal,
 };
+
+// ── colour palette (modern dark theme matching fkill.rs) ───────────────────────
+const C_BG: Color = Color::Rgb(10, 10, 18);
+const C_BORDER: Color = Color::Rgb(100, 210, 255); // neon cyan
+const C_ACCENT: Color = Color::Rgb(80, 220, 140); // mint green
+const C_SELECTED: Color = Color::Rgb(255, 85, 140); // hot pink / magenta accent
+const C_DIM: Color = Color::Rgb(120, 120, 140);
+const C_TEXT: Color = Color::Rgb(220, 220, 230);
+const C_GREEN: Color = Color::Rgb(80, 220, 120);
+const C_YELLOW: Color = Color::Rgb(255, 200, 80);
+const C_WHITE: Color = Color::Rgb(255, 255, 255);
 
 // ── Distro / package-manager detection ───────────────────────────────────────
 
@@ -113,6 +124,9 @@ impl PkgManager {
     }
 
     fn is_installed(&self, pkg: &str) -> bool {
+        if cmd_exists(pkg) {
+            return true;
+        }
         match self {
             PkgManager::Apt | PkgManager::Unknown => Command::new("dpkg-query")
                 .args(["-W", "-f=${Status}", pkg])
@@ -498,13 +512,21 @@ impl<'a> UtApp<'a> {
                         return Ok(None);
                     }
                     (KeyCode::Enter, _) => {
-                        let selected_indices: Vec<usize> = self
+                        let mut selected_indices: Vec<usize> = self
                             .items
                             .iter()
                             .enumerate()
                             .filter(|(_, item)| item.selected)
                             .map(|(idx, _)| idx)
                             .collect();
+                        if selected_indices.is_empty() {
+                            if let Some(sel) = self.list_state.selected() {
+                                if sel < self.filtered_indices.len() {
+                                    let orig_idx = self.filtered_indices[sel];
+                                    selected_indices.push(orig_idx);
+                                }
+                            }
+                        }
                         return Ok(Some(selected_indices));
                     }
                     (KeyCode::Tab, _) | (KeyCode::Char(' '), KeyModifiers::NONE) => {
@@ -554,79 +576,96 @@ impl<'a> UtApp<'a> {
     fn render_ui(&mut self, frame: &mut ratatui::Frame) {
         let area = frame.area();
 
-        let outer_block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::DarkGray));
-        frame.render_widget(outer_block, area);
+        // Dark background
+        frame.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
 
-        let inner_margin = Rect {
-            x: area.x + 1,
-            y: area.y + 1,
-            width: area.width.saturating_sub(2),
-            height: area.height.saturating_sub(2),
-        };
-
-        let chunks = Layout::default()
+        // 4-Tier Vertical Layout (Banner, Search, Table List Body, Status Bar)
+        let outer = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(1), // Search Arsenal > ...
-                Constraint::Length(1), // 76/76 (0)
-                Constraint::Length(1), // Divider
-                Constraint::Length(1), // [TAB] Select Multiple ...
-                Constraint::Length(1), // Divider
-                Constraint::Length(1), // Headers: STAT [IDX] CATEGORY PACKAGE DESCRIPTION
-                Constraint::Min(4),    // Items list
+                Constraint::Length(3), // Top Banner
+                Constraint::Length(3), // Search Bar
+                Constraint::Min(6),    // Main Table List Body
+                Constraint::Length(3), // Bottom Status Bar
             ])
-            .split(inner_margin);
+            .split(area);
 
-        // 1. Search Arsenal Input Line
-        let search_line = Line::from(vec![
-            Span::styled("🔍 Search Arsenal > ", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
-            Span::styled(&self.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-            Span::styled("|", Style::default().fg(Color::Green)),
+        // ── 1. Top Banner ───────────────────────────────────────────────────────
+        let banner_text = Line::from(vec![
+            Span::styled("⚡  ", Style::default().fg(C_YELLOW)),
+            Span::styled(
+                "UT",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " — Universal PC Arsenal Installer",
+                Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("  [Distro: {} | Pkg: {}]", self.distro_id, self.pm_label),
+                Style::default().fg(C_DIM),
+            ),
         ]);
-        frame.render_widget(Paragraph::new(search_line), chunks[0]);
 
-        // 2. Counter Line
+        let banner = Paragraph::new(banner_text)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_BORDER))
+                    .style(Style::default().bg(C_BG)),
+            );
+        frame.render_widget(banner, outer[0]);
+
+        // ── 2. Search Bar ───────────────────────────────────────────────────────
         let selected_count = self.items.iter().filter(|i| i.selected).count();
-        let counter_str = format!("{}/{} ({})", self.filtered_indices.len(), self.items.len(), selected_count);
-        let counter_line = Line::from(vec![
-            Span::styled(counter_str, Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)),
+        let match_count = self.filtered_indices.len();
+        let total_count = self.items.len();
+
+        let search_text = Line::from(vec![
+            Span::styled(" 🔍 ", Style::default().fg(C_BORDER)),
+            Span::styled(
+                &self.query,
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("█", Style::default().fg(C_ACCENT)),
+            Span::styled(
+                format!("   ({}/{} matches | {} selected)", match_count, total_count, selected_count),
+                Style::default().fg(C_DIM),
+            ),
         ]);
-        frame.render_widget(Paragraph::new(counter_line), chunks[1]);
 
-        // 3. Green Divider
-        let divider_len = chunks[2].width as usize;
-        let divider_str = "─".repeat(divider_len);
-        frame.render_widget(Paragraph::new(Line::from(Span::styled(&divider_str, Style::default().fg(Color::DarkGray)))), chunks[2]);
+        let search_bar = Paragraph::new(search_text).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_ACCENT))
+                .title(Span::styled(
+                    " Search Tool Arsenal ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ))
+                .style(Style::default().bg(C_BG)),
+        );
+        frame.render_widget(search_bar, outer[1]);
 
-        // 4. Shortcut Bar
-        let shortcuts = Line::from(vec![
-            Span::styled("  [TAB]", Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD)),
-            Span::raw(" Select Multiple  |  "),
-            Span::styled("[ENTER]", Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)),
-            Span::raw(" Process  |  "),
-            Span::styled("[Q]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-            Span::raw(" Exit  |  ("),
-            Span::styled(self.pm_label, Style::default().fg(Color::Yellow)),
-            Span::raw(")"),
-        ]);
-        frame.render_widget(Paragraph::new(shortcuts), chunks[3]);
+        // ── 3. Table List Body ──────────────────────────────────────────────────
+        let body_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(1), // Table Header
+                Constraint::Min(4),    // List Items
+            ])
+            .split(outer[2]);
 
-        // 5. Green Divider
-        frame.render_widget(Paragraph::new(Line::from(Span::styled(&divider_str, Style::default().fg(Color::DarkGray)))), chunks[4]);
-
-        // 6. Column Headers
         let header_line = Line::from(vec![
-            Span::styled("    STAT ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
-            Span::styled("[IDX]  ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
-            Span::styled("CATEGORY    ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
-            Span::styled("PACKAGE           ", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
-            Span::styled("DESCRIPTION", Style::default().fg(Color::DarkGray).add_modifier(Modifier::BOLD)),
+            Span::styled("    STAT ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled("[IDX]  ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled("CATEGORY    ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled("PACKAGE           ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled("DESCRIPTION", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
         ]);
-        frame.render_widget(Paragraph::new(header_line), chunks[5]);
 
-        // 7. List Items
         let list_items: Vec<ListItem> = self
             .filtered_indices
             .iter()
@@ -636,19 +675,19 @@ impl<'a> UtApp<'a> {
                 let item = &self.items[orig_idx];
 
                 let bar_span = if is_cursor {
-                    Span::styled("█ ", Style::default().fg(Color::Rgb(255, 0, 128)))
+                    Span::styled("❯ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD))
                 } else {
                     Span::raw("  ")
                 };
 
                 let status_span = if item.selected {
-                    Span::styled("● ", Style::default().fg(Color::Green))
+                    Span::styled("● ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
                 } else {
-                    Span::styled("○ ", Style::default().fg(Color::DarkGray))
+                    Span::styled("○ ", Style::default().fg(C_DIM))
                 };
 
                 let idx_str = format!("[{:>2}]  ", item.idx);
-                let idx_span = Span::styled(idx_str, Style::default().fg(Color::Green));
+                let idx_span = Span::styled(idx_str, Style::default().fg(C_GREEN));
 
                 let cat_color = match item.category {
                     "PERF" => Color::Magenta,
@@ -661,9 +700,12 @@ impl<'a> UtApp<'a> {
                 };
                 let cat_span = Span::styled(format!("{:<12}", item.category), Style::default().fg(cat_color).add_modifier(Modifier::BOLD));
 
-                let pkg_span = Span::styled(format!("{:<18}", item.generic_name), Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD));
+                let pkg_span = Span::styled(
+                    format!("{:<18}", item.generic_name),
+                    Style::default().fg(if is_cursor { C_WHITE } else { C_ACCENT }).add_modifier(Modifier::BOLD),
+                );
 
-                let desc_span = Span::styled(item.description, Style::default().fg(Color::LightGreen));
+                let desc_span = Span::styled(item.description, Style::default().fg(C_TEXT));
 
                 ListItem::new(Line::from(vec![
                     bar_span,
@@ -676,10 +718,54 @@ impl<'a> UtApp<'a> {
             })
             .collect();
 
+        let table_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_BORDER))
+            .title(Span::styled(
+                " 📦 Available Tools & Package Arsenal ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ))
+            .style(Style::default().bg(C_BG));
+
+        let inner_table_area = table_block.inner(outer[2]);
+        frame.render_widget(table_block, outer[2]);
+
+        let inner_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(1), // Header
+                Constraint::Min(3),    // List
+            ])
+            .split(inner_table_area);
+
+        frame.render_widget(Paragraph::new(header_line), inner_chunks[0]);
+
         let list_widget = List::new(list_items)
             .block(Block::default().borders(Borders::NONE));
 
-        frame.render_stateful_widget(list_widget, chunks[6], &mut self.list_state);
+        frame.render_stateful_widget(list_widget, inner_chunks[1], &mut self.list_state);
+
+        // ── 4. Bottom Status Bar ────────────────────────────────────────────────
+        let status_line = Line::from(vec![
+            Span::styled(" [SPACE / TAB] ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled("Select Multi-tools  │ ", Style::default().fg(C_TEXT)),
+            Span::styled(" [ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Install Selected  │ ", Style::default().fg(C_TEXT)),
+            Span::styled(" [Q / ESC] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+            Span::styled("Cancel", Style::default().fg(C_TEXT)),
+        ]);
+
+        let status_bar = Paragraph::new(status_line)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_DIM))
+                    .style(Style::default().bg(C_BG)),
+            );
+        frame.render_widget(status_bar, outer[3]);
     }
 }
 
@@ -949,13 +1035,15 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    // 4. Authenticate sudo upfront so password prompt is visible
+    println!("\n{CYAN}🔐 Requesting sudo permissions for tool installation...{NC}");
+    let _ = Command::new("sudo").arg("-v").status();
+
     // 5. Sync package lists
     println!("{CYAN}🔄 Syncing package lists...{NC}");
     if let Some(cmd) = pm.update_cmd() {
         let _ = Command::new(&cmd[0])
             .args(&cmd[1..])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
             .status();
     }
 
@@ -966,7 +1054,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut failed_list:    Vec<String> = vec![];
 
     println!(
-        "{CYAN}🔧 Processing {} tools on {}...{NC}\n",
+        "\n{CYAN}🔧 Processing {} tools on {}...{NC}\n",
         selected_indices.len(),
         distro.id
     );
@@ -987,8 +1075,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             let ok = Command::new(&cmd[0])
                 .args(&cmd[1..])
                 .arg(pkg)
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
                 .status()
                 .map(|s| s.success())
                 .unwrap_or(false);

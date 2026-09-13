@@ -76,7 +76,7 @@ export _FANCYBASH_BASH_LOADED=1
         Shell::Fish => r#"
 # Guard against double-sourcing
 if set -q _FANCYBASH_FISH_LOADED
-    exit 0
+    return
 end
 set -gx _FANCYBASH_FISH_LOADED 1
 "#.to_string(),
@@ -210,8 +210,11 @@ if [[ -s "$BUN_INSTALL/_bun" ]]; then
 fi
 "#.to_string(),
         Shell::Bash => r#"
-# ── Bun completions (lazy) ──
-[[ -s "$BUN_INSTALL/_bun" ]] && \. "$BUN_INSTALL/_bun"
+# ── Bun environment ──
+export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+if [[ -d "$BUN_INSTALL/bin" && ":$PATH:" != *":$BUN_INSTALL/bin:"* ]]; then
+    export PATH="$BUN_INSTALL/bin:$PATH"
+fi
 "#.to_string(),
         Shell::Fish => r#"
 # ── Bun ──

@@ -457,31 +457,38 @@ setup_rust_binary() {
 
 # ─── Fetch & Append Config ─────────────────
 install_config() {
-    printf "  ${CYAN}➜${NC} Applying fancybash Zsh configuration...\n"
-    export PATH="$HOME/.local/bin:$PATH"
+    printf "  ${CYAN}➜${NC} Configuring fancybash for your shell...\n"
+    export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 
-    {
-        echo ""
-        echo "$START"
-        echo "# Installed: $(date '+%Y-%m-%d %H:%M:%S')"
-        echo "# fancybash Rust Native Engine Initialization"
-        echo 'export PATH="$HOME/.local/bin:$PATH"'
-        echo ""
-        if command -v fancybash >/dev/null 2>&1; then
-            fancybash init zsh 2>/dev/null || echo 'eval "$(fancybash init zsh)"'
+    if command -v fancybash >/dev/null 2>&1; then
+        # fancybash setup detects the shell and injects eval line idempotently
+        fancybash setup
+    else
+        # Fallback: manually inject if binary not yet in PATH
+        local ZSHRC_FILE="$HOME/.zshrc"
+        local MARKER='fancybash init'
+        if ! grep -qF "$MARKER" "$ZSHRC_FILE" 2>/dev/null; then
+            {
+                echo ""
+                echo "$START"
+                echo "# Installed: $(date '+%Y-%m-%d %H:%M:%S')"
+                echo "# fancybash Rust Native Engine - auto-loaded every shell session"
+                echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"'
+                echo ""
+                echo 'if command -v fancybash >/dev/null 2>&1; then'
+                echo '    eval "$(fancybash init zsh)"'
+                echo 'fi'
+                echo "$END"
+            } >> "$ZSHRC_FILE"
+            printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.zshrc\n"
         else
-            echo 'if command -v fancybash >/dev/null 2>&1; then'
-            echo '    eval "$(fancybash init zsh)"'
-            echo 'fi'
+            printf "  ${GREEN}✔${NC} fancybash already configured in ~/.zshrc\n"
         fi
-        echo "$END"
-    } >> "$ZSHRC"
-
-    printf "  ${GREEN}✔${NC} Config successfully added to ~/.zshrc!\n"
+    fi
 
     # Pre-compile Zsh bytecode for sub-50ms initial launch
     if command -v zcompile >/dev/null 2>&1; then
-        zcompile "$ZSHRC" 2>/dev/null || true
+        zcompile "$HOME/.zshrc" 2>/dev/null || true
     fi
 }
 

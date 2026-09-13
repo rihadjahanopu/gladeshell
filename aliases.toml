@@ -167,9 +167,27 @@ only_shells = ["bash"]
 
 [[group.aliases]]
 key         = "rel"
-value       = "source ~/.zshrc && echo '✅ .zshrc reloaded!'"
+value       = "pkill -f fancybash-daemon 2>/dev/null; rm -f /tmp/fancybash_*.sock(N) 2>/dev/null; source ~/.zshrc; echo \"🔄 Zsh reloaded!\""
 description = "Reload Zsh config"
 only_shells = ["zsh"]
+
+[[group.aliases]]
+key         = "rel"
+value       = "pkill -f fancybash-daemon 2>/dev/null; rm -f /tmp/fancybash_*.sock 2>/dev/null; source ~/.bashrc; echo \"🔄 Bash reloaded!\""
+description = "Reload Bash config"
+only_shells = ["bash"]
+
+[[group.aliases]]
+key         = "rel"
+value       = "pkill -f fancybash-daemon 2>/dev/null; rm -f /tmp/fancybash_*.sock 2>/dev/null; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\""
+description = "Reload Fish config"
+only_shells = ["fish"]
+
+[[group.aliases]]
+key         = "rel"
+value       = ". $PROFILE; Write-Host \"🔄 PowerShell reloaded!\""
+description = "Reload PowerShell config"
+only_shells = ["pwsh"]
 
 # ── Git Shortcuts ────────────────────────────────────────────────────────────
 [[group]]

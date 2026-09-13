@@ -67,7 +67,7 @@ pub struct Theme {
 
 pub static THEMES: &[Theme] = &[
     // 00 ── minimal — ultra-clean compact path prompt (user_color=0 hides user@host)
-    Theme { name: "minimal",          emoji: "",   user_color: 0,               path_color: a8(51),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "minimal",          emoji: "💫", user_color: 0,               path_color: a8(147),         git_color: a8(147),         prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: ""   },
     // 01 ── full — rich detailed theme with cyan/green/yellow accents
     Theme { name: "full",             emoji: "⚡", user_color: a8(51),          path_color: a8(82),          git_color: a8(226),         prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: ""   },
     // 02 ── robbyrussell — %F{green}➜ cyan path green ❯
@@ -381,6 +381,26 @@ impl Default for PromptContext {
     }
 }
 
+fn format_short_cwd<'a>(raw_cwd: &'a str) -> &'a str {
+    let trimmed = raw_cwd.trim_end_matches('/');
+    if trimmed.is_empty() {
+        return "/";
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        if trimmed == home.trim_end_matches('/') {
+            return "~";
+        }
+    }
+    if trimmed == "~" {
+        return "~";
+    }
+    if let Some(pos) = trimmed.rfind('/') {
+        &trimmed[pos + 1..]
+    } else {
+        trimmed
+    }
+}
+
 /// Core render — writes a two-line ANSI prompt into `buf`.
 ///
 /// Line 1: `{line1_prefix} {emoji} {user_color}user@host{reset} {path_color}~/path{reset}  {git_color}[🌿 branch]{reset}`
@@ -423,8 +443,9 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
 
     // CWD in path_color
     write_theme_color(buf, &mut off, theme.path_color, s);
-    let cwd = std::str::from_utf8(&ctx.cwd[..ctx.cwd_len]).unwrap_or("~");
-    write_str(buf, &mut off, cwd);
+    let cwd_raw = std::str::from_utf8(&ctx.cwd[..ctx.cwd_len]).unwrap_or("~");
+    let cwd_short = format_short_cwd(cwd_raw);
+    write_str(buf, &mut off, cwd_short);
     write_ansi(buf, &mut off, RESET, s);
 
     // Git segment (only when inside a git repo)

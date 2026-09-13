@@ -401,27 +401,33 @@ setup_rust_binary() {
 
 # ─── Fetch & Append Config ─────────────────
 install_config() {
-    printf "  ${CYAN}➜${NC} Applying fancybash Bash configuration...\n"
-    export PATH="$HOME/.local/bin:$PATH"
+    printf "  ${CYAN}➜${NC} Configuring fancybash for your shell...\n"
+    export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 
-    {
-        echo ""
-        echo "$START"
-        echo "# Installed: $(date '+%Y-%m-%d %H:%M:%S')"
-        echo "# fancybash Rust Native Engine Initialization"
-        echo 'export PATH="$HOME/.local/bin:$PATH"'
-        echo ""
-        if command -v fancybash >/dev/null 2>&1; then
-            fancybash init bash 2>/dev/null || echo 'eval "$(fancybash init bash)"'
+    if command -v fancybash >/dev/null 2>&1; then
+        # fancybash setup detects the shell and injects eval line idempotently
+        fancybash setup
+    else
+        # Fallback: manually inject if binary not yet in PATH
+        local MARKER='fancybash init'
+        if ! grep -qF "$MARKER" "$BASHRC" 2>/dev/null; then
+            {
+                echo ""
+                echo "$START"
+                echo "# Installed: $(date '+%Y-%m-%d %H:%M:%S')"
+                echo "# fancybash Rust Native Engine - auto-loaded every shell session"
+                echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"'
+                echo ""
+                echo 'if command -v fancybash >/dev/null 2>&1; then'
+                echo '    eval "$(fancybash init bash)"'
+                echo 'fi'
+                echo "$END"
+            } >> "$BASHRC"
+            printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.bashrc\n"
         else
-            echo 'if command -v fancybash >/dev/null 2>&1; then'
-            echo '    eval "$(fancybash init bash)"'
-            echo 'fi'
+            printf "  ${GREEN}✔${NC} fancybash already configured in ~/.bashrc\n"
         fi
-        echo "$END"
-    } >> "$BASHRC"
-
-    printf "  ${GREEN}✔${NC} Config successfully added to ~/.bashrc!\n"
+    fi
 }
 
 # ─── Reload & Summary ──────────────────────

@@ -127,28 +127,30 @@ impl AliasFile {
 
                 match shell {
                     Shell::Bash | Shell::Zsh => {
+                        let escaped_val = entry.value.replace('\'', "'\\''");
                         if entry.description.is_empty() {
                             out.push_str(&format!(
                                 "alias {}='{}'\n",
-                                entry.key, entry.value
+                                entry.key, escaped_val
                             ));
                         } else {
                             out.push_str(&format!(
                                 "alias {}='{}'  # {}\n",
-                                entry.key, entry.value, entry.description
+                                entry.key, escaped_val, entry.description
                             ));
                         }
                     }
                     Shell::Fish => {
+                        let escaped_val = entry.value.replace('\'', "\\'");
                         if entry.description.is_empty() {
                             out.push_str(&format!(
                                 "alias {} '{}'\n",
-                                entry.key, entry.value
+                                entry.key, escaped_val
                             ));
                         } else {
                             out.push_str(&format!(
                                 "alias {} '{}'  # {}\n",
-                                entry.key, entry.value, entry.description
+                                entry.key, escaped_val, entry.description
                             ));
                         }
                     }

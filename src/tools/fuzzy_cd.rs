@@ -17,13 +17,25 @@ use crossterm::{
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Terminal,
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
+    Frame, Terminal,
 };
 use walkdir::WalkDir;
+
+// ── colour palette (modern dark theme matching fkill.rs) ───────────────────────
+const C_BG: Color = Color::Rgb(10, 10, 18);
+const C_BORDER: Color = Color::Rgb(80, 220, 140); // vibrant mint green
+const C_ACCENT: Color = Color::Rgb(100, 210, 255); // neon cyan
+const C_SELECTED: Color = Color::Rgb(255, 85, 140); // hot pink / magenta accent
+const C_DIM: Color = Color::Rgb(120, 120, 140);
+const C_TEXT: Color = Color::Rgb(220, 220, 230);
+const C_GREEN: Color = Color::Rgb(80, 220, 120);
+const C_YELLOW: Color = Color::Rgb(255, 200, 80);
+const C_WHITE: Color = Color::Rgb(255, 255, 255);
+const C_CYAN: Color = Color::Rgb(80, 220, 255);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchMode {
@@ -91,7 +103,13 @@ impl FuzzyCdApp {
                     if name.starts_with('.') && name != "." && name != ".." {
                         return false;
                     }
-                    if name == "node_modules" || name == "target" || name == "vendor" || name == "dist" || name == "build" || name == ".git" {
+                    if name == "node_modules"
+                        || name == "target"
+                        || name == "vendor"
+                        || name == "dist"
+                        || name == "build"
+                        || name == ".git"
+                    {
                         return false;
                     }
                 }
@@ -120,13 +138,7 @@ impl FuzzyCdApp {
                         format!("./{}", s)
                     }
                 }
-                Err(_) => {
-                    if is_dir {
-                        format!("{}/", path.display())
-                    } else {
-                        format!("{}", path.display())
-                    }
-                }
+                Err(_) => path.to_string_lossy().to_string(),
             };
 
             self.all_items.push(FileEntry {
@@ -139,19 +151,30 @@ impl FuzzyCdApp {
     }
 
     fn load_recent_dirs(&mut self) {
-        let mut candidates = Vec::new();
+        let mut seen = std::collections::HashSet::new();
 
-        // Check zoxide database if available (~/.local/share/zoxide/db)
+        // 1. Zoxide history if available (~/.local/share/zoxide/db.zo)
         if let Some(home) = dirs_home() {
-            let zoxide_db = home.join(".local/share/zoxide/db");
-            if zoxide_db.is_file() {
-                if let Ok(content) = fs::read_to_string(&zoxide_db) {
-                    for line in content.lines() {
-                        let parts: Vec<&str> = line.split('|').collect();
-                        if let Some(&dir_str) = parts.first() {
-                            let p = PathBuf::from(dir_str.trim());
-                            if p.is_dir() {
-                                candidates.push(p);
+            let zoxide_db = home.join(".local/share/zoxide/db.zo");
+            if zoxide_db.exists() {
+                if let Ok(file) = fs::File::open(&zoxide_db) {
+                    let reader = BufReader::new(file);
+                    for line in reader.lines().flatten() {
+                        let path_str = line.split('|').next().unwrap_or("").trim();
+                        if !path_str.is_empty() {
+                            let p = PathBuf::from(path_str);
+                            if p.is_dir() && seen.insert(p.clone()) {
+                                let rel_path = if let Ok(rel) = p.strip_prefix(&self.current_dir) {
+                                    format!("./{}/", rel.display())
+                                } else {
+                                    p.to_string_lossy().to_string()
+                                };
+                                self.all_items.push(FileEntry {
+                                    path: p,
+                                    rel_path,
+                                    is_dir: true,
+                                    size: 4096,
+                                });
                             }
                         }
                     }
@@ -159,38 +182,22 @@ impl FuzzyCdApp {
             }
         }
 
-        // Add fallback common directories from home
-        if candidates.is_empty() {
+        // Fallback: Add common developer dirs in HOME if recent list is empty
+        if self.all_items.is_empty() {
             if let Some(home) = dirs_home() {
-                if let Ok(entries) = fs::read_dir(&home) {
-                    for entry in entries.flatten() {
-                        if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                            candidates.push(entry.path());
-                        }
+                let candidates = ["Developer", "Projects", "Desktop", "Downloads", "Documents"];
+                for c in &candidates {
+                    let p = home.join(c);
+                    if p.is_dir() && seen.insert(p.clone()) {
+                        self.all_items.push(FileEntry {
+                            path: p.clone(),
+                            rel_path: p.to_string_lossy().to_string(),
+                            is_dir: true,
+                            size: 4096,
+                        });
                     }
                 }
             }
-        }
-
-        for path in candidates {
-            let is_dir = path.is_dir();
-            let size = 4096;
-            let rel_path = if let Ok(rel) = path.strip_prefix(&self.current_dir) {
-                format!("./{}/", rel.display())
-            } else {
-                format!("{}/", path.display())
-            };
-
-            self.all_items.push(FileEntry {
-                path,
-                rel_path,
-                is_dir,
-                size,
-            });
-        }
-
-        if self.all_items.is_empty() {
-            self.load_dev_walk();
         }
     }
 
@@ -204,34 +211,32 @@ impl FuzzyCdApp {
                 .iter()
                 .enumerate()
                 .filter(|(_, item)| item.rel_path.to_lowercase().contains(&q))
-                .map(|(i, _)| i)
+                .map(|(idx, _)| idx)
                 .collect();
         }
 
         if self.filtered_indices.is_empty() {
             self.list_state.select(None);
         } else {
-            self.list_state.select(Some(0));
+            let selected = self.list_state.selected().unwrap_or(0);
+            let next_sel = selected.min(self.filtered_indices.len().saturating_sub(1));
+            self.list_state.select(Some(next_sel));
         }
     }
 
-    pub fn run_loop<B: ratatui::backend::Backend>(
+    pub fn run_loop(
         &mut self,
-        terminal: &mut Terminal<B>,
-    ) -> io::Result<Option<String>> {
+        terminal: &mut Terminal<CrosstermBackend<io::Stderr>>,
+    ) -> Result<Option<String>, Box<dyn Error>> {
         loop {
             terminal.draw(|f| self.render_ui(f))?;
 
             if let Event::Key(key) = event::read()? {
-                if key.kind != event::KeyEventKind::Press {
-                    continue;
-                }
-
                 match (key.code, key.modifiers) {
                     (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                         return Ok(None);
                     }
-                    (KeyCode::Char('z'), KeyModifiers::CONTROL) => {
+                    (KeyCode::Char('z'), KeyModifiers::CONTROL) | (KeyCode::Tab, _) => {
                         self.mode = match self.mode {
                             SearchMode::DevWalk => SearchMode::RecentDirs,
                             SearchMode::RecentDirs => SearchMode::DevWalk,
@@ -240,19 +245,18 @@ impl FuzzyCdApp {
                         self.load_items();
                     }
                     (KeyCode::Enter, _) => {
-                        if let Some(sel) = self.list_state.selected() {
-                            if sel < self.filtered_indices.len() {
-                                let orig_idx = self.filtered_indices[sel];
-                                let entry = &self.all_items[orig_idx];
-                                return Ok(Some(entry.path.to_string_lossy().to_string()));
+                        if let Some(idx) = self.list_state.selected() {
+                            if let Some(&orig_idx) = self.filtered_indices.get(idx) {
+                                let item = &self.all_items[orig_idx];
+                                return Ok(Some(item.path.to_string_lossy().to_string()));
                             }
                         }
                         return Ok(None);
                     }
-                    (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::CONTROL) => {
+                    (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
                         self.move_select(-1);
                     }
-                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::CONTROL) => {
+                    (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
                         self.move_select(1);
                     }
                     (KeyCode::PageUp, _) => {
@@ -265,7 +269,8 @@ impl FuzzyCdApp {
                         self.query.pop();
                         self.filter_items();
                     }
-                    (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                    (KeyCode::Char(c), KeyModifiers::NONE)
+                    | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                         self.query.push(c);
                         self.filter_items();
                     }
@@ -285,73 +290,96 @@ impl FuzzyCdApp {
         self.list_state.select(Some(next as usize));
     }
 
-    fn render_ui(&mut self, frame: &mut ratatui::Frame) {
+    fn render_ui(&mut self, frame: &mut Frame) {
         let area = frame.area();
 
-        // Outer container block matching exact screenshot styling
-        let header_title = match self.mode {
-            SearchMode::DevWalk => " [ENTER] Cd/Open | [CTRL-Z] Recent Dirs (Zoxide/History) ",
-            SearchMode::RecentDirs => " [ENTER] Cd/Open | [CTRL-Z] Dev Walk (Current Tree) ",
-        };
+        // Dark background
+        frame.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
 
-        let outer_block = Block::default()
-            .title(Span::styled(
-                header_title,
-                Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD),
-            ))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Green));
-        frame.render_widget(outer_block, area);
-
-        // Inner layout: Top Search/Status bar + Dual Pane Body
-        let inner_margin = Rect {
-            x: area.x + 1,
-            y: area.y + 1,
-            width: area.width.saturating_sub(2),
-            height: area.height.saturating_sub(2),
-        };
-
-        let main_chunks = Layout::default()
+        // 4-Tier Vertical Layout (Banner, Search, Dual Pane Body, Status Bar)
+        let outer = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(1), // Prompt Line (⚡ Dev Walk: ... 4944/4944)
-                Constraint::Min(4),    // Dual pane body
+                Constraint::Length(3), // Top Banner
+                Constraint::Length(3), // Search Bar
+                Constraint::Min(6),    // Dual Pane Body
+                Constraint::Length(3), // Bottom Status Bar
             ])
-            .split(inner_margin);
+            .split(area);
 
-        // 1. Render Prompt Header Row
-        let mode_label = match self.mode {
-            SearchMode::DevWalk => "⚡ Dev Walk: ",
-            SearchMode::RecentDirs => "🕒 Recent Dirs: ",
+        // ── 1. Top Banner ───────────────────────────────────────────────────────
+        let mode_name = match self.mode {
+            SearchMode::DevWalk => "Dev Walk (Current Directory Tree)",
+            SearchMode::RecentDirs => "Recent Dirs (Zoxide / History)",
         };
 
-        let total_count = self.all_items.len();
-        let match_count = self.filtered_indices.len();
-        let counter_str = format!("{}/{}", match_count, total_count);
-
-        let available_width = main_chunks[0].width as usize;
-        let prompt_prefix_len = mode_label.chars().count() + self.query.chars().count() + 1;
-        let pad_len = available_width.saturating_sub(prompt_prefix_len + counter_str.len());
-
-        let prompt_line = Line::from(vec![
-            Span::styled(mode_label, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::styled(&self.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-            Span::styled("|", Style::default().fg(Color::Green)),
-            Span::raw(" ".repeat(pad_len)),
-            Span::styled(counter_str, Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD)),
+        let banner_text = Line::from(vec![
+            Span::styled("⚡  ", Style::default().fg(C_YELLOW)),
+            Span::styled(
+                "CF",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " — Interactive Fuzzy Directory Navigator",
+                Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("  [{}]  ({} items)", mode_name, self.all_items.len()),
+                Style::default().fg(C_DIM),
+            ),
         ]);
-        frame.render_widget(Paragraph::new(prompt_line), main_chunks[0]);
 
-        // 2. Render Dual Pane Layout (Left: File List, Right: Live Preview)
+        let banner = Paragraph::new(banner_text)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_BORDER))
+                    .style(Style::default().bg(C_BG)),
+            );
+        frame.render_widget(banner, outer[0]);
+
+        // ── 2. Search Bar ───────────────────────────────────────────────────────
+        let match_count = self.filtered_indices.len();
+        let total_count = self.all_items.len();
+
+        let search_text = Line::from(vec![
+            Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
+            Span::styled(
+                &self.query,
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("█", Style::default().fg(C_BORDER)),
+            Span::styled(
+                format!("   ({}/{} matches)", match_count, total_count),
+                Style::default().fg(C_DIM),
+            ),
+        ]);
+
+        let search_bar = Paragraph::new(search_text).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_ACCENT))
+                .title(Span::styled(
+                    " Search Filter ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ))
+                .style(Style::default().bg(C_BG)),
+        );
+        frame.render_widget(search_bar, outer[1]);
+
+        // ── 3. Dual Pane Body ───────────────────────────────────────────────────
         let body_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(52), // Left List
-                Constraint::Percentage(48), // Right Preview
+                Constraint::Percentage(52), // Left File List
+                Constraint::Percentage(48), // Right Live Preview
             ])
-            .split(main_chunks[1]);
+            .split(outer[2]);
 
-        // Render Left File List
+        // Left File List Panel
         let list_items: Vec<ListItem> = self
             .filtered_indices
             .iter()
@@ -360,31 +388,54 @@ impl FuzzyCdApp {
                 let is_selected = self.list_state.selected() == Some(i);
                 let item = &self.all_items[orig_idx];
 
+                let icon = if item.is_dir { "📁 " } else { "📄 " };
+
                 if is_selected {
                     ListItem::new(Line::from(vec![
-                        Span::styled("> ", Style::default().fg(Color::Rgb(255, 0, 128)).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            "❯ ",
+                            Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(icon, Style::default().fg(C_YELLOW)),
                         Span::styled(
                             &item.rel_path,
                             Style::default()
-                                .fg(Color::Rgb(255, 0, 128))
+                                .fg(C_WHITE)
+                                .bg(Color::Rgb(40, 20, 60))
                                 .add_modifier(Modifier::BOLD),
                         ),
                     ]))
                 } else {
+                    let color = if item.is_dir { C_CYAN } else { C_GREEN };
                     ListItem::new(Line::from(vec![
                         Span::raw("  "),
-                        Span::styled(&item.rel_path, Style::default().fg(Color::LightGreen)),
+                        Span::styled(icon, Style::default().fg(C_DIM)),
+                        Span::styled(&item.rel_path, Style::default().fg(color)),
                     ]))
                 }
             })
             .collect();
 
-        let list_widget = List::new(list_items)
-            .block(Block::default().borders(Borders::NONE));
+        let list_title = match self.mode {
+            SearchMode::DevWalk => " 📂 Dev Directory Tree ",
+            SearchMode::RecentDirs => " 🕒 Recent Directories ",
+        };
+
+        let list_widget = List::new(list_items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .title(Span::styled(
+                    list_title,
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ))
+                .style(Style::default().bg(C_BG)),
+        );
 
         frame.render_stateful_widget(list_widget, body_chunks[0], &mut self.list_state);
 
-        // Render Right Preview Panel
+        // Right Preview Panel
         let selected_entry = self
             .list_state
             .selected()
@@ -392,23 +443,46 @@ impl FuzzyCdApp {
             .map(|&orig_idx| &self.all_items[orig_idx]);
 
         render_preview_panel(frame, body_chunks[1], selected_entry);
+
+        // ── 4. Bottom Status Bar ────────────────────────────────────────────────
+        let status_line = Line::from(vec![
+            Span::styled(" [ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Cd / Open Target  │ ", Style::default().fg(C_TEXT)),
+            Span::styled(" [TAB / CTRL-Z] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Switch Mode  │ ", Style::default().fg(C_TEXT)),
+            Span::styled(" [ESC] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+            Span::styled("Cancel", Style::default().fg(C_TEXT)),
+        ]);
+
+        let status_bar = Paragraph::new(status_line)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_DIM))
+                    .style(Style::default().bg(C_BG)),
+            );
+        frame.render_widget(status_bar, outer[3]);
     }
 }
 
-fn render_preview_panel(frame: &mut ratatui::Frame, area: Rect, entry: Option<&FileEntry>) {
+fn render_preview_panel(frame: &mut Frame, area: Rect, entry: Option<&FileEntry>) {
     let title = match entry {
-        Some(e) if e.is_dir => format!(" 📁 Contents of: '{}' ", e.rel_path),
-        Some(e) => format!(" 📄 Preview of: '{}' ", e.rel_path),
-        None => " Preview ".to_string(),
+        Some(e) if e.is_dir => format!(" 👁️ Directory Contents: '{}' ", e.rel_path),
+        Some(e) => format!(" 👁️ File Preview: '{}' ", e.rel_path),
+        None => " 👁️ Preview ".to_string(),
     };
 
     let preview_block = Block::default()
         .title(Span::styled(
             title,
-            Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD),
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(C_ACCENT))
+        .style(Style::default().bg(C_BG));
 
     let inner = preview_block.inner(area);
     frame.render_widget(preview_block, area);
@@ -422,52 +496,51 @@ fn render_preview_panel(frame: &mut ratatui::Frame, area: Rect, entry: Option<&F
     if let Some(item) = entry {
         if item.is_dir {
             let (children, size_str) = get_dir_preview(&item.path);
+            lines.push(Line::from(vec![
+                Span::styled("📊 Total Size: ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled(size_str, Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            ]));
             lines.push(Line::from(Span::styled(
                 "─".repeat(inner.width as usize),
-                Style::default().fg(Color::Green),
+                Style::default().fg(C_DIM),
             )));
             if children.is_empty() {
-                lines.push(Line::from(Span::styled("  (empty directory)", Style::default().fg(Color::DarkGray))));
+                lines.push(Line::from(Span::styled("  (empty directory)", Style::default().fg(C_DIM))));
             } else {
-                for child in children.into_iter().take((inner.height as usize).saturating_sub(4)) {
+                for child in children
+                    .into_iter()
+                    .take((inner.height as usize).saturating_sub(3))
+                {
                     let color = if child.ends_with('/') || child.ends_with('@') {
-                        Color::Cyan
+                        C_CYAN
                     } else {
-                        Color::LightGreen
+                        C_GREEN
                     };
-                    lines.push(Line::from(vec![
-                        Span::styled(child, Style::default().fg(color)),
-                    ]));
+                    lines.push(Line::from(vec![Span::styled(
+                        child,
+                        Style::default().fg(color),
+                    )]));
                 }
             }
-            lines.push(Line::from(Span::styled(
-                "─".repeat(inner.width as usize),
-                Style::default().fg(Color::Green),
-            )));
-            lines.push(Line::from(vec![
-                Span::styled("📊 Size: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled(size_str, Style::default().fg(Color::Green)),
-            ]));
         } else {
             let (file_lines, size_str) = get_file_preview(&item.path);
-            lines.push(Line::from(Span::styled(
-                "─".repeat(inner.width as usize),
-                Style::default().fg(Color::Green),
-            )));
-            for l in file_lines.into_iter().take((inner.height as usize).saturating_sub(4)) {
-                lines.push(Line::from(Span::styled(l, Style::default().fg(Color::LightGreen))));
-            }
-            lines.push(Line::from(Span::styled(
-                "─".repeat(inner.width as usize),
-                Style::default().fg(Color::Green),
-            )));
             lines.push(Line::from(vec![
-                Span::styled("📊 Size: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled(size_str, Style::default().fg(Color::Green)),
+                Span::styled("📊 File Size: ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled(size_str, Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
             ]));
+            lines.push(Line::from(Span::styled(
+                "─".repeat(inner.width as usize),
+                Style::default().fg(C_DIM),
+            )));
+            for l in file_lines
+                .into_iter()
+                .take((inner.height as usize).saturating_sub(3))
+            {
+                lines.push(Line::from(Span::styled(l, Style::default().fg(C_TEXT))));
+            }
         }
     } else {
-        lines.push(Line::from(Span::styled("No item selected", Style::default().fg(Color::DarkGray))));
+        lines.push(Line::from(Span::styled("No item selected", Style::default().fg(C_DIM))));
     }
 
     frame.render_widget(Paragraph::new(lines), inner);
@@ -487,11 +560,11 @@ fn get_dir_preview(dir_path: &Path) -> (Vec<String>, String) {
             let is_symlink = entry.file_type().map(|t| t.is_symlink()).unwrap_or(false);
 
             if is_dir {
-                items.push(format!("{}/", name));
+                items.push(format!("📁 {}/", name));
             } else if is_symlink {
-                items.push(format!("{}@", name));
+                items.push(format!("🔗 {}@", name));
             } else {
-                items.push(name);
+                items.push(format!("📄 {}", name));
             }
         }
     }
@@ -581,4 +654,3 @@ mod tests {
         assert!(!app.all_items.is_empty());
     }
 }
-

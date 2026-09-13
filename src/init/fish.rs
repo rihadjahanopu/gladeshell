@@ -5,9 +5,14 @@
 //    fancybash init fish | source
 //
 //  Hook strategy:
-//    • fish_prompt()     — called to render the prompt via Native Rust engine.
-//    • fish_right_prompt()— optional right-side decoration.
-//    • accurate_auto_ls  — event hook on PWD change calling fancybash auto-ls.
+//    • fish_prompt()        — renders the full two-line prompt via Native Rust engine.
+//    • fish_right_prompt()  — shows command duration on the right side.
+//    • --on-variable PWD    — fires on directory change for auto-ls.
+//
+//  PS1/Prompt encoding:
+//    Fish reads $status BEFORE calling fish_prompt, so we capture it first.
+//    ANSI escape sequences are emitted raw (no %{} / \[ wrapping needed).
+//    CMD_DURATION is a built-in Fish variable (milliseconds).
 // =============================================================================
 
 use crate::core::aliases::Shell;
@@ -27,24 +32,60 @@ pub fn generate() -> String {
 
     // ── Prompt function (Native Rust Engine) ──────────────────────────────────
     out.push_str(r#"
-# ── fancybash prompt (Native Rust Engine) ──
+# ── fancybash Fish Prompt (Native Rust Engine) ──────────────────────────────
+#
+# fish_prompt is called every time a new prompt is needed.
+# $status    = exit code of the last command (captured BEFORE any other calls)
+# $CMD_DURATION = Fish built-in: duration of last command in milliseconds
+#
 
 function fish_prompt
-    set -l last_status $status
-    set -l duration (or "$CMD_DURATION" 0)
-    fancybash prompt --shell fish --cwd "$PWD" --exit-code "$last_status" --user (whoami) --host (hostname -s) --cmd-duration "$duration" 2>/dev/null
+    # Capture exit code FIRST before any other command clobbers it
+    set -l _fb_exit $status
+
+    # CMD_DURATION is a Fish built-in (ms). Default 0 if not set.
+    set -l _fb_dur 0
+    if set -q CMD_DURATION
+        set _fb_dur $CMD_DURATION
+    end
+
+    # Resolve hostname safely (works on Linux and macOS)
+    set -l _fb_host (hostname -s 2>/dev/null; or hostname 2>/dev/null; or echo host)
+
+    # Render prompt via Native Rust engine — outputs raw ANSI (no escaping needed in Fish)
+    fancybash prompt \
+        --shell fish \
+        --cwd "$PWD" \
+        --exit-code $_fb_exit \
+        --user (whoami) \
+        --host $_fb_host \
+        --cmd-duration $_fb_dur \
+        2>/dev/null
 end
 
+# ── Right-side prompt: shows command duration for slow commands (>2s) ──────
 function fish_right_prompt
-    if test $status -ne 0
-        set_color --bold red
-        printf ' ✗ %d' $status
+    if test $CMD_DURATION -gt 2000
+        set -l _secs (math -s0 "$CMD_DURATION / 1000")
+        set_color --bold yellow
+        printf ' ⏱ %ds' $_secs
         set_color normal
     end
 end
 
-# ── History ──
-set -gx fish_history_path "$HOME/.local/share/fish/fish_history"
+# ── Fish greeting — replace default with fancybash welcome ─────────────────
+function fish_greeting
+    # Silent — no greeting spam
+end
+
+# ── History settings ────────────────────────────────────────────────────────
+set -gx fish_history fancybash
+set -g fish_history_path "$HOME/.local/share/fish/fish_history"
+
+# ── Key bindings: Ctrl+R → fancybash fh (fuzzy history search) ─────────────
+if type -q fancybash
+    bind \cr 'fancybash fh'
+end
 "#);
 
     out.push_str("\n# fancybash fish init complete\n");

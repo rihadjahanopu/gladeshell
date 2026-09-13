@@ -41,7 +41,6 @@ const C_DIM:         Color = Color::Rgb(80, 80, 110);
 const C_TEXT:        Color = Color::Rgb(210, 215, 235);
 const C_GREEN:       Color = Color::Rgb(80, 220, 140);
 const C_YELLOW:      Color = Color::Rgb(255, 210, 80);
-const C_PINK:        Color = Color::Rgb(255, 80, 160);
 const C_ACTIVE:      Color = Color::Rgb(0, 240, 180);     // ✅ active theme marker
 const C_WHITE:       Color = Color::Rgb(255, 255, 255);
 

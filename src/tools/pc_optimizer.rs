@@ -662,7 +662,7 @@ impl<'a> UtApp<'a> {
         frame.render_widget(search_bar, outer[1]);
 
         // ── 3. Table List Body ──────────────────────────────────────────────────
-        let body_chunks = Layout::default()
+        let _body_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(1), // Table Header
@@ -721,7 +721,7 @@ impl<'a> UtApp<'a> {
                 } else {
                     ""
                 };
-                let tag_color = if item.selected { C_SELECTED } else { C_GREEN };
+                let _tag_color = if item.selected { C_SELECTED } else { C_GREEN };
                 let pkg_display = format!("{:<16} {:<11}", item.generic_name, tag_str);
 
                 let pkg_span = Span::styled(
@@ -1297,7 +1297,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     const YELLOW: &str = "\x1b[1;33m";
     const CYAN:   &str = "\x1b[1;36m";
     const RED:    &str = "\x1b[1;31m";
-    const BOLD:   &str = "\x1b[1m";
     const NC:     &str = "\x1b[0m";
 
     // 1. Distro detection
@@ -1332,19 +1331,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // 3. Authenticate sudo upfront so password prompt is visible
-    println!("\n{CYAN}🔐 Requesting sudo permissions for tool installation...{NC}");
-    let sudo_ok = Command::new("sudo")
-        .arg("-v")
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false);
-
-    if !sudo_ok {
-        println!("\n{RED}❌ Sudo authentication failed or was cancelled. Installation aborted.{NC}");
-        return Ok(());
-    }
-
     let shell_name = detect_shell_name();
     let rc = rc_file_for(&shell_name);
 
@@ -1363,7 +1349,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         selected_tools,
     );
 
-    // 4. Launch UtInstallProgressApp Ratatui TUI (Installation phase)
+    // 3. Launch UtInstallProgressApp Ratatui TUI immediately (Installation phase)
     enable_raw_mode()?;
     let mut tty = open_tty();
     execute!(tty, EnterAlternateScreen)?;
@@ -1377,16 +1363,39 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let selected_indices_clone = selected_indices.clone();
 
     std::thread::spawn(move || {
-        // Update package lists
+        // Step 1: sudo auth (silent — already cached from sudo -v on first launch or just runs)
+        let _ = tx.send(InstallEvent::Log {
+            line: "🔐 Authenticating sudo...".into(),
+        });
+        let sudo_ok = Command::new("sudo")
+            .arg("-v")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !sudo_ok {
+            let _ = tx.send(InstallEvent::Log {
+                line: "❌ Sudo authentication failed. Aborting.".into(),
+            });
+            let _ = tx.send(InstallEvent::AllDone);
+            return;
+        }
+
+        // Step 2: Sync package repositories
         if let Some(cmd) = pm_clone.update_cmd() {
             let _ = tx.send(InstallEvent::Log {
-                line: "🔄 Syncing package manager repository lists...".into(),
+                line: "🔄 Syncing package repository lists...".into(),
             });
             let _ = Command::new(&cmd[0])
                 .args(&cmd[1..])
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
                 .output();
+            let _ = tx.send(InstallEvent::Log {
+                line: "✅ Package lists updated — starting installations...".into(),
+            });
         }
 
         for (step_idx, &idx) in selected_indices_clone.iter().enumerate() {

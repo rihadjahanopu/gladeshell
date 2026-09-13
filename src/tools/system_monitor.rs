@@ -227,7 +227,7 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
     }
 }
 
-fn draw_header(f: &mut Frame, app: &App, area: Rect) {
+fn draw_header(f: &mut Frame, _app: &App, area: Rect) {
     let uptime = System::uptime();
     let days = uptime / 86400;
     let hours = (uptime % 86400) / 3600;

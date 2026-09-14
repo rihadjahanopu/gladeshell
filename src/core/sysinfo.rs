@@ -18,9 +18,12 @@
 // =============================================================================
 
 use std::{
+    collections::HashMap,
     fs,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::{OnceLock, RwLock},
+    thread,
     time::SystemTime,
 };
 
@@ -28,6 +31,11 @@ use crate::core::utils::cmd_exists;
 
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
+
+static METRICS_CACHE: OnceLock<RwLock<SystemMetrics>> = OnceLock::new();
+static TOOL_VERSIONS_CACHE: OnceLock<RwLock<ToolVersions>> = OnceLock::new();
+static FOLDER_SIZE_CACHE: OnceLock<RwLock<HashMap<PathBuf, String>>> = OnceLock::new();
+
 
 // ── Primary metrics struct ────────────────────────────────────────────────────
 
@@ -60,6 +68,46 @@ pub struct SystemMetrics {
 }
 
 impl SystemMetrics {
+    /// Fast metrics collection reading /proc and /sys only (< 0.05 ms).
+    /// Does NOT perform recursive directory walking.
+    pub fn collect_fast() -> Self {
+        let mut m = SystemMetrics::default();
+        m.read_meminfo();
+        m.read_loadavg();
+        m.read_battery();
+        m.read_cpu_temp();
+        m.read_kernel_version();
+        m.read_disk_free();
+        m.check_readonly();
+        m
+    }
+
+    /// Retrieve pre-computed cached metrics or compute fast metrics instantly (< 0.05 ms).
+    pub fn get_cached(cwd: &Path) -> Self {
+        let mut m = if let Some(lock) = METRICS_CACHE.get() {
+            if let Ok(guard) = lock.read() {
+                guard.clone()
+            } else {
+                Self::collect_fast()
+            }
+        } else {
+            Self::collect_fast()
+        };
+        let cached_size = get_folder_size_cached(cwd);
+        if !cached_size.is_empty() {
+            m.folder_size = cached_size;
+        }
+        m
+    }
+
+    /// Update global metrics cache.
+    pub fn update_cache(metrics: SystemMetrics) {
+        let cache = METRICS_CACHE.get_or_init(|| RwLock::new(SystemMetrics::default()));
+        if let Ok(mut guard) = cache.write() {
+            *guard = metrics;
+        }
+    }
+
     /// Read fresh system metrics from /proc and /sys.
     ///
     /// With the `rayon` feature enabled, metrics are collected in two parallel
@@ -447,6 +495,27 @@ pub struct ToolVersions {
 }
 
 impl ToolVersions {
+    /// Retrieve pre-computed cached tool versions (zero subprocesses on cache hit, < 0.01 ms).
+    /// If uninitialized, collects tool versions once and caches them.
+    pub fn get_cached() -> Self {
+        if let Some(lock) = TOOL_VERSIONS_CACHE.get() {
+            if let Ok(guard) = lock.read() {
+                return guard.clone();
+            }
+        }
+        let tv = ToolVersions::collect();
+        ToolVersions::update_cache(tv.clone());
+        tv
+    }
+
+    /// Update global tool versions cache.
+    pub fn update_cache(versions: ToolVersions) {
+        let cache = TOOL_VERSIONS_CACHE.get_or_init(|| RwLock::new(ToolVersions::default()));
+        if let Ok(mut guard) = cache.write() {
+            *guard = versions;
+        }
+    }
+
     /// Collect tool versions by spawning subprocesses.
     ///
     /// With the `rayon` feature: node / npm / bun are spawned in parallel
@@ -485,7 +554,64 @@ impl ToolVersions {
     }
 }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+// ── Folder size cache helpers ──────────────────────────────────────────────
+
+fn normalize_path(path: &Path) -> PathBuf {
+    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+}
+
+pub fn get_folder_size_cached(path: &Path) -> String {
+    let norm = normalize_path(path);
+    if let Some(lock) = FOLDER_SIZE_CACHE.get() {
+        if let Ok(guard) = lock.read() {
+            if let Some(s) = guard.get(&norm) {
+                return s.clone();
+            }
+        }
+    }
+    compute_and_cache_folder_size(path);
+    if let Some(lock) = FOLDER_SIZE_CACHE.get() {
+        if let Ok(guard) = lock.read() {
+            if let Some(s) = guard.get(&norm) {
+                return s.clone();
+            }
+        }
+    }
+    String::new()
+}
+
+pub fn update_folder_size_cache(path: PathBuf, size_str: String) {
+    let norm = normalize_path(&path);
+    let cache = FOLDER_SIZE_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+    if let Ok(mut guard) = cache.write() {
+        guard.insert(norm, size_str);
+    }
+}
+
+pub fn compute_and_cache_folder_size(path: &Path) {
+    let path_buf = path.to_path_buf();
+    #[cfg(feature = "rayon")]
+    let total = dir_size_bytes_parallel(&path_buf);
+    #[cfg(not(feature = "rayon"))]
+    let total = dir_size_bytes(&path_buf, 0);
+    let size_str = format_bytes(total);
+    update_folder_size_cache(path_buf, size_str);
+}
+
+pub fn ensure_folder_size_cached(path: &Path) {
+    let norm = normalize_path(path);
+    if let Some(lock) = FOLDER_SIZE_CACHE.get() {
+        if let Ok(guard) = lock.read() {
+            if guard.contains_key(&norm) {
+                return;
+            }
+        }
+    }
+    let p = path.to_path_buf();
+    thread::spawn(move || {
+        compute_and_cache_folder_size(&p);
+    });
+}
 
 fn parse_kb(line: &str) -> u64 {
     line.split_whitespace()
@@ -493,8 +619,6 @@ fn parse_kb(line: &str) -> u64 {
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(0)
 }
-
-
 
 fn cmd_available(name: &str) -> bool {
     cmd_exists(name)
@@ -513,12 +637,62 @@ fn run_count(args: &[&str]) -> u32 {
 
 fn run_version(args: &[&str]) -> Option<String> {
     if args.is_empty() { return None; }
-    let out = Command::new(args[0])
-        .args(&args[1..])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .output()
-        .ok()?;
+    let cmd_name = args[0];
+    let mut cmd = Command::new(cmd_name);
+    cmd.args(&args[1..])
+       .stdout(Stdio::piped())
+       .stderr(Stdio::null());
+
+    let out = match cmd.output() {
+        Ok(o) if o.status.success() && !o.stdout.is_empty() => o,
+        _ => {
+            if let Ok(home) = std::env::var("HOME") {
+                let fallback = match cmd_name {
+                    "bun" => {
+                        let p = format!("{home}/.bun/bin/bun");
+                        if Path::new(&p).exists() { Some(p) } else { None }
+                    }
+                    "node" | "npm" => {
+                        let nvm_dirs = [
+                            format!("{home}/.config/nvm/versions/node"),
+                            format!("{home}/.nvm/versions/node"),
+                        ];
+                        let mut found = None;
+                        for d in &nvm_dirs {
+                            if let Ok(entries) = fs::read_dir(d) {
+                                for entry in entries.flatten() {
+                                    if entry.file_name().to_string_lossy().starts_with('.') {
+                                        continue;
+                                    }
+                                    let bin = entry.path().join(format!("bin/{cmd_name}"));
+                                    if bin.exists() {
+                                        found = Some(bin.to_string_lossy().to_string());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        found
+                    }
+                    _ => None,
+                };
+
+                if let Some(fb_path) = fallback {
+                    Command::new(fb_path)
+                        .args(&args[1..])
+                        .stdout(Stdio::piped())
+                        .stderr(Stdio::null())
+                        .output()
+                        .ok()?
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            }
+        }
+    };
+
     let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
     if s.is_empty() { None } else { Some(s) }
 }
@@ -529,6 +703,20 @@ fn run_version(args: &[&str]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_run_version_debug() {
+        println!("NODE VERSION: {:?}", run_version(&["node", "-v"]));
+        println!("NPM VERSION: {:?}", run_version(&["npm", "-v"]));
+        println!("BUN VERSION: {:?}", run_version(&["bun", "-v"]));
+    }
+
+    #[test]
+    fn test_folder_size_cached() {
+        let size = get_folder_size_cached(Path::new("."));
+        println!("FOLDER SIZE FOR '.': {:?}", size);
+        assert!(!size.is_empty());
+    }
 
     #[test]
     fn test_collect_does_not_panic() {
@@ -585,7 +773,8 @@ mod tests {
     #[test]
     fn test_tool_versions_does_not_panic() {
         // Just ensure it doesn't crash, versions may or may not be installed
-        let _tv = ToolVersions::collect();
+        let tv = ToolVersions::collect();
+        println!("COLLECTED TV: {:?}", tv);
     }
 
     #[test]

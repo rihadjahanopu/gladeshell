@@ -48,6 +48,7 @@ struct App {
     filtered: Vec<usize>,
     new_branch_name: String,
     log_preview: Vec<String>,
+    log_scroll: u16,
     status_msg: Option<(String, bool)>, // (msg, is_error)
 }
 
@@ -76,6 +77,7 @@ impl App {
             filtered,
             new_branch_name: String::new(),
             log_preview: Vec::new(),
+            log_scroll: 0,
             status_msg: None,
         }
     }
@@ -100,9 +102,10 @@ impl App {
     }
 
     fn fetch_log(&mut self) {
+        self.log_scroll = 0;
         if let Some(branch) = self.selected_branch() {
             let out = Command::new("git")
-                .args(["log", "--oneline", "-20", branch])
+                .args(["log", "--oneline", "-100", branch])
                 .output();
             self.log_preview = match out {
                 Ok(o) => String::from_utf8_lossy(&o.stdout).lines().map(|l| l.to_string()).collect(),
@@ -136,6 +139,17 @@ impl App {
     fn move_action_down(&mut self) {
         let i = self.action_state.selected().unwrap_or(0);
         self.action_state.select(Some((i + 1) % ACTIONS.len()));
+    }
+
+    fn scroll_log_up(&mut self, delta: u16) {
+        self.log_scroll = self.log_scroll.saturating_sub(delta);
+    }
+
+    fn scroll_log_down(&mut self, delta: u16) {
+        let max_lines = self.log_preview.len() as u16;
+        if self.log_scroll + delta < max_lines {
+            self.log_scroll += delta;
+        }
     }
 }
 
@@ -188,6 +202,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 Mode::BranchList => match (key.modifiers, key.code) {
                     (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
                         should_quit = true;
+                    }
+                    (_, KeyCode::PageUp) | (KeyModifiers::SHIFT, KeyCode::Up) | (KeyModifiers::CONTROL, KeyCode::Char('u')) | (KeyModifiers::CONTROL, KeyCode::Char('k')) => {
+                        app.scroll_log_up(3);
+                    }
+                    (_, KeyCode::PageDown) | (KeyModifiers::SHIFT, KeyCode::Down) | (KeyModifiers::CONTROL, KeyCode::Char('d')) | (KeyModifiers::CONTROL, KeyCode::Char('j')) => {
+                        app.scroll_log_down(3);
                     }
                     (_, KeyCode::Up) => app.move_branch_up(),
                     (_, KeyCode::Down) => app.move_branch_down(),
@@ -455,14 +475,20 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
                     Span::styled(rest, Style::default().fg(C_TEXT)),
                 ])
             }).collect();
+            let title_text = if app.log_scroll > 0 {
+                format!(" Git Log Preview (100 Commits) [Scroll: {}] ", app.log_scroll)
+            } else {
+                format!(" Git Log Preview (100 Commits) ")
+            };
             let preview = Paragraph::new(log_lines)
                 .wrap(Wrap { trim: false })
+                .scroll((app.log_scroll, 0))
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(C_DIM))
-                        .title(Span::styled(" Git Log Preview ", Style::default().fg(C_DIM)))
+                        .title(Span::styled(title_text, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
                         .style(Style::default().bg(C_BG)),
                 );
             f.render_widget(preview, body[1]);
@@ -475,7 +501,7 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
         Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
     } else {
         let hints = match app.mode {
-            Mode::BranchList => "↑↓ Navigate  |  Enter Select  |  Type Filter  |  Esc Quit",
+            Mode::BranchList => "↑↓ Branch  |  PgUp/PgDn (Shift+↑↓) Scroll Log  |  Enter Select  |  Esc Quit",
             Mode::ActionMenu => "↑↓ Navigate  |  Enter Run Action  |  Esc Back",
             Mode::NewBranch  => "Type name  |  Enter Create  |  Esc Cancel",
             Mode::Confirm(_) => "[Y] Confirm  |  Any Cancel",

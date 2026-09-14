@@ -4905,53 +4905,10 @@ alias fu='cd ~/Developer/fullstack'
 # --- System Maintenance ---
 unalias update 2>/dev/null
 unalias clean 2>/dev/null
-function update {
-    if [ "$EUID" -ne 0 ]; then
-        if ! sudo -n true 2>/dev/null; then
-            echo -e "\033[1;36m🔐 Sudo authentication required for system update...\033[0m"
-            sudo -v || return 1
-        fi
-    fi
-    echo -e "\033[1;36m🔄 Updating system packages...\033[0m"
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get dist-upgrade -y && sudo apt-get install -f
-    elif command -v pacman &>/dev/null; then
-        sudo pacman -Syu --noconfirm
-    elif command -v dnf &>/dev/null; then
-        sudo dnf upgrade --refresh -y
-    elif command -v brew &>/dev/null; then
-        brew update && brew upgrade
-    fi
-    if command -v flatpak &>/dev/null; then
-        echo -e "\033[1;34m📦 Updating Flatpaks...\033[0m"
-        flatpak update -y
-    fi
-    if command -v snap &>/dev/null; then
-        echo -e "\033[1;35m⚡ Refreshing Snaps...\033[0m"
-        sudo snap refresh || true
-    fi
-    echo -e "\033[1;32m✨ System update completed!\033[0m"
-}
-
-function clean {
-    echo -e "\033[1;33m🧹 Cleaning system caches...\033[0m"
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get autoremove --purge -y && sudo apt-get autoclean && sudo apt-get clean -y
-    elif command -v pacman &>/dev/null; then
-        local orphans
-        orphans=$(pacman -Qtdq 2>/dev/null)
-        [[ -n "$orphans" ]] && sudo pacman -Rns --noconfirm $orphans 2>/dev/null || true
-        sudo pacman -Sc --noconfirm
-    elif command -v dnf &>/dev/null; then
-        sudo dnf autoremove -y && sudo dnf clean all
-    elif command -v brew &>/dev/null; then
-        brew cleanup
-    fi
-    if command -v flatpak &>/dev/null; then
-        echo -e "\033[1;34m💎 Cleaning Flatpak unused data...\033[0m"
-        flatpak uninstall --unused -y && flatpak repair
-    fi
-}
+unset -f update 2>/dev/null
+unset -f clean 2>/dev/null
+alias update="fancybash update"
+alias clean="fancybash clean"
 
 alias zshrc='code ~/.zshrc'
 alias to='code .'

@@ -952,11 +952,10 @@ fn draw_running_or_done(f: &mut Frame, app: &mut CleanApp) {
     let footer_line = if is_done {
         Line::from(vec![
             Span::styled(" ✅ System Cleanup Completed! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("⚡ Auto-exiting in 2m... ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
             Span::styled("Press ", Style::default().fg(C_DIM)),
-            Span::styled("[Enter]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-            Span::styled(" or ", Style::default().fg(C_DIM)),
-            Span::styled("[q / Esc]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-            Span::styled(" to exit ", Style::default().fg(C_DIM)),
+            Span::styled("[ENTER / Q / ESC]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(" to exit immediately ", Style::default().fg(C_DIM)),
         ])
     } else {
         Line::from(vec![
@@ -1064,17 +1063,29 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     spawn_cleaner_thread(distro, selected_tasks, tx, cancel_flag.clone());
 
+    let mut done_timestamp: Option<std::time::Instant> = None;
+
     loop {
         app.tick = app.tick.wrapping_add(1);
         app.process_messages(&rx);
 
+        if app.state == AppState::Done && done_timestamp.is_none() {
+            done_timestamp = Some(std::time::Instant::now());
+        }
+
         terminal.draw(|f| draw_running_or_done(f, &mut app))?;
+
+        if let Some(done_at) = done_timestamp {
+            if done_at.elapsed() >= Duration::from_secs(120) {
+                break;
+            }
+        }
 
         if event::poll(Duration::from_millis(60))? {
             if let Event::Key(key) = event::read()? {
                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                 match key.code {
-                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => {
+                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter | KeyCode::Char(' ') => {
                         if app.state == AppState::Done {
                             break;
                         }

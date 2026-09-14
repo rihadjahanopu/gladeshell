@@ -14,7 +14,10 @@ build:
 ## install: Install fancybash binary to ~/.cargo/bin and auto-configure shell
 install:
 	cargo install --path . --force
-	@echo "\n✨ fancybash installed to ~/.cargo/bin/fancybash"
+	@mkdir -p ~/.local/bin
+	@rm -f ~/.local/bin/fancybash 2>/dev/null || true
+	@cp -f ~/.cargo/bin/fancybash ~/.local/bin/fancybash 2>/dev/null || true
+	@echo "\n✨ fancybash installed to ~/.cargo/bin/fancybash and ~/.local/bin/fancybash"
 	@echo "🔧 Auto-configuring your shell..."
 	@fancybash setup || true
 	@echo ""

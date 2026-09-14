@@ -440,8 +440,9 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
 
     // ── Dedicated renderer for "full" theme (Rich multi-segment detailed prompt) ──
     if theme.name == "full" {
-        let m = SystemMetrics::collect();
-        let tv = ToolVersions::collect();
+        let cwd_path = std::path::Path::new(cwd_raw);
+        let m = SystemMetrics::get_cached(cwd_path);
+        let tv = ToolVersions::get_cached();
 
         // Line 1: 💫 Developer 📁 2.0G [🌿 main] 🌡️ 41°C 💽 16.0G free ⚖️ 0.87 ⏱️ 3447s
         let emoji = rand_emoji(cwd_raw);
@@ -748,6 +749,26 @@ mod tests {
             let ctx = PromptContext { theme_id: i % THEMES.len(), ..Default::default() };
             render(&ctx, &mut buf).unwrap();
         }
+    }
+
+    #[test]
+    fn full_theme_render_is_under_1ms() {
+        use crate::core::sysinfo::{SystemMetrics, ToolVersions};
+        SystemMetrics::update_cache(SystemMetrics::collect_fast());
+        ToolVersions::update_cache(ToolVersions::default());
+        let mut buf = vec![0u8; 4096];
+        let ctx = PromptContext {
+            theme_id: 1, // "full" theme
+            cwd_len: 1,
+            ..Default::default()
+        };
+        let start = std::time::Instant::now();
+        for _ in 0..100 {
+            let _ = render(&ctx, &mut buf).unwrap();
+        }
+        let per_render = start.elapsed() / 100;
+        println!("Full theme render time: {:?}", per_render);
+        assert!(per_render < std::time::Duration::from_millis(1), "Full theme render took {:?}", per_render);
     }
 
     #[test]

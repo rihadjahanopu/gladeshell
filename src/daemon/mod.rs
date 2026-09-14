@@ -54,6 +54,28 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
 
+        // Spawn background SystemMetrics update thread (every 500ms)
+        let r_sys = running.clone();
+        thread::spawn(move || {
+            use crate::core::sysinfo::SystemMetrics;
+            SystemMetrics::update_cache(SystemMetrics::collect_fast());
+            while r_sys.load(Ordering::Relaxed) {
+                thread::sleep(Duration::from_millis(500));
+                SystemMetrics::update_cache(SystemMetrics::collect_fast());
+            }
+        });
+
+        // Spawn background ToolVersions update thread (every 60s)
+        let r_tools = running.clone();
+        thread::spawn(move || {
+            use crate::core::sysinfo::ToolVersions;
+            ToolVersions::update_cache(ToolVersions::collect());
+            while r_tools.load(Ordering::Relaxed) {
+                thread::sleep(Duration::from_secs(60));
+                ToolVersions::update_cache(ToolVersions::collect());
+            }
+        });
+
         let mut _conn_id = 0u64;
 
         for stream in listener.incoming() {
@@ -112,6 +134,9 @@ fn handle_client(mut stream: UnixStream, buf: &mut Vec<u8>) {
         let len = cwd_bytes.len().min(ctx.cwd.len());
         ctx.cwd[..len].copy_from_slice(&cwd_bytes[..len]);
         ctx.cwd_len = len;
+
+        // Ensure folder size is computed in background if not already cached
+        crate::core::sysinfo::ensure_folder_size_cached(cwd_path);
 
         // Refresh Git status for this client cwd
         let git_status = git::get_status(cwd_path);

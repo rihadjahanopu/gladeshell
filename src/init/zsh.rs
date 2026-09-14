@@ -136,17 +136,26 @@ _fb_precmd() {
         duration=$(( (SECONDS - _fb_timer) * 1000 ))
         _fb_timer=0
     fi
-    local sock="/tmp/fancybash_${EUID:-${UID:-1000}}.sock"
+    # Socket path must match daemon/mod.rs socket_path()
+    local sock="/tmp/fancybash_daemon.sock"
     local fd
 
     zmodload -i zsh/net/socket 2>/dev/null || true
     if zsocket "$sock" 2>/dev/null; then
         fd=$REPLY
         print -u $fd "${PWD}"$'\x1f'"${exit_code}"$'\x1f'"0"$'\x1f'"${USER}"$'\x1f'"${HOST}"$'\x1f'"${duration}"$'\x1f'"0"
-        read -u $fd PROMPT
+        # Read the FULL multiline prompt (not just first line).
+        # IFS= read -r -d '' reads until NUL or EOF, preserving all newlines.
+        local raw_prompt
+        IFS= read -r -d '' -u $fd raw_prompt
+        PROMPT="${raw_prompt}"
         exec {fd}>&-
     else
-        PROMPT=$(fancybash prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOST" 2>/dev/null)
+        # Fallback: direct binary call.
+        # Use printf to avoid $() stripping trailing newlines that carry ❯❯❯.
+        local tmp
+        tmp=$(fancybash prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOST" 2>/dev/null; printf x)
+        PROMPT="${tmp%x}"
     fi
 }
 

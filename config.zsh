@@ -311,7 +311,17 @@ unalias parse_git_branch 2>/dev/null
 function parse_git_branch {
   # Fast guard: Skip git subshell if not inside a git repository
   [[ ! -d .git ]] && ! git rev-parse --is-inside-work-tree &>/dev/null && { rm -f "$_fb_git_cache_file" 2>/dev/null; return; }
-  _fb_update_git_async
+  if [[ ! -f "$_fb_git_cache_file" ]]; then
+    local branch=$(git branch --show-current 2>/dev/null)
+    [[ -z "$branch" ]] && branch=$(git rev-parse --short HEAD 2>/dev/null)
+    if [[ -n "$branch" ]]; then
+      local dirty=""
+      [[ -n $(git status --porcelain --untracked-files=no 2>/dev/null) ]] && dirty=" ❗"
+      echo " [🌿 $branch$dirty]" > "$_fb_git_cache_file"
+    fi
+  else
+    _fb_update_git_async
+  fi
   [[ -f "$_fb_git_cache_file" ]] && cat "$_fb_git_cache_file" 2>/dev/null
 }
 
@@ -2232,192 +2242,7 @@ function uu {
 
 
 unalias uup 2>/dev/null
-function uup {
-    # --- UI Colors & Styles ---
-    local RED='\033[1;31m' GRN='\033[1;32m' YLW='\033[1;33m' BLU='\033[1;34m'
-    local PUR='\033[1;35m' CYN='\033[1;36m' BOLD='\033[1m' NC='\033[0m'
-
-    # --- OS & Package Manager Detection ---
-    local OS_TYPE=$(uname -s)
-    local PKG_MGR=""
-    if [ "$OS_TYPE" = "Linux" ]; then
-        if command -v apt &>/dev/null; then PKG_MGR="apt"
-        elif command -v pacman &>/dev/null; then PKG_MGR="pacman"
-        elif command -v dnf &>/dev/null; then PKG_MGR="dnf"
-        fi
-    elif [ "$OS_TYPE" = "Darwin" ]; then PKG_MGR="brew"; fi
-
-
-    # --- Dependency Check (fzf) ---
-    if ! command -v fzf &>/dev/null; then
-        echo -e "${YLW}🔍 fzf not found. Installing...${NC}"
-        if [ "$OS_TYPE" = "Darwin" ] || command -v brew &>/dev/null; then brew install fzf
-        elif [ "$PKG_MGR" = "apt" ]; then sudo apt update && sudo apt install fzf -y
-        elif [ "$PKG_MGR" = "pacman" ]; then sudo pacman -S fzf --noconfirm
-        elif [ "$PKG_MGR" = "dnf" ]; then sudo dnf install fzf -y
-        fi
-    fi
-
-
-    clear
-    echo ""
-    echo -e "  ${BOLD}Manager:${NC} $PKG_MGR | ${BOLD}User:${NC} $(whoami) | ${BOLD}OS:${NC} $OS_TYPE"
-    echo ""
-    # --- Step 0: Smart Selection via FZF ---
-    local tasks=(
-        "0. ALL_MAINTENANCE_TASKS"
-        "1. Core_System_Update"
-        "2. Snap_Package_Refresh"
-        "3. Flatpak_Cleanup_Update"
-        "4. Bun_Runtime_Upgrade"
-        "5. Node.js_LTS_Sync"
-        "6. Global_NPM_Update"
-        "7. Full_System_Deep_Clean"
-    )
-
-    # Fixed FZF Color Typo (#9ece6a)
-    local SELECTED_TASKS=$(printf "%s\n" "${tasks[@]}" | fzf \
-        --ansi --multi --height=18 --layout=reverse --border=rounded \
-        --prompt="⚡ Action: " --header="[TAB] Select | [ENTER] Execute" \
-        --color='bg+:#292e42,hl:#bb9af7,prompt:#7dcfff,pointer:#f7768e,marker:#9ece6a' \
-        --preview 'if [[ {1} == "0." ]]; then echo "Execute all updates and cleanup."; else echo "Action: {1}" | sed "s/_/ /g"; fi' \
-        --preview-window='up:1:wrap')
-
-    [ -z "$SELECTED_TASKS" ] && { echo -e "${RED}❌ No tasks selected. Aborting...${NC}"; return; }
-
-    # --- Sudo Keep-alive ---
-    echo -e "${YLW}🔑 Requesting sudo permission...${NC}"
-    sudo -v || return
-    (while true; do sudo -n true; sleep 60; done) 2>/dev/null &
-    local SUDO_PID=$!
-    trap "kill $SUDO_PID 2>/dev/null" EXIT INT TERM
-
-    # --- Execute All Logic ---
-    if [[ "$SELECTED_TASKS" == *"0. ALL_MAINTENANCE_TASKS"* ]]; then
-        SELECTED_TASKS=$(printf "%s\n" "${tasks[@]}")
-    fi
-
-    # 1. OS Core
-    if [[ "$SELECTED_TASKS" == *"1. Core_System_Update"* ]]; then
-        echo -e "\n${BOLD}${YLW}🔍 [1/7] Updating OS Core ($PKG_MGR)...${NC}"
-        echo ""
-        case "$PKG_MGR" in
-            apt) sudo apt update && sudo apt upgrade -y ;;
-            pacman) sudo pacman -Syu --noconfirm ;;
-            dnf) sudo dnf upgrade --refresh -y ;;
-            brew) brew update && brew upgrade ;;
-        esac
-    fi
-
-    # 2. Snap
-    if [[ "$SELECTED_TASKS" == *"2. Snap_Package_Refresh"* ]]; then
-        echo -e "\n${BOLD}${GRN}📦 [2/7] Checking Snap Environment...${NC}"
-        echo ""
-        if ! command -v snap &>/dev/null; then
-            echo -e "  ${YLW}⚠ Snap is not installed on this system. Skipping...${NC}"
-        else
-            local sc=$(snap refresh --list 2>/dev/null)
-            [[ -n "$sc" && "$sc" != *"up to date"* ]] && sudo snap refresh || echo -e "  ${BLU}ℹ Snaps are up-to-date.${NC}"
-        fi
-    fi
-
-    # 3. Flatpak
-    if [[ "$SELECTED_TASKS" == *"3. Flatpak_Cleanup_Update"* ]]; then
-        echo -e "\n${BOLD}${CYN}💎 [3/7] Checking Flatpak Environment...${NC}"
-        echo ""
-        if ! command -v flatpak &>/dev/null; then
-            echo -e "  ${YLW}⚠ Flatpak is not installed on this system. Skipping...${NC}"
-        else
-            local f_updates=$(flatpak remote-ls --updates 2>/dev/null)
-            if [ -z "$f_updates" ]; then
-                echo -e "  ${BLU}No Flatpak updates available. Skipping...${NC}"
-            else
-                flatpak update -y
-                echo -e "  ${GRN}✅ Flatpak updated!${NC}"
-            fi
-            flatpak uninstall --unused -y &>/dev/null
-        fi
-    fi
-
-    # 4. Bun
-    if [[ "$SELECTED_TASKS" == *"4. Bun_Runtime_Upgrade"* ]]; then
-        echo -e "\n${BOLD}${CYN}🥬 [4/7] Upgrading Bun Runtime...${NC}"
-        echo ""
-        if command -v bun &>/dev/null; then
-            bun upgrade
-        else
-            echo -e "  ${YLW}⚠ Bun is not installed. Skipping...${NC}"
-        fi
-    fi
-
-    # 5. Node.js
-    if [[ "$SELECTED_TASKS" == *"5. Node.js_LTS_Sync"* ]]; then
-        echo -e "\n${BOLD}${PUR}🟢 [5/7] Syncing Node.js (LTS Version)...${NC}"
-        echo ""
-        local NVM_PATH="${NVM_DIR:-$HOME/.nvm}/nvm.sh"
-        if [ -f "$NVM_PATH" ]; then
-            source "$NVM_PATH"
-            nvm install --lts --reinstall-packages-from=node
-            nvm use --lts
-            nvm alias default 'lts/*'
-        else
-            echo -e "  ${YLW}⚠ NVM/Node not found. Skipping...${NC}"
-        fi
-    fi
-
-    # 6. Global NPM
-    if [[ "$SELECTED_TASKS" == *"6. Global_NPM_Update"* ]]; then
-        echo -e "\n${BOLD}${YLW}✨ [6/7] Finalizing NPM Update...${NC}"
-        echo ""
-        if command -v npm &>/dev/null; then
-            npm install -g npm@latest
-        else
-            echo -e "  ${YLW}⚠ NPM is not installed. Skipping...${NC}"
-        fi
-    fi
-
-    # --- 8. Full Deep Clean (Now including Snap & Flatpak) ---
-    if [[ "$SELECTED_TASKS" == *"7. Full_System_Deep_Clean"* ]]; then
-        echo -e "\n${BOLD}${RED}📦 [7/7] Full System Deep Cleaning...${NC}"
-        echo ""
-        # OS Native Clean
-        case "$PKG_MGR" in
-            apt) sudo apt autoremove -y && sudo apt autoclean ;;
-            pacman) sudo pacman -Rns $(pacman -Qtdq) --noconfirm 2>/dev/null || echo -e "  ${BLU}ℹ No orphans.${NC}" ;;
-            dnf) sudo dnf autoremove -y ;;
-            brew) brew cleanup ;;
-        esac
-
-        # Snap Clean
-        if command -v snap &>/dev/null; then
-            echo -e "  ${CYN}📦 Cleaning old Snap revisions...${NC}"
-            LANG=C snap list --all | awk '/disabled/{print $1, $3}' | while read sn rv; do sudo snap remove "$sn" --revision="$rv"; done
-        fi
-
-        # Flatpak Deep Clean (NEW)
-        if command -v flatpak &>/dev/null; then
-            echo ""
-            echo -e "${CYN}💎 Cleaning Flatpak unused runtimes & cache...${NC}"
-            flatpak uninstall --unused -y &>/dev/null
-            flatpak repair --user &>/dev/null
-            flatpak repair &>/dev/null
-            # Cleaning flatpak cache
-            rm -rf ~/.var/app/*/cache/* &>/dev/null
-            echo -e "  ${GRN}✅ Flatpak cleaned.${NC}"
-        fi
-    fi
-
-    echo -e "\n${PUR}─────────────────────────────────────────────────────────────${NC}"
-    echo -e "  ${BOLD}${GRN}✅ MISSION ACCOMPLISHED! YOUR PC IS NOW AT MAX POWER.${NC}"
-    echo -e "${PUR}─────────────────────────────────────────────────────────────${NC}"
-
-    # Notification (Fixed Multi-OS)
-    if [ "$OS_TYPE" = "Darwin" ]; then
-        osascript -e 'display notification "System optimized successfully" with title "uup Tool"' 2>/dev/null
-    elif command -v notify-send &>/dev/null; then
-        notify-send "uup Tool" "All selected updates completed successfully."
-    fi
-}
+alias uup="fancybash uup"
 
 
 
@@ -2968,7 +2793,10 @@ function v {
 
 
 unalias uc 2>/dev/null
-function uc {
+unfunction uc 2>/dev/null
+alias uc="fancybash uc"
+
+function _legacy_uc {
     # ==============================
     # 🎨 COLORS & SAFETY
     # ==============================
@@ -3096,6 +2924,9 @@ function uc {
         fi
         return 0
     }
+
+    # Prompt for sudo authentication upfront
+    _sudo_check
 
     unalias _pkg_install 2>/dev/null
     function _pkg_install {
@@ -5075,6 +4906,12 @@ alias fu='cd ~/Developer/fullstack'
 unalias update 2>/dev/null
 unalias clean 2>/dev/null
 function update {
+    if [ "$EUID" -ne 0 ]; then
+        if ! sudo -n true 2>/dev/null; then
+            echo -e "\033[1;36m🔐 Sudo authentication required for system update...\033[0m"
+            sudo -v || return 1
+        fi
+    fi
     echo -e "\033[1;36m🔄 Updating system packages...\033[0m"
     if command -v apt-get &>/dev/null; then
         sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get dist-upgrade -y && sudo apt-get install -f
@@ -5091,8 +4928,9 @@ function update {
     fi
     if command -v snap &>/dev/null; then
         echo -e "\033[1;35m⚡ Refreshing Snaps...\033[0m"
-        sudo snap refresh 2>/dev/null || true
+        sudo snap refresh || true
     fi
+    echo -e "\033[1;32m✨ System update completed!\033[0m"
 }
 
 function clean {

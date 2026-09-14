@@ -87,11 +87,14 @@ rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
 ureq = { version = "2.9", optional = true }
 
+# Data parallelism — parallel metric collection & file search
+rayon = { version = "1.10", optional = true }
+
 # ── Feature Flags ─────────────────────────────────────────────────────────────
 [features]
 default = ["prompt-engine", "tools"]
 # Enable heavy Phase-2 prompt engine (git + async)
-prompt-engine = ["gix"]
+prompt-engine = ["gix", "rayon"]
 # Enable Phase-4 tool subcommands
 tools = [
     "sysinfo",
@@ -116,6 +119,7 @@ tools = [
     "rand",
     "rand_chacha",
     "ureq",
+    "rayon",
 ]
 # Convenience: all features
 full = ["prompt-engine", "tools"]

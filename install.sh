@@ -63,7 +63,7 @@ spinner() {
 # ─── Progress Bar ──────────────────────────
 draw_progress_bar() {
     local current=$1
-    local total=5
+    local total=6
     local width=30
     local percentage=$((current * 100 / total))
     local completed=$((width * current / total))
@@ -354,39 +354,61 @@ backup_bashrc() {
 }
 
 # ─── Install / Verify Rust Binary ──────────
+_copy_binary_to_dirs() {
+    local src="$1"
+    local local_bin="$HOME/.local/bin"
+    local cargo_bin="$HOME/.cargo/bin"
+    mkdir -p "$local_bin"
+    cp "$src" "$local_bin/fancybash"
+    chmod +x "$local_bin/fancybash"
+    export PATH="$local_bin:$PATH"
+    # Also copy to ~/.cargo/bin if cargo is installed (rustup puts it in PATH)
+    if command -v cargo >/dev/null 2>&1 || [ -d "$cargo_bin" ]; then
+        mkdir -p "$cargo_bin"
+        cp "$src" "$cargo_bin/fancybash"
+        chmod +x "$cargo_bin/fancybash"
+        export PATH="$cargo_bin:$PATH"
+        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC} and ${PURPLE}%s/fancybash${NC}\n" "$local_bin" "$cargo_bin"
+    else
+        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC}\n" "$local_bin"
+    fi
+    # Show version
+    local ver
+    ver=$("$local_bin/fancybash" --version 2>/dev/null || echo "unknown")
+    printf "  ${CYAN}ℹ${NC} Version: ${BOLD}%s${NC}\n" "$ver"
+}
+
 setup_rust_binary() {
     printf "  ${CYAN}➜${NC} Installing fancybash Rust engine binary...\n"
-    local bin_dir="$HOME/.local/bin"
-    mkdir -p "$bin_dir"
-    export PATH="$bin_dir:$PATH"
 
     # 1. Local pre-built binary in target/release
     if [ -f "$SCRIPT_DIR/target/release/fancybash" ]; then
-        cp "$SCRIPT_DIR/target/release/fancybash" "$bin_dir/fancybash"
-        chmod +x "$bin_dir/fancybash"
-        printf "  ${GREEN}✔${NC} Installed local release binary to ${PURPLE}%s/fancybash${NC}\n" "$bin_dir"
+        printf "  ${CYAN}⚡ Found local release binary — installing...${NC}\n"
+        _copy_binary_to_dirs "$SCRIPT_DIR/target/release/fancybash"
         return 0
     fi
 
-    # 2. Local Rust source build via cargo
+    # 2. Build from local source if Cargo.toml exists
     if [ -f "$SCRIPT_DIR/Cargo.toml" ] && command -v cargo >/dev/null 2>&1; then
-        printf "  ${YELLOW}⚡ Building fancybash Rust engine (release mode)...${NC}\n"
-        (cd "$SCRIPT_DIR" && cargo build --release)
-        if [ -f "$SCRIPT_DIR/target/release/fancybash" ]; then
-            cp "$SCRIPT_DIR/target/release/fancybash" "$bin_dir/fancybash"
-            chmod +x "$bin_dir/fancybash"
-            printf "  ${GREEN}✔${NC} Built & installed to ${PURPLE}%s/fancybash${NC}\n" "$bin_dir"
-            return 0
+        printf "  ${YELLOW}⚡ Building fancybash from source (release mode)...${NC}\n"
+        if (cd "$SCRIPT_DIR" && cargo build --release 2>&1); then
+            if [ -f "$SCRIPT_DIR/target/release/fancybash" ]; then
+                _copy_binary_to_dirs "$SCRIPT_DIR/target/release/fancybash"
+                return 0
+            fi
         fi
+        printf "  ${RED}✗ cargo build failed.${NC}\n"
     fi
 
-    # 3. Existing system binary
+    # 3. Already installed on system PATH
     if command -v fancybash >/dev/null 2>&1; then
-        printf "  ${GREEN}✔${NC} fancybash binary active: $(command -v fancybash)\n"
+        local ver
+        ver=$(fancybash --version 2>/dev/null || echo "unknown")
+        printf "  ${GREEN}✔${NC} fancybash already installed: $(command -v fancybash) (${CYAN}%s${NC})\n" "$ver"
         return 0
     fi
 
-    # 4. Fallback cargo install from Git
+    # 4. Last resort: cargo install from GitHub
     if command -v cargo >/dev/null 2>&1; then
         printf "  ${YELLOW}⚡ Installing via cargo from GitHub...${NC}\n"
         cargo install --git https://github.com/rihadjahanopu/fancybash-rs --quiet 2>/dev/null || true
@@ -396,7 +418,7 @@ setup_rust_binary() {
         fi
     fi
 
-    printf "  ${YELLOW}⚠ Could not auto-build Rust binary. Please install Rust (cargo) and build manually.${NC}\n"
+    printf "  ${YELLOW}⚠ Could not install fancybash binary. Please run: cargo build --release${NC}\n"
 }
 
 # ─── Fetch & Append Config ─────────────────

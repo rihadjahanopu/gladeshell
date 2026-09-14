@@ -38,7 +38,10 @@ __fb_prompt() {
         _fb_timer_start=0
     fi
     _fb_auto_ls
-    PS1=$(fancybash prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null)
+    # Use printf x trick so $() doesn't strip trailing newlines that carry ❯❯❯
+    local _fb_raw
+    _fb_raw=$(fancybash prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)
+    PS1="${_fb_raw%x}"
 }
 
 PROMPT_COMMAND="__fb_prompt"

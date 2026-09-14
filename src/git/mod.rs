@@ -24,6 +24,8 @@ use std::sync::{Arc, Mutex};
 /// Cached result of a Git status query.
 #[derive(Debug, Clone, Default)]
 pub struct GitStatus {
+    /// Absolute path of the working directory this status belongs to.
+    pub path: std::path::PathBuf,
     /// Current branch name, or short SHA if detached HEAD.
     pub branch: String,
     /// True if working tree or index has uncommitted changes.
@@ -40,10 +42,7 @@ pub struct GitStatus {
 
 // ── Global atomic cache ───────────────────────────────────────────────────────
 
-/// Thread-safe, lock-free Git status cache.
-///
-/// Phase 2 uses ArcSwap for wait-free reads on the prompt thread.
-/// Phase 1 uses a simple Mutex for correctness; will be replaced.
+/// Thread-safe Git status cache.
 static GIT_STATUS_CACHE: std::sync::OnceLock<Arc<Mutex<GitStatus>>> =
     std::sync::OnceLock::new();
 
@@ -57,18 +56,27 @@ fn cache() -> &'static Arc<Mutex<GitStatus>> {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/// Read cached git status for `cwd`. If the cached path matches `cwd`, returns the cached result.
+/// Otherwise, queries Git status for `cwd`, updates the cache, and returns it.
+pub fn get_status(cwd: &std::path::Path) -> GitStatus {
+    if let Ok(guard) = cache().lock() {
+        if guard.path == cwd && !guard.path.as_os_str().is_empty() {
+            return guard.clone();
+        }
+    }
+    let status = query_git_status(cwd);
+    if let Ok(mut guard) = cache().lock() {
+        *guard = status.clone();
+    }
+    status
+}
+
 /// Read the current cached Git status (instant — no I/O).
-///
-/// Returns `None` if the cache has never been populated (first call before
-/// the background thread has run).
 pub fn read_cached() -> GitStatus {
     cache().lock().unwrap_or_else(|e| e.into_inner()).clone()
 }
 
-/// Trigger an async Git status refresh for `cwd`.
-///
-/// Phase 1: Runs inline (blocking) for correctness.
-/// Phase 2: Dispatches to the background `gix`-powered updater thread.
+/// Trigger a Git status refresh for `cwd`.
 pub fn refresh(cwd: &std::path::Path) {
     let status = query_git_status(cwd);
     if let Ok(mut guard) = cache().lock() {
@@ -76,68 +84,53 @@ pub fn refresh(cwd: &std::path::Path) {
     }
 }
 
-// ── Git query (Phase 1: pure-std fallback) ────────────────────────────────────
+// ── Git query ─────────────────────────────────────────────────────────────────
 
-/// Discover and query Git status using pure-std file reading (no subprocesses).
-///
-/// Phase 1 reads `.git/HEAD` and `.git/index` directly to avoid any fork.
-/// Phase 2 replaces this with `gix` for complete, accurate, and faster results.
+/// Discover and query Git status.
 fn query_git_status(cwd: &std::path::Path) -> GitStatus {
-    #[cfg(feature = "gix")]
-    {
-        if let Ok(repo) = gix::discover(cwd) {
-            let branch = if let Ok(head) = repo.head() {
-                if let Some(name) = head.referent_name() {
-                    name.shorten().to_string()
-                } else if let Some(id) = head.id() {
-                    id.to_hex_with_len(7).to_string()
-                } else {
-                    String::new()
-                }
-            } else {
-                String::new()
-            };
-
-            let dirty = is_dirty(repo.git_dir());
-
-            return GitStatus {
-                branch,
-                dirty,
-                ahead: false,
-                behind: false,
-                stash_count: 0,
-                is_git_repo: true,
-            };
-        }
-    }
-
-    // Walk up from cwd to find .git directory (fallback)
-    let git_dir = find_git_dir(cwd);
-    let git_dir = match git_dir {
+    let git_dir = match find_git_dir(cwd) {
         Some(d) => d,
-        None => return GitStatus::default(),
+        None => return GitStatus { path: cwd.to_path_buf(), ..Default::default() },
     };
 
     let branch = read_head(&git_dir);
-    let dirty = is_dirty(&git_dir);
+    let dirty = is_dirty(&git_dir, cwd);
 
     GitStatus {
+        path: cwd.to_path_buf(),
         branch,
         dirty,
-        ahead: false,       // Phase 2: parse FETCH_HEAD / packed-refs
+        ahead: false,
         behind: false,
-        stash_count: 0,     // Phase 2: count refs/stash
+        stash_count: 0,
         is_git_repo: true,
     }
 }
 
-/// Walk up the directory tree to find a `.git` directory or file.
+/// Walk up the directory tree to find a `.git` directory or file (worktree/submodule).
 fn find_git_dir(start: &std::path::Path) -> Option<std::path::PathBuf> {
     let mut current = start.to_path_buf();
     loop {
         let candidate = current.join(".git");
         if candidate.exists() {
-            return Some(candidate);
+            if candidate.is_file() {
+                // Worktree or submodule: parse "gitdir: <path>"
+                if let Ok(content) = std::fs::read_to_string(&candidate) {
+                    if let Some(line) = content.lines().next() {
+                        if let Some(path_str) = line.strip_prefix("gitdir:") {
+                            let trimmed = path_str.trim();
+                            let git_path = std::path::PathBuf::from(trimmed);
+                            if git_path.is_absolute() {
+                                return Some(git_path);
+                            } else {
+                                return Some(current.join(git_path));
+                            }
+                        }
+                    }
+                }
+            } else {
+                return Some(candidate);
+            }
         }
         if !current.pop() {
             return None;
@@ -158,23 +151,32 @@ fn read_head(git_dir: &std::path::Path) -> String {
     let content = content.trim();
     if let Some(branch) = content.strip_prefix("ref: refs/heads/") {
         branch.to_owned()
+    } else if let Some(tag) = content.strip_prefix("ref: refs/tags/") {
+        tag.to_owned()
     } else {
         // Detached HEAD — show short SHA
         content.chars().take(7).collect()
     }
 }
 
-/// Heuristic dirty check: compare `.git/index` mtime against the git dir mtime.
-///
-/// Phase 2 replaces this with `gix`'s precise status API.
-fn is_dirty(git_dir: &std::path::Path) -> bool {
+/// Check if repository has uncommitted changes.
+fn is_dirty(git_dir: &std::path::Path, cwd: &std::path::Path) -> bool {
     let index = git_dir.join("index");
-    // If index doesn't exist, repo might be freshly initialised (clean).
     if !index.exists() {
         return false;
     }
-    // Phase 1 heuristic: always report "not dirty" to avoid false positives.
-    // Phase 2: use gix::Repository::status() for accuracy.
+
+    let output = std::process::Command::new("git")
+        .args(["status", "--porcelain", "--untracked-files=no"])
+        .current_dir(cwd)
+        .output();
+
+    if let Ok(out) = output {
+        if out.status.success() {
+            return !out.stdout.is_empty();
+        }
+    }
+
     false
 }
 
@@ -193,18 +195,21 @@ mod tests {
 
     #[test]
     fn find_git_dir_finds_this_repo() {
-        // The fancybash-rs repo itself has a .git directory.
         let cwd = std::env::current_dir().unwrap();
-        // It may or may not exist depending on test environment, so just
-        // ensure the function doesn't panic.
         let _ = find_git_dir(&cwd);
     }
 
     #[test]
     fn cache_readable_before_refresh() {
-        // Should return default (empty) status without panicking.
         let s = read_cached();
-        // Either in a git repo (CI) or not — both are valid.
         let _ = s.is_git_repo;
+    }
+
+    #[test]
+    fn get_status_detects_current_repo() {
+        let cwd = std::env::current_dir().unwrap();
+        let status = get_status(&cwd);
+        assert!(status.is_git_repo);
+        assert!(!status.branch.is_empty());
     }
 }

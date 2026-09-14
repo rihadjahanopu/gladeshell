@@ -65,6 +65,9 @@ pub fn clean_rc_file() -> std::io::Result<()> {
     fs::write(&tmp_path, final_content)?;
     fs::rename(&tmp_path, &rc_path)?;
 
+    // Remove stale compiled bytecode so zsh doesn't load old cached config
+    let _ = fs::remove_file(PathBuf::from(&home).join(".zshrc.zwc"));
+
     Ok(())
 }
 

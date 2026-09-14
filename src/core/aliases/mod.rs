@@ -128,6 +128,9 @@ impl AliasFile {
                 match shell {
                     Shell::Bash | Shell::Zsh => {
                         let escaped_val = entry.value.replace('\'', "'\\''");
+                        if shell == Shell::Zsh {
+                            out.push_str(&format!("unfunction {} 2>/dev/null\n", entry.key));
+                        }
                         if entry.description.is_empty() {
                             out.push_str(&format!(
                                 "alias {}='{}'\n",

@@ -5,7 +5,7 @@
 use super::socket_path;
 use crate::core::prompt::{self, PromptContext};
 use crate::git;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufReader, Write};
 use std::time::Duration;
 
 #[cfg(unix)]
@@ -32,9 +32,10 @@ pub fn request_prompt(
         let req = format!("{cwd}\x1f{exit_code}\x1f{theme_id}\x1f{user}\x1f{host}\x1f{cmd_duration_ms}\x1f{shell}\n");
         stream.write_all(req.as_bytes())?;
 
+        use std::io::Read;
         let mut reader = BufReader::new(stream);
         let mut response = String::new();
-        reader.read_line(&mut response)?;
+        reader.read_to_string(&mut response)?;
 
         return Ok(response);
     }
@@ -77,7 +78,8 @@ pub fn render_fallback(
     ctx.host_len = hlen;
 
     // Check git status synchronously
-    let status = git::read_cached();
+    let cwd_path = std::path::Path::new(cwd);
+    let status = git::get_status(cwd_path);
     if status.is_git_repo {
         let branch_bytes = status.branch.as_bytes();
         let blen = branch_bytes.len().min(ctx.git_branch.len());

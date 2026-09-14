@@ -12,6 +12,20 @@ fn cmd_exists(name: &str) -> bool {
 pub fn run() -> Result<(), Box<dyn Error>> {
     println!("\x1b[1;36m🔄 Updating system packages...\x1b[0m");
 
+    let needs_sudo = cmd_exists("apt-get") || cmd_exists("pacman") || cmd_exists("dnf") || cmd_exists("snap");
+    if needs_sudo {
+        let is_cached = Command::new("sudo")
+            .args(["-n", "true"])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !is_cached {
+            println!("\x1b[1;36m🔐 Sudo authentication required for system update...\x1b[0m");
+            let _ = Command::new("sudo").arg("-v").status();
+        }
+    }
+
     if cmd_exists("apt-get") {
         let _ = Command::new("sh")
             .args(["-c", "sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get dist-upgrade -y && sudo apt-get install -f"])
@@ -39,8 +53,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     if cmd_exists("snap") {
         println!("\x1b[1;35m⚡ Refreshing Snaps...\x1b[0m");
-        let _ = Command::new("sh")
-            .args(["-c", "sudo snap refresh 2>/dev/null || true"])
+        let _ = Command::new("sudo")
+            .args(["snap", "refresh"])
             .status();
     }
 

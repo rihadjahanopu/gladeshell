@@ -15,6 +15,7 @@
 // =============================================================================
 
 use std::os::raw::c_char;
+use crate::core::sysinfo::{cmd_duration_display, time_date, SystemMetrics, ToolVersions};
 
 // ── Color encoding helpers ────────────────────────────────────────────────────
 
@@ -192,6 +193,29 @@ fn write_bytes(dst: &mut [u8], offset: &mut usize, src: &[u8]) -> bool {
 #[inline(always)]
 fn write_str(dst: &mut [u8], offset: &mut usize, s: &str) -> bool {
     write_bytes(dst, offset, s.as_bytes())
+}
+
+/// Write user-visible content, escaping `%` → `%%` for zsh PROMPT_PERCENT.
+/// In zsh PROMPT, a bare `%` followed by any character (including `\n`) is
+/// treated as an escape sequence, swallowing the character after it.
+/// Use this for all dynamic text (battery, load, etc.) — never for ANSI wrappers.
+#[inline]
+fn write_content(dst: &mut [u8], offset: &mut usize, s: &str, shell: u8) -> bool {
+    if shell == 0 {
+        // zsh: escape every literal `%` as `%%`
+        for ch in s.chars() {
+            if ch == '%' {
+                if !write_bytes(dst, offset, b"%%") { return false; }
+            } else {
+                let mut tmp = [0u8; 4];
+                let enc = ch.encode_utf8(&mut tmp);
+                if !write_bytes(dst, offset, enc.as_bytes()) { return false; }
+            }
+        }
+        true
+    } else {
+        write_bytes(dst, offset, s.as_bytes())
+    }
 }
 
 // ── ANSI helpers ──────────────────────────────────────────────────────────────
@@ -413,6 +437,97 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
     let mut off = 0usize;
     let s = ctx.shell;
     let cwd_raw = std::str::from_utf8(&ctx.cwd[..ctx.cwd_len]).unwrap_or("~");
+
+    // ── Dedicated renderer for "full" theme (Rich multi-segment detailed prompt) ──
+    if theme.name == "full" {
+        let m = SystemMetrics::collect();
+        let tv = ToolVersions::collect();
+
+        // Line 1: 💫 Developer 📁 2.0G [🌿 main] 🌡️ 41°C 💽 16.0G free ⚖️ 0.87 ⏱️ 3447s
+        let emoji = rand_emoji(cwd_raw);
+        if !emoji.is_empty() {
+            write_str(buf, &mut off, emoji);
+            write_str(buf, &mut off, " ");
+        }
+
+        let path_color = a8(rand_color(ctx.cwd_len));
+        write_theme_color(buf, &mut off, path_color, s);
+        let cwd_short = format_short_cwd(cwd_raw);
+        write_str(buf, &mut off, cwd_short);
+        write_ansi(buf, &mut off, RESET, s);
+
+        if !m.folder_size.is_empty() {
+            write_str(buf, &mut off, " ");
+            write_str(buf, &mut off, &m.folder_display());
+        }
+
+        if ctx.git_branch_len > 0 {
+            write_str(buf, &mut off, " ");
+            write_theme_color(buf, &mut off, theme.git_color, s);
+            write_str(buf, &mut off, "[🌿 ");
+            let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
+            write_str(buf, &mut off, branch);
+            if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
+            write_str(buf, &mut off, "]");
+            write_ansi(buf, &mut off, RESET, s);
+        }
+
+        if m.cpu_temp_c.is_some() {
+            write_str(buf, &mut off, &m.cpu_temp_display());
+        }
+        if m.disk_free_gib > 0.0 {
+            write_str(buf, &mut off, &m.disk_display());
+        }
+        write_str(buf, &mut off, &m.load_display());
+
+        let duration_str = cmd_duration_display(ctx.cmd_duration_ms / 1000);
+        if !duration_str.is_empty() {
+            write_str(buf, &mut off, &duration_str);
+        }
+
+        write_str(buf, &mut off, "\n");
+
+        // Line 2: 🟢 24.20.0 | 📦 12.0.2 | 🥐 1.4.2 | 🐧 6.18 | 📅 Sep 14 | 🧠 3.8G/7.7G | 🔋 100%
+        let mut first = true;
+        let mut add_item = |text: &str| {
+            if text.is_empty() { return; }
+            if !first {
+                let _ = write_str(buf, &mut off, " | ");
+            }
+            // Use write_content to escape `%` → `%%` for zsh PROMPT_PERCENT.
+            // Without this, `🔋100%` followed by `\n` makes zsh treat `%\n`
+            // as an escape sequence, swallowing the newline → ❯❯❯ appears
+            // on the same line as the battery percentage.
+            let _ = write_content(buf, &mut off, text, s);
+            first = false;
+        };
+
+        let node_str = tv.node.strip_prefix("🟢 v").map(|v| format!("🟢 {v}")).unwrap_or_else(|| tv.node.clone());
+        let npm_str = tv.npm.strip_prefix("📦 v").map(|v| format!("📦 {v}")).unwrap_or_else(|| tv.npm.clone());
+        let bun_str = tv.bun.strip_prefix("🥐 v").map(|v| format!("🥐 {v}")).unwrap_or_else(|| tv.bun.clone());
+
+        add_item(&node_str);
+        add_item(&npm_str);
+        add_item(&bun_str);
+        add_item(&m.kernel_display());
+        add_item(&time_date());
+        add_item(&m.mem_display());
+        add_item(&m.battery_display());
+
+        write_str(buf, &mut off, "\n");
+
+        // Line 3: ❯❯❯ 
+        if ctx.last_exit == 0 {
+            write_ansi(buf, &mut off, "\x1b[1;32m", s);
+        } else {
+            write_ansi(buf, &mut off, "\x1b[1;31m", s);
+        }
+        write_str(buf, &mut off, theme.prompt_char);
+        write_ansi(buf, &mut off, RESET, s);
+        write_str(buf, &mut off, " ");
+
+        return Ok(off);
+    }
 
     // ── Line 1 ───────────────────────────────────────────────────────────────
 

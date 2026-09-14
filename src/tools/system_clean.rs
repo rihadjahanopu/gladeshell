@@ -38,6 +38,19 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let bytes_freed = clean_temp_directories();
     println!("\x1b[1;36m💾 Cleared ~{} KB of temporary file caches\x1b[0m", bytes_freed / 1024);
 
+    if cmd_exists("apt-get") || cmd_exists("pacman") || cmd_exists("dnf") {
+        let is_cached = Command::new("sudo")
+            .args(["-n", "true"])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !is_cached {
+            println!("\x1b[1;36m🔐 Sudo authentication required for package cache cleanup...\x1b[0m");
+            let _ = Command::new("sudo").arg("-v").status();
+        }
+    }
+
     if cmd_exists("apt-get") {
         let _ = Command::new("sudo").args(["apt-get", "autoclean"]).status();
     } else if cmd_exists("pacman") {

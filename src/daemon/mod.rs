@@ -45,18 +45,16 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         // Spawn background Git status update thread
         let r = running.clone();
         thread::spawn(move || {
-            let mut last_cwd = PathBuf::new();
             while r.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(500));
-                let current_cwd = std::env::current_dir().unwrap_or_default();
-                if current_cwd != last_cwd {
-                    git::refresh(&current_cwd);
-                    last_cwd = current_cwd;
+                let cached_path = git::read_cached().path;
+                if !cached_path.as_os_str().is_empty() {
+                    git::refresh(&cached_path);
                 }
             }
         });
 
-        let mut buf = vec![0u8; 4096];
+        let mut _conn_id = 0u64;
 
         for stream in listener.incoming() {
             if !running.load(Ordering::Relaxed) {
@@ -65,7 +63,13 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
             match stream {
                 Ok(stream) => {
-                    handle_client(stream, &mut buf);
+                    _conn_id += 1;
+                    // Each client is handled in its own thread so the main
+                    // accept loop is never blocked by prompt rendering.
+                    thread::spawn(move || {
+                        let mut buf = vec![0u8; 4096];
+                        handle_client(stream, &mut buf);
+                    });
                 }
                 Err(e) => {
                     eprintln!("Socket error: {e}");
@@ -88,7 +92,7 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(unix)]
-fn handle_client(mut stream: UnixStream, buf: &mut [u8]) {
+fn handle_client(mut stream: UnixStream, buf: &mut Vec<u8>) {
     let mut reader = BufReader::new(&stream);
     let mut line = String::new();
 
@@ -102,13 +106,15 @@ fn handle_client(mut stream: UnixStream, buf: &mut [u8]) {
     let mut ctx = PromptContext::default();
 
     if !parts.is_empty() {
-        let cwd_bytes = parts[0].as_bytes();
+        let cwd_str = parts[0];
+        let cwd_path = std::path::Path::new(cwd_str);
+        let cwd_bytes = cwd_str.as_bytes();
         let len = cwd_bytes.len().min(ctx.cwd.len());
         ctx.cwd[..len].copy_from_slice(&cwd_bytes[..len]);
         ctx.cwd_len = len;
 
-        // Refresh Git status for this cwd asynchronously / check cache
-        let git_status = git::read_cached();
+        // Refresh Git status for this client cwd
+        let git_status = git::get_status(cwd_path);
         if git_status.is_git_repo {
             let branch_bytes = git_status.branch.as_bytes();
             let blen = branch_bytes.len().min(ctx.git_branch.len());
@@ -145,6 +151,10 @@ fn handle_client(mut stream: UnixStream, buf: &mut [u8]) {
         let hlen = h_bytes.len().min(ctx.host.len());
         ctx.host[..hlen].copy_from_slice(&h_bytes[..hlen]);
         ctx.host_len = hlen;
+    }
+
+    if parts.len() > 5 {
+        ctx.cmd_duration_ms = parts[5].parse::<u64>().unwrap_or(0);
     }
 
     if parts.len() > 6 {

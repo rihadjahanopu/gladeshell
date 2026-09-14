@@ -170,4 +170,3 @@ opt-level = 1
 opt-level     = 3
 lto           = true
 codegen-units = 1
-panic         = "unwind"   # criterion requires unwind (overrides release's "abort")

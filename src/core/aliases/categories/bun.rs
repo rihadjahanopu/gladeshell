@@ -31,6 +31,24 @@ pub fn group() -> AliasGroup {
                 description: "Start production server with Bun".to_string(),
                 only_shells: vec![],
             },
+            AliasEntry {
+                key: "html".to_string(),
+                value: "bun run index.html".to_string(),
+                description: "Serve / run index.html with Bun".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "w".to_string(),
+                value: "bun --watch".to_string(),
+                description: "Run file in watch mode with Bun".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "bhot".to_string(),
+                value: "bun --hot".to_string(),
+                description: "Run file with Bun hot-reloading".to_string(),
+                only_shells: vec![],
+            },
         ],
     }
 }

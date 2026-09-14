@@ -126,6 +126,10 @@ enum Commands {
     /// Interactive Project Initializer (Bun, NPM, PNPM, Yarn + .gitignore)
     Ii,
 
+    /// Interactive Project Setup & Tool Center TUI (project / projects)
+    #[command(alias = "projects")]
+    Project,
+
     /// Setup Next.js project
     Next,
 
@@ -137,6 +141,9 @@ enum Commands {
 
     /// Install & configure Tailwind CSS v4
     Css,
+
+    /// Serve or run index.html with Bun or system browser
+    Html,
 
     /// Master Command Center Help Menu UI (keep / help)
     Keep,
@@ -391,11 +398,13 @@ fn main() {
             Commands::Fh => fancybash_core::tools::history_search::run(),
             Commands::Grep(args) => fancybash_core::tools::fast_grep::run(args),
             Commands::Kp(args) => fancybash_core::tools::fkill::run_kp(args.port.as_deref()),
+            Commands::Project => fancybash_core::tools::project_setup::run_project(),
             Commands::Ii => fancybash_core::tools::project_setup::run_ii(),
             Commands::Next => fancybash_core::tools::project_setup::run_next(),
             Commands::Vite => fancybash_core::tools::project_setup::run_vite(),
             Commands::Ui => fancybash_core::tools::project_setup::run_ui(),
             Commands::Css => fancybash_core::tools::project_setup::run_css(),
+            Commands::Html => fancybash_core::tools::project_setup::run_html(),
             Commands::Keep => fancybash_core::tools::keep::run(),
             Commands::Run => fancybash_core::tools::bun_runner::run(),
             Commands::V { target } => fancybash_core::tools::video_player::run(target.as_deref()),

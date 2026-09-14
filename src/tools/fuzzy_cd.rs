@@ -102,9 +102,9 @@ impl FuzzyCdApp {
             size: 4096,
         });
 
-        let max_entries = 3000;
+        let max_entries = 15000;
         let walker = WalkDir::new(&self.current_dir)
-            .max_depth(3)
+            .max_depth(7)
             .into_iter()
             .filter_entry(|e| {
                 if let Some(name) = e.file_name().to_str() {
@@ -117,6 +117,14 @@ impl FuzzyCdApp {
                         || name == "dist"
                         || name == "build"
                         || name == ".git"
+                        || name == ".cargo"
+                        || name == ".rustup"
+                        || name == ".cache"
+                        || name == "__pycache__"
+                        || name == ".next"
+                        || name == ".nuxt"
+                        || name == "venv"
+                        || name == ".venv"
                     {
                         return false;
                     }

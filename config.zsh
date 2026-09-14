@@ -963,9 +963,43 @@ fi
 #  ⚡ INTERACTIVE SETUP SCRIPTS
 # ======================================================
 
+# --- Interactive Project Setup Hub TUI ---
+unalias project 2>/dev/null
+function project {
+  if command -v fancybash &>/dev/null; then
+    fancybash project "$@"
+    return
+  fi
+  echo "🚀 Select Project Tool:"
+  echo "  1) ⚡ Vite (React/Vue)"
+  echo "  2) 🚀 Next.js"
+  echo "  3) 🎨 Shadcn UI"
+  echo "  4) 📦 Tailwind CSS v4"
+  echo "  5) 🥐 Initialize Project (ii)"
+  echo "  6) ⚙️ C/C++ Project (makecpp)"
+  echo "  7) 🏃 Run JS/TS File (run)"
+  echo "  8) 🔄 Package Converter (pg)"
+  read "choice?Select option [1-8]: "
+  case "$choice" in
+    1) vite "$@" ;;
+    2) next "$@" ;;
+    3) ui "$@" ;;
+    4) css "$@" ;;
+    5) ii "$@" ;;
+    6) makecpp "$@" ;;
+    7) run "$@" ;;
+    8) pg "$@" ;;
+    *) echo "Invalid choice" ;;
+  esac
+}
+
 # --- Initialize a Project (Bun or NPM) ---
 unalias ii 2>/dev/null
 function ii {
+  if command -v fancybash &>/dev/null; then
+    fancybash ii "$@"
+    return
+  fi
   local has_bun=0 has_npm=0 has_pnpm=0 has_yarn=0
   command -v bun  >/dev/null 2>&1 && has_bun=1
   command -v npm  >/dev/null 2>&1 && has_npm=1
@@ -1167,7 +1201,12 @@ GITIGNORE
 
 
 # --- Setup Next.js Project ---
+unalias next 2>/dev/null
 function next() {
+  if command -v fancybash &>/dev/null; then
+    fancybash next "$@"
+    return
+  fi
   echo "⚡ Setup Next.js with:"
   echo "1) Bun"
   echo "2) NPM"
@@ -1294,6 +1333,10 @@ function _ui_patch_viteconfig {
 
 unalias ui 2>/dev/null
 function ui {
+  if command -v fancybash &>/dev/null; then
+    fancybash ui "$@"
+    return
+  fi
   echo "🎨 Setup Shadcn UI"
   echo ""
 
@@ -1409,6 +1452,10 @@ function ui {
 # --- Setup Vite (React/Vue) Project ---
 unalias vite 2>/dev/null
 function vite {
+  if command -v fancybash &>/dev/null; then
+    fancybash vite "$@"
+    return
+  fi
   echo "⚡ Setup Vite with:"
   echo "1) Bun"
   echo "2) NPM"
@@ -1447,31 +1494,16 @@ function vite {
 
     echo '@import "tailwindcss";' > "$CSS_FILE"
 
-    # Auto-detect Vite config file
-    VITE_CONFIG=""
-    for f in "vite.config.ts" "vite.config.js" "vite.config.mjs"; do
-      [ -f "$f" ] && VITE_CONFIG="$f" && break
-    done
-
     echo "---------------------------------------------------"
     echo "✅ Tailwind CSS v4 packages installed!"
     echo "✅ Added '@import \"tailwindcss\";' to $CSS_FILE"
     echo ""
 
-    if [[ -n "$VITE_CONFIG" ]]; then
-      echo "⚠️  ACTION REQUIRED: Update $VITE_CONFIG"
-      echo ""
-      echo "Add these lines:"
-      echo "  import tailwindcss from '@tailwindcss/vite'"
-      echo "  plugins: [tailwindcss(), ...]"
-      echo ""
-      echo "Or run this command to auto-patch:"
-      echo "  sed -i '1i import tailwindcss from \"@tailwindcss/vite\";' $VITE_CONFIG && sed -i 's/plugins: \\[/plugins: [tailwindcss(), /' $VITE_CONFIG"
-    else
-      echo "⚠️  No vite.config found. Create one and add:"
-      echo "  import tailwindcss from '@tailwindcss/vite'"
-      echo "  plugins: [tailwindcss()]"
-    fi
+    _ui_patch_tsconfig
+    _ui_patch_viteconfig
+
+    echo "---------------------------------------------------"
+    echo "🎉 Tailwind CSS v4 full setup complete!"
     echo "---------------------------------------------------"
   fi
 }
@@ -1486,6 +1518,10 @@ function vite {
 
 unalias css 2>/dev/null
 function css {
+  if command -v fancybash &>/dev/null; then
+    fancybash css "$@"
+    return
+  fi
   # Check package.json
   if [[ ! -f package.json ]]; then
     echo "❌ Error: package.json not found!"

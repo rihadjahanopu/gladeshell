@@ -738,3 +738,19 @@ key         = "theme"
 value       = "fancybash theme"
 description = "Interactive TUI theme picker & switcher"
 
+[[group.aliases]]
+key         = "gen"
+value       = "fancybash gen"
+description = "Cryptographically-secure secret key generator"
+
+[[group.aliases]]
+key         = "sysmon"
+value       = "fancybash sysmon"
+description = "Interactive system performance monitor"
+
+[[group.aliases]]
+key         = "t"
+value       = "fancybash t"
+description = "Smart file creation helper"
+
+

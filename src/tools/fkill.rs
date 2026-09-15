@@ -315,13 +315,14 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
         Line::from(vec![Span::styled(msg.clone(), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))])
     } else {
         Line::from(vec![
-            Span::styled(" ↑↓ Navigate", Style::default().fg(C_DIM)),
-            Span::styled("  |  ", Style::default().fg(C_BORDER)),
-            Span::styled("Type to filter", Style::default().fg(C_DIM)),
-            Span::styled("  |  ", Style::default().fg(C_BORDER)),
-            Span::styled("Enter Kill", Style::default().fg(C_ACCENT)),
-            Span::styled("  |  ", Style::default().fg(C_BORDER)),
-            Span::styled("Esc Quit", Style::default().fg(C_DIM)),
+            Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Navigate", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("↵ ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+            Span::styled("Kill Process", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("⎋ ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled("Quit ", Style::default().fg(C_DIM)),
         ])
     };
     let status_bar = Paragraph::new(status_text)

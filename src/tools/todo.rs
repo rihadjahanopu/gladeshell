@@ -304,28 +304,27 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
             f.render_widget(confirm, main[2]);
         }
         Mode::List => {
-            let hints = Paragraph::new(vec![
-                Line::from(vec![
-                    Span::styled("  [a] ", Style::default().fg(C_ACCENT)),
-                    Span::styled("Add task", Style::default().fg(C_TEXT)),
-                    Span::styled("   [Enter/d] ", Style::default().fg(C_ACCENT)),
-                    Span::styled("Mark done", Style::default().fg(C_TEXT)),
-                    Span::styled("   [c] ", Style::default().fg(C_ACCENT)),
-                    Span::styled("Clear all", Style::default().fg(C_TEXT)),
-                    Span::styled("   [Esc] ", Style::default().fg(C_ACCENT)),
-                    Span::styled("Quit", Style::default().fg(C_TEXT)),
-                ]),
-                Line::from(vec![
-                    Span::styled("  ↑↓ ", Style::default().fg(C_DIM)),
-                    Span::styled("Navigate tasks", Style::default().fg(C_DIM)),
-                ]),
-            ])
+            let hints = Paragraph::new(Line::from(vec![
+                    Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled("Navigate", Style::default().fg(C_DIM)),
+                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                    Span::styled("↵ ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                    Span::styled("Done", Style::default().fg(C_DIM)),
+                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                    Span::styled("n ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled("New", Style::default().fg(C_DIM)),
+                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                    Span::styled("d ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+                    Span::styled("Delete", Style::default().fg(C_DIM)),
+                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                    Span::styled("⎋ ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+                    Span::styled("Quit ", Style::default().fg(C_DIM)),
+            ]))
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_DIM))
-                    .title(Span::styled(" Shortcuts ", Style::default().fg(C_DIM)))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_widget(hints, main[2]);

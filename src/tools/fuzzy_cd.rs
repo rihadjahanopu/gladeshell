@@ -275,8 +275,8 @@ impl FuzzyCdApp {
                         }
                         return Ok(None);
                     }
-                    // [F2] → Open selected item in VS Code
-                    (KeyCode::F(2), _) => {
+                    // [v] → Open selected item in VS Code
+                    (KeyCode::Char('v'), KeyModifiers::NONE) | (KeyCode::F(2), _) => {
                         if let Some(idx) = self.list_state.selected() {
                             if let Some(&orig_idx) = self.filtered_indices.get(idx) {
                                 let item = &self.all_items[orig_idx];
@@ -500,14 +500,20 @@ impl FuzzyCdApp {
 
         // ── 4. Bottom Status Bar ────────────────────────────────────────────────
         let status_line = Line::from(vec![
-            Span::styled(" [ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("Open / Cd  │  ", Style::default().fg(C_TEXT)),
-            Span::styled("[F2] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled("VS Code  │  ", Style::default().fg(C_TEXT)),
-            Span::styled("[TAB] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled("Switch Mode  │  ", Style::default().fg(C_TEXT)),
-            Span::styled("[ESC] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-            Span::styled("Cancel", Style::default().fg(C_TEXT)),
+            Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Navigate", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("↵ ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Open / Cd", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("v ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Code", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("⇥ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Switch Mode", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("⎋ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+            Span::styled("Quit ", Style::default().fg(C_DIM)),
         ]);
 
         let status_bar = Paragraph::new(status_line)

@@ -497,7 +497,7 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
         Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
     } else {
         Line::from(vec![Span::styled(
-            "↑↓ Navigate  |  Enter Select  |  Esc Back/Quit",
+            " ↑↓ Navigate  ·  ↵ Select  ·  ⎋ Back / Quit",
             Style::default().fg(C_DIM),
         )])
     };

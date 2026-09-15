@@ -501,10 +501,10 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
         Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
     } else {
         let hints = match app.mode {
-            Mode::BranchList => "↑↓ Branch  |  PgUp/PgDn (Shift+↑↓) Scroll Log  |  Enter Select  |  Esc Quit",
-            Mode::ActionMenu => "↑↓ Navigate  |  Enter Run Action  |  Esc Back",
-            Mode::NewBranch  => "Type name  |  Enter Create  |  Esc Cancel",
-            Mode::Confirm(_) => "[Y] Confirm  |  Any Cancel",
+            Mode::BranchList => " ↑↓ Navigate  ·  ↵ Select  ·  Shift+↑↓ Scroll Log  ·  ⎋ Quit",
+            Mode::ActionMenu => " ↑↓ Navigate  ·  ↵ Run Action  ·  ⎋ Back",
+            Mode::NewBranch  => " Type name  ·  ↵ Create  ·  ⎋ Cancel",
+            Mode::Confirm(_) => " y Confirm  ·  ⎋ Cancel",
         };
         Line::from(vec![Span::styled(hints, Style::default().fg(C_DIM))])
     };

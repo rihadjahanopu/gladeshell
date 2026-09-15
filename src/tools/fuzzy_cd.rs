@@ -5,13 +5,14 @@
 //  preview, mode switching (Dev Walk / Recent Dirs), fast search & match counter.
 // =============================================================================
 
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseButton, MouseEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -46,17 +47,187 @@ pub enum SearchMode {
 /// Action the shell wrapper should take on the selected item.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CfAction {
-    CdInto,   // cd into directory
-    OpenCode, // open in VS Code (F2)
-    OpenFile, // open file with type-appropriate handler
+    CdInto,       // cd into directory
+    OpenCode,     // open in VS Code (F2)
+    OpenFile,     // open file with type-appropriate handler
+    OpenExplorer, // open directory in OS file explorer (e)
 }
 
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     pub path: PathBuf,
+    pub name: String,
     pub rel_path: String,
     pub is_dir: bool,
     pub size: u64,
+}
+
+// ── Trie / Dictionary Search Engine ──────────────────────────────────────────
+#[derive(Default, Debug)]
+pub struct TrieNode {
+    pub children: HashMap<char, TrieNode>,
+    pub item_indices: Vec<usize>,
+}
+
+#[derive(Default, Debug)]
+pub struct DictionarySearchEngine {
+    pub root: TrieNode,
+}
+
+impl DictionarySearchEngine {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(&mut self, text: &str, item_idx: usize) {
+        let mut node = &mut self.root;
+        for ch in text.to_lowercase().chars() {
+            node = node.children.entry(ch).or_default();
+            if !node.item_indices.contains(&item_idx) {
+                node.item_indices.push(item_idx);
+            }
+        }
+    }
+
+    pub fn build(items: &[FileEntry]) -> Self {
+        let mut engine = Self::new();
+        for (idx, item) in items.iter().enumerate() {
+            // Index full name
+            engine.insert(&item.name, idx);
+            // Index individual words split by `-`, `_`, `.`, ` `
+            for word in item.name.split(|c| c == '-' || c == '_' || c == '.' || c == ' ') {
+                if !word.is_empty() {
+                    engine.insert(word, idx);
+                }
+            }
+            // Index relative path tokens
+            for part in item.rel_path.split('/') {
+                if !part.is_empty() {
+                    engine.insert(part, idx);
+                }
+            }
+        }
+        engine
+    }
+
+    pub fn search(&self, query: &str, items: &[FileEntry]) -> Vec<usize> {
+        let q = query.to_lowercase();
+        if q.is_empty() {
+            return (0..items.len()).collect();
+        }
+
+        let mut candidate_scores: HashMap<usize, i32> = HashMap::new();
+
+        // Trie prefix matching
+        let mut curr = &self.root;
+        let mut trie_matched = true;
+        for ch in q.chars() {
+            if let Some(next) = curr.children.get(&ch) {
+                curr = next;
+            } else {
+                trie_matched = false;
+                break;
+            }
+        }
+
+        if trie_matched {
+            for &idx in &curr.item_indices {
+                let item = &items[idx];
+                let name_lower = item.name.to_lowercase();
+                let score = if name_lower == q {
+                    1000
+                } else if name_lower.starts_with(&q) {
+                    800
+                } else {
+                    500
+                };
+                candidate_scores.insert(idx, score);
+            }
+        }
+
+        // Fuzzy subsequence scoring across items
+        for (idx, item) in items.iter().enumerate() {
+            let name_lower = item.name.to_lowercase();
+            let rel_lower = item.rel_path.to_lowercase();
+
+            if let Some(score) = score_fuzzy(&q, &name_lower, &rel_lower) {
+                let existing = candidate_scores.entry(idx).or_insert(0);
+                if score > *existing {
+                    *existing = score;
+                }
+            }
+        }
+
+        let mut scored_indices: Vec<(usize, i32)> = candidate_scores.into_iter().collect();
+        scored_indices.sort_by(|a, b| {
+            b.1.cmp(&a.1)
+                .then_with(|| {
+                    let is_dir_a = items[a.0].is_dir;
+                    let is_dir_b = items[b.0].is_dir;
+                    is_dir_b.cmp(&is_dir_a)
+                })
+                .then_with(|| a.0.cmp(&b.0))
+        });
+
+        scored_indices.into_iter().map(|(idx, _)| idx).collect()
+    }
+}
+
+fn score_fuzzy(query: &str, name: &str, rel_path: &str) -> Option<i32> {
+    if query.is_empty() {
+        return Some(0);
+    }
+    if let Some(pos) = name.find(query) {
+        let base = 600 - (pos as i32 * 10);
+        return Some(base.max(100));
+    }
+    if let Some(pos) = rel_path.find(query) {
+        let base = 400 - (pos as i32 * 5);
+        return Some(base.max(50));
+    }
+    if let Some(score) = subsequence_score(query, name) {
+        return Some(score + 100);
+    }
+    if let Some(score) = subsequence_score(query, rel_path) {
+        return Some(score);
+    }
+    None
+}
+
+fn subsequence_score(query: &str, target: &str) -> Option<i32> {
+    let mut target_chars = target.char_indices().peekable();
+    let mut score = 0;
+    let mut prev_match_idx: Option<usize> = None;
+
+    for qch in query.chars() {
+        let mut found = false;
+        while let Some(&(idx, tch)) = target_chars.peek() {
+            target_chars.next();
+            if tch == qch {
+                found = true;
+                score += 10;
+                if let Some(prev) = prev_match_idx {
+                    if idx == prev + 1 {
+                        score += 20;
+                    }
+                }
+                if idx == 0
+                    || target
+                        .as_bytes()
+                        .get(idx.saturating_sub(1))
+                        .map_or(false, |&b| b == b'/' || b == b'-' || b == b'_' || b == b'.')
+                {
+                    score += 30;
+                }
+                prev_match_idx = Some(idx);
+                break;
+            }
+        }
+        if !found {
+            return None;
+        }
+    }
+    Some(score)
 }
 
 pub struct FuzzyCdApp {
@@ -66,6 +237,9 @@ pub struct FuzzyCdApp {
     pub filtered_indices: Vec<usize>,
     pub list_state: ListState,
     pub query: String,
+    pub history_stack: Vec<PathBuf>,
+    pub search_engine: DictionarySearchEngine,
+    pub last_list_area: Rect,
 }
 
 impl FuzzyCdApp {
@@ -77,6 +251,9 @@ impl FuzzyCdApp {
             filtered_indices: Vec::new(),
             list_state: ListState::default(),
             query: String::new(),
+            history_stack: Vec::new(),
+            search_engine: DictionarySearchEngine::new(),
+            last_list_area: Rect::default(),
         };
         app.load_items();
         app
@@ -90,21 +267,34 @@ impl FuzzyCdApp {
             SearchMode::RecentDirs => self.load_recent_dirs(),
         }
 
+        self.search_engine = DictionarySearchEngine::build(&self.all_items);
         self.filter_items();
     }
 
     fn load_dev_walk(&mut self) {
-        // Always include current directory
+        // Current dir
         self.all_items.push(FileEntry {
             path: self.current_dir.clone(),
+            name: ".".to_string(),
             rel_path: "./".to_string(),
             is_dir: true,
             size: 4096,
         });
 
+        // Parent dir
+        if let Some(parent) = self.current_dir.parent() {
+            self.all_items.push(FileEntry {
+                path: parent.to_path_buf(),
+                name: "..".to_string(),
+                rel_path: "../".to_string(),
+                is_dir: true,
+                size: 4096,
+            });
+        }
+
         let max_entries = 15000;
         let walker = WalkDir::new(&self.current_dir)
-            .max_depth(7)
+            .max_depth(5)
             .into_iter()
             .filter_entry(|e| {
                 if let Some(name) = e.file_name().to_str() {
@@ -143,7 +333,8 @@ impl FuzzyCdApp {
             }
 
             let is_dir = entry.file_type().is_dir();
-            let size = 0;
+            let name = entry.file_name().to_string_lossy().to_string();
+            let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
 
             let rel_path = match path.strip_prefix(&self.current_dir) {
                 Ok(rel) => {
@@ -159,6 +350,7 @@ impl FuzzyCdApp {
 
             self.all_items.push(FileEntry {
                 path,
+                name,
                 rel_path,
                 is_dir,
                 size,
@@ -169,7 +361,6 @@ impl FuzzyCdApp {
     fn load_recent_dirs(&mut self) {
         let mut seen = std::collections::HashSet::new();
 
-        // 1. Zoxide history if available (~/.local/share/zoxide/db.zo)
         if let Some(home) = dirs_home() {
             let zoxide_db = home.join(".local/share/zoxide/db.zo");
             if zoxide_db.exists() {
@@ -180,6 +371,10 @@ impl FuzzyCdApp {
                         if !path_str.is_empty() {
                             let p = PathBuf::from(path_str);
                             if p.is_dir() && seen.insert(p.clone()) {
+                                let name = p
+                                    .file_name()
+                                    .map(|n| n.to_string_lossy().to_string())
+                                    .unwrap_or_else(|| p.to_string_lossy().to_string());
                                 let rel_path = if let Ok(rel) = p.strip_prefix(&self.current_dir) {
                                     format!("./{}/", rel.display())
                                 } else {
@@ -187,6 +382,7 @@ impl FuzzyCdApp {
                                 };
                                 self.all_items.push(FileEntry {
                                     path: p,
+                                    name,
                                     rel_path,
                                     is_dir: true,
                                     size: 4096,
@@ -198,15 +394,16 @@ impl FuzzyCdApp {
             }
         }
 
-        // Fallback: Add common developer dirs in HOME if recent list is empty
         if self.all_items.is_empty() {
             if let Some(home) = dirs_home() {
                 let candidates = ["Developer", "Projects", "Desktop", "Downloads", "Documents"];
                 for c in &candidates {
                     let p = home.join(c);
                     if p.is_dir() && seen.insert(p.clone()) {
+                        let name = c.to_string();
                         self.all_items.push(FileEntry {
                             path: p.clone(),
+                            name,
                             rel_path: p.to_string_lossy().to_string(),
                             is_dir: true,
                             size: 4096,
@@ -218,18 +415,7 @@ impl FuzzyCdApp {
     }
 
     pub fn filter_items(&mut self) {
-        let q = self.query.to_lowercase();
-        if q.is_empty() {
-            self.filtered_indices = (0..self.all_items.len()).collect();
-        } else {
-            self.filtered_indices = self
-                .all_items
-                .iter()
-                .enumerate()
-                .filter(|(_, item)| item.rel_path.to_lowercase().contains(&q))
-                .map(|(idx, _)| idx)
-                .collect();
-        }
+        self.filtered_indices = self.search_engine.search(&self.query, &self.all_items);
 
         if self.filtered_indices.is_empty() {
             self.list_state.select(None);
@@ -240,6 +426,40 @@ impl FuzzyCdApp {
         }
     }
 
+    pub fn step_back_history(&mut self) {
+        if let Some(prev) = self.history_stack.pop() {
+            self.current_dir = prev;
+            self.query.clear();
+            self.load_items();
+            self.list_state.select(Some(0));
+        } else if let Some(parent) = self.current_dir.parent().map(|p| p.to_path_buf()) {
+            self.current_dir = parent;
+            self.query.clear();
+            self.load_items();
+            self.list_state.select(Some(0));
+        }
+    }
+
+    pub fn enter_selected_directory(&mut self, orig_idx: usize) -> Option<(String, CfAction)> {
+        let item = &self.all_items[orig_idx];
+        if item.is_dir {
+            if item.name == "." {
+                let path = self.current_dir.to_string_lossy().to_string();
+                return Some((path, CfAction::CdInto));
+            } else {
+                self.history_stack.push(self.current_dir.clone());
+                self.current_dir = item.path.clone();
+                self.query.clear();
+                self.load_items();
+                self.list_state.select(Some(0));
+                None
+            }
+        } else {
+            let path = item.path.to_string_lossy().to_string();
+            Some((path, CfAction::OpenFile))
+        }
+    }
+
     pub fn run_loop<B: ratatui::backend::Backend>(
         &mut self,
         terminal: &mut Terminal<B>,
@@ -247,67 +467,155 @@ impl FuzzyCdApp {
         loop {
             terminal.draw(|f| self.render_ui(f))?;
 
-            if let Event::Key(key) = event::read()? {
-                match (key.code, key.modifiers) {
-                    (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                        return Ok(None);
-                    }
-                    (KeyCode::Char('z'), KeyModifiers::CONTROL) | (KeyCode::Tab, _) => {
-                        self.mode = match self.mode {
-                            SearchMode::DevWalk => SearchMode::RecentDirs,
-                            SearchMode::RecentDirs => SearchMode::DevWalk,
-                        };
-                        self.query.clear();
-                        self.load_items();
-                    }
-                    (KeyCode::Enter, _) => {
-                        if let Some(idx) = self.list_state.selected() {
-                            if let Some(&orig_idx) = self.filtered_indices.get(idx) {
-                                let item = &self.all_items[orig_idx];
-                                let path = item.path.to_string_lossy().to_string();
-                                let action = if item.is_dir {
-                                    CfAction::CdInto
-                                } else {
-                                    CfAction::OpenFile
-                                };
-                                return Ok(Some((path, action)));
+            match event::read()? {
+                Event::Key(key) => {
+                    match (key.code, key.modifiers) {
+                        (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                            return Ok(None);
+                        }
+                        // Tab key -> Backtrack history serial by serial
+                        (KeyCode::Tab, _) | (KeyCode::BackTab, _) => {
+                            self.step_back_history();
+                        }
+                        // Ctrl+Z -> Switch Mode
+                        (KeyCode::Char('z'), KeyModifiers::CONTROL) => {
+                            self.mode = match self.mode {
+                                SearchMode::DevWalk => SearchMode::RecentDirs,
+                                SearchMode::RecentDirs => SearchMode::DevWalk,
+                            };
+                            self.query.clear();
+                            self.load_items();
+                        }
+                        // Enter -> Navigate inside directory or open file
+                        (KeyCode::Enter, KeyModifiers::NONE) => {
+                            if let Some(idx) = self.list_state.selected() {
+                                if let Some(&orig_idx) = self.filtered_indices.get(idx) {
+                                    if let Some(res) = self.enter_selected_directory(orig_idx) {
+                                        return Ok(Some(res));
+                                    }
+                                }
                             }
                         }
-                        return Ok(None);
-                    }
-                    // [v] → Open selected item in VS Code
-                    (KeyCode::Char('v'), KeyModifiers::NONE) | (KeyCode::F(2), _) => {
-                        if let Some(idx) = self.list_state.selected() {
-                            if let Some(&orig_idx) = self.filtered_indices.get(idx) {
-                                let item = &self.all_items[orig_idx];
-                                let path = item.path.to_string_lossy().to_string();
-                                return Ok(Some((path, CfAction::OpenCode)));
+                        // Ctrl+Enter or Shift+Enter -> Confirm CD to selected dir/current dir and exit
+                        (KeyCode::Enter, KeyModifiers::CONTROL)
+                        | (KeyCode::Enter, KeyModifiers::SHIFT)
+                        | (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
+                            if let Some(idx) = self.list_state.selected() {
+                                if let Some(&orig_idx) = self.filtered_indices.get(idx) {
+                                    let item = &self.all_items[orig_idx];
+                                    let path = if item.is_dir {
+                                        item.path.to_string_lossy().to_string()
+                                    } else {
+                                        item.path
+                                            .parent()
+                                            .unwrap_or(&self.current_dir)
+                                            .to_string_lossy()
+                                            .to_string()
+                                    };
+                                    return Ok(Some((path, CfAction::CdInto)));
+                                }
+                            }
+                            return Ok(Some((
+                                self.current_dir.to_string_lossy().to_string(),
+                                CfAction::CdInto,
+                            )));
+                        }
+                        // [e] or Ctrl+E or F3 → Open selected item / folder in OS File Explorer
+                        (KeyCode::Char('e'), KeyModifiers::CONTROL)
+                        | (KeyCode::Char('e'), KeyModifiers::ALT)
+                        | (KeyCode::F(3), _) => {
+                            if let Some(idx) = self.list_state.selected() {
+                                if let Some(&orig_idx) = self.filtered_indices.get(idx) {
+                                    let item = &self.all_items[orig_idx];
+                                    let path = item.path.to_string_lossy().to_string();
+                                    return Ok(Some((path, CfAction::OpenExplorer)));
+                                }
+                            }
+                            return Ok(Some((
+                                self.current_dir.to_string_lossy().to_string(),
+                                CfAction::OpenExplorer,
+                            )));
+                        }
+                        // Ctrl+V or F2 → Open selected item in VS Code
+                        (KeyCode::Char('v'), KeyModifiers::CONTROL) | (KeyCode::F(2), _) => {
+                            if let Some(idx) = self.list_state.selected() {
+                                if let Some(&orig_idx) = self.filtered_indices.get(idx) {
+                                    let item = &self.all_items[orig_idx];
+                                    let path = item.path.to_string_lossy().to_string();
+                                    return Ok(Some((path, CfAction::OpenCode)));
+                                }
                             }
                         }
+                        (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
+                            self.move_select(-1);
+                        }
+                        (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                            self.move_select(1);
+                        }
+                        (KeyCode::PageUp, _) => {
+                            self.move_select(-10);
+                        }
+                        (KeyCode::PageDown, _) => {
+                            self.move_select(10);
+                        }
+                        (KeyCode::Backspace, _) => {
+                            if self.query.is_empty() {
+                                self.step_back_history();
+                            } else {
+                                self.query.pop();
+                                self.filter_items();
+                            }
+                        }
+                        (KeyCode::Char('e'), KeyModifiers::NONE) if self.query.is_empty() => {
+                            if let Some(idx) = self.list_state.selected() {
+                                if let Some(&orig_idx) = self.filtered_indices.get(idx) {
+                                    let item = &self.all_items[orig_idx];
+                                    let path = item.path.to_string_lossy().to_string();
+                                    return Ok(Some((path, CfAction::OpenExplorer)));
+                                }
+                            }
+                            return Ok(Some((
+                                self.current_dir.to_string_lossy().to_string(),
+                                CfAction::OpenExplorer,
+                            )));
+                        }
+                        (KeyCode::Char(c), KeyModifiers::NONE)
+                        | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                            self.query.push(c);
+                            self.filter_items();
+                        }
+                        _ => {}
                     }
-                    (KeyCode::Up, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
-                        self.move_select(-1);
-                    }
-                    (KeyCode::Down, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                        self.move_select(1);
-                    }
-                    (KeyCode::PageUp, _) => {
-                        self.move_select(-10);
-                    }
-                    (KeyCode::PageDown, _) => {
-                        self.move_select(10);
-                    }
-                    (KeyCode::Backspace, _) => {
-                        self.query.pop();
-                        self.filter_items();
-                    }
-                    (KeyCode::Char(c), KeyModifiers::NONE)
-                    | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
-                        self.query.push(c);
-                        self.filter_items();
-                    }
-                    _ => {}
                 }
+                Event::Mouse(mouse) => {
+                    if mouse.kind == MouseEventKind::Down(MouseButton::Left) {
+                        let area = self.last_list_area;
+                        if area.width > 0
+                            && mouse.column >= area.x
+                            && mouse.column < area.x + area.width
+                            && mouse.row > area.y
+                            && mouse.row <= area.y + area.height.saturating_sub(2)
+                        {
+                            let clicked_row = (mouse.row - area.y - 1) as usize;
+                            if clicked_row < self.filtered_indices.len() {
+                                if self.list_state.selected() == Some(clicked_row) {
+                                    if let Some(&orig_idx) =
+                                        self.filtered_indices.get(clicked_row)
+                                    {
+                                        if let Some(res) =
+                                            self.enter_selected_directory(orig_idx)
+                                        {
+                                            return Ok(Some(res));
+                                        }
+                                    }
+                                } else {
+                                    self.list_state.select(Some(clicked_row));
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -411,6 +719,8 @@ impl FuzzyCdApp {
             ])
             .split(outer[2]);
 
+        self.last_list_area = body_chunks[0];
+
         // Left File List Panel
         let list_items: Vec<ListItem> = self
             .filtered_indices
@@ -423,25 +733,44 @@ impl FuzzyCdApp {
                 let icon = if item.is_dir {
                     "📁 "
                 } else {
-                    let ext = item.path.extension()
+                    let ext = item
+                        .path
+                        .extension()
                         .and_then(|e| e.to_str())
                         .unwrap_or("")
                         .to_lowercase();
                     match ext.as_str() {
-                        "mp4"|"mkv"|"avi"|"mov"|"webm"|"flv"|"wmv"|"m4v"|"ogv"|"m2ts"|"rmvb"|"3gp" => "🎬 ",
-                        "jpg"|"jpeg"|"png"|"gif"|"bmp"|"webp"|"svg"|"avif"|"heic"|"tiff"|"ico" => "🖼️  ",
-                        "mp3"|"flac"|"ogg"|"wav"|"aac"|"m4a"|"opus"|"wma" => "🎵 ",
+                        "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" | "m4v"
+                        | "ogv" | "m2ts" | "rmvb" | "3gp" => "🎬 ",
+                        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg" | "avif"
+                        | "heic" | "tiff" | "ico" => "🖼️  ",
+                        "mp3" | "flac" | "ogg" | "wav" | "aac" | "m4a" | "opus" | "wma" => "🎵 ",
                         "pdf" => "📕 ",
-                        "docx"|"doc"|"odt" => "📝 ",
-                        "xlsx"|"xls"|"ods"|"csv" => "📊 ",
-                        "pptx"|"ppt"|"odp" => "📊 ",
-                        "zip"|"tar"|"gz"|"bz2"|"xz"|"7z"|"rar"|"zst" => "🗜️  ",
-                        "rs"|"py"|"js"|"ts"|"go"|"c"|"cpp"|"java"|"rb"|"php"|"swift"|"kt" => "⚡ ",
-                        "sh"|"bash"|"zsh"|"fish" => "🖥️  ",
-                        "md"|"txt"|"rst" => "📄 ",
-                        "json"|"yaml"|"yml"|"toml"|"xml" => "🔧 ",
+                        "docx" | "doc" | "odt" => "📝 ",
+                        "xlsx" | "xls" | "ods" | "csv" => "📊 ",
+                        "pptx" | "ppt" | "odp" => "📊 ",
+                        "zip" | "tar" | "gz" | "bz2" | "xz" | "7z" | "rar" | "zst" => "🗜️  ",
+                        "rs" | "py" | "js" | "ts" | "go" | "c" | "cpp" | "java" | "rb" | "php"
+                        | "swift" | "kt" => "⚡ ",
+                        "sh" | "bash" | "zsh" | "fish" => "🖥️  ",
+                        "md" | "txt" | "rst" => "📄 ",
+                        "json" | "yaml" | "yml" | "toml" | "xml" => "🔧 ",
                         _ => "📄 ",
                     }
+                };
+
+                let display_label = if item.name == "." || item.name == ".." {
+                    item.rel_path.clone()
+                } else if item.is_dir {
+                    format!("{}/", item.name)
+                } else {
+                    item.name.clone()
+                };
+
+                let parent_hint = if !self.query.is_empty() && item.name != "." && item.name != ".." {
+                    format!("  ({})", item.rel_path)
+                } else {
+                    String::new()
                 };
 
                 if is_selected {
@@ -452,11 +781,15 @@ impl FuzzyCdApp {
                         ),
                         Span::styled(icon, Style::default().fg(C_YELLOW)),
                         Span::styled(
-                            &item.rel_path,
+                            display_label,
                             Style::default()
                                 .fg(C_WHITE)
                                 .bg(Color::Rgb(40, 20, 60))
                                 .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            parent_hint,
+                            Style::default().fg(C_DIM).bg(Color::Rgb(40, 20, 60)),
                         ),
                     ]))
                 } else {
@@ -464,7 +797,8 @@ impl FuzzyCdApp {
                     ListItem::new(Line::from(vec![
                         Span::raw("  "),
                         Span::styled(icon, Style::default().fg(C_DIM)),
-                        Span::styled(&item.rel_path, Style::default().fg(color)),
+                        Span::styled(display_label, Style::default().fg(color)),
+                        Span::styled(parent_hint, Style::default().fg(C_DIM)),
                     ]))
                 }
             })
@@ -501,19 +835,25 @@ impl FuzzyCdApp {
         // ── 4. Bottom Status Bar ────────────────────────────────────────────────
         let status_line = Line::from(vec![
             Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled("Navigate", Style::default().fg(C_DIM)),
+            Span::styled("Nav", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
             Span::styled("↵ ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("Open / Cd", Style::default().fg(C_DIM)),
+            Span::styled("Enter Dir", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("v ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+↵ ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled("Cd Here", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("e ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Explorer", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_DIM)),
+            Span::styled("Ctrl+V ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("⇥ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled("Switch Mode", Style::default().fg(C_DIM)),
+            Span::styled("⇥ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled("Back", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
             Span::styled("⎋ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-            Span::styled("Quit ", Style::default().fg(C_DIM)),
+            Span::styled("Quit", Style::default().fg(C_DIM)),
         ]);
 
         let status_bar = Paragraph::new(status_line)
@@ -531,8 +871,8 @@ impl FuzzyCdApp {
 
 fn render_preview_panel(frame: &mut Frame, area: Rect, entry: Option<&FileEntry>) {
     let title = match entry {
-        Some(e) if e.is_dir => format!(" 👁️ Directory Contents: '{}' ", e.rel_path),
-        Some(e) => format!(" 👁️ File Preview: '{}' ", e.rel_path),
+        Some(e) if e.is_dir => format!(" 👁️ Directory Contents: '{}' ", e.name),
+        Some(e) => format!(" 👁️ File Preview: '{}' ", e.name),
         None => " 👁️ Preview ".to_string(),
     };
 
@@ -695,7 +1035,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     enable_raw_mode()?;
     let mut tty = open_tty();
-    execute!(tty, EnterAlternateScreen)?;
+    execute!(tty, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(tty);
     let mut terminal = Terminal::new(backend)?;
 
@@ -704,15 +1044,15 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let res = app.run_loop(&mut terminal);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     terminal.show_cursor()?;
 
     if let Ok(Some((selected_path, action))) = res {
-        // Output tagged path so the shell wrapper can dispatch correctly
         let tag = match action {
-            CfAction::CdInto   => "CD",
-            CfAction::OpenCode => "CODE",
-            CfAction::OpenFile => "OPEN",
+            CfAction::CdInto       => "CD",
+            CfAction::OpenCode     => "CODE",
+            CfAction::OpenFile     => "OPEN",
+            CfAction::OpenExplorer => "EXPLORE",
         };
         println!("{}:{}", tag, selected_path);
     }
@@ -736,5 +1076,53 @@ mod tests {
         let cur = std::env::current_dir().unwrap();
         let app = FuzzyCdApp::new(cur);
         assert!(!app.all_items.is_empty());
+    }
+
+    #[test]
+    fn test_dictionary_search_engine() {
+        let items = vec![
+            FileEntry {
+                path: PathBuf::from("./src"),
+                name: "src".to_string(),
+                rel_path: "./src".to_string(),
+                is_dir: true,
+                size: 4096,
+            },
+            FileEntry {
+                path: PathBuf::from("./src/tools"),
+                name: "tools".to_string(),
+                rel_path: "./src/tools".to_string(),
+                is_dir: true,
+                size: 4096,
+            },
+            FileEntry {
+                path: PathBuf::from("./src/tools/fuzzy_cd.rs"),
+                name: "fuzzy_cd.rs".to_string(),
+                rel_path: "./src/tools/fuzzy_cd.rs".to_string(),
+                is_dir: false,
+                size: 20000,
+            },
+        ];
+
+        let engine = DictionarySearchEngine::build(&items);
+        let results = engine.search("tools", &items);
+        assert!(!results.is_empty());
+        assert_eq!(items[results[0]].name, "tools");
+
+        let fuzzy_res = engine.search("fzcd", &items);
+        assert!(!fuzzy_res.is_empty());
+        assert_eq!(items[fuzzy_res[0]].name, "fuzzy_cd.rs");
+    }
+
+    #[test]
+    fn test_history_stack_backtracking() {
+        let cur = std::env::current_dir().unwrap();
+        let mut app = FuzzyCdApp::new(cur.clone());
+        let sub = cur.join("src");
+        app.history_stack.push(cur.clone());
+        app.current_dir = sub.clone();
+
+        app.step_back_history();
+        assert_eq!(app.current_dir, cur);
     }
 }

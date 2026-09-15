@@ -463,6 +463,14 @@ cf() {
         OPEN)
             _cf_open "$target"
             ;;
+        EXPLORE)
+            local explore_path="$target"
+            [[ -f "$target" ]] && explore_path="$(dirname "$target")"
+            if   command -v xdg-open &>/dev/null; then xdg-open "$explore_path" >/dev/null 2>&1 &
+            elif command -v open     &>/dev/null; then open     "$explore_path" >/dev/null 2>&1 &
+            elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$explore_path" 2>/dev/null || echo "$explore_path")" >/dev/null 2>&1 &
+            fi
+            ;;
         *)
             # Legacy fallback: raw path (no tag)
             if   [[ -d "$result" ]]; then cd "$result" || return
@@ -530,6 +538,18 @@ function cf
             end
         case OPEN
             _cf_open "$target"
+        case EXPLORE
+            set -l explore_path "$target"
+            if test -f "$target"
+                set explore_path (dirname "$target")
+            end
+            if type -q xdg-open
+                xdg-open "$explore_path" >/dev/null 2>&1 &
+            else if type -q open
+                open "$explore_path" >/dev/null 2>&1 &
+            else if type -q explorer.exe
+                explorer.exe "$explore_path" >/dev/null 2>&1 &
+            end
         case '*'
             if test -d "$result"
                 cd "$result"
@@ -593,6 +613,12 @@ function cf {
         }
         "OPEN" {
             _cf_open $target
+        }
+        "EXPLORE" {
+            $explorePath = $target
+            if (Test-Path -Path $target -PathType Leaf) { $explorePath = Split-Path -Parent $target }
+            if (Get-Command Invoke-Item -ErrorAction SilentlyContinue) { Invoke-Item -Path $explorePath }
+            else { Start-Process explorer.exe -ArgumentList "`"$explorePath`"" }
         }
         default {
             if (Test-Path -Path $result -PathType Container) { Set-Location -Path $result }

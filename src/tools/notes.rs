@@ -77,7 +77,7 @@ pub struct ActionItem {
 pub const ACTION_ITEMS: &[ActionItem] = &[
     ActionItem { label: "Edit Content",    desc: "Edit note text in interactive buffer",  emoji: "✏️", shortcut: "Enter / e" },
     ActionItem { label: "Copy Content",    desc: "Copy note text strictly to clipboard", emoji: "📋", shortcut: "c"         },
-    ActionItem { label: "Open VS Code",    desc: "Open note file in VS Code editor",      emoji: "💻", shortcut: "v"         },
+    ActionItem { label: "Open VS Code",    desc: "Open note file in VS Code editor",      emoji: "💻", shortcut: "Ctrl+V"    },
     ActionItem { label: "Open Folder",     desc: "Open containing folder in file manager",emoji: "📂", shortcut: "o"         },
     ActionItem { label: "Note Statistics", desc: "View word, line, and character stats",  emoji: "📊", shortcut: "s"         },
     ActionItem { label: "Delete Note",     desc: "Delete note file permanently",          emoji: "🗑️", shortcut: "d"         },
@@ -493,7 +493,7 @@ impl NotesApp {
                             }
                             (KeyCode::Char('e'), KeyModifiers::NONE) => self.is_editing_content = true,
                             (KeyCode::Char('c'), KeyModifiers::NONE) | (KeyCode::Char('y'), KeyModifiers::NONE) => self.copy_selected_note_content(),
-                            (KeyCode::Char('v'), KeyModifiers::NONE) => self.open_in_vscode(),
+                            (KeyCode::Char('v'), KeyModifiers::CONTROL) => self.open_in_vscode(),
                             (KeyCode::Char('o'), KeyModifiers::NONE) => self.open_folder(),
                             (KeyCode::Char('d'), KeyModifiers::NONE) => {
                                 if let Some(sel) = self.list_state.selected() {
@@ -523,7 +523,7 @@ impl NotesApp {
                     }
 
                     // Open in VS Code directly
-                    (KeyCode::Char('v'), KeyModifiers::NONE) => {
+                    (KeyCode::Char('v'), KeyModifiers::CONTROL) => {
                         self.open_in_vscode();
                     }
 
@@ -685,7 +685,7 @@ impl NotesApp {
             Span::styled("d ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
             Span::styled("Delete", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("v ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+V ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
             Span::styled("⎋ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
@@ -775,7 +775,7 @@ impl NotesApp {
             Span::styled("d ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
             Span::styled("Delete", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("v ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+V ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
             Span::styled("⎋ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),

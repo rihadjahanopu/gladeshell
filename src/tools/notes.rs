@@ -6,6 +6,7 @@ use std::error::Error;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use std::process::Command;
 
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
@@ -21,7 +22,7 @@ use ratatui::{
     Frame, Terminal,
 };
 
-// ── Colour Palette (fkill-consistent, notes-tinted cyan/green) ───────────────
+// ── Colour Palette (fkill & gwip consistent dark violet/teal) ───────────────
 const C_BG: Color = Color::Rgb(8, 12, 22);
 const C_BORDER: Color = Color::Rgb(0, 210, 180);       // teal accent
 const C_ACCENT: Color = Color::Rgb(0, 240, 200);       // bright teal
@@ -35,6 +36,9 @@ const C_PINK: Color = Color::Rgb(255, 80, 160);
 const C_WHITE: Color = Color::Rgb(255, 255, 255);
 const C_CAT: Color = Color::Rgb(130, 200, 255);        // category label blue
 const C_CONTENT: Color = Color::Rgb(195, 230, 215);    // note content text
+const C_VIOLET: Color = Color::Rgb(180, 100, 255);     // gwip-style violet
+const C_CYAN: Color = Color::Rgb(0, 229, 255);       // neon cyan
+const C_CARD: Color = Color::Rgb(16, 22, 34);         // card background
 
 fn notes_dir_path() -> PathBuf {
     let home = std::env::var_os("HOME")
@@ -54,13 +58,39 @@ pub struct NoteItem {
     pub content: String,
 }
 
+// ── App Pages & Gwip-style Actions ──────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AppPage {
+    List,   // Page 1: Note search & catalog
+    Detail, // Page 2: gwip-style Note Actions & Edit view
+}
+
+#[derive(Debug, Clone)]
+pub struct ActionItem {
+    pub label: &'static str,
+    pub desc: &'static str,
+    pub emoji: &'static str,
+    pub shortcut: &'static str,
+}
+
+pub const ACTION_ITEMS: &[ActionItem] = &[
+    ActionItem { label: "Edit Content",    desc: "Edit note text in interactive buffer",  emoji: "✏️", shortcut: "Enter / e" },
+    ActionItem { label: "Copy Content",    desc: "Copy note text strictly to clipboard", emoji: "📋", shortcut: "c"         },
+    ActionItem { label: "Open VS Code",    desc: "Open note file in VS Code editor",      emoji: "💻", shortcut: "v"         },
+    ActionItem { label: "Open Folder",     desc: "Open containing folder in file manager",emoji: "📂", shortcut: "o"         },
+    ActionItem { label: "Note Statistics", desc: "View word, line, and character stats",  emoji: "📊", shortcut: "s"         },
+    ActionItem { label: "Delete Note",     desc: "Delete note file permanently",          emoji: "🗑️", shortcut: "d"         },
+    ActionItem { label: "Back to Catalog", desc: "Return to notes search catalog",        emoji: "🔙", shortcut: "Esc"       },
+];
+
 // ── Modal Mode ───────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq)]
 enum Modal {
     None,
-    ConfirmDelete(usize),                // index into filtered_indices
-    NewNoteField(u8, String, String),    // active_field (0=cat,1=title), cat, title
+    ConfirmDelete(usize),                    // index into filtered_indices
+    NewNoteField(u8, String, String, String),// active_field (0=cat,1=title,2=content), cat, title, content
 }
 
 // ── App State ────────────────────────────────────────────────────────────────
@@ -73,6 +103,13 @@ pub struct NotesApp {
     pub query: String,
     pub status_msg: Option<(String, bool)>, // (msg, is_error)
     pub scroll_offset: u16,
+
+    // Page 2 & GWIP-style UX State
+    pub page: AppPage,
+    pub action_cursor: usize,
+    pub is_editing_content: bool,
+    pub edit_buffer: String,
+
     modal: Modal,
 }
 
@@ -86,6 +123,10 @@ impl NotesApp {
             query: String::new(),
             status_msg: None,
             scroll_offset: 0,
+            page: AppPage::List,
+            action_cursor: 0,
+            is_editing_content: false,
+            edit_buffer: String::new(),
             modal: Modal::None,
         };
         app.load_notes();
@@ -192,7 +233,7 @@ impl NotesApp {
         self.modal = Modal::None;
     }
 
-    fn create_note(&mut self, category: &str, title: &str) {
+    fn create_note(&mut self, category: &str, title: &str, content: &str) {
         let cat = if category.trim().is_empty() { "General" } else { category.trim() };
         let ttl = if title.trim().is_empty() { "Untitled" } else { title.trim() };
         let cat_dir = self.root_dir.join(cat);
@@ -207,13 +248,117 @@ impl NotesApp {
             self.modal = Modal::None;
             return;
         }
-        if let Err(e) = fs::write(&file_path, "") {
+        if let Err(e) = fs::write(&file_path, content) {
             self.status_msg = Some((format!("❌ {e}"), true));
         } else {
             self.status_msg = Some((format!("✅ Created '{cat}/{ttl}'"), false));
             self.load_notes();
         }
         self.modal = Modal::None;
+    }
+
+    pub fn open_detail_page(&mut self) {
+        if let Some(note) = self.selected_note() {
+            self.edit_buffer = note.content.clone();
+            self.page = AppPage::Detail;
+            self.action_cursor = 0;
+            self.is_editing_content = false;
+        }
+    }
+
+    pub fn open_in_vscode(&mut self) {
+        if let Some(note) = self.selected_note() {
+            let path = &note.file_path;
+            match Command::new("code").arg(path).spawn() {
+                Ok(_) => {
+                    self.status_msg = Some((format!("💻 Opened '{}' in VS Code", note.title), false));
+                }
+                Err(_) => {
+                    if let Ok(editor) = std::env::var("EDITOR") {
+                        let _ = Command::new(editor).arg(path).spawn();
+                        self.status_msg = Some((format!("💻 Opened '{}' in $EDITOR", note.title), false));
+                    } else {
+                        self.status_msg = Some(("❌ Could not launch VS Code ('code' not found)".to_string(), true));
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn open_folder(&mut self) {
+        if let Some(note) = self.selected_note() {
+            if let Some(parent) = note.file_path.parent() {
+                #[cfg(target_os = "linux")]
+                let res = Command::new("xdg-open").arg(parent).spawn();
+                #[cfg(target_os = "macos")]
+                let res = Command::new("open").arg(parent).spawn();
+                #[cfg(target_os = "windows")]
+                let res = Command::new("explorer").arg(parent).spawn();
+                #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+                let res = Command::new("xdg-open").arg(parent).spawn();
+
+                match res {
+                    Ok(_) => {
+                        self.status_msg = Some((format!("📂 Opened folder: {}", parent.display()), false));
+                    }
+                    Err(e) => {
+                        self.status_msg = Some((format!("❌ Failed to open folder: {e}"), true));
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn save_current_detail_edit(&mut self) {
+        if let Some(sel) = self.list_state.selected() {
+            if sel < self.filtered_indices.len() {
+                let orig = self.filtered_indices[sel];
+                let path = self.items[orig].file_path.clone();
+                let title = self.items[orig].title.clone();
+                let new_content = self.edit_buffer.clone();
+                if let Err(e) = fs::write(&path, &new_content) {
+                    self.status_msg = Some((format!("❌ Save failed: {e}"), true));
+                } else {
+                    self.items[orig].content = new_content;
+                    self.status_msg = Some((format!("✅ Note '{title}' updated successfully"), false));
+                }
+            }
+        }
+        self.is_editing_content = false;
+    }
+
+    pub fn save_edited_note(&mut self, sel: usize, new_content: String) {
+        if sel < self.filtered_indices.len() {
+            let orig = self.filtered_indices[sel];
+            let path = self.items[orig].file_path.clone();
+            let title = self.items[orig].title.clone();
+            if let Err(e) = fs::write(&path, &new_content) {
+                self.status_msg = Some((format!("❌ Save failed: {e}"), true));
+            } else {
+                self.items[orig].content = new_content;
+                self.status_msg = Some((format!("✅ Note '{title}' updated"), false));
+            }
+        }
+        self.modal = Modal::None;
+    }
+
+    pub fn copy_selected_note_content(&mut self) {
+        if let Some(note) = self.selected_note() {
+            let content = if self.page == AppPage::Detail {
+                self.edit_buffer.clone()
+            } else {
+                note.content.clone()
+            };
+            if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                if clipboard.set_text(&content).is_ok() {
+                    self.status_msg = Some(("📋 Copied note content to clipboard".to_string(), false));
+                } else {
+                    self.status_msg = Some(("❌ Failed to copy to clipboard".to_string(), true));
+                }
+            } else {
+                self.status_msg = Some(("❌ Clipboard unavailable".to_string(), true));
+            }
+        }
     }
 
     // ── Main TUI event loop ───────────────────────────────────────────────────
@@ -236,23 +381,44 @@ impl NotesApp {
                         }
                         continue;
                     }
-                    Modal::NewNoteField(active, cat, title) => {
-                        let (mut active, mut cat, mut title) = (*active, cat.clone(), title.clone());
-                        match key.code {
-                            KeyCode::Esc => { self.modal = Modal::None; }
-                            KeyCode::Tab => { active = 1 - active; self.modal = Modal::NewNoteField(active, cat, title); }
-                            KeyCode::Enter => {
+                    Modal::NewNoteField(active, cat, title, content) => {
+                        let (mut active, mut cat, mut title, mut content) = (*active, cat.clone(), title.clone(), content.clone());
+                        match (key.code, key.modifiers) {
+                            (KeyCode::Esc, _) => { self.modal = Modal::None; }
+                            (KeyCode::Tab, _) => {
+                                active = (active + 1) % 3;
+                                self.modal = Modal::NewNoteField(active, cat, title, content);
+                            }
+                            (KeyCode::Char('s'), KeyModifiers::CONTROL)
+                            | (KeyCode::Enter, KeyModifiers::CONTROL) => {
                                 let c = cat.clone();
                                 let t = title.clone();
-                                self.create_note(&c, &t);
+                                let cnt = content.clone();
+                                self.create_note(&c, &t, &cnt);
                             }
-                            KeyCode::Backspace => {
-                                if active == 0 { cat.pop(); } else { title.pop(); }
-                                self.modal = Modal::NewNoteField(active, cat, title);
+                            (KeyCode::Enter, _) => {
+                                if active == 0 {
+                                    active = 1;
+                                    self.modal = Modal::NewNoteField(active, cat, title, content);
+                                } else if active == 1 {
+                                    active = 2;
+                                    self.modal = Modal::NewNoteField(active, cat, title, content);
+                                } else {
+                                    content.push('\n');
+                                    self.modal = Modal::NewNoteField(active, cat, title, content);
+                                }
                             }
-                            KeyCode::Char(c) => {
-                                if active == 0 { cat.push(c); } else { title.push(c); }
-                                self.modal = Modal::NewNoteField(active, cat, title);
+                            (KeyCode::Backspace, _) => {
+                                if active == 0 { cat.pop(); }
+                                else if active == 1 { title.pop(); }
+                                else { content.pop(); }
+                                self.modal = Modal::NewNoteField(active, cat, title, content);
+                            }
+                            (KeyCode::Char(c), _) => {
+                                if active == 0 { cat.push(c); }
+                                else if active == 1 { title.push(c); }
+                                else { content.push(c); }
+                                self.modal = Modal::NewNoteField(active, cat, title, content);
                             }
                             _ => {}
                         }
@@ -261,16 +427,109 @@ impl NotesApp {
                     Modal::None => {}
                 }
 
-                // ── Normal mode ───────────────────────────────────────────────
+                // ── Page 2 GWIP-style UX Handling ─────────────────────────────
+                if self.page == AppPage::Detail {
+                    if self.is_editing_content {
+                        // Right Pane Note Content Editor
+                        match (key.code, key.modifiers) {
+                            (KeyCode::Esc, _) | (KeyCode::Left, KeyModifiers::NONE) => {
+                                self.is_editing_content = false;
+                            }
+                            (KeyCode::Char('s'), KeyModifiers::CONTROL)
+                            | (KeyCode::Enter, KeyModifiers::CONTROL) => {
+                                self.save_current_detail_edit();
+                            }
+                            (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                                self.copy_selected_note_content();
+                            }
+                            (KeyCode::Enter, _) => {
+                                self.edit_buffer.push('\n');
+                            }
+                            (KeyCode::Tab, _) => {
+                                self.edit_buffer.push_str("    ");
+                            }
+                            (KeyCode::Backspace, _) => {
+                                self.edit_buffer.pop();
+                            }
+                            (KeyCode::Char(c), _) => {
+                                self.edit_buffer.push(c);
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        // Left Pane Action Menu Navigation
+                        match (key.code, key.modifiers) {
+                            (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) => {
+                                self.page = AppPage::List;
+                            }
+                            (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => {
+                                if self.action_cursor > 0 { self.action_cursor -= 1; }
+                            }
+                            (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => {
+                                if self.action_cursor < ACTION_ITEMS.len() - 1 { self.action_cursor += 1; }
+                            }
+                            (KeyCode::Tab, _) | (KeyCode::Right, _) => {
+                                self.is_editing_content = true;
+                            }
+                            (KeyCode::Enter, _) => {
+                                match self.action_cursor {
+                                    0 => self.is_editing_content = true,
+                                    1 => self.copy_selected_note_content(),
+                                    2 => self.open_in_vscode(),
+                                    3 => self.open_folder(),
+                                    4 => {
+                                        let words = self.edit_buffer.split_whitespace().count();
+                                        let chars = self.edit_buffer.chars().count();
+                                        self.status_msg = Some((format!("📊 Note stats: {words} words, {chars} characters"), false));
+                                    }
+                                    5 => {
+                                        if let Some(sel) = self.list_state.selected() {
+                                            self.modal = Modal::ConfirmDelete(sel);
+                                        }
+                                    }
+                                    6 => self.page = AppPage::List,
+                                    _ => {}
+                                }
+                            }
+                            (KeyCode::Char('e'), KeyModifiers::NONE) => self.is_editing_content = true,
+                            (KeyCode::Char('c'), KeyModifiers::NONE) | (KeyCode::Char('y'), KeyModifiers::NONE) => self.copy_selected_note_content(),
+                            (KeyCode::Char('v'), KeyModifiers::NONE) => self.open_in_vscode(),
+                            (KeyCode::Char('o'), KeyModifiers::NONE) => self.open_folder(),
+                            (KeyCode::Char('d'), KeyModifiers::NONE) => {
+                                if let Some(sel) = self.list_state.selected() {
+                                    self.modal = Modal::ConfirmDelete(sel);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    continue;
+                }
+
+                // ── Page 1 Normal mode ─────────────────────────────────────────
                 match (key.code, key.modifiers) {
                     (KeyCode::Esc, _)
-                    | (KeyCode::Char('q'), KeyModifiers::NONE)
-                    | (KeyCode::Char('c'), KeyModifiers::CONTROL) => return Ok(None),
+                    | (KeyCode::Char('q'), KeyModifiers::NONE) => return Ok(None),
 
-                    (KeyCode::Enter, _) => {
-                        if let Some(note) = self.selected_note().cloned() {
-                            return Ok(Some(note));
-                        }
+                    // Open Page 2 (GWIP Note Detail & Action UX)
+                    (KeyCode::Enter, _) | (KeyCode::Char('e'), KeyModifiers::NONE) => {
+                        self.open_detail_page();
+                    }
+
+                    // Copy ONLY note content to clipboard
+                    (KeyCode::Char('c'), KeyModifiers::NONE)
+                    | (KeyCode::Char('y'), KeyModifiers::NONE) => {
+                        self.copy_selected_note_content();
+                    }
+
+                    // Open in VS Code directly
+                    (KeyCode::Char('v'), KeyModifiers::NONE) => {
+                        self.open_in_vscode();
+                    }
+
+                    // Open containing folder
+                    (KeyCode::Char('o'), KeyModifiers::NONE) => {
+                        self.open_folder();
                     }
 
                     (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => self.move_select(-1),
@@ -300,7 +559,7 @@ impl NotesApp {
 
                     // New note
                     (KeyCode::Char('n'), KeyModifiers::NONE) => {
-                        self.modal = Modal::NewNoteField(0, String::new(), String::new());
+                        self.modal = Modal::NewNoteField(0, String::new(), String::new(), String::new());
                     }
 
                     // Search typing
@@ -323,6 +582,17 @@ impl NotesApp {
     fn render_ui(&mut self, f: &mut Frame) {
         let area = f.area();
 
+        if self.page == AppPage::Detail {
+            self.render_detail_page(f, area);
+        } else {
+            self.render_list_page(f, area);
+        }
+
+        // Modals (rendered on top)
+        self.render_modal(f, area);
+    }
+
+    fn render_list_page(&mut self, f: &mut Frame, area: Rect) {
         // Full background
         f.render_widget(
             Block::default().style(Style::default().bg(C_BG)),
@@ -335,33 +605,41 @@ impl NotesApp {
                 Constraint::Length(3), // Banner
                 Constraint::Length(3), // Search bar
                 Constraint::Min(5),    // Content area
-                Constraint::Length(3), // Status / footer
+                Constraint::Length(3), // Status bar / shortcuts
             ])
             .split(area);
 
         // ── Banner ────────────────────────────────────────────────────────────
-        let note_count = self.items.len();
-        let banner = Paragraph::new(Line::from(vec![
-            Span::styled("📝  ", Style::default().fg(C_ACCENT)),
-            Span::styled("NOTES", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-            Span::styled(" — Fancybash Note Manager", Style::default().fg(C_TEXT)),
-            Span::styled(
-                format!("  ({note_count} notes)"),
-                Style::default().fg(C_DIM),
-            ),
-        ]))
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(C_BORDER))
-                .style(Style::default().bg(C_BG)),
-        );
+        let banner_spans = if let Some((ref msg, is_error)) = self.status_msg {
+            let color = if is_error { Color::Rgb(255, 80, 80) } else { C_GREEN };
+            vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))]
+        } else {
+            let note_count = self.items.len();
+            vec![
+                Span::styled("📝  ", Style::default().fg(C_ACCENT)),
+                Span::styled("NOTES", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+                Span::styled(" — Fancybash Note Manager", Style::default().fg(C_TEXT)),
+                Span::styled(
+                    format!("  ({note_count} notes)"),
+                    Style::default().fg(C_DIM),
+                ),
+            ]
+        };
+
+        let banner = Paragraph::new(Line::from(banner_spans))
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_BORDER))
+                    .style(Style::default().bg(C_BG)),
+            );
         f.render_widget(banner, outer[0]);
 
         // ── Search Bar ────────────────────────────────────────────────────────
         let match_count = self.filtered_indices.len();
+        let note_count = self.items.len();
         let search_text = Line::from(vec![
             Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
             Span::styled(&self.query, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
@@ -393,38 +671,290 @@ impl NotesApp {
         self.render_list(f, content_panes[0]);
         self.render_preview(f, content_panes[1]);
 
-        // ── Status / Footer ───────────────────────────────────────────────────
-        let status_text = if let Some((ref msg, is_error)) = self.status_msg {
-            let color = if is_error { Color::Rgb(255, 80, 80) } else { C_GREEN };
-            Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
-        } else {
-            Line::from(vec![
-                Span::styled(" ↑↓/jk Navigate", Style::default().fg(C_DIM)),
-                Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("Type to search", Style::default().fg(C_DIM)),
-                Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("n New", Style::default().fg(C_ACCENT)),
-                Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("d Delete", Style::default().fg(C_PINK)),
-                Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("Enter Open", Style::default().fg(C_GREEN)),
-                Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("q Quit", Style::default().fg(C_DIM)),
-            ])
-        };
-        let status_bar = Paragraph::new(status_text)
+        // ── Status Bar / Shortcuts ────────────────────────────────────────────
+        let status_spans = vec![
+            Span::styled(" ↑↓/jk ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Navigate ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled("Type ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Search ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled("Enter/e ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Open Actions ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled("c ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Copy ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled("v ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Code ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled("n ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("New ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled("d ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Delete ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled("q ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("Quit", Style::default().fg(C_TEXT)),
+        ];
+
+        let status_bar = Paragraph::new(Line::from(status_spans))
             .alignment(Alignment::Center)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(C_DIM))
+                    .border_style(Style::default().fg(C_BORDER))
                     .style(Style::default().bg(C_BG)),
             );
         f.render_widget(status_bar, outer[3]);
+    }
 
-        // ── Modals (rendered last, on top) ────────────────────────────────────
-        self.render_modal(f, area);
+    fn render_detail_page(&mut self, f: &mut Frame, area: Rect) {
+        // Deep space background fill
+        f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
+
+        let outer = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Header banner
+                Constraint::Min(0),    // GWIP 2-pane body
+                Constraint::Length(3), // Footer status bar
+            ])
+            .split(area);
+
+        let sel_note = self.selected_note();
+        let (cat, title, created) = sel_note
+            .map(|n| (n.category.as_str(), n.title.as_str(), n.created_time.as_str()))
+            .unwrap_or(("General", "Untitled", "—"));
+
+        // ── Header Banner ──────────────────────────────────────────────────────
+        let header_spans = if let Some((ref msg, is_error)) = self.status_msg {
+            let color = if is_error { Color::Rgb(255, 80, 80) } else { C_GREEN };
+            vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))]
+        } else {
+            let mode_pill = if self.is_editing_content {
+                Span::styled(" STEP 2/2: EDIT NOTE ", Style::default().fg(C_BG).bg(C_CYAN).add_modifier(Modifier::BOLD))
+            } else {
+                Span::styled(" STEP 2/2: CHOOSE NOTE ACTION ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD))
+            };
+
+            vec![
+                Span::styled(" 📝 FANCYBASH NOTES  ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD)),
+                Span::raw("  "),
+                mode_pill,
+                Span::raw("  "),
+                Span::styled(format!("📁 {} / {}", cat, title), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+                Span::raw("  •  "),
+                Span::styled(format!("🕐 {created}"), Style::default().fg(C_DIM)),
+            ]
+        };
+
+        let header = Paragraph::new(Line::from(header_spans))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_VIOLET))
+                    .style(Style::default().bg(C_CARD)),
+            )
+            .alignment(Alignment::Left);
+        f.render_widget(header, outer[0]);
+
+        // ── Body Layout: Left Pane (32%) | Right Pane (68%) ───────────────────
+        let body = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(32), Constraint::Percentage(68)])
+            .split(outer[1]);
+
+        self.draw_action_menu(f, body[0]);
+        self.draw_detail_right_panel(f, body[1]);
+
+        // ── Footer status bar ──────────────────────────────────────────────────
+        let footer_spans = vec![
+            Span::styled(" [↑/↓ or k/j] ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled("Navigate Actions ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled(" [Enter/e] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled("Select Action ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled(" [c] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Copy ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled(" [v] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled("VS Code ", Style::default().fg(C_TEXT)),
+            Span::styled("│ ", Style::default().fg(C_BORDER)),
+            Span::styled(" [Esc] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Back to Catalog", Style::default().fg(C_TEXT)),
+        ];
+
+        let footer = Paragraph::new(Line::from(footer_spans))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_VIOLET))
+                    .style(Style::default().bg(C_CARD)),
+            )
+            .alignment(Alignment::Center);
+        f.render_widget(footer, outer[2]);
+    }
+
+    fn draw_action_menu(&self, f: &mut Frame, area: Rect) {
+        let active = !self.is_editing_content;
+        let border_color = if active { C_VIOLET } else { C_BORDER };
+
+        let items: Vec<ListItem> = ACTION_ITEMS.iter().enumerate().map(|(idx, item)| {
+            let sel = idx == self.action_cursor;
+            if sel {
+                let label_style = if active {
+                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)
+                };
+                ListItem::new(Line::from(vec![
+                    Span::styled("❯ ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+                    Span::styled(item.emoji, Style::default().fg(C_WHITE)),
+                    Span::raw(" "),
+                    Span::styled(format!("{:<15}", item.label), label_style),
+                    Span::styled(format!(" [{}]", item.shortcut), Style::default().fg(C_YELLOW)),
+                ])).style(Style::default().bg(C_CARD))
+            } else {
+                ListItem::new(Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(item.emoji, Style::default().fg(C_DIM)),
+                    Span::raw(" "),
+                    Span::styled(format!("{:<15}", item.label), Style::default().fg(C_DIM)),
+                    Span::styled(format!(" [{}]", item.shortcut), Style::default().fg(Color::Rgb(70, 78, 100))),
+                ]))
+            }
+        }).collect();
+
+        let title_span = if active {
+            Span::styled(" 📌 NOTE ACTIONS (ACTIVE) ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD))
+        } else {
+            Span::styled(" 📌 NOTE ACTIONS ", Style::default().fg(C_DIM))
+        };
+
+        let mut state = ListState::default();
+        state.select(Some(self.action_cursor));
+
+        f.render_stateful_widget(
+            List::new(items).block(
+                Block::default()
+                    .title(title_span)
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(border_color))
+                    .style(Style::default().bg(C_CARD)),
+            ),
+            area,
+            &mut state,
+        );
+    }
+
+    fn draw_detail_right_panel(&self, f: &mut Frame, area: Rect) {
+        let editor_active = self.is_editing_content;
+
+        let inner_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(5), // Note Metadata & Live Stats Card
+                Constraint::Min(0),    // Interactive Editor / Content Preview
+            ])
+            .split(area);
+
+        let sel_note = self.selected_note();
+        let (cat, title, path_str) = sel_note
+            .map(|n| (n.category.clone(), n.title.clone(), n.file_path.to_string_lossy().to_string()))
+            .unwrap_or(("General".to_string(), "Untitled".to_string(), "—".to_string()));
+
+        let words = self.edit_buffer.split_whitespace().count();
+        let chars = self.edit_buffer.chars().count();
+        let lines_cnt = self.edit_buffer.lines().count();
+        let file_bytes = self.edit_buffer.len();
+
+        // ── 1. Note Info & Metrics Card ───────────────────────────────────────
+        f.render_widget(
+            Paragraph::new(vec![
+                Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled("📁 ", Style::default().fg(C_YELLOW)),
+                    Span::styled(cat, Style::default().fg(C_CAT).add_modifier(Modifier::BOLD)),
+                    Span::styled(" / ", Style::default().fg(C_DIM)),
+                    Span::styled(title, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled("  •  ", Style::default().fg(C_DIM)),
+                    Span::styled(format!("📊 {words} words │ {chars} chars │ {lines_cnt} lines │ {file_bytes} bytes"), Style::default().fg(C_CYAN)),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled("Path: ", Style::default().fg(C_DIM)),
+                    Span::styled(path_str, Style::default().fg(C_TEXT)),
+                ]),
+            ])
+            .block(
+                Block::default()
+                    .title(Span::styled(" ℹ  NOTE METADATA & METRICS ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)))
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_BORDER))
+                    .style(Style::default().bg(C_CARD)),
+            ),
+            inner_layout[0],
+        );
+
+        // ── 2. Interactive Editor / Content Preview Box ───────────────────────
+        let border_style = if editor_active {
+            Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(C_BORDER)
+        };
+
+        let title_span = if editor_active {
+            Span::styled(" ✏️ EDIT NOTE CONTENT (ACTIVE — Ctrl+S to Save) ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD))
+        } else {
+            Span::styled(" 📄 NOTE CONTENT PREVIEW (Press Enter or e to edit) ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+        };
+
+        let mut display_lines: Vec<Line> = Vec::new();
+        let lines_vec: Vec<&str> = self.edit_buffer.split('\n').collect();
+        let total = lines_vec.len();
+
+        if self.edit_buffer.trim().is_empty() && !editor_active {
+            display_lines.push(Line::from(Span::styled(
+                "  (empty note — press Enter/e to edit content)",
+                Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+            )));
+        } else {
+            for (idx, line) in lines_vec.iter().enumerate() {
+                if editor_active && idx == total - 1 {
+                    display_lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(*line, Style::default().fg(C_WHITE)),
+                        Span::styled("█", Style::default().fg(C_CYAN)),
+                    ]));
+                } else {
+                    display_lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(*line, Style::default().fg(C_CONTENT)),
+                    ]));
+                }
+            }
+        }
+
+        let editor_widget = Paragraph::new(display_lines)
+            .wrap(Wrap { trim: false })
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(border_style)
+                    .title(title_span)
+                    .style(Style::default().bg(C_BG)),
+            );
+
+        f.render_widget(editor_widget, inner_layout[1]);
     }
 
     fn render_list(&mut self, f: &mut Frame, area: Rect) {
@@ -599,8 +1129,8 @@ impl NotesApp {
                 f.render_widget(dialog, dialog_area);
             }
 
-            Modal::NewNoteField(active_field, cat, title) => {
-                let dialog_area = centered_rect(60, 12, area);
+            Modal::NewNoteField(active_field, cat, title, content) => {
+                let dialog_area = centered_rect(75, 18, area);
                 f.render_widget(Clear, dialog_area);
 
                 let outer_block = Block::default()
@@ -608,7 +1138,7 @@ impl NotesApp {
                     .border_type(BorderType::Double)
                     .border_style(Style::default().fg(C_ACCENT))
                     .title(Span::styled(
-                        " ✏  New Note ",
+                        " ✏  Create New Note ",
                         Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
                     ))
                     .style(Style::default().bg(Color::Rgb(8, 22, 18)));
@@ -619,23 +1149,23 @@ impl NotesApp {
                 let rows = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints([
-                        Constraint::Length(1),
-                        Constraint::Length(3),
-                        Constraint::Length(3),
-                        Constraint::Length(1),
-                        Constraint::Length(1),
+                        Constraint::Length(1), // Instructions
+                        Constraint::Length(3), // Category
+                        Constraint::Length(3), // Title
+                        Constraint::Min(5),    // Content
+                        Constraint::Length(1), // Hint
                     ])
                     .split(inner);
 
                 // Instructions
                 f.render_widget(
                     Paragraph::new(Line::from(vec![
-                        Span::styled("  Tab", Style::default().fg(C_YELLOW)),
-                        Span::styled(" to switch fields  │  ", Style::default().fg(C_DIM)),
-                        Span::styled("Enter", Style::default().fg(C_GREEN)),
-                        Span::styled(" to create  │  ", Style::default().fg(C_DIM)),
-                        Span::styled("Esc", Style::default().fg(C_DIM)),
-                        Span::styled(" cancel", Style::default().fg(C_DIM)),
+                        Span::styled(" Tab/Enter", Style::default().fg(C_YELLOW)),
+                        Span::styled(" switch fields  │  ", Style::default().fg(C_DIM)),
+                        Span::styled("Ctrl+S / Ctrl+Enter", Style::default().fg(C_GREEN)),
+                        Span::styled(" Create Note  │  ", Style::default().fg(C_DIM)),
+                        Span::styled("Esc", Style::default().fg(C_PINK)),
+                        Span::styled(" Cancel", Style::default().fg(C_DIM)),
                     ])),
                     rows[0],
                 );
@@ -651,7 +1181,7 @@ impl NotesApp {
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(cat_border_color))
-                        .title(Span::styled(" Category ", Style::default().fg(cat_border_color))),
+                        .title(Span::styled(" 1. Category ", Style::default().fg(cat_border_color))),
                 );
                 f.render_widget(cat_field, rows[1]);
 
@@ -666,17 +1196,45 @@ impl NotesApp {
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(title_border_color))
-                        .title(Span::styled(" Title ", Style::default().fg(title_border_color))),
+                        .title(Span::styled(" 2. Title ", Style::default().fg(title_border_color))),
                 );
                 f.render_widget(title_field, rows[2]);
+
+                // Content field
+                let content_border_color = if *active_field == 2 { C_CYAN } else { C_DIM };
+                let mut content_lines: Vec<Line> = Vec::new();
+                let lines_vec: Vec<&str> = content.split('\n').collect();
+                let total = lines_vec.len();
+
+                for (idx, line) in lines_vec.iter().enumerate() {
+                    if *active_field == 2 && idx == total - 1 {
+                        content_lines.push(Line::from(vec![
+                            Span::styled(*line, Style::default().fg(C_WHITE)),
+                            Span::styled("█", Style::default().fg(C_CYAN)),
+                        ]));
+                    } else {
+                        content_lines.push(Line::from(Span::styled(*line, Style::default().fg(C_WHITE))));
+                    }
+                }
+
+                let content_field = Paragraph::new(content_lines)
+                    .wrap(Wrap { trim: false })
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .border_style(Style::default().fg(content_border_color))
+                            .title(Span::styled(" 3. Note Content (Write text here) ", Style::default().fg(content_border_color))),
+                    );
+                f.render_widget(content_field, rows[3]);
 
                 // Hint
                 f.render_widget(
                     Paragraph::new(Line::from(Span::styled(
-                        "  Leave Category blank to use 'General'",
+                        "  Leave Category blank to use 'General'  │  Press Ctrl+S or Ctrl+Enter to save",
                         Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
                     ))),
-                    rows[3],
+                    rows[4],
                 );
             }
         }
@@ -751,6 +1309,45 @@ fn format_system_time(st: std::time::SystemTime) -> String {
     }
 }
 
+fn print_notes_help(root_dir: &PathBuf) {
+    let display_dir = root_dir.to_string_lossy();
+    println!("\x1b[1;36m📝 Notes Manager — {}\x1b[0m\n", display_dir);
+    println!("  \x1b[1;32mnotes\x1b[0m                 Browse all notes with interactive TUI & live preview");
+    println!("  \x1b[1;32mnotes add [title]\x1b[0m     Add a note — pick category, enter title, write content");
+    println!("  \x1b[1;32mnotes search <query>\x1b[0m  Full-text search inside all notes (e.g. \x1b[36mnotes search \"docker\"\x1b[0m)");
+    println!("  \x1b[1;32mnotes find <query>\x1b[0m    Alias for \x1b[32mnotes search\x1b[0m");
+    println!("  \x1b[1;32mnotes delete <name>\x1b[0m   Delete a note by title");
+    println!("  \x1b[1;32mnotes --help\x1b[0m          Show full usage reference");
+}
+
+fn run_tui(app: &mut NotesApp) -> io::Result<()> {
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let res = app.run_loop(&mut terminal);
+
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    if let Ok(Some(note)) = res {
+        println!("\x1b[1;36m📝 {}/{}\x1b[0m", note.category, note.title);
+        println!("\x1b[2m🕐 {}\x1b[0m", note.created_time);
+        println!("────────────────────────────────────────");
+        println!("{}", note.content);
+        println!("────────────────────────────────────────");
+        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+            let _ = clipboard.set_text(&note.content);
+            println!("\x1b[1;32m📋 Copied note content to clipboard.\x1b[0m");
+        }
+    }
+
+    Ok(())
+}
+
 // ── Public entry point ────────────────────────────────────────────────────────
 
 /// Runs the interactive notes manager (`fancybash notes`).
@@ -761,55 +1358,45 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn Erro
     let action = action_opt.unwrap_or("tui");
 
     match action {
-        "tui" | "list" | "ls" | "search" => {
-            let mut app = NotesApp::new(root_dir);
-
-            enable_raw_mode()?;
-            let mut stdout = io::stdout();
-            execute!(stdout, EnterAlternateScreen)?;
-            let backend = CrosstermBackend::new(stdout);
-            let mut terminal = Terminal::new(backend)?;
-
-            let res = app.run_loop(&mut terminal);
-
-            disable_raw_mode()?;
-            execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-            terminal.show_cursor()?;
-
-            if let Ok(Some(note)) = res {
-                println!("\x1b[1;36m📝 {}/{}\x1b[0m", note.category, note.title);
-                println!("\x1b[2m🕐 {}\x1b[0m", note.created_time);
-                println!("────────────────────────────────────────");
-                println!("{}", note.content);
-                println!("────────────────────────────────────────");
-                if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                    let _ = clipboard.set_text(&note.content);
-                    println!("\x1b[1;32m📋 Copied to clipboard.\x1b[0m");
-                }
-            }
+        "--help" | "-h" | "help" => {
+            print_notes_help(&root_dir);
+            return Ok(());
         }
 
         "add" => {
-            let title = if !args.is_empty() { args.join(" ") } else { "Untitled".to_string() };
-            let cat_dir = root_dir.join("General");
-            fs::create_dir_all(&cat_dir)?;
-            fs::write(cat_dir.join(format!("{title}.txt")), "")?;
-            println!("✅ Note created: General/{title}");
+            let initial_title = args.join(" ");
+            let mut app = NotesApp::new(root_dir);
+            app.modal = Modal::NewNoteField(0, String::new(), initial_title, String::new());
+            run_tui(&mut app)?;
+        }
+
+        "search" | "find" => {
+            let query_str = args.join(" ");
+            let mut app = NotesApp::new(root_dir);
+            if !query_str.is_empty() {
+                app.query = query_str;
+                app.filter_items();
+            }
+            run_tui(&mut app)?;
         }
 
         "delete" | "rm" => {
-            if let Some(target) = args.first() {
-                let path = root_dir.join("General").join(format!("{target}.txt"));
-                if path.exists() {
-                    fs::remove_file(path)?;
-                    println!("🗑  Note deleted: {target}");
-                } else {
-                    println!("❌ Not found: {target}");
+            let target = args.join(" ");
+            let mut app = NotesApp::new(root_dir);
+            if !target.is_empty() {
+                app.query = target;
+                app.filter_items();
+                if !app.filtered_indices.is_empty() {
+                    app.modal = Modal::ConfirmDelete(0);
                 }
             }
+            run_tui(&mut app)?;
         }
 
-        _ => println!("Usage: fancybash notes [add | list | search | delete]"),
+        "tui" | "list" | "ls" | _ => {
+            let mut app = NotesApp::new(root_dir);
+            run_tui(&mut app)?;
+        }
     }
 
     Ok(())
@@ -836,7 +1423,7 @@ mod tests {
         let dir = tmp();
         let mut app = NotesApp::new(dir.clone());
         let before = app.items.len();
-        app.create_note("Work", "my-task");
+        app.create_note("Work", "my-task", "initial note content");
         // create_note calls load_notes internally; check item count grew
         assert!(
             app.items.len() > before || app.items.iter().any(|n| n.title == "my-task"),
@@ -876,5 +1463,75 @@ mod tests {
         let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
         let s = format_system_time(t);
         assert!(s.contains('-'));
+    }
+
+    #[test]
+    fn test_edit_and_save_note() {
+        let dir = tmp();
+        let cat = dir.join("Work");
+        fs::create_dir_all(&cat).unwrap();
+        let file_p = cat.join("todo.txt");
+        fs::write(&file_p, "old content").unwrap();
+
+        let mut app = NotesApp::new(dir.clone());
+        assert!(!app.items.is_empty());
+        app.list_state.select(Some(0));
+
+        // Save new content
+        app.save_edited_note(0, "updated content line 1\nupdated line 2".to_string());
+
+        let read_back = fs::read_to_string(&file_p).unwrap();
+        assert_eq!(read_back, "updated content line 1\nupdated line 2");
+        assert_eq!(app.items[0].content, "updated content line 1\nupdated line 2");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_copy_note_content() {
+        let dir = tmp();
+        let cat = dir.join("General");
+        fs::create_dir_all(&cat).unwrap();
+        fs::write(cat.join("sample.txt"), "pure note content without headers").unwrap();
+
+        let mut app = NotesApp::new(dir.clone());
+        app.list_state.select(Some(0));
+        app.copy_selected_note_content();
+
+        assert!(app.status_msg.is_some());
+        let (msg, is_err) = app.status_msg.unwrap();
+        assert!(!is_err);
+        assert!(msg.contains("Copied note content"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_gwip_detail_page_navigation() {
+        let dir = tmp();
+        let cat = dir.join("Work");
+        fs::create_dir_all(&cat).unwrap();
+        fs::write(cat.join("project.txt"), "Initial note content").unwrap();
+
+        let mut app = NotesApp::new(dir.clone());
+        app.list_state.select(Some(0));
+
+        // Open detail page (Page 2)
+        app.open_detail_page();
+        assert_eq!(app.page, AppPage::Detail);
+        assert_eq!(app.edit_buffer, "Initial note content");
+        assert_eq!(app.action_cursor, 0);
+        assert!(!app.is_editing_content);
+
+        // Modify edit buffer and save
+        app.edit_buffer = "Modified in Page 2 editor".to_string();
+        app.save_current_detail_edit();
+
+        let file_p = cat.join("project.txt");
+        let content_on_disk = fs::read_to_string(&file_p).unwrap();
+        assert_eq!(content_on_disk, "Modified in Page 2 editor");
+        assert_eq!(app.items[0].content, "Modified in Page 2 editor");
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

@@ -219,11 +219,48 @@ fn spinner_frame(tick: u64) -> &'static str {
     frames[(tick as usize) % frames.len()]
 }
 
+fn truncate_to_width(s: &str, max_width: usize) -> String {
+    if max_width == 0 {
+        return String::new();
+    }
+    let width = unicode_width::UnicodeWidthStr::width(s);
+    if width <= max_width {
+        return s.to_string();
+    }
+    if max_width == 1 {
+        return "…".to_string();
+    }
+    let mut cur_width = 0;
+    let mut res = String::new();
+    for c in s.chars() {
+        let cw = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
+        if cur_width + cw + 1 > max_width {
+            res.push('…');
+            break;
+        }
+        res.push(c);
+        cur_width += cw;
+    }
+    res
+}
+
 fn strip_ansi_codes(s: &str) -> String {
+    let s = if s.contains('\r') {
+        s.split('\r')
+            .filter(|part| !part.trim().is_empty())
+            .last()
+            .unwrap_or(s)
+    } else {
+        s
+    };
+
     let mut clean = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
+            '\t' => {
+                clean.push_str("    ");
+            }
             '\x1b' => {
                 match chars.peek() {
                     Some('[') => {
@@ -523,6 +560,7 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .split(outer[2]);
 
     // Left Pane: Tasks List
+    let left_inner_width = middle_chunks[0].width.saturating_sub(2) as usize;
     let queue_items: Vec<ListItem> = app
         .tasks
         .iter()
@@ -542,9 +580,17 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
                 StatusKind::Failed => (" [FAILED]  ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
             };
 
+            let pointer_w = 2;
+            let badge_w = badge.chars().count(); // 11
+            let name_avail = left_inner_width.saturating_sub(pointer_w + badge_w);
+
+            let truncated_name = truncate_to_width(&task.name, name_avail);
+            let name_disp_w = unicode_width::UnicodeWidthStr::width(truncated_name.as_str());
+            let padding = " ".repeat(name_avail.saturating_sub(name_disp_w));
+
             let line = Line::from(vec![
                 pointer,
-                Span::styled(format!("{:<22}", task.name), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{}{}", truncated_name, padding), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
                 Span::styled(badge, badge_style),
             ]);
             ListItem::new(line)
@@ -561,8 +607,7 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
 
     // Right Pane: Live Installation Log
     let visible_capacity = middle_chunks[1].height.saturating_sub(2) as usize;
-    // Subtract 2 for borders, 1 extra safety margin to prevent overflow
-    let log_panel_width = middle_chunks[1].width.saturating_sub(3) as usize;
+    let log_inner_width = middle_chunks[1].width.saturating_sub(2) as usize;
     let total_lines = app.log_lines.len();
     let start_idx = if app.auto_scroll {
         total_lines.saturating_sub(visible_capacity)
@@ -588,14 +633,8 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
                 Style::default().fg(C_DIM)
             };
 
-            // Hard-truncate to panel width so long lines never overflow into left pane
-            let char_count = line.chars().count();
-            let display_line = if log_panel_width > 1 && char_count > log_panel_width {
-                let truncated: String = line.chars().take(log_panel_width - 1).collect();
-                format!("{}…", truncated)
-            } else {
-                line.clone()
-            };
+            // Hard-truncate to log_inner_width so log lines NEVER overflow past border
+            let display_line = truncate_to_width(line, log_inner_width);
 
             ListItem::new(Line::from(Span::styled(display_line, style)))
         })
@@ -647,5 +686,19 @@ mod tests {
     #[test]
     fn test_cmd_exists_fn() {
         assert!(cmd_exists("sh"));
+    }
+
+    #[test]
+    fn test_truncate_to_width() {
+        assert_eq!(truncate_to_width("hello world", 5), "hell…");
+        assert_eq!(truncate_to_width("hello", 10), "hello");
+        assert_eq!(truncate_to_width("⚡ system", 4), "⚡ …");
+        assert_eq!(truncate_to_width("⚡ system", 5), "⚡ s…");
+    }
+
+    #[test]
+    fn test_strip_ansi_codes_cr() {
+        let log = "Updating 5/8...\rUpdating 5/8... 100% 48.2 kB/s";
+        assert_eq!(strip_ansi_codes(log), "Updating 5/8... 100% 48.2 kB/s");
     }
 }

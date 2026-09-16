@@ -202,6 +202,40 @@ enum Commands {
         files: Vec<String>,
     },
 
+    /// Create directory and enter it (mkd <name>)
+    Mkd {
+        /// Directory name to create
+        name: String,
+    },
+
+    /// Force remove directory recursively (rmd <name>)
+    Rmd {
+        /// Directory or file name to remove
+        name: String,
+    },
+
+    /// Remove file with confirmation (rmf <file>)
+    Rmf {
+        /// File name to remove
+        name: String,
+
+        /// Skip interactive confirmation
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Create backup copy (.bak) (bak <file>)
+    Bak {
+        /// File or directory name to back up
+        name: String,
+    },
+
+    /// Move file to system trash safely (trash <file>)
+    Trash {
+        /// File or directory name to trash
+        name: String,
+    },
+
     /// Run the persistent background Unix socket server daemon
     Serve,
 
@@ -417,6 +451,11 @@ fn main() {
             Commands::Drive { num } => fancybash_core::tools::drive_jumper::run(num.as_deref()),
             Commands::Cf => fancybash_core::tools::fuzzy_cd::run(),
             Commands::T { files } => fancybash_core::tools::touch_tool::run(&files),
+            Commands::Mkd { name } => fancybash_core::tools::mkd::run(&name).map(|_| ()),
+            Commands::Rmd { name } => fancybash_core::tools::rmd::run(&name),
+            Commands::Rmf { name, force } => fancybash_core::tools::rmf::run(&name, force),
+            Commands::Bak { name } => fancybash_core::tools::bak::run(&name),
+            Commands::Trash { name } => fancybash_core::tools::trash::run(&name),
             Commands::Serve => cmd_serve(),
             Commands::Prompt(args) => cmd_prompt(args),
             Commands::InternalCleanRc => cmd_internal_clean_rc(),

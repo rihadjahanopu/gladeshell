@@ -249,12 +249,103 @@ if (Get-Command eza -ErrorAction SilentlyContinue) {
     }
 }
 
+/// Render shell function helpers for filesystem operations (mkd, rmd, rmf, bak, trash).
+pub fn render_file_helpers(shell: Shell) -> String {
+    match shell {
+        Shell::Zsh | Shell::Bash => r#"
+# ── Native Rust File & Directory Helper Functions ──
+unfunction mkd rmd rmf bak trash 2>/dev/null || true
+unalias mkd rmd rmf bak trash 2>/dev/null || true
+
+mkd() {
+    if [ -n "$1" ]; then
+        fancybash mkd "$1" && cd "$1" 2>/dev/null || true
+    else
+        fancybash mkd ""
+    fi
+}
+
+rmd() {
+    fancybash rmd "$@"
+}
+
+rmf() {
+    fancybash rmf "$@"
+}
+
+bak() {
+    fancybash bak "$@"
+}
+
+trash() {
+    fancybash trash "$@"
+}
+"#.to_string(),
+        Shell::Fish => r#"
+# ── Native Rust File & Directory Helper Functions ──
+functions -e mkd rmd rmf bak trash 2>/dev/null
+function mkd
+    if test -n "$argv[1]"
+        fancybash mkd "$argv[1]"; and cd "$argv[1]" 2>/dev/null
+    else
+        fancybash mkd ""
+    end
+end
+
+function rmd
+    fancybash rmd $argv
+end
+
+function rmf
+    fancybash rmf $argv
+end
+
+function bak
+    fancybash bak $argv
+end
+
+function trash
+    fancybash trash $argv
+end
+"#.to_string(),
+        Shell::Pwsh => r#"
+# ── Native Rust File & Directory Helper Functions ──
+function global:mkd {
+    param([string]$Path)
+    if ($Path) {
+        fancybash mkd $Path
+        Set-Location $Path 2>$null
+    } else {
+        fancybash mkd ""
+    }
+}
+function global:rmd {
+    param([string]$Path)
+    fancybash rmd $Path
+}
+function global:rmf {
+    param([string]$Path)
+    fancybash rmf $Path
+}
+function global:bak {
+    param([string]$Path)
+    fancybash bak $Path
+}
+function global:trash {
+    param([string]$Path)
+    fancybash trash $Path
+}
+"#.to_string(),
+    }
+}
+
 /// Render built-in aliases and safe ls wrapper snippet per shell.
 pub fn render_aliases(shell: Shell) -> String {
     let mut out = String::new();
     out.push_str("\n# ── Aliases ──\n");
     out.push_str(&crate::core::aliases::AliasFile::builtin().render(shell));
     out.push_str(&render_safe_ls_wrapper(shell));
+    out.push_str(&render_file_helpers(shell));
     out
 }
 

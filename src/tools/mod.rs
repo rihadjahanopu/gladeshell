@@ -37,3 +37,10 @@ pub mod universal_clean;
 pub mod updater;
 pub mod vault;
 pub mod video_player;
+pub mod mkd;
+pub mod rmd;
+pub mod rmf;
+pub mod bak;
+pub mod trash;
+
+

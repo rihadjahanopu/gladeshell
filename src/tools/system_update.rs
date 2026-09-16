@@ -221,16 +221,46 @@ fn spinner_frame(tick: u64) -> &'static str {
 
 fn strip_ansi_codes(s: &str) -> String {
     let mut clean = String::with_capacity(s.len());
-    let mut in_escape = false;
-    for c in s.chars() {
-        if c == '\x1b' {
-            in_escape = true;
-        } else if in_escape {
-            if c.is_ascii_alphabetic() || c == '~' {
-                in_escape = false;
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\x1b' => {
+                match chars.peek() {
+                    Some('[') => {
+                        // CSI sequence: ESC [ ... final_byte (A-Z, a-z, @)
+                        chars.next(); // consume '['
+                        for ch in chars.by_ref() {
+                            if ch.is_ascii_alphabetic() || ch == '@' {
+                                break;
+                            }
+                        }
+                    }
+                    Some(']') => {
+                        // OSC sequence: ESC ] ... ST (ESC \ or BEL)
+                        chars.next(); // consume ']'
+                        let mut prev = ' ';
+                        for ch in chars.by_ref() {
+                            if ch == '\x07' || (prev == '\x1b' && ch == '\\') {
+                                break;
+                            }
+                            prev = ch;
+                        }
+                    }
+                    Some('(') | Some(')') => {
+                        // Character set designator: ESC ( x
+                        chars.next();
+                        chars.next();
+                    }
+                    _ => {
+                        // Two-char ESC sequence: skip next char
+                        chars.next();
+                    }
+                }
             }
-        } else if c != '\r' {
-            clean.push(c);
+            '\r' | '\x00'..='\x08' | '\x0b'..='\x0c' | '\x0e'..='\x1f' | '\x7f' => {
+                // Skip carriage returns and other control characters
+            }
+            _ => clean.push(c),
         }
     }
     clean
@@ -253,7 +283,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    // Check sudo if required
+    // Check sudo if required — Bug 3 fix: actually check if sudo -v succeeded
     let needs_sudo = available_specs.iter().any(|s| s.needs_sudo);
     if needs_sudo {
         let is_cached = Command::new("sudo")
@@ -264,7 +294,15 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
         if !is_cached {
             println!("\x1b[1;36m🔐 Sudo authentication required for system update...\x1b[0m");
-            let _ = Command::new("sudo").arg("-v").status();
+            let auth_ok = Command::new("sudo")
+                .arg("-v")
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+            if !auth_ok {
+                println!("\x1b[1;31m❌ Sudo authentication failed. Cannot run privileged updates.\x1b[0m");
+                return Ok(());
+            }
         }
     }
 
@@ -299,20 +337,48 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
             match child {
                 Ok(mut proc) => {
-                    if let Some(stdout) = proc.stdout.take() {
+                    // Bug 2 fix: read both stdout AND stderr to prevent buffer deadlock
+                    let handle_out = proc.stdout.take().map(|out| {
                         let tx_log = tx.clone();
-                        let reader = BufReader::new(stdout);
                         std::thread::spawn(move || {
-                            for line in reader.lines().flatten() {
+                            for line in BufReader::new(out).lines().flatten() {
                                 let clean = strip_ansi_codes(&line);
                                 if !clean.trim().is_empty() {
                                     let _ = tx_log.send(Msg::Log(format!("  {}", clean)));
                                 }
                             }
-                        });
-                    }
+                        })
+                    });
 
-                    let status = proc.wait();
+                    let handle_err = proc.stderr.take().map(|err| {
+                        let tx_log = tx.clone();
+                        std::thread::spawn(move || {
+                            for line in BufReader::new(err).lines().flatten() {
+                                let clean = strip_ansi_codes(&line);
+                                if !clean.trim().is_empty() {
+                                    let _ = tx_log.send(Msg::Log(format!("  {}", clean)));
+                                }
+                            }
+                        })
+                    });
+
+                    // Bug 4 fix: kill process if cancel requested
+                    let status = loop {
+                        if cancel_clone.load(Ordering::SeqCst) {
+                            let _ = proc.kill();
+                            break proc.wait();
+                        }
+                        match proc.try_wait() {
+                            Ok(Some(s)) => break Ok(s),
+                            Ok(None) => std::thread::sleep(Duration::from_millis(100)),
+                            Err(e) => break Err(e),
+                        }
+                    };
+
+                    // Bug 1 fix: join threads BEFORE sending ToolFinished — no lost logs
+                    if let Some(h) = handle_out { let _ = h.join(); }
+                    if let Some(h) = handle_err { let _ = h.join(); }
+
                     let success = status.map(|s| s.success()).unwrap_or(false);
                     if success {
                         let _ = tx.send(Msg::Log(format!("✅ Finished updating {} successfully.", spec.name)));
@@ -495,6 +561,8 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
 
     // Right Pane: Live Installation Log
     let visible_capacity = middle_chunks[1].height.saturating_sub(2) as usize;
+    // Subtract 2 for borders, 1 extra safety margin to prevent overflow
+    let log_panel_width = middle_chunks[1].width.saturating_sub(3) as usize;
     let total_lines = app.log_lines.len();
     let start_idx = if app.auto_scroll {
         total_lines.saturating_sub(visible_capacity)
@@ -519,7 +587,17 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
             } else {
                 Style::default().fg(C_DIM)
             };
-            ListItem::new(Line::from(Span::styled(line.clone(), style)))
+
+            // Hard-truncate to panel width so long lines never overflow into left pane
+            let char_count = line.chars().count();
+            let display_line = if log_panel_width > 1 && char_count > log_panel_width {
+                let truncated: String = line.chars().take(log_panel_width - 1).collect();
+                format!("{}…", truncated)
+            } else {
+                line.clone()
+            };
+
+            ListItem::new(Line::from(Span::styled(display_line, style)))
         })
         .collect();
 

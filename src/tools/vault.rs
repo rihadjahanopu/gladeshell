@@ -23,7 +23,7 @@ use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use pbkdf2::pbkdf2_hmac;
 use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Cursor, Write};
 use std::path::{Path, PathBuf};
@@ -43,6 +43,7 @@ const C_RED: Color = Color::Rgb(255, 90, 90);
 
 fn vault_store_dir() -> PathBuf {
     let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
     home.join(".secret_vaults")
@@ -50,7 +51,141 @@ fn vault_store_dir() -> PathBuf {
 
 fn ram_base_dir() -> PathBuf {
     let shm = Path::new("/dev/shm");
-    if shm.exists() && shm.is_dir() { shm.to_path_buf() } else { std::env::temp_dir() }
+    if shm.exists() && shm.is_dir() {
+        shm.to_path_buf()
+    } else {
+        let uid = std::env::var("UID")
+            .or_else(|_| std::env::var("USERNAME"))
+            .unwrap_or_else(|_| "1000".into());
+        let ram_dir = std::env::temp_dir().join(format!(".secret_ram_{}", uid));
+        let _ = fs::create_dir_all(&ram_dir);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(&ram_dir, fs::Permissions::from_mode(0o700));
+        }
+        ram_dir
+    }
+}
+
+fn clean_broken_ram_symlinks() {
+    let home = match std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+    {
+        Some(h) => h,
+        None => return,
+    };
+    if let Ok(entries) = fs::read_dir(&home) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_symlink() && !path.exists() {
+                if let Ok(target) = fs::read_link(&path) {
+                    let target_str = target.to_string_lossy();
+                    if target_str.contains("/dev/shm") || target_str.contains("secret_ram") {
+                        let _ = fs::remove_file(&path);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn open_file_explorer(target_path: &Path) {
+    let path_str = target_path.to_string_lossy().to_string();
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(&path_str).spawn();
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("explorer").arg(&path_str).spawn();
+    }
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    {
+        let _ = std::process::Command::new("xdg-open").arg(&path_str).spawn();
+    }
+}
+
+fn scan_directory(dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() && !p.is_symlink() {
+                if let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+                    if !name.starts_with('.')
+                        && name != "node_modules"
+                        && name != "Library"
+                        && name != ".secret_vaults"
+                    {
+                        dirs.push(p);
+                    }
+                }
+            }
+        }
+    }
+    dirs.sort();
+    dirs
+}
+
+fn hash_panic_password(password: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+fn get_telegram_config() -> (String, String) {
+    let env_token = std::env::var("FB_VAULT_TELEGRAM_BOT_TOKEN").unwrap_or_default();
+    let env_chat = std::env::var("FB_VAULT_TELEGRAM_CHAT_ID").unwrap_or_default();
+    if !env_token.is_empty() && !env_chat.is_empty() {
+        return (env_token, env_chat);
+    }
+    let conf_path = vault_store_dir().join("telegram.conf");
+    if let Ok(content) = fs::read_to_string(conf_path) {
+        let lines: Vec<&str> = content.lines().map(|s| s.trim()).collect();
+        if lines.len() >= 2 {
+            return (lines[0].to_string(), lines[1].to_string());
+        }
+    }
+    (String::new(), String::new())
+}
+
+fn save_telegram_config(token: &str, chat_id: &str) -> Result<(), String> {
+    let conf_path = vault_store_dir().join("telegram.conf");
+    let data = format!("{}\n{}\n", token.trim(), chat_id.trim());
+    fs::write(conf_path, data).map_err(|e| format!("Failed to save config: {}", e))
+}
+
+fn send_telegram_alert(msg: &str) {
+    let (token, chat_id) = get_telegram_config();
+    if token.is_empty() || chat_id.is_empty() {
+        return;
+    }
+    let message = format!("⚠️ VAULT ALERT: {}", msg);
+    std::thread::spawn(move || {
+        let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
+        let _ = ureq::post(&url).send_form(&[("chat_id", &chat_id), ("text", &message)]);
+    });
+}
+
+fn close_vault_session(folder_name: &str) {
+    let home = match std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+    {
+        Some(h) => h,
+        None => return,
+    };
+    let ram_base = ram_base_dir();
+    let ram_dir = ram_base.join(folder_name);
+    let vault_sym = home.join(folder_name);
+
+    if vault_sym.is_symlink() || vault_sym.exists() {
+        let _ = fs::remove_file(&vault_sym);
+        let _ = fs::remove_dir_all(&vault_sym);
+    }
+    let _ = shred_directory(&ram_dir);
 }
 
 // ── menu entries ──────────────────────────────────────────────────────────────
@@ -59,6 +194,14 @@ const MENU_ITEMS: &[&str] = &[
     "  🔒  Lock Vault",
     "  ➕  Create New Vault",
     "  📋  List All Vaults",
+    "  🗑️  Delete Vault",
+    "  ⚙️  Telegram Config",
+];
+
+const RELOCK_CHOICES: &[&str] = &[
+    "  1. 🐚 Interactive Vault Session (Auto-relock on exit)",
+    "  2. ⏱️ 10-Minute Auto-Relock Timer",
+    "  3. 🔒 Relock Now",
 ];
 
 #[allow(dead_code)]
@@ -66,48 +209,99 @@ const MENU_ITEMS: &[&str] = &[
 enum Mode {
     Menu,
     VaultList { action: VaultAction },
+    FolderSelect,
     TextInput { prompt: String, field: InputField },
     PasswordInput { prompt: String, field: PasswordField, stored: String },
+    RelockChoice { name: String },
+    TelegramConfigInput { field: TelegramConfigField },
     Processing,
 }
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
-enum VaultAction { Unlock, Lock, Create }
+enum VaultAction { Unlock, Lock, Delete, List }
 
+#[allow(dead_code)]
 #[derive(Clone, PartialEq)]
 enum InputField { VaultName, LockName }
 
+#[allow(dead_code)]
 #[derive(Clone, PartialEq)]
-enum PasswordField { First, Second }
+enum PasswordField { First, Second, Panic, DeleteConfirm, UnlockAttempt }
+
+#[allow(dead_code)]
+#[derive(Clone, PartialEq)]
+enum TelegramConfigField { BotToken, ChatId }
 
 struct App {
     menu_state: ListState,
     vault_state: ListState,
+    folder_state: ListState,
+    relock_state: ListState,
     vaults: Vec<String>,
+    folders: Vec<PathBuf>,
+    current_browser_dir: PathBuf,
     mode: Mode,
     input: String,
     pending_name: String,
+    pending_path: Option<PathBuf>,
     pending_pass1: String,
+    pending_panic: String,
+    telegram_token: String,
+    telegram_chat_id: String,
+    unlock_attempts: u32,
     status_msg: Option<(String, bool)>,
 }
 
 impl App {
     fn new(vaults: Vec<String>) -> Self {
+        let home = std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("."));
+
         let mut menu_state = ListState::default();
         menu_state.select(Some(0));
         let mut vault_state = ListState::default();
         if !vaults.is_empty() { vault_state.select(Some(0)); }
+        let mut folder_state = ListState::default();
+        folder_state.select(Some(0));
+        let mut relock_state = ListState::default();
+        relock_state.select(Some(0));
+
         Self {
             menu_state,
             vault_state,
+            folder_state,
+            relock_state,
             vaults,
+            folders: Vec::new(),
+            current_browser_dir: home,
             mode: Mode::Menu,
             input: String::new(),
             pending_name: String::new(),
+            pending_path: None,
             pending_pass1: String::new(),
+            pending_panic: String::new(),
+            telegram_token: String::new(),
+            telegram_chat_id: String::new(),
+            unlock_attempts: 0,
             status_msg: None,
         }
+    }
+
+    fn refresh_folder_browser(&mut self) {
+        self.folders = scan_directory(&self.current_browser_dir);
+        self.folder_state.select(Some(0));
+    }
+
+    fn has_parent_folder(&self) -> bool {
+        self.current_browser_dir.parent().is_some()
+    }
+
+    fn total_folder_items(&self) -> usize {
+        let parent_count = if self.has_parent_folder() { 1 } else { 0 };
+        parent_count + self.folders.len()
     }
 
     fn move_menu_up(&mut self) {
@@ -132,6 +326,30 @@ impl App {
         self.vault_state.select(Some((i + 1) % self.vaults.len()));
     }
 
+    fn move_folder_up(&mut self) {
+        let total = self.total_folder_items();
+        if total == 0 { return; }
+        let i = self.folder_state.selected().unwrap_or(0);
+        self.folder_state.select(Some(if i == 0 { total - 1 } else { i - 1 }));
+    }
+
+    fn move_folder_down(&mut self) {
+        let total = self.total_folder_items();
+        if total == 0 { return; }
+        let i = self.folder_state.selected().unwrap_or(0);
+        self.folder_state.select(Some((i + 1) % total));
+    }
+
+    fn move_relock_up(&mut self) {
+        let i = self.relock_state.selected().unwrap_or(0);
+        self.relock_state.select(Some(if i == 0 { RELOCK_CHOICES.len() - 1 } else { i - 1 }));
+    }
+
+    fn move_relock_down(&mut self) {
+        let i = self.relock_state.selected().unwrap_or(0);
+        self.relock_state.select(Some((i + 1) % RELOCK_CHOICES.len()));
+    }
+
     fn selected_vault(&self) -> Option<&str> {
         let i = self.vault_state.selected()?;
         self.vaults.get(i).map(|s| s.as_str())
@@ -140,6 +358,7 @@ impl App {
 
 /// Runs the interactive AES-256 Vault Manager TUI.
 pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    clean_broken_ram_symlinks();
     let store_dir = vault_store_dir();
     fs::create_dir_all(&store_dir)?;
     #[cfg(unix)]
@@ -187,19 +406,40 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                     app.mode = Mode::VaultList { action: VaultAction::Unlock };
                                 }
                             }
-                            1 => { // Lock
-                                app.input.clear();
-                                app.mode = Mode::TextInput { prompt: "Enter vault name to lock:".into(), field: InputField::LockName };
+                            1 => { // Lock (Folder selector)
+                                let home = std::env::var_os("HOME")
+                                    .or_else(|| std::env::var_os("USERPROFILE"))
+                                    .map(PathBuf::from)
+                                    .unwrap_or_else(|| PathBuf::from("."));
+                                app.current_browser_dir = home;
+                                app.refresh_folder_browser();
+                                app.mode = Mode::FolderSelect;
                             }
                             2 => { // Create
+                                app.pending_path = None;
                                 app.input.clear();
                                 app.mode = Mode::TextInput { prompt: "New vault name (e.g. MySecrets):".into(), field: InputField::VaultName };
                             }
                             3 => { // List
                                 app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
                                 if !app.vaults.is_empty() { app.vault_state.select(Some(0)); }
-                                app.mode = Mode::VaultList { action: VaultAction::Unlock }; // reuse list view
-                                // Mark as "list only" by checking action in draw
+                                app.mode = Mode::VaultList { action: VaultAction::List };
+                            }
+                            4 => { // Delete
+                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                if app.vaults.is_empty() {
+                                    app.status_msg = Some(("📋 No encrypted vaults found to delete".into(), true));
+                                } else {
+                                    if !app.vaults.is_empty() { app.vault_state.select(Some(0)); }
+                                    app.mode = Mode::VaultList { action: VaultAction::Delete };
+                                }
+                            }
+                            5 => { // Telegram Config
+                                let (tok, chat) = get_telegram_config();
+                                app.telegram_token = tok;
+                                app.telegram_chat_id = chat;
+                                app.input.clear();
+                                app.mode = Mode::TelegramConfigInput { field: TelegramConfigField::BotToken };
                             }
                             _ => {}
                         }
@@ -207,28 +447,97 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                     _ => {}
                 },
 
+                // ── Folder Selection ───────────────────────────────────────
+                Mode::FolderSelect => match (key.modifiers, key.code) {
+                    (_, KeyCode::Esc) => app.mode = Mode::Menu,
+                    (_, KeyCode::Up) => app.move_folder_up(),
+                    (_, KeyCode::Down) => app.move_folder_down(),
+                    (_, KeyCode::Left) | (_, KeyCode::Backspace) => {
+                        if let Some(parent) = app.current_browser_dir.parent() {
+                            app.current_browser_dir = parent.to_path_buf();
+                            app.refresh_folder_browser();
+                        }
+                    }
+                    (_, KeyCode::Right) | (_, KeyCode::Enter) => {
+                        let sel = app.folder_state.selected().unwrap_or(0);
+                        let has_parent = app.has_parent_folder();
+                        if has_parent && sel == 0 {
+                            if let Some(parent) = app.current_browser_dir.parent() {
+                                app.current_browser_dir = parent.to_path_buf();
+                                app.refresh_folder_browser();
+                            }
+                        } else {
+                            let real_idx = if has_parent { sel - 1 } else { sel };
+                            if let Some(folder) = app.folders.get(real_idx).cloned() {
+                                app.current_browser_dir = folder;
+                                app.refresh_folder_browser();
+                            }
+                        }
+                    }
+                    (_, KeyCode::Char(' ')) | (_, KeyCode::Char('l')) | (_, KeyCode::Char('L')) => {
+                        let sel = app.folder_state.selected().unwrap_or(0);
+                        let has_parent = app.has_parent_folder();
+                        let target_folder = if has_parent && sel == 0 {
+                            app.current_browser_dir.clone()
+                        } else {
+                            let real_idx = if has_parent { sel - 1 } else { sel };
+                            if let Some(folder) = app.folders.get(real_idx) {
+                                folder.clone()
+                            } else {
+                                app.current_browser_dir.clone()
+                            }
+                        };
+
+                        let name = target_folder.file_name().unwrap_or_default().to_string_lossy().to_string();
+                        app.pending_path = Some(target_folder);
+                        app.pending_name = name.clone();
+                        app.input.clear();
+                        app.mode = Mode::PasswordInput {
+                            prompt: format!("New Master Password for [{}]", name),
+                            field: PasswordField::First,
+                            stored: String::new(),
+                        };
+                    }
+                    _ => {}
+                },
+
                 // ── Vault List (select) ────────────────────────────────────
-                Mode::VaultList { action: _ } => match (key.modifiers, key.code) {
+                Mode::VaultList { ref action } => match (key.modifiers, key.code) {
                     (_, KeyCode::Esc) => app.mode = Mode::Menu,
                     (_, KeyCode::Up) => app.move_vault_up(),
                     (_, KeyCode::Down) => app.move_vault_down(),
                     (_, KeyCode::Enter) => {
                         if let Some(name) = app.selected_vault() {
                             let clean = name.trim_end_matches(".enc").to_string();
-                            app.pending_name = clean;
+                            app.pending_name = clean.clone();
                             app.input.clear();
-                            app.mode = Mode::PasswordInput {
-                                prompt: "Enter Master Password:".into(),
-                                field: PasswordField::First,
-                                stored: String::new(),
-                            };
+                            match action {
+                                VaultAction::Unlock => {
+                                    app.unlock_attempts = 0;
+                                    app.mode = Mode::PasswordInput {
+                                        prompt: format!("Enter Master Password for [{}] (Attempts left: 3)", clean),
+                                        field: PasswordField::UnlockAttempt,
+                                        stored: String::new(),
+                                    };
+                                }
+                                VaultAction::Delete => {
+                                    app.mode = Mode::PasswordInput {
+                                        prompt: format!("Enter Master Password to CONFIRM DELETE [{}]", clean),
+                                        field: PasswordField::DeleteConfirm,
+                                        stored: String::new(),
+                                    };
+                                }
+                                VaultAction::List | VaultAction::Lock => {
+                                    app.mode = Mode::Menu;
+                                }
+                            }
                         }
                     }
                     _ => {}
                 },
 
                 // ── Text Input ──────────────────────────────────────────────
-                Mode::TextInput { prompt: _, field } => match (key.modifiers, key.code) {
+                Mode::TextInput { prompt: _, field: _ } => match (key.modifiers, key.code) {
                     (_, KeyCode::Esc) => { app.mode = Mode::Menu; app.input.clear(); }
                     (_, KeyCode::Enter) => {
                         let name = app.input.trim().replace(' ', "_");
@@ -236,23 +545,13 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                             app.status_msg = Some(("❌ Name cannot be empty!".into(), true));
                         } else {
                             app.pending_name = name.clone();
+                            app.pending_path = None;
                             app.input.clear();
-                            match field {
-                                InputField::VaultName => {
-                                    app.mode = Mode::PasswordInput {
-                                        prompt: "Master Password:".into(),
-                                        field: PasswordField::First,
-                                        stored: String::new(),
-                                    };
-                                }
-                                InputField::LockName => {
-                                    app.mode = Mode::PasswordInput {
-                                        prompt: "Master Password:".into(),
-                                        field: PasswordField::First,
-                                        stored: String::new(),
-                                    };
-                                }
-                            }
+                            app.mode = Mode::PasswordInput {
+                                prompt: format!("Master Password for [{}]", name),
+                                field: PasswordField::First,
+                                stored: String::new(),
+                            };
                         }
                     }
                     (_, KeyCode::Backspace) => { app.input.pop(); }
@@ -261,49 +560,204 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                 },
 
                 // ── Password Input ──────────────────────────────────────────
-                Mode::PasswordInput { prompt: _, field, stored: _ } => match (key.modifiers, key.code) {
+                Mode::PasswordInput { prompt: _, ref field, stored: _ } => match (key.modifiers, key.code) {
                     (_, KeyCode::Esc) => { app.mode = Mode::Menu; app.input.clear(); }
                     (_, KeyCode::Enter) => {
                         let pass = app.input.trim().to_string();
                         app.input.clear();
                         match field {
-                            PasswordField::First => {
-                                app.pending_pass1 = pass.clone();
-                                // For unlock we go straight to action; for create/lock ask confirm
-                                let menu_sel = app.menu_state.selected().unwrap_or(0);
-                                if menu_sel == 0 {
-                                    // Unlock: run immediately
-                                    let name = app.pending_name.clone();
-                                    let result = vault_unlock(&name, &pass, &store_dir_c);
-                                    app.status_msg = Some(result);
-                                    app.mode = Mode::Menu;
-                                } else {
-                                    // Create or Lock: ask for confirm
-                                    app.mode = Mode::PasswordInput {
-                                        prompt: "Confirm Master Password:".into(),
-                                        field: PasswordField::Second,
-                                        stored: pass,
-                                    };
+                            PasswordField::UnlockAttempt => {
+                                let name = app.pending_name.clone();
+                                let panic_file = store_dir_c.join(format!("{}.panic", name));
+
+                                // 1. Check Panic Password
+                                if panic_file.exists() {
+                                    if let Ok(saved_hash) = fs::read_to_string(&panic_file) {
+                                        if hash_panic_password(&pass) == saved_hash.trim() {
+                                            send_telegram_alert(&format!("PANIC PASSWORD USED FOR {}! Data wiped.", name));
+                                            let enc_file = store_dir_c.join(format!("{}.enc", name));
+                                            let _ = shred_file(&enc_file);
+                                            let _ = shred_file(&panic_file);
+
+                                            let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
+                                            let vault_dir = home.join(&name);
+                                            let _ = fs::create_dir_all(&vault_dir);
+                                            let notes_file = vault_dir.join("notes.txt");
+                                            let _ = fs::write(&notes_file, format!("Confidential Project Notes {}...\n", 2026));
+                                            open_file_explorer(&vault_dir);
+
+                                            app.status_msg = Some(("✅ Access Granted!".into(), false));
+                                            app.mode = Mode::Menu;
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                // 2. Attempt normal unlock
+                                let result = vault_unlock(&name, &pass, &store_dir_c);
+                                if !result.1 { // success
+                                    app.status_msg = Some((result.0, false));
+                                    app.relock_state.select(Some(0));
+                                    app.mode = Mode::RelockChoice { name };
+                                } else { // failed
+                                    app.unlock_attempts += 1;
+                                    let remaining = 3_u32.saturating_sub(app.unlock_attempts);
+                                    if app.unlock_attempts >= 3 {
+                                        // Self-destruct sequence
+                                        send_telegram_alert(&format!("3 Failed attempts on {}! Self-destruct activated.", name));
+                                        let enc_file = store_dir_c.join(format!("{}.enc", name));
+                                        let _ = shred_file(&enc_file);
+                                        let _ = shred_file(&panic_file);
+                                        close_vault_session(&name);
+
+                                        app.status_msg = Some((format!("🚨 SELF-DESTRUCT: 3 Failed attempts! Vault '{}' wiped.", name), true));
+                                        app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                        app.mode = Mode::Menu;
+                                    } else {
+                                        let delay = app.unlock_attempts * 3;
+                                        std::thread::sleep(std::time::Duration::from_secs(delay as u64));
+                                        app.mode = Mode::PasswordInput {
+                                            prompt: format!("Invalid Password! Re-enter for [{}] (Attempts left: {})", name, remaining),
+                                            field: PasswordField::UnlockAttempt,
+                                            stored: String::new(),
+                                        };
+                                    }
                                 }
                             }
+                            PasswordField::First => {
+                                app.pending_pass1 = pass.clone();
+                                app.mode = Mode::PasswordInput {
+                                    prompt: "Confirm Master Password:".into(),
+                                    field: PasswordField::Second,
+                                    stored: pass,
+                                };
+                            }
                             PasswordField::Second => {
-                                let pass2 = pass;
-                                if pass2 != app.pending_pass1 {
+                                if pass != app.pending_pass1 {
                                     app.status_msg = Some(("❌ Passwords do not match!".into(), true));
                                     app.mode = Mode::Menu;
                                 } else {
-                                    let name = app.pending_name.clone();
-                                    let p = app.pending_pass1.clone();
-                                    let menu_sel = app.menu_state.selected().unwrap_or(0);
-                                    let result = match menu_sel {
-                                        2 => vault_create(&name, &p, &store_dir_c),
-                                        1 => vault_lock(&name, &p, &store_dir_c),
-                                        _ => ("❌ Unknown action".into(), true),
+                                    app.mode = Mode::PasswordInput {
+                                        prompt: "Panic Password (Optional - Enter to skip):".into(),
+                                        field: PasswordField::Panic,
+                                        stored: String::new(),
                                     };
-                                    app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
-                                    app.status_msg = Some(result);
-                                    app.mode = Mode::Menu;
                                 }
+                            }
+                            PasswordField::Panic => {
+                                app.pending_panic = pass.clone();
+                                let name = app.pending_name.clone();
+                                let p1 = app.pending_pass1.clone();
+                                let panic_pass = app.pending_panic.clone();
+
+                                // Save panic password hash if provided
+                                if !panic_pass.is_empty() {
+                                    let panic_file = store_dir_c.join(format!("{}.panic", name));
+                                    let hash = hash_panic_password(&panic_pass);
+                                    let _ = fs::write(panic_file, hash);
+                                }
+
+                                let result = if let Some(ref target_path) = app.pending_path {
+                                    vault_lock_path(&name, target_path, &p1, &store_dir_c)
+                                } else {
+                                    vault_create(&name, &p1, &store_dir_c)
+                                };
+                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                app.status_msg = Some(result);
+                                app.mode = Mode::Menu;
+                            }
+                            PasswordField::DeleteConfirm => {
+                                let name = app.pending_name.clone();
+                                let result = vault_delete(&name, &pass, &store_dir_c);
+                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                app.status_msg = Some(result);
+                                app.mode = Mode::Menu;
+                            }
+                        }
+                    }
+                    (_, KeyCode::Backspace) => { app.input.pop(); }
+                    (_, KeyCode::Char(c)) => { app.input.push(c); }
+                    _ => {}
+                },
+
+                // ── Relock Choice Selection ────────────────────────────────
+                Mode::RelockChoice { ref name } => match (key.modifiers, key.code) {
+                    (_, KeyCode::Esc) => {
+                        close_vault_session(name);
+                        app.status_msg = Some((format!("🔒 Vault '{}' relocked.", name), false));
+                        app.mode = Mode::Menu;
+                    }
+                    (_, KeyCode::Up) => app.move_relock_up(),
+                    (_, KeyCode::Down) => app.move_relock_down(),
+                    (_, KeyCode::Enter) => {
+                        let sel = app.relock_state.selected().unwrap_or(0);
+                        let name_c = name.clone();
+                        match sel {
+                            0 => { // Subshell
+                                disable_raw_mode()?;
+                                execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+
+                                println!("\n\x1b[1;32m[🔓] Entering Vault Shell Session for '{}'. Type 'exit' or close terminal to auto-relock.\x1b[0m\n", name_c);
+                                let home = std::env::var_os("HOME")
+                                    .or_else(|| std::env::var_os("USERPROFILE"))
+                                    .map(PathBuf::from)
+                                    .unwrap_or_else(|| PathBuf::from("."));
+                                let vault_dir = home.join(&name_c);
+
+                                #[cfg(windows)]
+                                let shell = std::env::var("COMSPEC").unwrap_or_else(|_| "powershell.exe".into());
+                                #[cfg(not(windows))]
+                                let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
+                                let _ = std::process::Command::new(shell).current_dir(&vault_dir).status();
+
+                                close_vault_session(&name_c);
+                                println!("\n\x1b[1;33m[🔒] Session ended. Vault '{}' relocked & RAM purged.\x1b[0m\n", name_c);
+
+                                enable_raw_mode()?;
+                                execute!(io::stdout(), EnterAlternateScreen)?;
+                                terminal.clear()?;
+                                app.status_msg = Some((format!("🔒 Relocked session for '{}'.", name_c), false));
+                                app.mode = Mode::Menu;
+                            }
+                            1 => { // 10-Minute Timer
+                                std::thread::spawn(move || {
+                                    std::thread::sleep(std::time::Duration::from_secs(600));
+                                    close_vault_session(&name_c);
+                                });
+                                app.status_msg = Some((format!("⏱️ 10-Minute auto-relock timer started for '{}'.", name), false));
+                                app.mode = Mode::Menu;
+                            }
+                            2 => { // Relock Now
+                                close_vault_session(name);
+                                app.status_msg = Some((format!("🔒 Vault '{}' relocked & RAM purged.", name), false));
+                                app.mode = Mode::Menu;
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                },
+
+                // ── Telegram Config Input ──────────────────────────────────
+                Mode::TelegramConfigInput { ref field } => match (key.modifiers, key.code) {
+                    (_, KeyCode::Esc) => { app.mode = Mode::Menu; app.input.clear(); }
+                    (_, KeyCode::Enter) => {
+                        let val = app.input.trim().to_string();
+                        app.input.clear();
+                        match field {
+                            TelegramConfigField::BotToken => {
+                                app.telegram_token = val;
+                                app.mode = Mode::TelegramConfigInput { field: TelegramConfigField::ChatId };
+                            }
+                            TelegramConfigField::ChatId => {
+                                app.telegram_chat_id = val;
+                                if let Err(e) = save_telegram_config(&app.telegram_token, &app.telegram_chat_id) {
+                                    app.status_msg = Some((e, true));
+                                } else {
+                                    send_telegram_alert("Telegram security alert configuration saved!");
+                                    app.status_msg = Some(("✅ Telegram alert configuration saved!".into(), false));
+                                }
+                                app.mode = Mode::Menu;
                             }
                         }
                     }
@@ -383,9 +837,17 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
     );
     f.render_stateful_widget(menu, body[0], &mut app.menu_state.clone());
 
-    // Right: vault list or input
+    // Right: dynamic pane based on mode
     match &app.mode.clone() {
-        Mode::VaultList { .. } => {
+        Mode::VaultList { action } => {
+            let title = match action {
+                VaultAction::Unlock => " Select Vault to Unlock ",
+                VaultAction::Delete => " 🗑️ Select Vault to DELETE ",
+                _ => " Encrypted Vaults ",
+            };
+            let ram_base = ram_base_dir();
+            let store_dir = vault_store_dir();
+
             let vault_items: Vec<ListItem> = if app.vaults.is_empty() {
                 vec![ListItem::new(Line::from(vec![Span::styled(
                     "  (no vaults found)",
@@ -394,15 +856,37 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
             } else {
                 app.vaults.iter().enumerate().map(|(i, v)| {
                     let is_sel = app.vault_state.selected() == Some(i);
+                    let clean = v.trim_end_matches(".enc");
+                    let enc_file = store_dir.join(v);
+                    let size_str = if let Ok(meta) = fs::metadata(&enc_file) {
+                        format!("{} KB", meta.len() / 1024)
+                    } else {
+                        "-".into()
+                    };
+                    let ram_dir = ram_base.join(clean);
+                    let is_unlocked = ram_dir.exists();
+
+                    let status_span = if is_unlocked {
+                        Span::styled(" [UNLOCKED in RAM]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+                    } else {
+                        Span::styled(" [LOCKED]", Style::default().fg(C_DIM))
+                    };
+
+                    let icon = if is_unlocked { "🔓" } else { "🔒" };
+
                     if is_sel {
                         ListItem::new(Line::from(vec![
                             Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                            Span::styled(format!("🔒 {}", v), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
+                            Span::styled(format!("{} {} ", icon, clean), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
+                            Span::styled(format!("({})", size_str), Style::default().fg(C_ACCENT)),
+                            status_span,
                         ]))
                     } else {
                         ListItem::new(Line::from(vec![
                             Span::styled("   ", Style::default()),
-                            Span::styled(format!("🔒 {}", v), Style::default().fg(C_ACCENT)),
+                            Span::styled(format!("{} {} ", icon, clean), Style::default().fg(C_TEXT)),
+                            Span::styled(format!("({})", size_str), Style::default().fg(C_DIM)),
+                            status_span,
                         ]))
                     }
                 }).collect()
@@ -412,10 +896,92 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(" Select Vault ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_stateful_widget(vault_list, body[1], &mut app.vault_state.clone());
+        }
+
+        Mode::FolderSelect => {
+            let has_parent = app.has_parent_folder();
+            let mut folder_items: Vec<ListItem> = Vec::new();
+
+            if has_parent {
+                let is_sel = app.folder_state.selected() == Some(0);
+                if is_sel {
+                    folder_items.push(ListItem::new(Line::from(vec![
+                        Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+                        Span::styled("📁 .. (Go Up Parent Directory)", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
+                    ])));
+                } else {
+                    folder_items.push(ListItem::new(Line::from(vec![
+                        Span::styled("   ", Style::default()),
+                        Span::styled("📁 .. (Go Up Parent Directory)", Style::default().fg(C_ACCENT)),
+                    ])));
+                }
+            }
+
+            if app.folders.is_empty() {
+                folder_items.push(ListItem::new(Line::from(vec![Span::styled(
+                    "  (no subfolders in this directory)",
+                    Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+                )])));
+            } else {
+                for (i, path) in app.folders.iter().enumerate() {
+                    let item_idx = if has_parent { i + 1 } else { i };
+                    let is_sel = app.folder_state.selected() == Some(item_idx);
+                    let name = path.file_name().unwrap_or_default().to_string_lossy();
+                    if is_sel {
+                        folder_items.push(ListItem::new(Line::from(vec![
+                            Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+                            Span::styled(format!("📁 {}/", name), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
+                            Span::styled("  [Space / L to LOCK]", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+                        ])));
+                    } else {
+                        folder_items.push(ListItem::new(Line::from(vec![
+                            Span::styled("   ", Style::default()),
+                            Span::styled(format!("📁 {}/", name), Style::default().fg(C_TEXT)),
+                        ])));
+                    }
+                }
+            }
+
+            let title = format!(" 📂 Directory: {} ", app.current_browser_dir.display());
+            let folder_list = List::new(folder_items).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_ACCENT))
+                    .title(Span::styled(title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .style(Style::default().bg(C_BG)),
+            );
+            f.render_stateful_widget(folder_list, body[1], &mut app.folder_state.clone());
+        }
+
+        Mode::RelockChoice { name } => {
+            let choices: Vec<ListItem> = RELOCK_CHOICES.iter().enumerate().map(|(i, item)| {
+                let is_sel = app.relock_state.selected() == Some(i);
+                if is_sel {
+                    ListItem::new(Line::from(vec![
+                        Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+                        Span::styled(item.trim(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
+                    ]))
+                } else {
+                    ListItem::new(Line::from(vec![
+                        Span::styled("   ", Style::default()),
+                        Span::styled(item.trim(), Style::default().fg(C_TEXT)),
+                    ]))
+                }
+            }).collect();
+            let relock_list = List::new(choices).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Double)
+                    .border_style(Style::default().fg(C_GREEN))
+                    .title(Span::styled(format!(" 🔓 Vault '{}' Unlocked! Select Relock Mode ", name), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)))
+                    .style(Style::default().bg(C_BG)),
+            );
+            f.render_stateful_widget(relock_list, body[1], &mut app.relock_state.clone());
         }
 
         Mode::TextInput { prompt, .. } => {
@@ -465,17 +1031,59 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
             f.render_widget(pane, body[1]);
         }
 
+        Mode::TelegramConfigInput { field } => {
+            let label = match field {
+                TelegramConfigField::BotToken => "Enter Telegram Bot Token:",
+                TelegramConfigField::ChatId => "Enter Telegram Chat ID:",
+            };
+            let pane = Paragraph::new(vec![
+                Line::from(""),
+                Line::from(vec![Span::styled(format!("  {}", label), Style::default().fg(C_DIM))]),
+                Line::from(vec![
+                    Span::styled("  ", Style::default()),
+                    Span::styled(&app.input, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled("█", Style::default().fg(C_BORDER)),
+                ]),
+                Line::from(""),
+                Line::from(vec![Span::styled("  Enter to save  Esc to cancel", Style::default().fg(C_DIM))]),
+            ])
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_ACCENT))
+                    .title(Span::styled(" ⚙️ Telegram Alert Setup ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .style(Style::default().bg(C_BG)),
+            );
+            f.render_widget(pane, body[1]);
+        }
+
         Mode::Menu | Mode::Processing => {
-            // Info pane
+            let (tok, chat) = get_telegram_config();
+            let tg_status = if !tok.is_empty() && !chat.is_empty() {
+                Span::styled(" Configured", Style::default().fg(C_GREEN))
+            } else {
+                Span::styled(" Disabled", Style::default().fg(C_DIM))
+            };
+
             let info_lines = vec![
                 Line::from(""),
-                Line::from(vec![Span::styled("  AES-256-CBC encrypted vaults", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled("  AES-256-GCM encrypted vaults", Style::default().fg(C_DIM))]),
                 Line::from(vec![Span::styled("  PBKDF2 key derivation (500k iter)", Style::default().fg(C_DIM))]),
-                Line::from(vec![Span::styled("  RAM-only unlock (no plaintext on disk)", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled("  3-Pass DoD Forensic Secure Shredding", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled("  RAM-only unlock & auto-relock timers", Style::default().fg(C_DIM))]),
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("  Store dir: ", Style::default().fg(C_DIM)),
                     Span::styled(vault_store_dir().display().to_string(), Style::default().fg(C_ACCENT)),
+                ]),
+                Line::from(vec![
+                    Span::styled("  RAM base:  ", Style::default().fg(C_DIM)),
+                    Span::styled(ram_base_dir().display().to_string(), Style::default().fg(C_ACCENT)),
+                ]),
+                Line::from(vec![
+                    Span::styled("  Telegram:  ", Style::default().fg(C_DIM)),
+                    tg_status,
                 ]),
             ];
             let info = Paragraph::new(info_lines)
@@ -484,7 +1092,7 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(C_DIM))
-                        .title(Span::styled(" Vault Info ", Style::default().fg(C_DIM)))
+                        .title(Span::styled(" Vault System Info ", Style::default().fg(C_DIM)))
                         .style(Style::default().bg(C_BG)),
                 );
             f.render_widget(info, body[1]);
@@ -495,6 +1103,11 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
     let status_text = if let Some((ref msg, is_err)) = app.status_msg {
         let color = if is_err { C_RED } else { C_GREEN };
         Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
+    } else if app.mode == Mode::FolderSelect {
+        Line::from(vec![Span::styled(
+            " ↑↓ Navigate  ·  ↵ / → Open Folder  ·  ← / Backspace Go Up  ·  Space / L Lock Folder  ·  ⎋ Back",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        )])
     } else {
         Line::from(vec![Span::styled(
             " ↑↓ Navigate  ·  ↵ Select  ·  ⎋ Back / Quit",
@@ -738,52 +1351,13 @@ fn vault_create(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     (format!("✅ Created vault: {}.enc", name), false)
 }
 
-fn vault_unlock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
-    let enc_file = store_dir.join(format!("{}.enc", name));
-    if !enc_file.exists() {
-        return (format!("❌ Vault file not found: {}.enc", name), true);
-    }
-
-    let encrypted_data = match fs::read(&enc_file) {
-        Ok(data) => data,
-        Err(e) => return (format!("❌ Failed to read vault file: {}", e), true),
-    };
-
-    let decrypted_tarball = match decrypt_vault_payload(&encrypted_data, pass) {
-        Ok(t) => t,
-        Err(e) => return (format!("❌ {}", e), true),
-    };
-
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."));
-    let target = home.join(name);
-    let _ = fs::remove_dir_all(&target);
-
-    if let Err(e) = extract_in_memory_tarball(&decrypted_tarball, &target) {
-        return (format!("❌ Tar extraction failed: {}", e), true);
-    }
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(&target, fs::Permissions::from_mode(0o700));
-    }
-
-    (format!("🔓 Unlocked to: ~/{}", name), false)
-}
-
-fn vault_lock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
-    let home = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."));
-    let target = home.join(name);
-    if !target.exists() {
-        return (format!("❌ Vault directory ~/{} not found", name), true);
+fn vault_lock_path(name: &str, target_path: &Path, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+    if !target_path.exists() {
+        return (format!("❌ Directory path '{}' not found", target_path.display()), true);
     }
 
     let enc_file = store_dir.join(format!("{}.enc", name));
-    let tarball = match create_in_memory_tarball(&target) {
+    let tarball = match create_in_memory_tarball(target_path) {
         Ok(t) => t,
         Err(e) => return (format!("❌ Tar archive failed: {}", e), true),
     };
@@ -803,12 +1377,83 @@ fn vault_lock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
         let _ = fs::set_permissions(&enc_file, fs::Permissions::from_mode(0o700));
     }
 
-    let _ = shred_directory(&target);
+    let _ = shred_directory(target_path);
     (format!("🔒 Locked: {}.enc", name), false)
+}
+
+fn vault_unlock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+    let enc_file = store_dir.join(format!("{}.enc", name));
+    if !enc_file.exists() {
+        return (format!("❌ Vault file not found: {}.enc", name), true);
+    }
+
+    let encrypted_data = match fs::read(&enc_file) {
+        Ok(data) => data,
+        Err(e) => return (format!("❌ Failed to read vault file: {}", e), true),
+    };
+
+    let decrypted_tarball = match decrypt_vault_payload(&encrypted_data, pass) {
+        Ok(t) => t,
+        Err(e) => return (format!("❌ {}", e), true),
+    };
+
+    let ram_base = ram_base_dir();
+    let ram_dir = ram_base.join(name);
+    let _ = fs::remove_dir_all(&ram_dir);
+
+    if let Err(e) = extract_in_memory_tarball(&decrypted_tarball, &ram_base) {
+        return (format!("❌ Tar extraction failed: {}", e), true);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&ram_dir, fs::Permissions::from_mode(0o700));
+    }
+
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let target_symlink = home.join(name);
+    if target_symlink.is_symlink() || target_symlink.exists() {
+        let _ = fs::remove_file(&target_symlink);
+        let _ = fs::remove_dir_all(&target_symlink);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::symlink;
+        if let Err(e) = symlink(&ram_dir, &target_symlink) {
+            return (format!("❌ Failed to create RAM symlink: {}", e), true);
+        }
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::symlink_dir;
+        if let Err(_) = symlink_dir(&ram_dir, &target_symlink) {
+            let _ = extract_in_memory_tarball(&decrypted_tarball, &target_symlink);
+        }
+    }
+
+    open_file_explorer(&target_symlink);
+
+    (format!("🔓 Unlocked in RAM: ~/{}", name), false)
+}
+
+fn vault_lock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let target = home.join(name);
+    vault_lock_path(name, &target, pass, store_dir)
 }
 
 fn vault_delete(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     let enc_file = store_dir.join(format!("{}.enc", name));
+    let panic_file = store_dir.join(format!("{}.panic", name));
+
     if !enc_file.exists() {
         return (format!("❌ Vault file not found: {}.enc", name), true);
     }
@@ -826,7 +1471,11 @@ fn vault_delete(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     if let Err(e) = shred_file(&enc_file) {
         return (format!("❌ Shredding failed: {}", e), true);
     }
+    if panic_file.exists() {
+        let _ = shred_file(&panic_file);
+    }
 
+    send_telegram_alert(&format!("Vault {} permanently deleted by user.", name));
     (format!("💥 Securely deleted vault: {}.enc", name), false)
 }
 
@@ -876,6 +1525,16 @@ fn run_cli(action: &str, args: &[String], store_dir: &PathBuf) -> Result<(), Box
             let (msg, _) = vault_delete(name.trim(), p.trim(), store_dir);
             println!("{}", msg);
         }
+        "config" => {
+            let token = rpassword::prompt_password("Telegram Bot Token: ")?;
+            let chat_id = rpassword::prompt_password("Telegram Chat ID: ")?;
+            if let Err(e) = save_telegram_config(&token, &chat_id) {
+                println!("❌ Error: {}", e);
+            } else {
+                println!("✅ Telegram alert configuration saved!");
+                send_telegram_alert("Telegram security alert configuration saved!");
+            }
+        }
         "list" | "ls" => {
             let vaults = list_encrypted_vaults(store_dir)?;
             if vaults.is_empty() {
@@ -886,7 +1545,7 @@ fn run_cli(action: &str, args: &[String], store_dir: &PathBuf) -> Result<(), Box
                 }
             }
         }
-        _ => println!("Usage: fancybash vault [create <name> | lock <name> | unlock <name> | delete <name> | list]"),
+        _ => println!("Usage: fancybash vault [create <name> | lock <name> | unlock <name> | delete <name> | config | list]"),
     }
     Ok(())
 }

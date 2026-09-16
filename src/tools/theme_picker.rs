@@ -330,8 +330,12 @@ impl ThemePickerApp {
                 Span::raw("  ")
             };
 
+            // Format emoji to occupy exactly 3 terminal display cells for perfect alignment
+            let raw_emoji = if theme.emoji.is_empty() { "•" } else { theme.emoji };
+            let w = unicode_width::UnicodeWidthStr::width(raw_emoji);
+            let padding = " ".repeat(3_usize.saturating_sub(w));
             let emoji_span = Span::styled(
-                format!("{:<3}", theme.emoji),
+                format!("{raw_emoji}{padding}"),
                 Style::default().fg(C_YELLOW),
             );
 

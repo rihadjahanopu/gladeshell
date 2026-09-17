@@ -45,18 +45,38 @@ pub struct Theme {
     pub name: &'static str,
     /// Decorative emoji shown at start of line 1 (empty string = none)
     pub emoji: &'static str,
-    /// User@host color: bit-31 = true-color (0x80RRGGBB), else ANSI256 index
+    /// Emoji text color (0 = default/emoji color)
+    pub emoji_color: u32,
+    /// Structural prefix color (0 = default, e.g. blue for p10k ╭─/╰─, yellow for bira ╭─/╰─)
+    pub prefix_color: u32,
+    /// User@host color: bit-31 = true-color (0x80RRGGBB), else ANSI256 index (0 = hide user@host)
     pub user_color: u32,
     /// CWD path color (same encoding)
     pub path_color: u32,
     /// Git branch/status color (same encoding)
     pub git_color: u32,
-    /// Prompt character on line 2 (e.g. "❯", "❯❯❯", "▶▶", "$")
+    /// Prompt character color on line 2 (0 = exit code green/red, else fixed theme color)
+    pub prompt_color: u32,
+    /// Prompt character (e.g. "❯", "❯❯❯", "▶▶", "$")
     pub prompt_char: &'static str,
     /// Line-1 structural prefix (before emoji+user, e.g. "╭─" or "")
     pub line1_prefix: &'static str,
     /// Line-2 structural prefix (before prompt_char, e.g. "╰─" or "")
     pub line2_prefix: &'static str,
+    /// If true, prompt is rendered on a single line instead of 2 lines
+    pub single_line: bool,
+    /// If true, prompt starts with a leading newline
+    pub leading_newline: bool,
+    /// Show user name %n
+    pub show_user: bool,
+    /// Show host name %m
+    pub show_host: bool,
+    /// Show "in " before path
+    pub in_path: bool,
+    /// Color of "in " text (0 = same as path_color)
+    pub in_color: u32,
+    /// Powerline mode (0 = standard, 1 = agnoster, 2 = catppuccin pill, 3 = cyberpunk block, 4 = paradox chevron, 5 = powerlineclassic)
+    pub powerline_mode: u8,
 }
 
 // ── THEMES — 55 entries matching config.zsh fb_theme_* exactly ───────────────
@@ -68,115 +88,115 @@ pub struct Theme {
 
 pub static THEMES: &[Theme] = &[
     // 00 ── minimal — ultra-clean compact path prompt (user_color=0 hides user@host)
-    Theme { name: "minimal",          emoji: "💫", user_color: 0,               path_color: a8(147),         git_color: a8(147),         prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "minimal",          emoji: "💫", emoji_color: 0,            prefix_color: 0,       user_color: 0,               path_color: a8(147),         git_color: a8(147),         prompt_color: a8(147),        prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 01 ── full — rich detailed theme with cyan/green/yellow accents
-    Theme { name: "full",             emoji: "⚡", user_color: a8(51),          path_color: a8(82),          git_color: a8(226),         prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "full",             emoji: "⚡", emoji_color: 0,            prefix_color: 0,       user_color: a8(51),          path_color: a8(82),          git_color: a8(226),         prompt_color: 0,              prompt_char: "❯❯❯",   line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 0 },
     // 02 ── robbyrussell — %F{green}➜ cyan path green ❯
-    Theme { name: "robbyrussell",     emoji: "➜",  user_color: a8(46),          path_color: a8(51),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "robbyrussell",     emoji: "➜",  emoji_color: a8(46),       prefix_color: 0,       user_color: 0,               path_color: a8(51),          git_color: a8(46),          prompt_color: a8(46),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: true,  leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 03 ── p10k — blue ╭─/╰─, 🐧 green@host cyan path
-    Theme { name: "p10k",             emoji: "🐧", user_color: a8(46),          path_color: a8(51),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "╭─", line2_prefix: "╰─" },
+    Theme { name: "p10k",             emoji: "🐧", emoji_color: 0,            prefix_color: a8(75),  user_color: a8(46),          path_color: a8(51),          git_color: a8(46),          prompt_color: a8(46),         prompt_char: "❯",     line1_prefix: "╭─", line2_prefix: "╰─", single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: true,  in_color: 0,            powerline_mode: 0 },
     // 04 ── agnoster — powerline blue/green/yellow
-    Theme { name: "agnoster",         emoji: "💻", user_color: a8(75),          path_color: a8(34),          git_color: a8(226),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "agnoster",         emoji: "💻", emoji_color: 0,            prefix_color: 0,       user_color: a8(75),          path_color: a8(34),          git_color: a8(226),         prompt_color: a8(51),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 1 },
     // 05 ── catppuccin — #ca9ee6 / #89b4fa / #f5c2e7
-    Theme { name: "catppuccin",       emoji: "🐱", user_color: tc(0xca9ee6),    path_color: tc(0x89b4fa),    git_color: tc(0xf5c2e7),    prompt_char: "❯❯❯",  line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "catppuccin",       emoji: "🐱", emoji_color: 0,            prefix_color: 0,       user_color: tc(0xca9ee6),    path_color: tc(0x89b4fa),    git_color: tc(0xf5c2e7),    prompt_color: tc(0xf5c2e7),   prompt_char: "❯❯❯",  line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 2 },
     // 06 ── tokyonight — #bb9af7 / #7dcfff / #7aa2f7 ⚡
-    Theme { name: "tokyonight",       emoji: "🌌", user_color: tc(0xbb9af7),    path_color: tc(0x7dcfff),    git_color: tc(0x7aa2f7),    prompt_char: "⚡",    line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "tokyonight",       emoji: "🌌", emoji_color: tc(0xbb9af7), prefix_color: 0,       user_color: 0,               path_color: tc(0x7dcfff),    git_color: tc(0x7aa2f7),    prompt_color: tc(0xbb9af7),   prompt_char: "⚡",    line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 07 ── dracula — #bd93f9 / #ff79c6 / #8be9fd
-    Theme { name: "dracula",          emoji: "🧛", user_color: tc(0xbd93f9),    path_color: tc(0xff79c6),    git_color: tc(0x8be9fd),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "dracula",          emoji: "🧛", emoji_color: tc(0xbd93f9), prefix_color: 0,       user_color: tc(0xbd93f9),    path_color: tc(0xff79c6),    git_color: tc(0x8be9fd),    prompt_color: tc(0x50fa7b),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0xff79c6), powerline_mode: 0 },
     // 08 ── nord — #88c0d0 / #81a1c1 / #8fbcbb ❄️
-    Theme { name: "nord",             emoji: "❄️", user_color: tc(0x88c0d0),    path_color: tc(0x81a1c1),    git_color: tc(0x8fbcbb),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "nord",             emoji: "❄️ ",emoji_color: tc(0x88c0d0), prefix_color: 0,       user_color: 0,               path_color: tc(0x88c0d0),    git_color: tc(0x81a1c1),    prompt_color: tc(0x8fbcbb),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 09 ── bira — yellow ╭─/╰─ green@host blue path magenta git $
-    Theme { name: "bira",             emoji: "",   user_color: a8(46),          path_color: a8(75),          git_color: a8(201),         prompt_char: "$",     line1_prefix: "╭─", line2_prefix: "╰─" },
+    Theme { name: "bira",             emoji: "",   emoji_color: 0,            prefix_color: a8(226), user_color: a8(46),          path_color: a8(75),          git_color: a8(201),         prompt_color: a8(46),         prompt_char: "$",     line1_prefix: "╭─", line2_prefix: "╰─", single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 0 },
     // 10 ── pure — blue path 240-git green ❯
-    Theme { name: "pure",             emoji: "",   user_color: a8(75),          path_color: a8(240),         git_color: a8(240),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "pure",             emoji: "",   emoji_color: 0,            prefix_color: 0,       user_color: 0,               path_color: a8(75),          git_color: a8(240),         prompt_color: a8(46),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: true,  show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 11 ── starship — 🚀 magenta/green/cyan
-    Theme { name: "starship",         emoji: "🚀", user_color: a8(201),         path_color: a8(51),          git_color: a8(226),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "starship",         emoji: "🚀", emoji_color: a8(201),      prefix_color: 0,       user_color: a8(201),         path_color: a8(51),          git_color: a8(46),          prompt_color: a8(226),        prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: a8(46),       powerline_mode: 0 },
     // 12 ── cyberpunk — ⚡ #ffee00 / #00f0ff / #ff0055 ▶▶
-    Theme { name: "cyberpunk",        emoji: "⚡", user_color: tc(0xffee00),    path_color: tc(0x00f0ff),    git_color: tc(0xff0055),    prompt_char: "▶▶",    line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "cyberpunk",        emoji: "⚡", emoji_color: 0,            prefix_color: 0,       user_color: tc(0xffee00),    path_color: tc(0x00f0ff),    git_color: tc(0xff0055),    prompt_color: tc(0xff0055),   prompt_char: "▶▶",    line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 3 },
     // 13 ── synthwave — 🌅 #ff007f / #00ffff / #9d00ff ❯❯
-    Theme { name: "synthwave",        emoji: "🌅", user_color: tc(0xff007f),    path_color: tc(0x00ffff),    git_color: tc(0x9d00ff),    prompt_char: "❯❯",   line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "synthwave",        emoji: "🌅", emoji_color: tc(0xff007f), prefix_color: 0,       user_color: 0,               path_color: tc(0x00ffff),    git_color: tc(0x9d00ff),    prompt_color: tc(0xff007f),   prompt_char: "❯❯",   line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 14 ── gruvbox — 🌴 #fabd2f / #8ec07c / #fe8019
-    Theme { name: "gruvbox",          emoji: "🌴", user_color: tc(0xfabd2f),    path_color: tc(0x8ec07c),    git_color: tc(0xfe8019),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "gruvbox",          emoji: "🌴", emoji_color: tc(0xfabd2f), prefix_color: 0,       user_color: tc(0xfabd2f),    path_color: tc(0x8ec07c),    git_color: tc(0xfe8019),    prompt_color: tc(0xfabd2f),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0x8ec07c), powerline_mode: 0 },
     // 15 ── onedark — 🌐 #61afef / #c678dd / #98c379
-    Theme { name: "onedark",          emoji: "🌐", user_color: tc(0x61afef),    path_color: tc(0xc678dd),    git_color: tc(0x98c379),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "onedark",          emoji: "🌐", emoji_color: tc(0x61afef), prefix_color: 0,       user_color: tc(0x61afef),    path_color: tc(0xc678dd),    git_color: tc(0x98c379),    prompt_color: tc(0x61afef),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 16 ── sorin — blue@host cyan path magenta git
-    Theme { name: "sorin",            emoji: "",   user_color: a8(75),          path_color: a8(51),          git_color: a8(201),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "sorin",            emoji: "",   emoji_color: 0,            prefix_color: 0,       user_color: a8(75),          path_color: a8(51),          git_color: a8(51),          prompt_color: a8(201),        prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 0 },
     // 17 ── spaceship — 🚀 blue@host cyan path green ➜
-    Theme { name: "spaceship",        emoji: "🚀", user_color: a8(75),          path_color: a8(51),          git_color: a8(46),          prompt_char: "➜",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "spaceship",        emoji: "🚀", emoji_color: a8(75),       prefix_color: 0,       user_color: a8(75),          path_color: a8(51),          git_color: a8(51),          prompt_color: a8(46),         prompt_char: "➜",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: true,  show_user: true,  show_host: false, in_path: true,  in_color: 0,            powerline_mode: 0 },
     // 18 ── halflife — λ #ff9800 / #ffeb3b ▶
-    Theme { name: "halflife",         emoji: "λ",  user_color: tc(0xff9800),    path_color: tc(0xffeb3b),    git_color: tc(0xff9800),    prompt_char: "▶",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "halflife",         emoji: "λ",  emoji_color: tc(0xff9800), prefix_color: 0,       user_color: 0,               path_color: tc(0xffeb3b),    git_color: tc(0xff9800),    prompt_color: tc(0xff9800),   prompt_char: "▶",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 19 ── paradox — ⚡ blue/magenta powerline ❯
-    Theme { name: "paradox",          emoji: "⚡", user_color: a8(75),          path_color: a8(201),         git_color: a8(51),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "paradox",          emoji: "⚡", emoji_color: 0,            prefix_color: 0,       user_color: 0,               path_color: a8(15),          git_color: a8(15),          prompt_color: a8(51),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 4 },
     // 20 ── bureau — 240-gray / yellow@host / cyan path / green ❯
-    Theme { name: "bureau",           emoji: "",   user_color: a8(226),         path_color: a8(51),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "bureau",           emoji: "",   emoji_color: 0,            prefix_color: a8(240), user_color: a8(226),         path_color: a8(51),          git_color: a8(51),          prompt_color: a8(46),         prompt_char: "❯",     line1_prefix: "[",  line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 0 },
     // 21 ── gallifrey — ⏳ #ffd700 / #00bfff
-    Theme { name: "gallifrey",        emoji: "⏳", user_color: tc(0xffd700),    path_color: tc(0x00bfff),    git_color: tc(0xffd700),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "gallifrey",        emoji: "⏳", emoji_color: tc(0xffd700), prefix_color: 0,       user_color: 0,               path_color: tc(0x00bfff),    git_color: tc(0xffd700),    prompt_color: tc(0x00bfff),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 22 ── material — 💎 #00e676 / #00e5ff / #d500f9
-    Theme { name: "material",         emoji: "💎", user_color: tc(0x00e676),    path_color: tc(0x00e5ff),    git_color: tc(0xd500f9),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "material",         emoji: "💎", emoji_color: tc(0x00e676), prefix_color: 0,       user_color: tc(0x00e676),    path_color: tc(0x00e5ff),    git_color: tc(0xd500f9),    prompt_color: tc(0x00e676),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 23 ── monokai — 🔥 #a6e22e / #f92672 / #e6db74
-    Theme { name: "monokai",          emoji: "🔥", user_color: tc(0xa6e22e),    path_color: tc(0xf92672),    git_color: tc(0xe6db74),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "monokai",          emoji: "🔥", emoji_color: tc(0xa6e22e), prefix_color: 0,       user_color: tc(0xa6e22e),    path_color: tc(0xf92672),    git_color: tc(0xe6db74),    prompt_color: tc(0xa6e22e),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0xf92672), powerline_mode: 0 },
     // 24 ── palenight — 🍇 #c792ea / #89ddff / #ff5370
-    Theme { name: "palenight",        emoji: "🍇", user_color: tc(0xc792ea),    path_color: tc(0x89ddff),    git_color: tc(0xff5370),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "palenight",        emoji: "🍇", emoji_color: tc(0xc792ea), prefix_color: 0,       user_color: 0,               path_color: tc(0xc792ea),    git_color: tc(0x89ddff),    prompt_color: tc(0xff5370),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 25 ── powerlineclassic — blue@host green path cyan git
-    Theme { name: "powerlineclassic", emoji: "",   user_color: a8(75),          path_color: a8(34),          git_color: a8(51),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "powerlineclassic", emoji: "",   emoji_color: 0,            prefix_color: 0,       user_color: a8(15),          path_color: a8(0),           git_color: a8(15),          prompt_color: a8(51),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 5 },
     // 26 ── lambda — λ green / blue ❯
-    Theme { name: "lambda",           emoji: "λ",  user_color: a8(46),          path_color: a8(75),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "lambda",           emoji: "λ",  emoji_color: a8(46),       prefix_color: 0,       user_color: 0,               path_color: a8(75),          git_color: a8(75),          prompt_color: a8(46),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: true,  leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 27 ── hyper — ⚡ #ff00ff / #00ffff / #ffff00
-    Theme { name: "hyper",            emoji: "⚡", user_color: tc(0xff00ff),    path_color: tc(0x00ffff),    git_color: tc(0xffff00),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "hyper",            emoji: "⚡", emoji_color: tc(0xff00ff), prefix_color: 0,       user_color: 0,               path_color: tc(0x00ffff),    git_color: tc(0xffff00),    prompt_color: tc(0xff00ff),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 28 ── slick — ● green / cyan ❯
-    Theme { name: "slick",            emoji: "●",  user_color: a8(46),          path_color: a8(51),          git_color: a8(46),          prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "slick",            emoji: "●",  emoji_color: a8(46),       prefix_color: 0,       user_color: 0,               path_color: a8(51),          git_color: a8(51),          prompt_color: a8(46),         prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: true,  leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 29 ── matrix — 📟 #00ff00 [matrix]❯
-    Theme { name: "matrix",           emoji: "📟", user_color: tc(0x00ff00),    path_color: tc(0x00ff00),    git_color: tc(0x00ff00),    prompt_char: "[matrix]❯", line1_prefix: "", line2_prefix: "" },
+    Theme { name: "matrix",           emoji: "📟", emoji_color: tc(0x00ff00), prefix_color: 0,       user_color: tc(0x00ff00),    path_color: tc(0x00ff00),    git_color: tc(0x00ff00),    prompt_color: tc(0x00ff00),   prompt_char: "[matrix]❯", line1_prefix: "", line2_prefix: "", single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 0 },
     // 30 ── sunset — 🌇 #ff6b6b / #feca57 / #5f27cd
-    Theme { name: "sunset",           emoji: "🌇", user_color: tc(0xff6b6b),    path_color: tc(0xfeca57),    git_color: tc(0x5f27cd),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "sunset",           emoji: "🌇", emoji_color: tc(0xff6b6b), prefix_color: 0,       user_color: 0,               path_color: tc(0xff6b6b),    git_color: tc(0xfeca57),    prompt_color: tc(0x5f27cd),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 31 ── solarized — ☀️ #b58900 / #2aa198 / #cb4b16
-    Theme { name: "solarized",        emoji: "☀️", user_color: tc(0xb58900),    path_color: tc(0x2aa198),    git_color: tc(0xcb4b16),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "solarized",        emoji: "☀️", emoji_color: tc(0xb58900), prefix_color: 0,       user_color: tc(0xb58900),    path_color: tc(0x2aa198),    git_color: tc(0xcb4b16),    prompt_color: tc(0x268bd2),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0x2aa198), powerline_mode: 0 },
     // 32 ── rosepine — 🌹 #eb6f92 / #c4a7e7 / #f6c177
-    Theme { name: "rosepine",         emoji: "🌹", user_color: tc(0xeb6f92),    path_color: tc(0xc4a7e7),    git_color: tc(0xf6c177),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "rosepine",         emoji: "🌹", emoji_color: tc(0xeb6f92), prefix_color: 0,       user_color: 0,               path_color: tc(0xeb6f92),    git_color: tc(0xc4a7e7),    prompt_color: tc(0xf6c177),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 33 ── everforest — 🌲 #a7c080 / #e2b76e / #7fbbb3
-    Theme { name: "everforest",       emoji: "🌲", user_color: tc(0xa7c080),    path_color: tc(0xe2b76e),    git_color: tc(0x7fbbb3),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "everforest",       emoji: "🌲", emoji_color: tc(0xa7c080), prefix_color: 0,       user_color: tc(0xa7c080),    path_color: tc(0xe2b76e),    git_color: tc(0x7fbbb3),    prompt_color: tc(0xa7c080),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 34 ── kanagawa — 🌊 #7e9cd8 / #e06d76 / #e09e72
-    Theme { name: "kanagawa",         emoji: "🌊", user_color: tc(0x7e9cd8),    path_color: tc(0xe06d76),    git_color: tc(0xe09e72),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "kanagawa",         emoji: "🌊", emoji_color: tc(0x7e9cd8), prefix_color: 0,       user_color: tc(0x7e9cd8),    path_color: tc(0xe06d76),    git_color: tc(0xe09e72),    prompt_color: tc(0x98bb75),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0xe06d76), powerline_mode: 0 },
     // 35 ── nightowl — 🦉 #82aaff / #7fdbca / #c792ea
-    Theme { name: "nightowl",         emoji: "🦉", user_color: tc(0x82aaff),    path_color: tc(0x7fdbca),    git_color: tc(0xc792ea),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "nightowl",         emoji: "🦉", emoji_color: tc(0x82aaff), prefix_color: 0,       user_color: tc(0x82aaff),    path_color: tc(0x7fdbca),    git_color: tc(0xc792ea),    prompt_color: tc(0xffcb6b),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 36 ── cobalt2 — ⚡ #ffc400 / #0088ff / #00e5ff
-    Theme { name: "cobalt2",          emoji: "⚡", user_color: tc(0xffc400),    path_color: tc(0x0088ff),    git_color: tc(0x00e5ff),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "cobalt2",          emoji: "⚡", emoji_color: tc(0xffc400), prefix_color: 0,       user_color: tc(0xffc400),    path_color: tc(0x0088ff),    git_color: tc(0x00e5ff),    prompt_color: tc(0xffc400),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0x0088ff), powerline_mode: 0 },
     // 37 ── shadesofpurple — 🍇 #bd93f9 / #ffd600 / #ff8000 ❯❯
-    Theme { name: "shadesofpurple",   emoji: "🍇", user_color: tc(0xbd93f9),    path_color: tc(0xffd600),    git_color: tc(0xff8000),    prompt_char: "❯❯",   line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "shadesofpurple",   emoji: "🍇", emoji_color: tc(0xbd93f9), prefix_color: 0,       user_color: 0,               path_color: tc(0xbd93f9),    git_color: tc(0xffd600),    prompt_color: tc(0xff8000),   prompt_char: "❯❯",   line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 38 ── ayu — 🎨 #ff8f40 / #95e6cb / #ffd700
-    Theme { name: "ayu",              emoji: "🎨", user_color: tc(0xff8f40),    path_color: tc(0x95e6cb),    git_color: tc(0xffd700),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "ayu",              emoji: "🎨", emoji_color: tc(0xff8f40), prefix_color: 0,       user_color: tc(0xff8f40),    path_color: tc(0x95e6cb),    git_color: tc(0xffd700),    prompt_color: tc(0xff8f40),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 39 ── snazzy — ✨ #ff5c57 / #5ffaef / #ff6ac1
-    Theme { name: "snazzy",           emoji: "✨", user_color: tc(0xff5c57),    path_color: tc(0x5ffaef),    git_color: tc(0xff6ac1),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "snazzy",           emoji: "✨", emoji_color: tc(0xff5c57), prefix_color: 0,       user_color: 0,               path_color: tc(0xff5c57),    git_color: tc(0x5ffaef),    prompt_color: tc(0xff6ac1),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 40 ── outrun — 🌆 #ff007f / #00f0ff / #ffc800 ▶▶
-    Theme { name: "outrun",           emoji: "🌆", user_color: tc(0xff007f),    path_color: tc(0x00f0ff),    git_color: tc(0xffc800),    prompt_char: "▶▶",    line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "outrun",           emoji: "🌆", emoji_color: tc(0xff007f), prefix_color: 0,       user_color: tc(0xff007f),    path_color: tc(0x00f0ff),    git_color: tc(0xffc800),    prompt_color: tc(0xff007f),   prompt_char: "▶▶",    line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0x00f0ff), powerline_mode: 0 },
     // 41 ── oceanic — 🌊 #6699cc / #ec5f67 / #5fb3b3
-    Theme { name: "oceanic",          emoji: "🌊", user_color: tc(0x6699cc),    path_color: tc(0xec5f67),    git_color: tc(0x5fb3b3),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "oceanic",          emoji: "🌊", emoji_color: tc(0x6699cc), prefix_color: 0,       user_color: 0,               path_color: tc(0x6699cc),    git_color: tc(0xec5f67),    prompt_color: tc(0x5fb3b3),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 42 ── moonlight — 🌙 #82aaff / #b4a0ff / #87ddff
-    Theme { name: "moonlight",        emoji: "🌙", user_color: tc(0x82aaff),    path_color: tc(0xb4a0ff),    git_color: tc(0x87ddff),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "moonlight",        emoji: "🌙", emoji_color: tc(0x82aaff), prefix_color: 0,       user_color: tc(0x82aaff),    path_color: tc(0xb4a0ff),    git_color: tc(0x87ddff),    prompt_color: tc(0xc586c0),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 43 ── papercolor — 📜 #5faf87 / #d78700 / #af005f
-    Theme { name: "papercolor",       emoji: "📜", user_color: tc(0x5faf87),    path_color: tc(0xd78700),    git_color: tc(0xaf005f),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "papercolor",       emoji: "📜", emoji_color: tc(0x5faf87), prefix_color: 0,       user_color: tc(0x5faf87),    path_color: tc(0xd78700),    git_color: tc(0xaf005f),    prompt_color: tc(0x005f87),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: true,  in_path: false, in_color: 0,            powerline_mode: 0 },
     // 44 ── horizon — 🌄 #e95c72 / #f0907a / #fac591
-    Theme { name: "horizon",          emoji: "🌄", user_color: tc(0xe95c72),    path_color: tc(0xf0907a),    git_color: tc(0xfac591),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "horizon",          emoji: "🌄", emoji_color: tc(0xe95c72), prefix_color: 0,       user_color: 0,               path_color: tc(0xe95c72),    git_color: tc(0xf0907a),    prompt_color: tc(0xfac591),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 45 ── catppuccin_frappe — ☕ #ca9ee6 / #bac2de / #99d1db ❯❯
-    Theme { name: "catppuccin_frappe",emoji: "☕", user_color: tc(0xca9ee6),    path_color: tc(0xbac2de),    git_color: tc(0x99d1db),    prompt_char: "❯❯",   line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "catppuccin_frappe",emoji: "☕", emoji_color: tc(0xca9ee6), prefix_color: 0,       user_color: tc(0xca9ee6),    path_color: tc(0xbac2de),    git_color: tc(0x99d1db),    prompt_color: tc(0xf4b8e4),   prompt_char: "❯❯",   line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0xbac2de), powerline_mode: 0 },
     // 46 ── dracula_pro — 🗡️ #a27aff / #ff80bf / #80ffea ▶
-    Theme { name: "dracula_pro",      emoji: "🗡️", user_color: tc(0xa27aff),    path_color: tc(0xff80bf),    git_color: tc(0x80ffea),    prompt_char: "▶",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "dracula_pro",      emoji: "🗡️ ",emoji_color: tc(0xa27aff), prefix_color: 0,       user_color: tc(0xa27aff),    path_color: tc(0xff80bf),    git_color: tc(0x80ffea),    prompt_color: tc(0x50fa7b),   prompt_char: "▶",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 47 ── cyber_samurai — 🥷 #ff2a6d / #05d9e8 / #fff200 ❯❯❯
-    Theme { name: "cyber_samurai",    emoji: "🥷", user_color: tc(0xff2a6d),    path_color: tc(0x05d9e8),    git_color: tc(0xfff200),    prompt_char: "❯❯❯",  line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "cyber_samurai",    emoji: "🥷", emoji_color: tc(0xff2a6d), prefix_color: 0,       user_color: tc(0xff2a6d),    path_color: tc(0x05d9e8),    git_color: tc(0xfff200),    prompt_color: tc(0xff2a6d),   prompt_char: "❯❯❯",  line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 48 ── evergreen — 🍃 #2ecc71 / #1abc9c / #3498db
-    Theme { name: "evergreen",        emoji: "🍃", user_color: tc(0x2ecc71),    path_color: tc(0x1abc9c),    git_color: tc(0x3498db),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "evergreen",        emoji: "🍃", emoji_color: tc(0x2ecc71), prefix_color: 0,       user_color: 0,               path_color: tc(0x2ecc71),    git_color: tc(0x1abc9c),    prompt_color: tc(0x3498db),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 49 ── ghost — 👻 #bdc3c7 / #95a5a6 / #ecf0f1
-    Theme { name: "ghost",            emoji: "👻", user_color: tc(0xbdc3c7),    path_color: tc(0x95a5a6),    git_color: tc(0xecf0f1),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "ghost",            emoji: "👻", emoji_color: tc(0xbdc3c7), prefix_color: 0,       user_color: tc(0xbdc3c7),    path_color: tc(0x95a5a6),    git_color: tc(0xecf0f1),    prompt_color: tc(0x7f8c8d),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0x95a5a6), powerline_mode: 0 },
     // 50 ── oxide — ⚙️ #d35400 / #e67e22 / #f1c40f
-    Theme { name: "oxide",            emoji: "⚙️", user_color: tc(0xd35400),    path_color: tc(0xe67e22),    git_color: tc(0xf1c40f),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "oxide",            emoji: "⚙️ ",emoji_color: tc(0xd35400), prefix_color: 0,       user_color: 0,               path_color: tc(0xd35400),    git_color: tc(0xe67e22),    prompt_color: tc(0xf1c40f),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 51 ── neon_pulse — 🔮 #39ff14 / #ff1493 / #00ffff ⚡
-    Theme { name: "neon_pulse",       emoji: "🔮", user_color: tc(0x39ff14),    path_color: tc(0xff1493),    git_color: tc(0x00ffff),    prompt_char: "⚡",    line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "neon_pulse",       emoji: "🔮", emoji_color: tc(0x39ff14), prefix_color: 0,       user_color: tc(0x39ff14),    path_color: tc(0xff1493),    git_color: tc(0x00ffff),    prompt_color: tc(0x39ff14),   prompt_char: "⚡",    line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 52 ── volcano — 🌋 #e74c3c / #c0392b / #f39c12 ▶
-    Theme { name: "volcano",          emoji: "🌋", user_color: tc(0xe74c3c),    path_color: tc(0xc0392b),    git_color: tc(0xf39c12),    prompt_char: "▶",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "volcano",          emoji: "🌋", emoji_color: tc(0xe74c3c), prefix_color: 0,       user_color: 0,               path_color: tc(0xe74c3c),    git_color: tc(0xc0392b),    prompt_color: tc(0xf39c12),   prompt_char: "▶",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: false, show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
     // 53 ── sakura — 🌸 #ffb7b2 / #ffda09 / #e2f0cb
-    Theme { name: "sakura",           emoji: "🌸", user_color: tc(0xffb7b2),    path_color: tc(0xffda09),    git_color: tc(0xe2f0cb),    prompt_char: "❯",     line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "sakura",           emoji: "🌸", emoji_color: tc(0xffb7b2), prefix_color: 0,       user_color: tc(0xffb7b2),    path_color: tc(0xffda09),    git_color: tc(0xe2f0cb),    prompt_color: tc(0xff9aa2),   prompt_char: "❯",     line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: true,  in_color: tc(0xffda09), powerline_mode: 0 },
     // 54 ── galaxy — 🌌 #9b59b6 / #8e44ad / #3498db ✨❯
-    Theme { name: "galaxy",           emoji: "🌌", user_color: tc(0x9b59b6),    path_color: tc(0x8e44ad),    git_color: tc(0x3498db),    prompt_char: "✨ ❯",  line1_prefix: "",   line2_prefix: ""   },
+    Theme { name: "galaxy",           emoji: "🌌", emoji_color: tc(0x9b59b6), prefix_color: 0,       user_color: tc(0x9b59b6),    path_color: tc(0x8e44ad),    git_color: tc(0x3498db),    prompt_color: tc(0xf1c40f),   prompt_char: "✨ ❯",  line1_prefix: "",   line2_prefix: "",   single_line: false, leading_newline: false, show_user: true,  show_host: false, in_path: false, in_color: 0,            powerline_mode: 0 },
 ];
 
 // ── Internal write helpers (no allocation) ────────────────────────────────────
@@ -530,79 +550,247 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
         return Ok(off);
     }
 
-    // ── Line 1 ───────────────────────────────────────────────────────────────
-
-    // Structural prefix (e.g. "╭─" for p10k/bira, "" for most)
-    if !theme.line1_prefix.is_empty() {
-        if !write_str(buf, &mut off, theme.line1_prefix) { return Err("buffer too small"); }
-        write_str(buf, &mut off, " ");
+    // ── Leading newline ──────────────────────────────────────────────────────
+    if theme.leading_newline {
+        write_str(buf, &mut off, "\n");
     }
 
-    // Decorative emoji: dynamic random icon for minimal & full themes, fixed emoji for others
-    let dynamic_emoji;
-    let emoji = if theme.name == "minimal" || theme.name == "full" {
-        dynamic_emoji = rand_emoji(cwd_raw);
-        dynamic_emoji
+    // ── Powerline Modes ──────────────────────────────────────────────────────
+    if theme.powerline_mode != 0 {
+        match theme.powerline_mode {
+            1 => {
+                // Mode 1: Agnoster
+                write_ansi(buf, &mut off, "\x1b[48;5;75m\x1b[38;5;0m", s);
+                write_str(buf, &mut off, " 💻 ");
+                let user = std::str::from_utf8(&ctx.user[..ctx.user_len]).unwrap_or("user");
+                let host = std::str::from_utf8(&ctx.host[..ctx.host_len]).unwrap_or("host");
+                write_str(buf, &mut off, user);
+                write_str(buf, &mut off, "@");
+                write_str(buf, &mut off, host);
+                write_str(buf, &mut off, " ");
+
+                write_ansi(buf, &mut off, "\x1b[48;5;34m\x1b[38;5;75m \x1b[38;5;0m", s);
+                let cwd_short = format_short_cwd(cwd_raw);
+                write_str(buf, &mut off, cwd_short);
+                write_str(buf, &mut off, " ");
+
+                if ctx.git_branch_len > 0 {
+                    write_ansi(buf, &mut off, "\x1b[48;5;226m\x1b[38;5;34m \x1b[38;5;0m[🌿 ", s);
+                    let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
+                    write_str(buf, &mut off, branch);
+                    if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
+                    write_str(buf, &mut off, "] ");
+                    write_ansi(buf, &mut off, "\x1b[49m\x1b[38;5;226m\x1b[0m", s);
+                } else {
+                    write_ansi(buf, &mut off, "\x1b[49m\x1b[38;5;34m\x1b[0m", s);
+                }
+            }
+            2 => {
+                // Mode 2: Catppuccin Pill
+                write_ansi(buf, &mut off, "\x1b[38;2;202;158;230m\x1b[48;2;202;158;230m\x1b[38;2;30;30;46m 🐱 catppuccin \x1b[48;2;137;180;250m\x1b[38;2;202;158;230m\x1b[48;2;137;180;250m\x1b[38;2;30;30;46m 📂 ", s);
+                let cwd_short = format_short_cwd(cwd_raw);
+                write_str(buf, &mut off, cwd_short);
+                write_str(buf, &mut off, " ");
+                write_ansi(buf, &mut off, "\x1b[49m\x1b[38;2;137;180;250m\x1b[0m", s);
+
+                if ctx.git_branch_len > 0 {
+                    write_str(buf, &mut off, "  ");
+                    write_theme_color(buf, &mut off, theme.git_color, s);
+                    write_str(buf, &mut off, "[🌿 ");
+                    let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
+                    write_str(buf, &mut off, branch);
+                    if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
+                    write_str(buf, &mut off, "]");
+                    write_ansi(buf, &mut off, RESET, s);
+                }
+            }
+            3 => {
+                // Mode 3: Cyberpunk Block
+                write_ansi(buf, &mut off, "\x1b[48;2;255;238;0m\x1b[38;2;0;0;0m ⚡ CYBER \x1b[48;2;0;240;255m\x1b[38;2;0;0;0m ", s);
+                let cwd_short = format_short_cwd(cwd_raw);
+                write_str(buf, &mut off, cwd_short);
+                write_str(buf, &mut off, " \x1b[49m\x1b[0m");
+
+                if ctx.git_branch_len > 0 {
+                    write_str(buf, &mut off, "  ");
+                    write_theme_color(buf, &mut off, theme.git_color, s);
+                    write_str(buf, &mut off, "[🌿 ");
+                    let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
+                    write_str(buf, &mut off, branch);
+                    if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
+                    write_str(buf, &mut off, "]");
+                    write_ansi(buf, &mut off, RESET, s);
+                }
+            }
+            4 => {
+                // Mode 4: Paradox Chevron
+                write_ansi(buf, &mut off, "\x1b[48;5;75m\x1b[38;5;15m ⚡ ", s);
+                let cwd_short = format_short_cwd(cwd_raw);
+                write_str(buf, &mut off, cwd_short);
+                write_str(buf, &mut off, " ");
+
+                if ctx.git_branch_len > 0 {
+                    write_ansi(buf, &mut off, "\x1b[48;5;201m\x1b[38;5;75m \x1b[38;5;15m[🌿 ", s);
+                    let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
+                    write_str(buf, &mut off, branch);
+                    if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
+                    write_str(buf, &mut off, "] ");
+                    write_ansi(buf, &mut off, "\x1b[49m\x1b[38;5;201m\x1b[0m", s);
+                } else {
+                    write_ansi(buf, &mut off, "\x1b[49m\x1b[38;5;75m\x1b[0m", s);
+                }
+            }
+            5 => {
+                // Mode 5: PowerlineClassic
+                write_ansi(buf, &mut off, "\x1b[48;5;75m\x1b[38;5;15m ", s);
+                let user = std::str::from_utf8(&ctx.user[..ctx.user_len]).unwrap_or("user");
+                let host = std::str::from_utf8(&ctx.host[..ctx.host_len]).unwrap_or("host");
+                write_str(buf, &mut off, user);
+                write_str(buf, &mut off, "@");
+                write_str(buf, &mut off, host);
+                write_str(buf, &mut off, " ");
+
+                write_ansi(buf, &mut off, "\x1b[48;5;34m\x1b[38;5;75m \x1b[38;5;0m", s);
+                let cwd_short = format_short_cwd(cwd_raw);
+                write_str(buf, &mut off, cwd_short);
+                write_str(buf, &mut off, " ");
+                write_ansi(buf, &mut off, "\x1b[49m\x1b[38;5;34m\x1b[0m", s);
+
+                if ctx.git_branch_len > 0 {
+                    write_str(buf, &mut off, " ");
+                    write_theme_color(buf, &mut off, theme.git_color, s);
+                    write_str(buf, &mut off, "[🌿 ");
+                    let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
+                    write_str(buf, &mut off, branch);
+                    if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
+                    write_str(buf, &mut off, "]");
+                    write_ansi(buf, &mut off, RESET, s);
+                }
+            }
+            _ => {}
+        }
     } else {
-        theme.emoji
-    };
+        // Standard non-powerline mode
+        // 1. Line1 Prefix (e.g. "╭─" or "[")
+        if !theme.line1_prefix.is_empty() {
+            if theme.prefix_color != 0 {
+                write_theme_color(buf, &mut off, theme.prefix_color, s);
+            }
+            write_str(buf, &mut off, theme.line1_prefix);
+            if theme.prefix_color != 0 {
+                write_ansi(buf, &mut off, RESET, s);
+            }
+            if theme.name != "bureau" {
+                write_str(buf, &mut off, " ");
+            }
+        }
 
-    if !emoji.is_empty() {
-        write_str(buf, &mut off, emoji);
-        write_str(buf, &mut off, " ");
-    }
+        // 2. Emoji
+        let dynamic_emoji;
+        let emoji = if theme.name == "minimal" || theme.name == "full" {
+            dynamic_emoji = rand_emoji(cwd_raw);
+            dynamic_emoji
+        } else {
+            theme.emoji
+        };
 
-    // User@host in user_color (bold) — skipped if user_color == 0 (e.g. minimal theme)
-    if theme.user_color != 0 {
-        if !write_theme_color(buf, &mut off, theme.user_color, s) { return Err("buffer too small"); }
-        if !write_ansi(buf, &mut off, BOLD, s) { return Err("buffer too small"); }
+        if !emoji.is_empty() {
+            if theme.emoji_color != 0 {
+                write_theme_color(buf, &mut off, theme.emoji_color, s);
+            }
+            write_str(buf, &mut off, emoji);
+            if theme.emoji_color != 0 {
+                write_ansi(buf, &mut off, RESET, s);
+            }
+            write_str(buf, &mut off, " ");
+        }
 
-        let user = std::str::from_utf8(&ctx.user[..ctx.user_len]).unwrap_or("user");
-        let host = std::str::from_utf8(&ctx.host[..ctx.host_len]).unwrap_or("host");
-        write_str(buf, &mut off, user);
-        write_str(buf, &mut off, "@");
-        write_str(buf, &mut off, host);
+        // 3. User & Host
+        if theme.show_user && theme.user_color != 0 {
+            write_theme_color(buf, &mut off, theme.user_color, s);
+            let user = std::str::from_utf8(&ctx.user[..ctx.user_len]).unwrap_or("user");
+            write_str(buf, &mut off, user);
+            if theme.show_host {
+                write_str(buf, &mut off, "@");
+                let host = std::str::from_utf8(&ctx.host[..ctx.host_len]).unwrap_or("host");
+                write_str(buf, &mut off, host);
+            }
+            write_ansi(buf, &mut off, RESET, s);
+
+            if theme.name == "bureau" {
+                if theme.prefix_color != 0 {
+                    write_theme_color(buf, &mut off, theme.prefix_color, s);
+                }
+                write_str(buf, &mut off, "] ");
+                if theme.prefix_color != 0 {
+                    write_ansi(buf, &mut off, RESET, s);
+                }
+            } else {
+                write_str(buf, &mut off, " ");
+            }
+        }
+
+        // 4. "in " keyword
+        if theme.in_path {
+            let in_col = if theme.in_color != 0 { theme.in_color } else { theme.path_color };
+            write_theme_color(buf, &mut off, in_col, s);
+            write_str(buf, &mut off, "in ");
+            write_ansi(buf, &mut off, RESET, s);
+        }
+
+        // 5. CWD Path
+        let path_color = if theme.name == "full" {
+            a8(rand_color(ctx.cwd_len))
+        } else {
+            theme.path_color
+        };
+        write_theme_color(buf, &mut off, path_color, s);
+        let cwd_short = format_short_cwd(cwd_raw);
+        write_str(buf, &mut off, cwd_short);
         write_ansi(buf, &mut off, RESET, s);
+
+        // 6. Git segment
+        if ctx.git_branch_len > 0 {
+            write_str(buf, &mut off, " ");
+            if theme.name == "minimal" {
+                write_theme_color(buf, &mut off, theme.path_color, s);
+            } else {
+                write_theme_color(buf, &mut off, theme.git_color, s);
+            }
+            write_str(buf, &mut off, "[🌿 ");
+            let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
+            write_str(buf, &mut off, branch);
+            if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
+            write_str(buf, &mut off, "]");
+            write_ansi(buf, &mut off, RESET, s);
+        }
+    }
+
+    // ── Line 2 / Single Line completion ─────────────────────────────────────
+    if theme.single_line {
         write_str(buf, &mut off, " ");
-    }
-
-    // CWD in path_color (dynamic rainbow for full theme)
-    let path_color = if theme.name == "full" {
-        a8(rand_color(ctx.cwd_len))
     } else {
-        theme.path_color
-    };
-    write_theme_color(buf, &mut off, path_color, s);
-    let cwd_short = format_short_cwd(cwd_raw);
-    write_str(buf, &mut off, cwd_short);
-    write_ansi(buf, &mut off, RESET, s);
-
-    // Git segment (only when inside a git repo)
-    if ctx.git_branch_len > 0 {
-        write_str(buf, &mut off, "  ");
-        write_theme_color(buf, &mut off, theme.git_color, s);
-        write_str(buf, &mut off, "[🌿 ");
-        let branch = std::str::from_utf8(&ctx.git_branch[..ctx.git_branch_len]).unwrap_or("?");
-        write_str(buf, &mut off, branch);
-        if ctx.git_dirty { write_str(buf, &mut off, " ❗"); }
-        write_str(buf, &mut off, "]");
-        write_ansi(buf, &mut off, RESET, s);
+        write_str(buf, &mut off, "\n");
+        if !theme.line2_prefix.is_empty() {
+            if theme.prefix_color != 0 {
+                write_theme_color(buf, &mut off, theme.prefix_color, s);
+            }
+            write_str(buf, &mut off, theme.line2_prefix);
+            if theme.prefix_color != 0 {
+                write_ansi(buf, &mut off, RESET, s);
+            }
+        }
     }
 
-    write_str(buf, &mut off, "\n");
-
-    // ── Line 2 ───────────────────────────────────────────────────────────────
-
-    if !theme.line2_prefix.is_empty() {
-        write_str(buf, &mut off, theme.line2_prefix);
-        write_str(buf, &mut off, " ");
-    }
-
-    // Prompt character: green on success, red on error
-    if ctx.last_exit == 0 {
-        write_ansi(buf, &mut off, "\x1b[1;32m", s);
+    // Prompt character color
+    if theme.prompt_color != 0 {
+        write_theme_color(buf, &mut off, theme.prompt_color, s);
     } else {
-        write_ansi(buf, &mut off, "\x1b[1;31m", s);
+        if ctx.last_exit == 0 {
+            write_ansi(buf, &mut off, "\x1b[1;32m", s);
+        } else {
+            write_ansi(buf, &mut off, "\x1b[1;31m", s);
+        }
     }
     write_str(buf, &mut off, theme.prompt_char);
     write_ansi(buf, &mut off, RESET, s);
@@ -707,21 +895,27 @@ mod tests {
 
     #[test]
     fn true_color_themes_have_bit31_set() {
-        // Themes using hex colors from config.zsh must encode as true-color.
+        // Themes using hex colors from config.zsh must encode as true-color in at least one field.
         let tc_themes = ["catppuccin", "tokyonight", "dracula", "nord",
                          "gruvbox", "onedark", "synthwave", "cyberpunk",
                          "galaxy", "sakura", "volcano"];
         for name in tc_themes {
             let t = THEMES.iter().find(|t| t.name == name)
                 .unwrap_or_else(|| panic!("theme '{}' not found", name));
-            assert!(is_true_color(t.user_color),
-                "theme '{}' user_color should be true-color", name);
+            let has_tc = is_true_color(t.user_color)
+                || is_true_color(t.path_color)
+                || is_true_color(t.prompt_color)
+                || is_true_color(t.git_color)
+                || is_true_color(t.emoji_color)
+                || is_true_color(t.prefix_color);
+            assert!(has_tc,
+                "theme '{}' should have true-color encoded in at least one field", name);
         }
     }
 
     #[test]
     fn ansi256_themes_have_no_true_color_bit() {
-        // ANSI256-only themes must NOT have bit 31 set.
+        // Pure ANSI256-only themes must NOT have bit 31 set on user_color.
         let a256_themes = ["minimal", "full", "bira", "pure", "sorin",
                            "bureau", "paradox", "powerlineclassic", "lambda", "slick"];
         for name in a256_themes {

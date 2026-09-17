@@ -320,9 +320,21 @@ struct InitArgs {
 
 #[derive(clap::Args, Debug)]
 struct ThemeArgs {
-    /// Theme name to activate, or "list" to show all available themes
-    #[arg(value_name = "THEME")]
+    /// Theme name to activate, "list", "set-color", "reset-color", or "list-colors"
+    #[arg(value_name = "THEME_OR_ACTION")]
     name: Option<String>,
+
+    /// Theme name (when action is set-color/reset-color) or color element (user, path, git, etc.)
+    #[arg(value_name = "ARG1")]
+    element: Option<String>,
+
+    /// Color element (when action is set-color) or color code
+    #[arg(value_name = "ARG2")]
+    color: Option<String>,
+
+    /// Color value (#ff0055, 214, cyan, default)
+    #[arg(value_name = "ARG3")]
+    val: Option<String>,
 }
 
 #[derive(clap::Args, Debug)]
@@ -501,7 +513,7 @@ fn main() {
             // When invoked as `fancy`, `theme`, or plain `fancybash` with no
             // subcommand → open the interactive theme picker TUI.
             // Help menu is still available via `fancybash keep`.
-            cmd_theme(ThemeArgs { name: None })
+            cmd_theme(ThemeArgs { name: None, element: None, color: None, val: None })
         }
     };
 
@@ -599,7 +611,10 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
 // ── theme ─────────────────────────────────────────────────────────────────────
 
 fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::core::prompt::{active_theme_id, set_active_theme, THEMES};
+    use fancybash_core::core::prompt::{
+        active_theme_id, get_effective_theme, load_theme_overrides,
+        reset_theme_color_overrides, save_theme_color_override, set_active_theme, THEMES,
+    };
 
     match args.name.as_deref() {
         // ── fancybash theme list  →  styled table ─────────────────────────────
@@ -619,10 +634,52 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
             println!();
         }
 
+        // ── fancybash theme set-color <theme> <element> <color> ───────────────
+        Some("set-color") => {
+            let theme_name = args.element.as_deref().ok_or("Usage: fancybash theme set-color <theme_name> <element> <color>")?;
+            let element = args.color.as_deref().ok_or("Usage: fancybash theme set-color <theme_name> <element> <color>")?;
+            let color_val = args.val.as_deref().ok_or("Usage: fancybash theme set-color <theme_name> <element> <color>")?;
+
+            save_theme_color_override(theme_name, element, color_val)?;
+            println!("\x1b[1;32m✅ Color override saved!\x1b[0m Theme: \x1b[1;36m{}\x1b[0m, Element: \x1b[1;33m{}\x1b[0m -> \x1b[1;35m{}\x1b[0m", theme_name, element, color_val);
+        }
+
+        // ── fancybash theme reset-color [theme] ──────────────────────────────
+        Some("reset-color") => {
+            let target_theme = args.element.as_deref();
+            reset_theme_color_overrides(target_theme)?;
+            if let Some(t) = target_theme {
+                println!("\x1b[1;32m✅ Color overrides reset for theme:\x1b[0m \x1b[1;36m{}\x1b[0m", t);
+            } else {
+                println!("\x1b[1;32m✅ All theme color overrides reset to defaults.\x1b[0m");
+            }
+        }
+
+        // ── fancybash theme list-colors [theme] ──────────────────────────────
+        Some("list-colors") => {
+            let overrides = load_theme_overrides();
+            if overrides.is_empty() {
+                println!("\x1b[1;33mℹ️ No theme text color overrides configured in ~/.config/fancybash/theme_overrides.toml\x1b[0m");
+            } else {
+                println!("\n\x1b[1;35m🎨 Configured Theme Color Overrides:\x1b[0m\n");
+                for (t_name, o) in &overrides {
+                    println!("  \x1b[1;36m[{}]\x1b[0m", t_name);
+                    if let Some(ref c) = o.user_color { println!("    user_color   = {}", c); }
+                    if let Some(ref c) = o.path_color { println!("    path_color   = {}", c); }
+                    if let Some(ref c) = o.git_color { println!("    git_color    = {}", c); }
+                    if let Some(ref c) = o.prompt_color { println!("    prompt_color = {}", c); }
+                    if let Some(ref c) = o.prefix_color { println!("    prefix_color = {}", c); }
+                    if let Some(ref c) = o.in_color { println!("    in_color     = {}", c); }
+                    if let Some(ref c) = o.emoji_color { println!("    emoji_color  = {}", c); }
+                }
+                println!();
+            }
+        }
+
         // ── fancybash theme <name>  →  set directly ───────────────────────────
         Some(name) => {
             let idx = set_active_theme(name)?;
-            let t = &THEMES[idx];
+            let t = get_effective_theme(idx);
             println!("\x1b[1;32m✅ Theme '{}' {} applied!\x1b[0m", t.name, t.emoji);
             println!("\x1b[2m💡 Run 'source ~/.zshrc' to apply in this session.\x1b[0m");
         }

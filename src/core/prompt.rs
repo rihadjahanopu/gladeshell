@@ -14,7 +14,9 @@
 //    same name, same hex color, same emoji, same prompt_char, same line structure.
 // =============================================================================
 
+use std::collections::HashMap;
 use std::os::raw::c_char;
+use serde::{Deserialize, Serialize};
 use crate::core::sysinfo::{cmd_duration_display, time_date, SystemMetrics, ToolVersions};
 
 // ── Color encoding helpers ────────────────────────────────────────────────────
@@ -389,6 +391,214 @@ pub fn set_active_theme(name: &str) -> Result<usize, String> {
     }
 }
 
+// ── Theme Text Color Overrides System ─────────────────────────────────────────
+
+/// Optional custom text color overrides per theme
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThemeColorOverrides {
+    pub prefix_color: Option<String>,
+    pub user_color: Option<String>,
+    pub path_color: Option<String>,
+    pub git_color: Option<String>,
+    pub prompt_color: Option<String>,
+    pub in_color: Option<String>,
+    pub emoji_color: Option<String>,
+}
+
+/// Returns path to theme color overrides file (~/.config/fancybash/theme_overrides.toml).
+pub fn theme_overrides_config_path() -> std::path::PathBuf {
+    if let Ok(home) = std::env::var("HOME") {
+        std::path::PathBuf::from(home)
+            .join(".config")
+            .join("fancybash")
+            .join("theme_overrides.toml")
+    } else {
+        std::path::PathBuf::from(".fancybash_theme_overrides.toml")
+    }
+}
+
+/// Loads all theme text color overrides from disk.
+pub fn load_theme_overrides() -> HashMap<String, ThemeColorOverrides> {
+    let path = theme_overrides_config_path();
+    if let Ok(content) = std::fs::read_to_string(&path) {
+        if let Ok(overrides) = toml::from_str::<HashMap<String, ThemeColorOverrides>>(&content) {
+            return overrides;
+        }
+    }
+    HashMap::new()
+}
+
+/// Saves a specific text color override for a theme.
+pub fn save_theme_color_override(
+    theme_name: &str,
+    element: &str,
+    color_val: &str,
+) -> Result<(), String> {
+    let mut overrides = load_theme_overrides();
+    let theme_key = theme_name.trim().to_lowercase();
+    let theme_entry = overrides
+        .entry(theme_key)
+        .or_insert_with(ThemeColorOverrides::default);
+
+    let val_trim = color_val.trim();
+    let val_opt = if val_trim.is_empty()
+        || val_trim.eq_ignore_ascii_case("reset")
+        || val_trim.eq_ignore_ascii_case("default")
+    {
+        None
+    } else {
+        Some(val_trim.to_string())
+    };
+
+    match element.trim().to_lowercase().as_str() {
+        "prefix" | "prefix_color" => theme_entry.prefix_color = val_opt,
+        "user" | "user_color" => theme_entry.user_color = val_opt,
+        "path" | "path_color" => theme_entry.path_color = val_opt,
+        "git" | "git_color" => theme_entry.git_color = val_opt,
+        "prompt" | "prompt_color" => theme_entry.prompt_color = val_opt,
+        "in" | "in_color" => theme_entry.in_color = val_opt,
+        "emoji" | "emoji_color" => theme_entry.emoji_color = val_opt,
+        _ => {
+            return Err(format!(
+                "Unknown color element '{}'. Valid elements: prefix, user, path, git, prompt, in, emoji",
+                element
+            ))
+        }
+    }
+
+    let path = theme_overrides_config_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let toml_str = toml::to_string_pretty(&overrides)
+        .map_err(|e| format!("Failed to serialize theme overrides: {}", e))?;
+    std::fs::write(&path, toml_str)
+        .map_err(|e| format!("Failed to write theme overrides file: {}", e))?;
+
+    Ok(())
+}
+
+/// Resets theme text color overrides for a specific theme or all themes.
+pub fn reset_theme_color_overrides(theme_name: Option<&str>) -> Result<(), String> {
+    let mut overrides = load_theme_overrides();
+    if let Some(name) = theme_name {
+        overrides.remove(&name.trim().to_lowercase());
+    } else {
+        overrides.clear();
+    }
+    let path = theme_overrides_config_path();
+    let toml_str = toml::to_string_pretty(&overrides)
+        .map_err(|e| format!("Failed to serialize theme overrides: {}", e))?;
+    std::fs::write(&path, toml_str)
+        .map_err(|e| format!("Failed to write theme overrides file: {}", e))?;
+    Ok(())
+}
+
+/// Parses string representation of color (#RRGGBB, #RGB, ANSI index 0-255, or color name) into u32 color code.
+pub fn parse_color_spec(input: &str) -> Option<u32> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    // Pure number 0-255 without '#' -> ANSI 256 color index
+    if !trimmed.starts_with('#') {
+        if let Ok(idx) = trimmed.parse::<u8>() {
+            return Some(a8(idx));
+        }
+    }
+
+    // Hex color `#ff0055` or `ff0055`
+    let hex_clean = trimmed.trim_start_matches('#');
+    if hex_clean.len() == 6 {
+        if let Ok(val) = u32::from_str_radix(hex_clean, 16) {
+            return Some(tc(val));
+        }
+    } else if trimmed.starts_with('#') && hex_clean.len() == 3 {
+        // Short hex `#f05` -> `#ff0055`
+        let r = u32::from_str_radix(&hex_clean[0..1], 16).ok()? * 17;
+        let g = u32::from_str_radix(&hex_clean[1..2], 16).ok()? * 17;
+        let b = u32::from_str_radix(&hex_clean[2..3], 16).ok()? * 17;
+        return Some(tc((r << 16) | (g << 8) | b));
+    }
+
+    // Color names
+    match trimmed.to_lowercase().as_str() {
+        "black" => Some(a8(0)),
+        "red" => Some(tc(0xff5555)),
+        "green" => Some(tc(0x50fa7b)),
+        "yellow" => Some(tc(0xf1fa8c)),
+        "blue" => Some(tc(0xbd93f9)),
+        "magenta" | "purple" => Some(tc(0xff79c6)),
+        "cyan" => Some(tc(0x8be9fd)),
+        "white" => Some(a8(15)),
+        "orange" => Some(tc(0xffb86c)),
+        "gray" | "grey" => Some(a8(240)),
+        _ => None,
+    }
+}
+
+/// Converts internal u32 color code into readable string format (#RRGGBB or ANSI index).
+pub fn format_color_spec(color_u32: u32) -> String {
+    if color_u32 == 0 {
+        return "default".to_string();
+    }
+    if is_true_color(color_u32) {
+        let r = tc_r(color_u32);
+        let g = tc_g(color_u32);
+        let b = tc_b(color_u32);
+        format!("#{:02x}{:02x}{:02x}", r, g, b)
+    } else {
+        format!("{}", a8_idx(color_u32))
+    }
+}
+
+/// Returns a Theme instance with user text color overrides applied.
+pub fn get_effective_theme(theme_id: usize) -> Theme {
+    let mut theme = *THEMES.get(theme_id).unwrap_or(&THEMES[0]);
+    let overrides = load_theme_overrides();
+
+    if let Some(t_overrides) = overrides.get(theme.name) {
+        if let Some(ref c) = t_overrides.prefix_color {
+            if let Some(val) = parse_color_spec(c) {
+                theme.prefix_color = val;
+            }
+        }
+        if let Some(ref c) = t_overrides.user_color {
+            if let Some(val) = parse_color_spec(c) {
+                theme.user_color = val;
+            }
+        }
+        if let Some(ref c) = t_overrides.path_color {
+            if let Some(val) = parse_color_spec(c) {
+                theme.path_color = val;
+            }
+        }
+        if let Some(ref c) = t_overrides.git_color {
+            if let Some(val) = parse_color_spec(c) {
+                theme.git_color = val;
+            }
+        }
+        if let Some(ref c) = t_overrides.prompt_color {
+            if let Some(val) = parse_color_spec(c) {
+                theme.prompt_color = val;
+            }
+        }
+        if let Some(ref c) = t_overrides.in_color {
+            if let Some(val) = parse_color_spec(c) {
+                theme.in_color = val;
+            }
+        }
+        if let Some(ref c) = t_overrides.emoji_color {
+            if let Some(val) = parse_color_spec(c) {
+                theme.emoji_color = val;
+            }
+        }
+    }
+
+    theme
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /// Context passed to the renderer on every prompt call.
@@ -453,7 +663,7 @@ fn format_short_cwd<'a>(raw_cwd: &'a str) -> &'a str {
 /// # Zero-allocation guarantee
 /// Uses only the caller-supplied buffer. No Box, Vec, or String is created.
 pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str> {
-    let theme = THEMES.get(ctx.theme_id).unwrap_or(&THEMES[0]);
+    let theme = get_effective_theme(ctx.theme_id);
     let mut off = 0usize;
     let s = ctx.shell;
     let cwd_raw = std::str::from_utf8(&ctx.cwd[..ctx.cwd_len]).unwrap_or("~");
@@ -1034,4 +1244,37 @@ mod tests {
             assert!(RAINBOW_COLORS.contains(&rand_color(i)));
         }
     }
+
+    #[test]
+    fn test_parse_and_format_color_spec() {
+        let hex_val = parse_color_spec("#ff0055").unwrap();
+        assert_eq!(format_color_spec(hex_val), "#ff0055");
+
+        let short_hex = parse_color_spec("#0f5").unwrap();
+        assert_eq!(format_color_spec(short_hex), "#00ff55");
+
+        let ansi_val = parse_color_spec("214").unwrap();
+        assert_eq!(format_color_spec(ansi_val), "214");
+
+        let cyan_val = parse_color_spec("cyan").unwrap();
+        assert_eq!(format_color_spec(cyan_val), "#8be9fd");
+    }
+
+    #[test]
+    fn test_effective_theme_with_override() {
+        let base_theme = THEMES[0]; // minimal
+        assert_eq!(base_theme.name, "minimal");
+
+        // Save override
+        assert!(save_theme_color_override("minimal", "path", "#00ffff").is_ok());
+
+        let effective = get_effective_theme(0);
+        assert_eq!(format_color_spec(effective.path_color), "#00ffff");
+
+        // Clean up override
+        let _ = reset_theme_color_overrides(Some("minimal"));
+        let restored = get_effective_theme(0);
+        assert_eq!(restored.path_color, base_theme.path_color);
+    }
 }
+

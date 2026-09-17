@@ -1,15 +1,10 @@
 // =============================================================================
-//  src/tools/theme_picker.rs — Interactive TUI Theme Picker with Live Preview
+//  src/tools/theme_picker.rs — Interactive TUI Theme Picker & Color Customizer
 //
-//  Layout (fkill-style):
-//    ┌─ BANNER ─────────────────────────────────────────────────────────────────┐
-//    ├─ SEARCH ─────────────────────────────────────────────────────────────────┤
-//    ├─ THEME LIST (40%) ──────┬─ LIVE PREVIEW (60%) ──────────────────────────┤
-//    │ ▶ catppuccin  🐱        │  📄 Theme: catppuccin                         │
-//    │   tokyonight  🌌        │  ─────────────────────────────────────────────│
-//    │   dracula     🧛        │  🐱 user@host ~/path  [🌿 main]               │
-//    │   ...                   │  ❯❯❯                                          │
-//    ├─ STATUS / KEYBINDS ──────────────────────────────────────────────────────┤
+//  Multi-page Architecture:
+//    • Page 1: Theme Browser & Picker (Browse 55 themes, live preview, quick apply)
+//    • Page 2: Full-Screen Theme Color Customizer (Dedicated split-pane editor
+//              with real-time live prompt preview & color swatch customization)
 // =============================================================================
 
 use crossterm::{
@@ -28,7 +23,9 @@ use ratatui::{
 use std::io;
 
 use crate::core::prompt::{
-    active_theme_id, render, set_active_theme, PromptContext, THEMES,
+    active_theme_id, format_color_spec, get_effective_theme, render,
+    reset_theme_color_overrides, save_theme_color_override, set_active_theme, PromptContext,
+    THEMES,
 };
 
 // ── Colour Palette ────────────────────────────────────────────────────────────
@@ -44,6 +41,14 @@ const C_YELLOW:      Color = Color::Rgb(255, 210, 80);
 const C_ACTIVE:      Color = Color::Rgb(0, 240, 180);     // ✅ active theme marker
 const C_WHITE:       Color = Color::Rgb(255, 255, 255);
 
+// ── App Navigation State ──────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CurrentPage {
+    ThemeList,    // Page 1: Select & Search Themes
+    ColorEditor,  // Page 2: Full-Screen Theme Color Customizer
+}
+
 // ── App State ─────────────────────────────────────────────────────────────────
 
 struct ThemePickerApp {
@@ -53,9 +58,15 @@ struct ThemePickerApp {
     query: String,
     /// Currently-active theme index (persisted on disk)
     active_idx: usize,
-    /// Confirm-apply dialog visible
+    /// Confirm-apply dialog visible (Page 1)
     confirm: bool,
-    /// Status message after apply
+    /// Navigation page (Page 1 vs Page 2)
+    current_page: CurrentPage,
+    /// Selected color element index on Page 2 (0..6)
+    color_element_idx: usize,
+    /// Buffer for color input on Page 2
+    color_input_buffer: String,
+    /// Status message after apply/edit
     status: Option<(String, bool)>,
 }
 
@@ -75,6 +86,9 @@ impl ThemePickerApp {
             query: String::new(),
             active_idx,
             confirm: false,
+            current_page: CurrentPage::ThemeList,
+            color_element_idx: 0,
+            color_input_buffer: String::new(),
             status: None,
         }
     }
@@ -148,7 +162,63 @@ impl ThemePickerApp {
             if let Event::Key(key) = event::read()? {
                 if key.kind != KeyEventKind::Press { continue; }
 
-                // Confirm dialog
+                // ── PAGE 2: Color Editor Navigation & Input ───────────────────
+                if self.current_page == CurrentPage::ColorEditor {
+                    match (key.code, key.modifiers) {
+                        // Exit Page 2 -> Back to Page 1
+                        (KeyCode::Esc, _)
+                        | (KeyCode::Char('b'), KeyModifiers::NONE) if self.color_input_buffer.is_empty() => {
+                            self.current_page = CurrentPage::ThemeList;
+                            self.status = None;
+                        }
+
+                        (KeyCode::Up, _) => {
+                            self.color_element_idx = if self.color_element_idx == 0 { 6 } else { self.color_element_idx - 1 };
+                        }
+                        (KeyCode::Down, _) => {
+                            self.color_element_idx = (self.color_element_idx + 1) % 7;
+                        }
+
+                        // Save color on Enter
+                        (KeyCode::Enter, _) => {
+                            if let Some(theme_idx) = self.selected_theme_idx() {
+                                let theme_name = THEMES[theme_idx].name;
+                                let element_keys = ["user", "path", "git", "prompt", "prefix", "in", "emoji"];
+                                let element = element_keys[self.color_element_idx];
+                                match save_theme_color_override(theme_name, element, &self.color_input_buffer) {
+                                    Ok(_) => {
+                                        self.status = Some((format!("✅ Set {} color for '{}'", element, theme_name), false));
+                                        self.color_input_buffer.clear();
+                                    }
+                                    Err(e) => {
+                                        self.status = Some((format!("❌ {}", e), true));
+                                    }
+                                }
+                            }
+                        }
+
+                        // Reset colors with 'r' when input is empty
+                        (KeyCode::Char('r'), KeyModifiers::NONE) if self.color_input_buffer.is_empty() => {
+                            if let Some(theme_idx) = self.selected_theme_idx() {
+                                let theme_name = THEMES[theme_idx].name;
+                                let _ = reset_theme_color_overrides(Some(theme_name));
+                                self.status = Some((format!("✅ Colors reset for '{}'", theme_name), false));
+                            }
+                        }
+
+                        // Typing & editing input field
+                        (KeyCode::Backspace, _) => {
+                            self.color_input_buffer.pop();
+                        }
+                        (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                            self.color_input_buffer.push(c);
+                        }
+                        _ => {}
+                    }
+                    continue;
+                }
+
+                // ── PAGE 1: Theme Browser & Navigation ───────────────────────
                 if self.confirm {
                     match key.code {
                         KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
@@ -172,6 +242,14 @@ impl ThemePickerApp {
                     (KeyCode::End, _)  => {
                         let last = self.filtered.len().saturating_sub(1);
                         self.list_state.select(Some(last));
+                    }
+
+                    // Open Page 2: Color Customizer with 'e' (or 'c') when search query is empty
+                    (KeyCode::Char('e'), KeyModifiers::NONE) if self.query.is_empty() => {
+                        self.status = None;
+                        self.current_page = CurrentPage::ColorEditor;
+                        self.color_element_idx = 0;
+                        self.color_input_buffer.clear();
                     }
 
                     // Apply with Enter (show confirm dialog)
@@ -204,8 +282,16 @@ impl ThemePickerApp {
         Ok(())
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ── Render Router ─────────────────────────────────────────────────────────
     fn render_ui(&mut self, f: &mut Frame) {
+        match self.current_page {
+            CurrentPage::ThemeList => self.render_page_1_theme_list(f),
+            CurrentPage::ColorEditor => self.render_page_2_color_editor(f),
+        }
+    }
+
+    // ── PAGE 1: Theme Browser View ────────────────────────────────────────────
+    fn render_page_1_theme_list(&mut self, f: &mut Frame) {
         let area = f.area();
 
         // Full background
@@ -231,6 +317,7 @@ impl ThemePickerApp {
             Span::styled(format!("  ({n} themes)"), Style::default().fg(C_DIM)),
             Span::styled("  │  Active: ", Style::default().fg(C_DIM)),
             Span::styled(active_name, Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD)),
+            Span::styled("  (Page 1 of 2)", Style::default().fg(C_DIM)),
         ]))
         .alignment(Alignment::Center)
         .block(
@@ -286,6 +373,9 @@ impl ThemePickerApp {
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
                 Span::styled("Space ", Style::default().fg(C_ACCENT)),
                 Span::styled("Quick Apply", Style::default().fg(C_DIM)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("e ", Style::default().fg(C_YELLOW)),
+                Span::styled("Edit Colors (Page 2)", Style::default().fg(C_DIM)),
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
                 Span::styled("q ", Style::default().fg(C_DIM)),
                 Span::styled("Quit", Style::default().fg(C_DIM)),
@@ -380,7 +470,7 @@ impl ThemePickerApp {
 
     fn render_preview(&self, f: &mut Frame, area: Rect) {
         let theme_idx = self.selected_theme_idx().unwrap_or(0);
-        let theme = &THEMES[theme_idx];
+        let theme = get_effective_theme(theme_idx);
 
         let preview_block = Block::default()
             .borders(Borders::ALL)
@@ -539,6 +629,217 @@ impl ThemePickerApp {
         );
         f.render_widget(dialog, dialog_area);
     }
+
+    // ── PAGE 2: Full-Screen Theme Color Customizer ────────────────────────────
+    fn render_page_2_color_editor(&mut self, f: &mut Frame) {
+        let area = f.area();
+        f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
+
+        let theme_idx = self.selected_theme_idx().unwrap_or(0);
+        let theme = get_effective_theme(theme_idx);
+
+        let outer = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Banner
+                Constraint::Min(8),    // Split Panes (Elements List 40%, Preview 60%)
+                Constraint::Length(3), // Focused Color Input Field
+                Constraint::Length(3), // Footer Bar
+            ])
+            .split(area);
+
+        // ── Banner ────────────────────────────────────────────────────────────
+        let banner = Paragraph::new(Line::from(vec![
+            Span::styled("🎨  ", Style::default().fg(C_ACCENT)),
+            Span::styled("THEME COLOR CUSTOMIZER", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled(" — Fancybash", Style::default().fg(C_TEXT)),
+            Span::styled("  │  Editing Theme: ", Style::default().fg(C_DIM)),
+            Span::styled(theme.name, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(format!(" {}", theme.emoji), Style::default().fg(C_YELLOW)),
+            Span::styled("  (Page 2 of 2)", Style::default().fg(C_DIM)),
+        ]))
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .style(Style::default().bg(C_BG)),
+        );
+        f.render_widget(banner, outer[0]);
+
+        // ── Split Panes (Left: 7 Color Elements, Right: Real-time Live Prompt Preview) ──
+        let content_panes = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+            .split(outer[1]);
+
+        let elements = [
+            ("user", "User / Host text", theme.user_color),
+            ("path", "CWD Path text", theme.path_color),
+            ("git", "Git branch text", theme.git_color),
+            ("prompt", "Prompt symbol text", theme.prompt_color),
+            ("prefix", "Line prefix text", theme.prefix_color),
+            ("in", "'in' prefix text", theme.in_color),
+            ("emoji", "Emoji text", theme.emoji_color),
+        ];
+
+        // ── Left Pane: Elements List ──────────────────────────────────────────
+        let mut list_items = Vec::new();
+        for (i, (_key, label, color_u32)) in elements.iter().enumerate() {
+            let is_sel = i == self.color_element_idx;
+            let cursor = if is_sel {
+                Span::styled("▶ ", Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD))
+            } else {
+                Span::raw("  ")
+            };
+            let cur_spec = format_color_spec(*color_u32);
+            let swatch_col = theme_color_to_ratatui(*color_u32);
+
+            let label_style = if is_sel {
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(C_TEXT)
+            };
+
+            let line = Line::from(vec![
+                cursor,
+                Span::styled(format!("{:<18}", label), label_style),
+                Span::styled(" ██ ", Style::default().fg(swatch_col)),
+                Span::styled(format!("{:<10}", cur_spec), Style::default().fg(C_YELLOW)),
+            ]);
+
+            let item_style = if is_sel {
+                Style::default().bg(C_SELECTED_BG)
+            } else {
+                Style::default()
+            };
+
+            list_items.push(ListItem::new(line).style(item_style));
+        }
+
+        let list_widget = List::new(list_items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .title(Span::styled(" Color Elements (7) ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+                .style(Style::default().bg(C_BG)),
+        );
+        f.render_widget(list_widget, content_panes[0]);
+
+        // ── Right Pane: Live Prompt Preview ───────────────────────────────────
+        let preview_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_ACCENT))
+            .title(Span::styled(" Real-Time Live Prompt Preview ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+            .style(Style::default().bg(C_BG));
+
+        let inner = preview_block.inner(content_panes[1]);
+        f.render_widget(preview_block, content_panes[1]);
+
+        let mut preview_lines = Vec::new();
+        preview_lines.push(Line::from(vec![
+            Span::styled("  Target Theme: ", Style::default().fg(C_DIM)),
+            Span::styled(theme.name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled("   Focused Element: ", Style::default().fg(C_DIM)),
+            Span::styled(elements[self.color_element_idx].1, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+        ]));
+        preview_lines.push(Line::from(Span::styled("─".repeat(inner.width as usize), Style::default().fg(C_BORDER))));
+        preview_lines.push(Line::from(""));
+
+        // Render live prompt using PromptContext
+        let mut ctx = PromptContext {
+            theme_id: theme_idx,
+            last_exit: 0,
+            ..Default::default()
+        };
+        let cwd_str = b"~/projects/fancybash";
+        ctx.cwd[..cwd_str.len()].copy_from_slice(cwd_str);
+        ctx.cwd_len = cwd_str.len();
+
+        let user_str = b"rihad";
+        ctx.user[..user_str.len()].copy_from_slice(user_str);
+        ctx.user_len = user_str.len();
+
+        let host_str = b"arch";
+        ctx.host[..host_str.len()].copy_from_slice(host_str);
+        ctx.host_len = host_str.len();
+
+        let branch_str = b"main";
+        ctx.git_branch[..branch_str.len()].copy_from_slice(branch_str);
+        ctx.git_branch_len = branch_str.len();
+        ctx.git_dirty = false;
+        ctx.shell = 2;
+
+        let mut buf = [0u8; 1024];
+        if let Ok(n) = render(&ctx, &mut buf) {
+            let rendered = String::from_utf8_lossy(&buf[..n]);
+            for raw_line in rendered.lines() {
+                let clean = strip_ansi(raw_line);
+                preview_lines.push(Line::from(vec![
+                    Span::styled("  ", Style::default()),
+                    Span::styled(clean, Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+                ]));
+            }
+        }
+
+        f.render_widget(Paragraph::new(preview_lines).wrap(Wrap { trim: false }), inner);
+
+        // ── Bottom Input Field (outer[2]) ─────────────────────────────────────
+        let sel_label = elements[self.color_element_idx].1;
+        let input_box = Paragraph::new(Line::from(vec![
+            Span::styled(" 🎨 New Color Code for ", Style::default().fg(C_ACCENT)),
+            Span::styled(sel_label, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(": ", Style::default().fg(C_ACCENT)),
+            Span::styled(&self.color_input_buffer, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled("█", Style::default().fg(C_BORDER)),
+            Span::styled("  (e.g. #ff0055, 214, cyan, green, default)", Style::default().fg(C_DIM)),
+        ]))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_ACCENT))
+                .title(Span::styled(" Type Hex / ANSI Code & Press Enter to Save ", Style::default().fg(C_ACCENT)))
+                .style(Style::default().bg(C_BG)),
+        );
+        f.render_widget(input_box, outer[2]);
+
+        // ── Footer Bar (outer[3]) ─────────────────────────────────────────────
+        let footer_text = if let Some((ref msg, is_err)) = self.status {
+            let col = if is_err { Color::Rgb(255, 80, 80) } else { C_GREEN };
+            Line::from(Span::styled(msg.clone(), Style::default().fg(col).add_modifier(Modifier::BOLD)))
+        } else {
+            Line::from(vec![
+                Span::styled(" ↑↓ ", Style::default().fg(C_DIM)),
+                Span::styled("Select Element", Style::default().fg(C_DIM)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("Enter ", Style::default().fg(C_YELLOW)),
+                Span::styled("Save Color", Style::default().fg(C_DIM)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("r ", Style::default().fg(C_ACCENT)),
+                Span::styled("Reset Theme Colors", Style::default().fg(C_DIM)),
+                Span::styled("  │  ", Style::default().fg(C_BORDER)),
+                Span::styled("Esc / b ", Style::default().fg(C_WHITE)),
+                Span::styled("Back to Page 1", Style::default().fg(C_DIM)),
+            ])
+        };
+
+        f.render_widget(
+            Paragraph::new(footer_text)
+                .alignment(Alignment::Center)
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(C_DIM))
+                        .style(Style::default().bg(C_BG)),
+                ),
+            outer[3],
+        );
+    }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -589,7 +890,7 @@ fn centered_rect(percent_x: u16, height: u16, r: Rect) -> Rect {
 
 // ── Public entry point ────────────────────────────────────────────────────────
 
-/// Launch the interactive TUI theme picker.
+/// Launch the interactive TUI theme picker & color customizer.
 pub fn run_theme_picker() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = ThemePickerApp::new();
 
@@ -648,6 +949,7 @@ mod tests {
         assert!(app.active_idx < THEMES.len());
         // filtered should contain all themes initially
         assert_eq!(app.filtered.len(), THEMES.len());
+        assert_eq!(app.current_page, CurrentPage::ThemeList);
     }
 
     #[test]

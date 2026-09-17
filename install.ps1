@@ -158,7 +158,7 @@ Write-Host "  ${GRN}✔ Running with ExecutionPolicy Bypass.${NC}"
 
 # --- STEP 2: Dependency Check & Auto-Install ----------------------------------
 Show-ProgressBar -Current 2 -Total 6 -StepName "Checking Dependencies"
-$missing = @('git','fzf','gum','glow','bat','zoxide','chafa') | Where-Object {
+$missing = @('git') | Where-Object {
     -not (Get-Command $_ -ErrorAction SilentlyContinue)
 }
 
@@ -172,13 +172,7 @@ if ($missing.Count -gt 0) {
         }
         if ($ansNorm -eq "" -or $ansNorm -eq "y" -or $ansNorm -eq "yes") {
             $wingetIds = @{
-                git    = 'Git.Git'
-                fzf    = 'junegunn.fzf'
-                gum    = 'charmbracelet.gum'
-                glow   = 'charmbracelet.glow'
-                bat    = 'sharkdp.bat'
-                zoxide = 'ajeetdsouza.zoxide'
-                chafa  = 'hpjansson.chafa'
+                git = 'Git.Git'
             }
             foreach ($tool in $missing) {
                 Write-Host "  📦 Installing $tool..." -ForegroundColor Cyan
@@ -275,7 +269,72 @@ function Install-RustBinary {
         return $true
     }
 
-    # 2. Local cargo build
+    # 2. Download pre-built binary from GitHub Releases
+    $realArch = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' -ErrorAction SilentlyContinue).PROCESSOR_ARCHITECTURE
+    $isArm64 = ($realArch -eq "ARM64")
+
+    $repos = @("rihadjahanopu/fancybash-rs", "rihadjahanopu/fancybash")
+    $assets = if ($isArm64) {
+        @("fancybash-windows-arm64.exe", "fancybash-aarch64-pc-windows-msvc.exe", "fancybash-windows-amd64.exe", "fancybash.exe")
+    } else {
+        @("fancybash-windows-amd64.exe", "fancybash-x86_64-pc-windows-msvc.exe", "fancybash.exe")
+    }
+    
+    $targetExe = Join-Path $binDir "fancybash.exe"
+
+    # Close open instances if running to prevent file lock
+    try {
+        $openProc = Get-Process -Name fancybash -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $targetExe }
+        if ($openProc) {
+            Write-Host "  ${YLW}⚠️ Closing active fancybash background process to update binary...${NC}"
+            Stop-Process -InputObject $openProc -Force -ErrorAction SilentlyContinue
+        }
+    } catch {}
+
+    Write-Host "  ${CYAN}⚡ Attempting GitHub Release pre-built binary download...${NC}"
+    foreach ($repo in $repos) {
+        foreach ($asset in $assets) {
+            $url = "https://github.com/$repo/releases/latest/download/$asset"
+            $downloadSuccess = $false
+
+            # Method A: Fast curl.exe if available
+            if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+                try {
+                    curl.exe -#SfLo "$targetExe" "$url" 2>$null
+                    if ($LASTEXITCODE -eq 0 -and (Test-Path $targetExe) -and ((Get-Item $targetExe).Length -gt 0)) {
+                        $downloadSuccess = $true
+                    }
+                } catch {}
+            }
+
+            # Method B: Invoke-RestMethod fallback
+            if (-not $downloadSuccess) {
+                try {
+                    Invoke-RestMethod -Uri $url -OutFile $targetExe -ErrorAction Stop
+                    if ((Test-Path $targetExe) -and ((Get-Item $targetExe).Length -gt 0)) {
+                        $downloadSuccess = $true
+                    }
+                } catch {}
+            }
+
+            if ($downloadSuccess) {
+                Write-Host "  ${GRN}✔ Downloaded latest pre-built binary from GitHub Release ($repo)!${NC}"
+                
+                # Register in Windows Add/Remove Programs (Optional / Graceful)
+                try {
+                    $regKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Fancybash"
+                    New-Item -Path $regKey -Force | Out-Null
+                    New-ItemProperty -Path $regKey -Name "DisplayName" -Value "Fancybash Rust Engine" -PropertyType String -Force | Out-Null
+                    New-ItemProperty -Path $regKey -Name "InstallLocation" -Value $binDir -PropertyType String -Force | Out-Null
+                    New-ItemProperty -Path $regKey -Name "DisplayIcon" -Value $targetExe -PropertyType String -Force | Out-Null
+                } catch {}
+
+                return $true
+            }
+        }
+    }
+
+    # 3. Local cargo build
     if ($scriptDir -and (Test-Path (Join-Path $scriptDir "Cargo.toml")) -and (Get-Command cargo -ErrorAction SilentlyContinue)) {
         Write-Host "  ${YLW}⚡ Building fancybash Rust engine (release mode)...${NC}"
         Push-Location $scriptDir
@@ -288,13 +347,13 @@ function Install-RustBinary {
         }
     }
 
-    # 3. System command check
+    # 4. System command check
     if (Get-Command fancybash -ErrorAction SilentlyContinue) {
         Write-Host "  ${GRN}✔ fancybash binary active: $((Get-Command fancybash).Source)${NC}"
         return $true
     }
 
-    # 4. Cargo install fallback
+    # 5. Cargo install fallback
     if (Get-Command cargo -ErrorAction SilentlyContinue) {
         Write-Host "  ${YLW}⚡ Installing via cargo from GitHub...${NC}"
         cargo install --git https://github.com/rihadjahanopu/fancybash-rs --quiet 2>$null
@@ -304,7 +363,7 @@ function Install-RustBinary {
         }
     }
 
-    Write-Host "  ${YLW}⚠️ Could not auto-build Rust binary. Please install Cargo and build manually.${NC}"
+    Write-Host "  ${YLW}⚠️ Could not download or build Rust binary. Please install Cargo or download manually.${NC}"
     return $false
 }
 

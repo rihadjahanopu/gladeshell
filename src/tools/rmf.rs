@@ -26,13 +26,22 @@ pub fn run(name: &str, force: bool) -> Result<(), Box<dyn Error>> {
         }
         println!("\x1b[1;32m✅ Removed: {}\x1b[0m", name);
     } else {
-        println!("\x1b[1;33m❓ Remove '{}'? (run with -f to skip prompt)\x1b[0m", name);
-        if path.is_dir() {
-            fs::remove_dir_all(path)?;
+        use std::io::{self, Write};
+        print!("\x1b[1;33m❓ Remove '{}'? [y/N] (run with -f to skip prompt): \x1b[0m", name);
+        io::stdout().flush()?;
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        let ans = input.trim().to_lowercase();
+        if ans == "y" || ans == "yes" {
+            if path.is_dir() {
+                fs::remove_dir_all(path)?;
+            } else {
+                fs::remove_file(path)?;
+            }
+            println!("\x1b[1;32m✅ Removed: {}\x1b[0m", name);
         } else {
-            fs::remove_file(path)?;
+            println!("\x1b[1;33m⚠️ Operation cancelled.\x1b[0m");
         }
-        println!("\x1b[1;32m✅ Removed: {}\x1b[0m", name);
     }
 
     Ok(())

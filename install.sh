@@ -91,19 +91,7 @@ show_header() {
 }
 
 # ─── System Information ────────────────────
-show_sysinfo() {
-    local os_name=$(uname -s)
-    if [ -f /etc/os-release ]; then
-        os_name=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d '=' -f 2 | tr -d '"')
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        os_name="macOS $(sw_vers -productVersion 2>/dev/null || echo '')"
-    fi
-
-    local arch=$(uname -m)
-    local user=${USER:-$(whoami 2>/dev/null || echo "user")}
-    # 1st: Use shell detected by i.sh (most reliable — passed via env var)
-    # 2nd: PPID detection (for direct runs without i.sh)
-    # 3rd: $SHELL fallback
+detect_shell() {
     local current_shell="${FANCYBASH_SHELL:-}"
     if [ -z "$current_shell" ]; then
         local _ppid_cmd
@@ -115,6 +103,21 @@ show_sysinfo() {
             *) current_shell=$(basename "${SHELL:-bash}") ;;
         esac
     fi
+    echo "$current_shell"
+}
+
+show_sysinfo() {
+    local os_name=$(uname -s)
+    if [ -f /etc/os-release ]; then
+        os_name=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d '=' -f 2 | tr -d '"')
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        os_name="macOS $(sw_vers -productVersion 2>/dev/null || echo '')"
+    fi
+
+    local arch=$(uname -m)
+    local user=${USER:-$(whoami 2>/dev/null || echo "user")}
+    local current_shell
+    current_shell=$(detect_shell)
 
     echo -e "\n${BLUE}──────────────────────────────────────────────────${NC}"
     echo -e " 🖥️   ${BOLD}SYSTEM INFORMATION${NC}"
@@ -152,38 +155,16 @@ detect_pm() {
     fi
 }
 
-is_intel_or_amd() {
-    if [ -f /proc/cpuinfo ] && grep -qiE 'intel|amd' /proc/cpuinfo 2>/dev/null; then
-        return 0
-    fi
-    if command -v lspci &>/dev/null && lspci 2>/dev/null | grep -qiE 'intel|amd|radeon'; then
-        return 0
-    fi
-    return 1
-}
-
-# ─── Check & Install Fonts ──────────────────
+# ─── Check & Install Fonts & Essential Dependencies ───────
 check_and_install_fonts() {
     printf "  ${CYAN}➜${NC} Checking system dependencies...\n"
 
     local missing_deps=()
-    for cmd in curl grep git fzf gum glow bat zoxide chafa; do
-        if [ "$cmd" = "bat" ] && command -v batcat &>/dev/null; then
-            continue
-        fi
+    for cmd in curl git; do
         if ! command -v "$cmd" &>/dev/null; then
             missing_deps+=("$cmd")
         fi
     done
-
-    if [[ "$OSTYPE" != "darwin"* ]]; then
-        if ! command -v xclip &>/dev/null && ! command -v wl-copy &>/dev/null && ! command -v xsel &>/dev/null; then
-            missing_deps+=("clipboard-tool")
-        fi
-        if is_intel_or_amd && ! command -v vulkaninfo &>/dev/null; then
-            missing_deps+=("vulkan-tools")
-        fi
-    fi
 
     local fonts_needed=0
     if command -v fc-list &>/dev/null; then
@@ -234,45 +215,22 @@ check_and_install_fonts() {
 
     printf "  ${CYAN}➜${NC} Installing via ${pm}...\n"
 
-    local vulkan_pkgs=""
-    if [[ "$OSTYPE" != "darwin"* ]] && is_intel_or_amd; then
-        case "$pm" in
-            apt) vulkan_pkgs="mesa-vulkan-drivers vulkan-tools" ;;
-            pacman) vulkan_pkgs="vulkan-intel vulkan-radeon vulkan-tools" ;;
-            dnf) vulkan_pkgs="mesa-vulkan-drivers vulkan-tools" ;;
-            apk) vulkan_pkgs="vulkan-loader vulkan-tools" ;;
-        esac
-    fi
-
     case "$pm" in
         apt)
-            if ! command -v gum &>/dev/null || ! command -v glow &>/dev/null; then
-                $sudo_cmd mkdir -p /etc/apt/keyrings 2>/dev/null || true
-                curl -fsSL https://repo.charm.sh/apt/gpg.key | $sudo_cmd gpg --dearmor --yes -o /etc/apt/keyrings/charm.gpg 2>/dev/null || true
-                echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | $sudo_cmd tee /etc/apt/sources.list.d/charm.list >/dev/null 2>&1 || true
-            fi
             $sudo_cmd apt update -qq >/dev/null 2>&1 || true
-            $sudo_cmd apt install -y curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion fonts-noto-color-emoji fonts-firacode fonts-cascadia-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd apt install -y curl git fonts-noto-color-emoji fonts-firacode fonts-cascadia-code fontconfig >/dev/null 2>&1 || true
             ;;
         pacman)
-            $sudo_cmd pacman -Sy --noconfirm curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion ttf-noto-emoji ttf-fira-code ttf-cascadia-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd pacman -Sy --noconfirm curl git ttf-noto-emoji ttf-fira-code ttf-cascadia-code fontconfig >/dev/null 2>&1 || true
             ;;
         dnf)
-            if ! command -v gum &>/dev/null || ! command -v glow &>/dev/null; then
-                echo '[charm]
-name=Charm
-baseurl=https://repo.charm.sh/yum/
-enabled=1
-gpgcheck=1
-gpgkey=https://repo.charm.sh/yum/gpg.key' | $sudo_cmd tee /etc/yum.repos.d/charm.repo >/dev/null 2>&1 || true
-            fi
-            $sudo_cmd dnf install -y curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion google-noto-emoji-fonts fira-code-fonts cascadia-code-fonts fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd dnf install -y curl git google-noto-emoji-fonts fira-code-fonts cascadia-code-fonts fontconfig >/dev/null 2>&1 || true
             ;;
         apk)
-            $sudo_cmd apk add --no-cache curl git fzf gum glow bat zoxide chafa xclip wl-clipboard nano bash-completion font-noto-emoji font-fira-code fontconfig $vulkan_pkgs >/dev/null 2>&1 || true
+            $sudo_cmd apk add --no-cache curl git font-noto-emoji font-fira-code fontconfig >/dev/null 2>&1 || true
             ;;
         brew)
-            brew install curl git fzf gum glow bat zoxide chafa nano bash-completion font-fira-code font-cascadia-code font-noto-emoji >/dev/null 2>&1 || true
+            brew install curl git font-fira-code font-cascadia-code font-noto-emoji >/dev/null 2>&1 || true
             ;;
         *)
             printf "  ${GRAY}ℹ Package manager not recognized. Skipping.${NC}\n"
@@ -320,6 +278,55 @@ EOF
     fi
 }
 
+# ─── Install Zsh Plugins (Conditional) ───────────
+install_zsh_plugins() {
+    local current_shell
+    current_shell=$(detect_shell)
+    if [ "$current_shell" != "zsh" ]; then
+        return 0
+    fi
+
+    printf "  ${CYAN}➜${NC} Setting up Zsh plugins...\n"
+
+    local zsh_dir="$HOME/.zsh"
+    mkdir -p "$zsh_dir"
+
+    # zsh-syntax-highlighting
+    if [ -d "$zsh_dir/zsh-syntax-highlighting" ]; then
+        printf "  ${GREEN}✔${NC} zsh-syntax-highlighting already exists, skipping.\n"
+    else
+        (
+            git clone --quiet https://github.com/zsh-users/zsh-syntax-highlighting.git \
+                "$zsh_dir/zsh-syntax-highlighting" 2>/dev/null
+        ) &
+        spinner $! "Cloning zsh-syntax-highlighting..."
+    fi
+
+    # zsh-autosuggestions
+    if [ -d "$zsh_dir/zsh-autosuggestions" ]; then
+        printf "  ${GREEN}✔${NC} zsh-autosuggestions already exists, skipping.\n"
+    else
+        (
+            git clone --quiet https://github.com/zsh-users/zsh-autosuggestions.git \
+                "$zsh_dir/zsh-autosuggestions" 2>/dev/null
+        ) &
+        spinner $! "Cloning zsh-autosuggestions..."
+    fi
+
+    # zsh-completions
+    if [ -d "$zsh_dir/zsh-completions" ]; then
+        printf "  ${GREEN}✔${NC} zsh-completions already exists, skipping.\n"
+    else
+        (
+            git clone --quiet https://github.com/zsh-users/zsh-completions.git \
+                "$zsh_dir/zsh-completions" 2>/dev/null
+        ) &
+        spinner $! "Cloning zsh-completions..."
+    fi
+
+    printf "  ${GREEN}✔${NC} Zsh plugins ready in ${PURPLE}~/.zsh/${NC}\n"
+}
+
 # ─── Remove Old Config Block ───────────────
 remove_old_config() {
     if grep -qF "$START" "$BASHRC" 2>/dev/null; then
@@ -353,6 +360,15 @@ backup_bashrc() {
     printf "  ${GREEN}✔${NC} Backup created: ${PURPLE}$(basename "$backup_file")${NC}\n"
 }
 
+# ─── Helper: Tildify Path ───────────────────
+tildify() {
+    if [[ "$1" == "$HOME"* ]]; then
+        echo "~${1#"$HOME"}"
+    else
+        echo "$1"
+    fi
+}
+
 # ─── Install / Verify Rust Binary ──────────
 _copy_binary_to_dirs() {
     local src="$1"
@@ -368,9 +384,9 @@ _copy_binary_to_dirs() {
         cp "$src" "$cargo_bin/fancybash"
         chmod +x "$cargo_bin/fancybash"
         export PATH="$cargo_bin:$PATH"
-        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC} and ${PURPLE}%s/fancybash${NC}\n" "$local_bin" "$cargo_bin"
+        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC} and ${PURPLE}%s/fancybash${NC}\n" "$(tildify "$local_bin")" "$(tildify "$cargo_bin")"
     else
-        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC}\n" "$local_bin"
+        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC}\n" "$(tildify "$local_bin")"
     fi
     # Show version
     local ver
@@ -388,7 +404,114 @@ setup_rust_binary() {
         return 0
     fi
 
-    # 2. Build from local source if Cargo.toml exists
+    # 2. Download pre-built release binary from GitHub Releases
+    local os_type arch_type is_musl=false is_rosetta=false has_avx2=true
+    os_type="$(uname -s | tr '[:upper:]' '[:lower:]')"
+    arch_type="$(uname -m)"
+
+    case "$os_type" in
+        linux*) os_type="linux" ;;
+        darwin*) os_type="darwin" ;;
+        *) os_type="unknown" ;;
+    esac
+
+    case "$arch_type" in
+        x86_64|amd64) arch_type="amd64" ;;
+        aarch64|arm64) arch_type="arm64" ;;
+        *) arch_type="unknown" ;;
+    esac
+
+    # Rosetta 2 detection on macOS (Apple Silicon running x86_64 shell)
+    if [ "$os_type" = "darwin" ] && [ "$arch_type" = "amd64" ]; then
+        if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
+            arch_type="arm64"
+            is_rosetta=true
+            printf "  ${CYAN}ℹ${NC} Rosetta 2 detected — downloading native Apple Silicon (arm64) binary\n"
+        fi
+    fi
+
+    # Alpine Linux musl libc detection
+    if [ "$os_type" = "linux" ] && [ -f /etc/alpine-release ]; then
+        is_musl=true
+    fi
+
+    # AVX2 instruction set probing
+    if [ "$arch_type" = "amd64" ]; then
+        if [ "$os_type" = "linux" ] && [ -f /proc/cpuinfo ] && ! grep -qi "avx2" /proc/cpuinfo 2>/dev/null; then
+            has_avx2=false
+        elif [ "$os_type" = "darwin" ] && ! sysctl -a 2>/dev/null | grep -q "AVX2"; then
+            has_avx2=false
+        fi
+    fi
+
+    if [ "$os_type" != "unknown" ] && [ "$arch_type" != "unknown" ]; then
+        local dl_tmp
+        dl_tmp="$(mktemp -d 2>/dev/null || mktemp -d -t 'fancybash')"
+        local bin_tmp="$dl_tmp/fancybash"
+
+        local repos=("rihadjahanopu/fancybash-rs" "rihadjahanopu/fancybash")
+        local assets=(
+            "fancybash-${os_type}-${arch_type}"
+            "fancybash-${arch_type}-${os_type}"
+            "fancybash-x86_64-unknown-linux-gnu"
+            "fancybash-aarch64-unknown-linux-gnu"
+            "fancybash-x86_64-apple-darwin"
+            "fancybash-aarch64-apple-darwin"
+        )
+
+        if [ "$is_musl" = true ]; then
+            assets=(
+                "fancybash-x86_64-unknown-linux-musl"
+                "fancybash-aarch64-unknown-linux-musl"
+                "fancybash-${os_type}-${arch_type}-musl"
+                "${assets[@]}"
+            )
+        fi
+
+        if [ "$has_avx2" = false ]; then
+            assets=(
+                "fancybash-${os_type}-${arch_type}-baseline"
+                "fancybash-x86_64-unknown-linux-gnu-baseline"
+                "${assets[@]}"
+            )
+        fi
+
+        assets+=("fancybash")
+
+        printf "  ${CYAN}⚡ Attempting GitHub Release pre-built binary download...${NC}\n"
+        for repo in "${repos[@]}"; do
+            for asset in "${assets[@]}"; do
+                local url="https://github.com/${repo}/releases/latest/download/${asset}"
+                if curl -fsSL "$url" -o "$bin_tmp" 2>/dev/null; then
+                    if [ -s "$bin_tmp" ]; then
+                        chmod +x "$bin_tmp"
+                        if "$bin_tmp" --version >/dev/null 2>&1; then
+                            printf "  ${GREEN}✔${NC} Downloaded latest pre-built binary from GitHub Release (${repo})!\n"
+                            _copy_binary_to_dirs "$bin_tmp"
+                            rm -rf "$dl_tmp" 2>/dev/null || true
+                            return 0
+                        fi
+                    fi
+                fi
+                # Also try tar.gz archive
+                local tar_url="https://github.com/${repo}/releases/latest/download/${asset}.tar.gz"
+                if curl -fsSL "$tar_url" -o "$dl_tmp/asset.tar.gz" 2>/dev/null; then
+                    if tar -xzf "$dl_tmp/asset.tar.gz" -C "$dl_tmp" 2>/dev/null && [ -f "$bin_tmp" ]; then
+                        chmod +x "$bin_tmp"
+                        if "$bin_tmp" --version >/dev/null 2>&1; then
+                            printf "  ${GREEN}✔${NC} Extracted latest pre-built binary from GitHub Release (${repo})!\n"
+                            _copy_binary_to_dirs "$bin_tmp"
+                            rm -rf "$dl_tmp" 2>/dev/null || true
+                            return 0
+                        fi
+                    fi
+                fi
+            done
+        done
+        rm -rf "$dl_tmp" 2>/dev/null || true
+    fi
+
+    # 3. Build from local source if Cargo.toml exists
     if [ -f "$SCRIPT_DIR/Cargo.toml" ] && command -v cargo >/dev/null 2>&1; then
         printf "  ${YELLOW}⚡ Building fancybash from source (release mode)...${NC}\n"
         if (cd "$SCRIPT_DIR" && cargo build --release 2>&1); then
@@ -400,7 +523,7 @@ setup_rust_binary() {
         printf "  ${RED}✗ cargo build failed.${NC}\n"
     fi
 
-    # 3. Already installed on system PATH
+    # 4. Already installed on system PATH
     if command -v fancybash >/dev/null 2>&1; then
         local ver
         ver=$(fancybash --version 2>/dev/null || echo "unknown")
@@ -408,7 +531,7 @@ setup_rust_binary() {
         return 0
     fi
 
-    # 4. Last resort: cargo install from GitHub
+    # 5. Fallback: cargo install from GitHub
     if command -v cargo >/dev/null 2>&1; then
         printf "  ${YELLOW}⚡ Installing via cargo from GitHub...${NC}\n"
         cargo install --git https://github.com/rihadjahanopu/fancybash-rs --quiet 2>/dev/null || true
@@ -418,7 +541,7 @@ setup_rust_binary() {
         fi
     fi
 
-    printf "  ${YELLOW}⚠ Could not install fancybash binary. Please run: cargo build --release${NC}\n"
+    printf "  ${YELLOW}⚠ Could not install fancybash binary. Please install Cargo or download binary manually.${NC}\n"
 }
 
 # ─── Fetch & Append Config ─────────────────
@@ -484,6 +607,7 @@ main() {
 
     draw_progress_bar 2 6
     setup_fontconfig
+    install_zsh_plugins
 
     draw_progress_bar 3 6
     setup_rust_binary
@@ -502,4 +626,3 @@ main() {
 }
 
 main "$@"
-

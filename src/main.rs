@@ -444,7 +444,7 @@ fn main() {
             Commands::V { target } => fancybash_core::tools::video_player::run(target.as_deref()),
             Commands::Uc => fancybash_core::tools::universal_clean::run(),
             Commands::Clean => fancybash_core::tools::system_clean::run(),
-            Commands::Sysmon => fancybash_core::tools::system_monitor::run(),
+            Commands::Sysmon => fancybash_core::tools::ftop::run(),
             Commands::Rt => fancybash_core::tools::runtime_installer::run(),
             Commands::Rn { target } => fancybash_core::tools::file_renamer::run(target.as_deref()),
             Commands::Pg { file, install } => fancybash_core::tools::pkg_converter::run(&file, install),

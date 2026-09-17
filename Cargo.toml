@@ -11,16 +11,10 @@ keywords = ["shell", "prompt", "zsh", "bash", "fish"]
 categories = ["command-line-utilities"]
 
 # ── Crate Targets ────────────────────────────────────────────────────────────
-# 1. Native binary  →  `fancybash` CLI (init, uup, uu, gen, ex, makecpp, …)
+# 1. Native binary  →  `fancybash` CLI (init, uup, uu, gen, ex, sysmon, ftop, …)
 [[bin]]
 name = "fancybash"
 path = "src/main.rs"
-
-# 2. `ftop` standalone TUI system monitor binary (alias for `fancybash sysmon`)
-[[bin]]
-name = "ftop"
-path = "src/bin/ftop.rs"
-required-features = ["tools"]
 
 # 3. C-ABI dynamic library  →  loaded in-process by the shell (zero-fork prompt)
 [lib]

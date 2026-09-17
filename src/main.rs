@@ -254,6 +254,14 @@ enum Commands {
     #[command(name = "auto-ls")]
     AutoLs,
 
+    /// Check for command typos and suggest intended subcommand (correct / suggest)
+    #[command(alias = "suggest")]
+    Correct {
+        /// Mistyped command name
+        #[arg(value_name = "COMMAND")]
+        command: String,
+    },
+
     /// Auto-inject `eval "$(fancybash init <shell>)"` into your shell RC file
     ///
     /// Detects your current shell and writes the eval line into ~/.zshrc,
@@ -402,7 +410,20 @@ fn main() {
         .map(|s| std::path::Path::new(s).file_name().unwrap_or_default().to_string_lossy().to_string())
         .unwrap_or_default();
 
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(err) => {
+            // Check if user ran `fancybash <unknown_cmd>`
+            if raw_args.len() > 1 && !raw_args[1].starts_with('-') {
+                let unknown_subcmd = &raw_args[1];
+                let pretty_msg = fancybash_core::core::typo_engine::render_pretty_suggestion(unknown_subcmd);
+                eprint!("{}", pretty_msg);
+                std::process::exit(1);
+            } else {
+                err.exit();
+            }
+        }
+    };
 
     let result = match cli.command {
         Some(cmd) => match cmd {
@@ -462,6 +483,11 @@ fn main() {
             Commands::EnsureDep(args) => fancybash_core::tools::dep_installer::run(&args),
             Commands::AutoLs => {
                 fancybash_core::tools::auto_ls::run();
+                Ok(())
+            }
+            Commands::Correct { command } => {
+                let msg = fancybash_core::core::typo_engine::render_pretty_suggestion(&command);
+                eprint!("{}", msg);
                 Ok(())
             }
             Commands::Setup => cmd_setup(),

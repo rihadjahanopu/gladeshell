@@ -8,6 +8,7 @@
 //    • PROMPT_COMMAND — fires before each prompt render (replaces precmd).
 //    • trap DEBUG      — fires before each command (cmd-duration tracking).
 //    • PS1             — set from the lib's render output via $(__fb_prompt).
+//    • command_not_found_handle — fires when an unknown command is executed.
 // =============================================================================
 
 use crate::core::aliases::Shell;
@@ -58,6 +59,12 @@ if [[ -f /usr/share/bash-completion/bash_completion ]]; then
 elif [[ -f /etc/bash_completion ]]; then
     \. /etc/bash_completion
 fi
+
+# ── Typo Engine & Command Not Found Handler ──
+command_not_found_handle() {
+    fancybash correct "$1"
+    return 127
+}
 "#);
 
     out.push_str(&shared::render_auto_ls_hook(Shell::Bash));

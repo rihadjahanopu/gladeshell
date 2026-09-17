@@ -10,6 +10,7 @@
 //    • precmd()     — called before each prompt render (Native Rust prompt / socket daemon).
 //    • preexec()    — called before each command (cmd-duration in ms).
 //    • chpwd()      — called on directory change (Native Rust auto-ls).
+//    • command_not_found_handler — fires when an unknown command is executed.
 // =============================================================================
 
 use crate::core::aliases::Shell;
@@ -162,6 +163,12 @@ _fb_precmd() {
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _fb_preexec
 add-zsh-hook precmd  _fb_precmd
+
+# ── Typo Engine & Command Not Found Handler ──
+command_not_found_handler() {
+    fancybash correct "$1"
+    return 127
+}
 "#);
     out.push_str(&shared::render_auto_ls_hook(Shell::Zsh));
     out.push_str(&shared::render_cf_wrapper(Shell::Zsh));

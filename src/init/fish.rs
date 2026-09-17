@@ -8,11 +8,7 @@
 //    • fish_prompt()        — renders the full two-line prompt via Native Rust engine.
 //    • fish_right_prompt()  — shows command duration on the right side.
 //    • --on-variable PWD    — fires on directory change for auto-ls.
-//
-//  PS1/Prompt encoding:
-//    Fish reads $status BEFORE calling fish_prompt, so we capture it first.
-//    ANSI escape sequences are emitted raw (no %{} / \[ wrapping needed).
-//    CMD_DURATION is a built-in Fish variable (milliseconds).
+//    • fish_command_not_found — fires when an unknown command is executed.
 // =============================================================================
 
 use crate::core::aliases::Shell;
@@ -86,6 +82,11 @@ set -g fish_history_path "$HOME/.local/share/fish/fish_history"
 # ── Key bindings: Ctrl+R → fancybash fh (fuzzy history search) ─────────────
 if type -q fancybash
     bind \cr 'fancybash fh'
+end
+
+# ── Typo Engine & Command Not Found Handler ──
+function fish_command_not_found
+    fancybash correct $argv[1]
 end
 "#);
 

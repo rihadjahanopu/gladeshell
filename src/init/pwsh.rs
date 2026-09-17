@@ -9,6 +9,7 @@
 //    • function Prompt {}         — main prompt & native auto-ls hook.
 //    • $PSDefaultParameterValues — coloured output defaults.
 //    • Set-PSReadLineOption       — key bindings & history.
+//    • CommandNotFoundAction      — fires when an unknown command is executed.
 // =============================================================================
 
 use crate::core::aliases::Shell;
@@ -48,6 +49,12 @@ function Prompt {
 # ── History & Defaults ──
 $MaximumHistoryCount = 50000
 $PSDefaultParameterValues['*:Encoding'] = 'UTF8'
+
+# ── Typo Engine & Command Not Found Handler ──
+$ExecutionContext.InvokeCommand.CommandNotFoundAction = {
+    param($commandName, $commandEventArgs)
+    fancybash correct $commandName
+}
 "#);
 
     out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));

@@ -8,6 +8,7 @@ pub fn group() -> AliasGroup {
         only_shells: vec![],
         aliases: vec![
             AliasEntry { key: "ffmedia".into(), value: "fancybash ffmedia".into(), description: "Interactive 24-in-1 FFmpeg multimedia suite".into(), only_shells: vec![] },
+            AliasEntry { key: "ff".into(),      value: "fancybash ff".into(),      description: "Native high-performance fast file search engine".into(), only_shells: vec![] },
             AliasEntry { key: "ut".into(),      value: "fancybash ut".into(),      description: "PC Arsenal - interactive CLI tool installer & optimizer".into(), only_shells: vec![] },
             AliasEntry { key: "uu".into(),      value: "fancybash uu".into(),      description: "Interactive universal app uninstaller".into(), only_shells: vec![] },
             AliasEntry { key: "uup".into(),     value: "fancybash uup".into(),     description: "Mega system updater with interactive menu".into(), only_shells: vec![] },

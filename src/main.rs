@@ -120,6 +120,10 @@ enum Commands {
     #[command(alias = "rg")]
     Grep(fancybash_core::tools::fast_grep::GrepArgs),
 
+    /// High-performance native fast file finder (ff / file-find)
+    #[command(alias = "file-find", alias = "find-file", alias = "ff")]
+    Ff(fancybash_core::tools::file_find::FfArgs),
+
     /// Kill process running on a specific port (kp <port>)
     Kp(KpArgs),
 
@@ -452,6 +456,7 @@ fn main() {
             Commands::Fkill => fancybash_core::tools::fkill::run_fkill(),
             Commands::Fh => fancybash_core::tools::history_search::run(),
             Commands::Grep(args) => fancybash_core::tools::fast_grep::run(args),
+            Commands::Ff(args) => fancybash_core::tools::file_find::run(args),
             Commands::Kp(args) => fancybash_core::tools::fkill::run_kp(args.port.as_deref()),
             Commands::Project => fancybash_core::tools::project_setup::run_project(),
             Commands::Ii => fancybash_core::tools::project_setup::run_ii(),

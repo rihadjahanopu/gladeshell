@@ -43,5 +43,6 @@ pub mod rmd;
 pub mod rmf;
 pub mod bak;
 pub mod trash;
+pub mod file_find;
 
 

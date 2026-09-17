@@ -1652,13 +1652,10 @@ function ex {
 }
 
 
-# Usage: ff filename (Dynamic fd auto-installer)
+# Fast File Search Engine (Native Rust implementation)
 unalias ff 2>/dev/null
 function ff {
-  fancybash ensure-dep fd fd-find fd fd-find || return 1
-  local fd_cmd="fd"
-  command -v fdfind &>/dev/null && fd_cmd="fdfind"
-  "$fd_cmd" -H -E "node_modules" -E ".git" "$1"
+  fancybash ff "$@"
 }
 
 #  Secret Key Generator (Usage: gen 32)

@@ -51,7 +51,7 @@ enum Commands {
     Version,
 
     /// Theme management (list available themes or set active theme)
-    #[command(alias = "fancy")]
+    #[command(alias = "fancy", alias = "fancy_theme")]
     Theme(ThemeArgs),
 
     /// Generate a cryptographically-secure secret key
@@ -92,6 +92,7 @@ enum Commands {
     Makecpp(MakecppArgs),
 
     /// Interactive 24-in-1 FFmpeg multimedia suite (compress, trim, concat, convert, ...)
+    #[command(alias = "ffstudio", alias = "fftool", alias = "fancy_ffmpeg")]
     Ffmedia(FfmediaArgs),
 
     /// Interactive 3-tier task manager (todo add, todo done, todo list, todo clear)
@@ -101,6 +102,7 @@ enum Commands {
     Notes(NotesArgs),
 
     /// Hardened AES-256 Multi-Vault Manager (vault lock, vault unlock, vault create, vault list)
+    #[command(alias = "secvault", alias = "fvault")]
     Vault(VaultArgs),
 
     /// Interactive Docker TUI Manager (containers, images, volumes, networks, compose)
@@ -197,6 +199,7 @@ enum Commands {
     },
 
     /// Interactive Fuzzy Directory Navigator (cf)
+    #[command(alias = "fcd")]
     Cf,
 
     /// Create files with confirmation feedback (t <file1> <file2> ...)

@@ -605,11 +605,21 @@ fn push_with_retry() -> Result<(), Box<dyn std::error::Error>> {
 
 fn push_once(branch: &Option<String>) -> Result<bool, (String, Vec<String>)> {
     let mut cmd = Command::new("git");
-    cmd.arg("push").arg("-u");
-    if let Some(b) = branch { cmd.args(["origin", b.as_str()]); }
-    let out = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).output()
+    cmd.arg("push");
+    if let Some(b) = branch {
+        cmd.args(["-u", "origin", b.as_str()]);
+    } else {
+        cmd.arg("-u");
+    }
+    let out = cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
         .map_err(|e| (e.to_string(), vec![]))?;
-    if out.status.success() { return Ok(true); }
+
+    if out.status.success() {
+        return Ok(true);
+    }
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
     let is_nff = stderr.contains("non-fast-forward")
         || stderr.contains("fetch first")
@@ -618,7 +628,12 @@ fn push_once(branch: &Option<String>) -> Result<bool, (String, Vec<String>)> {
         Ok(false)
     } else {
         let lines: Vec<String> = stderr.lines().map(|l| l.to_string()).collect();
-        Err(("Push command rejected by git remote".into(), lines))
+        let err_msg = if stderr.contains("has no upstream branch") {
+            "Git remote rejected push: Branch has no upstream branch.".to_string()
+        } else {
+            "Push command rejected by git remote".to_string()
+        };
+        Err((err_msg, lines))
     }
 }
 

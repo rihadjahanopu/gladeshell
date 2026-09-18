@@ -1139,6 +1139,23 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
         for disk in disks.iter() {
             let raw_name = disk.name().to_string_lossy().to_string();
             let mount = disk.mount_point().to_string_lossy().to_string();
+            let fs = disk.file_system().to_string_lossy().to_lowercase();
+
+            // Skip virtual, pseudo, and overlay filesystems (e.g. etc-overlay, opt-overlay, tmpfs)
+            if fs == "overlay"
+                || fs == "tmpfs"
+                || fs == "devtmpfs"
+                || fs == "squashfs"
+                || fs == "proc"
+                || fs == "sysfs"
+                || fs == "cgroup"
+                || fs == "pstore"
+                || raw_name.contains("overlay")
+                || raw_name.starts_with("loop")
+                || raw_name.starts_with("ram")
+            {
+                continue;
+            }
 
             let key = if !raw_name.is_empty() {
                 raw_name.clone()
@@ -2155,18 +2172,24 @@ fn render_tab_storage(f: &mut Frame, area: Rect, report: &SystemReport) {
             let lines = vec![
                 Line::from(vec![
                     Span::styled(format!("💾 Device: {} ", drive.drive_name), Style::default().fg(C_YELLOW).bold()),
-                    Span::styled(format!("[{}] ", type_str), Style::default().fg(C_CYAN)),
-                    Span::styled(format!("│ Mount: {} ({})", drive.mount_point, drive.file_system), Style::default().fg(C_TEXT)),
+                    Span::styled(format!("[{}]", type_str), Style::default().fg(C_CYAN)),
                 ]),
                 Line::from(vec![
-                    Span::styled("   Capacity:      ", Style::default().fg(C_DIM)),
+                    Span::styled("   Mount:        ", Style::default().fg(C_DIM)),
+                    Span::styled(format!("{} ({})", drive.mount_point, drive.file_system), Style::default().fg(C_TEXT)),
+                ]),
+                Line::from(vec![
+                    Span::styled("   Capacity:     ", Style::default().fg(C_DIM)),
                     Span::raw(format!("{} Used / {} Total ({:.1}% Used)", format_bytes_human(drive.used_capacity_bytes), format_bytes_human(drive.total_capacity_bytes), usage_pct)),
                 ]),
                 Line::from(vec![
-                    Span::styled("   Diagnostics:   ", Style::default().fg(C_DIM)),
+                    Span::styled("   Diagnostics:  ", Style::default().fg(C_DIM)),
                     Span::styled(format!("SMART Health: {} ", health_label), Style::default().fg(health_color).bold()),
-                    Span::styled(format!("│ Temp: {} ", temp_str), Style::default().fg(C_TEAL)),
-                    Span::styled(format!("│ Lifetime I/O: {}", io_str), Style::default().fg(C_TEXT)),
+                    Span::styled(format!("│ Temp: {}", temp_str), Style::default().fg(C_TEAL)),
+                ]),
+                Line::from(vec![
+                    Span::styled("   Lifetime I/O: ", Style::default().fg(C_DIM)),
+                    Span::styled(io_str, Style::default().fg(C_TEXT)),
                 ]),
                 Line::from(Span::styled("─────────────────────────────────────────────────────────────────────────────", Style::default().fg(C_BORDER))),
             ];

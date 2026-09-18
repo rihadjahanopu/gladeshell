@@ -753,4 +753,14 @@ key         = "t"
 value       = "fancybash t"
 description = "Smart file creation helper"
 
+[[group.aliases]]
+key         = "pc-info"
+value       = "fancybash pc-info"
+description = "Advanced system hardware diagnostics & live sensors profiler TUI"
+
+[[group.aliases]]
+key         = "pcinfo"
+value       = "fancybash pc-info"
+description = "Advanced system hardware diagnostics & live sensors profiler TUI"
+
 

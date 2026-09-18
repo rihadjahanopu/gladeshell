@@ -498,7 +498,7 @@ pub fn render_cf_wrapper(shell: Shell) -> String {
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
 unalias cf _cf_open 2>/dev/null || true
 
-# File-type aware opener: videos → mpv/vlc, images → eog/feh, audio → mpv, docs → xdg-open
+# File-type aware opener: videos → mpv/vlc, images → eog/feh, audio → mpv, docs → xdg-open/evince/libreoffice
 _cf_open() {
     local file="$1"
     [[ -z "$file" ]] && return
@@ -506,28 +506,50 @@ _cf_open() {
     ext="$(echo "$ext" | tr '[:upper:]' '[:lower:]')"
     case "$ext" in
         mp4|mkv|avi|mov|webm|flv|wmv|m4v|ogv|ts|rmvb|3gp)
-            if   command -v mpv    &>/dev/null; then mpv    "$file" >/dev/null 2>&1 &
-            elif command -v vlc    &>/dev/null; then vlc    "$file" >/dev/null 2>&1 &
-            elif command -v mplayer &>/dev/null; then mplayer "$file" >/dev/null 2>&1 &
-            else xdg-open "$file" >/dev/null 2>&1 &
+            if   command -v mpv          &>/dev/null; then mpv          "$file" >/dev/null 2>&1 &
+            elif command -v vlc          &>/dev/null; then vlc          "$file" >/dev/null 2>&1 &
+            elif command -v mplayer      &>/dev/null; then mplayer      "$file" >/dev/null 2>&1 &
+            elif command -v xdg-open     &>/dev/null; then xdg-open     "$file" >/dev/null 2>&1 &
+            elif command -v open         &>/dev/null; then open         "$file" >/dev/null 2>&1 &
+            elif command -v wslview      &>/dev/null; then wslview      "$file" >/dev/null 2>&1 &
+            elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$file" 2>/dev/null || echo "$file")" >/dev/null 2>&1 &
             fi ;;
         jpg|jpeg|png|gif|bmp|webp|svg|ico|tiff|tif|avif|heic|raw)
-            if   command -v eog    &>/dev/null; then eog    "$file" >/dev/null 2>&1 &
-            elif command -v feh    &>/dev/null; then feh    "$file" >/dev/null 2>&1 &
-            elif command -v imv    &>/dev/null; then imv    "$file" >/dev/null 2>&1 &
-            elif command -v sxiv   &>/dev/null; then sxiv   "$file" >/dev/null 2>&1 &
-            elif command -v nomacs &>/dev/null; then nomacs "$file" >/dev/null 2>&1 &
-            else xdg-open "$file" >/dev/null 2>&1 &
+            if   command -v eog          &>/dev/null; then eog          "$file" >/dev/null 2>&1 &
+            elif command -v feh          &>/dev/null; then feh          "$file" >/dev/null 2>&1 &
+            elif command -v imv          &>/dev/null; then imv          "$file" >/dev/null 2>&1 &
+            elif command -v sxiv         &>/dev/null; then sxiv         "$file" >/dev/null 2>&1 &
+            elif command -v nomacs       &>/dev/null; then nomacs       "$file" >/dev/null 2>&1 &
+            elif command -v viewnior     &>/dev/null; then viewnior     "$file" >/dev/null 2>&1 &
+            elif command -v gwenview     &>/dev/null; then gwenview     "$file" >/dev/null 2>&1 &
+            elif command -v xdg-open     &>/dev/null; then xdg-open     "$file" >/dev/null 2>&1 &
+            elif command -v open         &>/dev/null; then open         "$file" >/dev/null 2>&1 &
+            elif command -v wslview      &>/dev/null; then wslview      "$file" >/dev/null 2>&1 &
+            elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$file" 2>/dev/null || echo "$file")" >/dev/null 2>&1 &
             fi ;;
         mp3|flac|ogg|wav|aac|m4a|opus|wma)
-            if   command -v mpv &>/dev/null; then mpv "$file" >/dev/null 2>&1 &
-            elif command -v vlc &>/dev/null; then vlc "$file" >/dev/null 2>&1 &
-            else xdg-open "$file" >/dev/null 2>&1 &
+            if   command -v mpv          &>/dev/null; then mpv          "$file" >/dev/null 2>&1 &
+            elif command -v vlc          &>/dev/null; then vlc          "$file" >/dev/null 2>&1 &
+            elif command -v xdg-open     &>/dev/null; then xdg-open     "$file" >/dev/null 2>&1 &
+            elif command -v open         &>/dev/null; then open         "$file" >/dev/null 2>&1 &
+            elif command -v wslview      &>/dev/null; then wslview      "$file" >/dev/null 2>&1 &
+            elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$file" 2>/dev/null || echo "$file")" >/dev/null 2>&1 &
             fi ;;
-        pdf|docx|doc|odt|pptx|ppt|xlsx|xls|odp|ods|odf)
-            xdg-open "$file" >/dev/null 2>&1 & ;;
+        pdf|docx|doc|odt|pptx|ppt|xlsx|xls|odp|ods|odf|txt|csv)
+            if   command -v xdg-open     &>/dev/null; then xdg-open     "$file" >/dev/null 2>&1 &
+            elif command -v evince       &>/dev/null; then evince       "$file" >/dev/null 2>&1 &
+            elif command -v okular       &>/dev/null; then okular       "$file" >/dev/null 2>&1 &
+            elif command -v libreoffice  &>/dev/null; then libreoffice  "$file" >/dev/null 2>&1 &
+            elif command -v open         &>/dev/null; then open         "$file" >/dev/null 2>&1 &
+            elif command -v wslview      &>/dev/null; then wslview      "$file" >/dev/null 2>&1 &
+            elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$file" 2>/dev/null || echo "$file")" >/dev/null 2>&1 &
+            fi ;;
         *)
-            xdg-open "$file" >/dev/null 2>&1 & ;;
+            if   command -v xdg-open     &>/dev/null; then xdg-open     "$file" >/dev/null 2>&1 &
+            elif command -v open         &>/dev/null; then open         "$file" >/dev/null 2>&1 &
+            elif command -v wslview      &>/dev/null; then wslview      "$file" >/dev/null 2>&1 &
+            elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$file" 2>/dev/null || echo "$file")" >/dev/null 2>&1 &
+            fi ;;
     esac
 }
 
@@ -566,6 +588,53 @@ cf() {
             # Legacy fallback: raw path (no tag)
             if   [[ -d "$result" ]]; then cd "$result" || return
             elif [[ -f "$result" ]]; then cd "$(dirname "$result")" || return
+            fi
+            ;;
+    esac
+}
+
+unalias ff 2>/dev/null || true
+unfunction ff 2>/dev/null || true
+ff() {
+    local result action target
+    if [ $# -eq 0 ]; then
+        result="$(fancybash ff -i)"
+    else
+        result="$(fancybash ff "$@")"
+    fi
+    [[ -z "$result" ]] && return
+
+    action="${result%%:*}"
+    target="${result#*:}"
+
+    case "$action" in
+        CD)
+            [[ -d "$target" ]] && cd "$target" || return
+            ;;
+        CODE)
+            local open_path="$target"
+            if   command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
+            elif command -v codium &>/dev/null; then codium "$open_path" >/dev/null 2>&1 &
+            fi
+            ;;
+        OPEN)
+            _cf_open "$target"
+            ;;
+        EXPLORE)
+            local explore_path="$target"
+            [[ -f "$target" ]] && explore_path="$(dirname "$target")"
+            if   command -v xdg-open &>/dev/null; then xdg-open "$explore_path" >/dev/null 2>&1 &
+            elif command -v open     &>/dev/null; then open     "$explore_path" >/dev/null 2>&1 &
+            elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$explore_path" 2>/dev/null || echo "$explore_path")" >/dev/null 2>&1 &
+            fi
+            ;;
+        *)
+            if [[ -f "$result" ]]; then
+                _cf_open "$result"
+            elif [[ -d "$result" ]]; then
+                cd "$result" || return
+            else
+                echo "$result"
             fi
             ;;
     esac
@@ -649,6 +718,50 @@ function cf
             end
     end
 end
+
+functions -e ff 2>/dev/null
+function ff
+    set -l result (test (count $argv) -eq 0; and fancybash ff -i; or fancybash ff $argv)
+    test -z "$result"; and return
+
+    set -l parts (string split -m1 ":" -- $result)
+    set -l action $parts[1]
+    set -l target $parts[2]
+
+    switch $action
+        case CD
+            if test -d "$target"
+                cd "$target"
+            end
+        case CODE
+            set -l open_path "$target"
+            if type -q code
+                code "$open_path" >/dev/null 2>&1 &
+            else if type -q codium
+                codium "$open_path" >/dev/null 2>&1 &
+            end
+        case OPEN
+            _cf_open "$target"
+        case EXPLORE
+            set -l explore_path "$target"
+            if test -f "$target"
+                set explore_path (dirname "$target")
+            end
+            if type -q xdg-open
+                xdg-open "$explore_path" >/dev/null 2>&1 &
+            else if type -q open
+                open "$explore_path" >/dev/null 2>&1 &
+            else if type -q explorer.exe
+                explorer.exe "$explore_path" >/dev/null 2>&1 &
+            end
+        case '*'
+            if test -f "$result"
+                _cf_open "$result"
+            else if test -d "$result"
+                cd "$result"
+            end
+    end
+end
 "#.to_string(),
         Shell::Pwsh => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
@@ -714,6 +827,43 @@ function cf {
         default {
             if (Test-Path -Path $result -PathType Container) { Set-Location -Path $result }
             elseif (Test-Path -Path $result -PathType Leaf) { Set-Location -Path (Split-Path -Parent $result) }
+        }
+    }
+}
+
+Remove-Item alias:ff -ErrorAction SilentlyContinue 2>$null
+function ff {
+    $result = if ($args.Count -eq 0) { fancybash ff -i } else { fancybash ff @args }
+    if (-not $result) { return }
+    $parts = $result -split ':', 2
+    if ($parts.Length -lt 2) {
+        if (Test-Path -Path $result -PathType Container) { Set-Location -Path $result }
+        elseif (Test-Path -Path $result -PathType Leaf) { Start-Process $result }
+        return
+    }
+    $action = $parts[0]
+    $target = $parts[1]
+    switch ($action) {
+        "CD" {
+            if (Test-Path -Path $target -PathType Container) { Set-Location -Path $target }
+        }
+        "CODE" {
+            $openPath = $target
+            if (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command codium -ErrorAction SilentlyContinue) { Start-Process codium -ArgumentList "`"$openPath`"" }
+        }
+        "OPEN" {
+            _cf_open $target
+        }
+        "EXPLORE" {
+            $explorePath = $target
+            if (Test-Path -Path $target -PathType Leaf) { $explorePath = Split-Path -Parent $target }
+            if (Get-Command Invoke-Item -ErrorAction SilentlyContinue) { Invoke-Item -Path $explorePath }
+            else { Start-Process explorer.exe -ArgumentList "`"$explorePath`"" }
+        }
+        default {
+            if (Test-Path -Path $result -PathType Container) { Set-Location -Path $result }
+            elseif (Test-Path -Path $result -PathType Leaf) { Start-Process $result }
         }
     }
 }

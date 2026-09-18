@@ -21,6 +21,7 @@ pub mod history_search;
 pub mod keep;
 pub mod notes;
 pub mod pc_optimizer;
+pub mod pc_info;
 pub mod pkg_converter;
 pub mod project_setup;
 pub mod runtime_installer;

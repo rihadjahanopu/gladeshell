@@ -27,16 +27,16 @@ use ratatui::{
 use walkdir::WalkDir;
 
 // ── colour palette (modern dark theme matching fkill.rs) ───────────────────────
-const C_BG: Color = Color::Rgb(10, 10, 18);
-const C_BORDER: Color = Color::Rgb(80, 220, 140); // vibrant mint green
-const C_ACCENT: Color = Color::Rgb(100, 210, 255); // neon cyan
-const C_SELECTED: Color = Color::Rgb(255, 85, 140); // hot pink / magenta accent
-const C_DIM: Color = Color::Rgb(120, 120, 140);
-const C_TEXT: Color = Color::Rgb(220, 220, 230);
-const C_GREEN: Color = Color::Rgb(80, 220, 120);
-const C_YELLOW: Color = Color::Rgb(255, 200, 80);
+const C_BG: Color = Color::Reset;
+const C_BORDER: Color = Color::Rgb(0, 180, 120);   // Emerald mint green
+const C_ACCENT: Color = Color::Rgb(0, 150, 220);   // Royal cyan
+const C_SELECTED: Color = Color::Rgb(255, 40, 120); // Hot pink / magenta
+const C_DIM: Color = Color::Rgb(100, 120, 150);     // Muted steel slate
+const C_TEXT: Color = Color::Reset;                 // Adaptive text (black in Light mode, white in Dark mode)
+const C_GREEN: Color = Color::Rgb(0, 160, 80);     // Rich emerald
+const C_YELLOW: Color = Color::Rgb(210, 120, 0);   // High-contrast Amber / Gold
 const C_WHITE: Color = Color::Rgb(255, 255, 255);
-const C_CYAN: Color = Color::Rgb(80, 220, 255);
+const C_CYAN: Color = Color::Rgb(0, 140, 210);     // Deep electric cyan
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchMode {

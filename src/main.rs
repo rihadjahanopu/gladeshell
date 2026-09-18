@@ -123,7 +123,7 @@ enum Commands {
     Grep(fancybash_core::tools::fast_grep::GrepArgs),
 
     /// High-performance native fast file finder (ff / file-find)
-    #[command(alias = "file-find", alias = "find-file", alias = "ff")]
+    #[command(alias = "file-find", alias = "find-file")]
     Ff(fancybash_core::tools::file_find::FfArgs),
 
     /// Kill process running on a specific port (kp <port>)
@@ -275,6 +275,29 @@ enum Commands {
     /// ~/.bashrc, or ~/.config/fish/config.fish automatically.
     /// Idempotent — safe to run multiple times.
     Setup,
+
+    /// Advanced System Hardware Diagnostics & Live Sensors Profiler (pc-info / pcinfo)
+    #[command(name = "pc-info", alias = "pcinfo")]
+    PcInfo(PcInfoArgs),
+}
+
+#[derive(clap::Args, Debug, Clone)]
+struct PcInfoArgs {
+    /// Output system report in JSON format
+    #[arg(long)]
+    json: bool,
+
+    /// Output system report in YAML format
+    #[arg(long)]
+    yaml: bool,
+
+    /// Output system report in TOML format
+    #[arg(long)]
+    toml: bool,
+
+    /// Launch interactive Ratatui TUI Dashboard
+    #[arg(long, short)]
+    tui: bool,
 }
 
 #[derive(clap::Args, Debug)]
@@ -511,6 +534,7 @@ fn main() {
                 Ok(())
             }
             Commands::Setup => cmd_setup(),
+            Commands::PcInfo(args) => cmd_pc_info(args.clone()),
         },
         None => {
             // When invoked as `fancy`, `theme`, or plain `fancybash` with no
@@ -570,6 +594,24 @@ fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
 
 fn cmd_internal_clean_rc() -> Result<(), Box<dyn std::error::Error>> {
     init::cleaner::clean_rc_file()?;
+    Ok(())
+}
+
+fn cmd_pc_info(args: PcInfoArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use fancybash_core::tools::pc_info;
+
+    if args.json {
+        let report = pc_info::collect_system_report();
+        println!("{}", report.to_json_pretty()?);
+    } else if args.yaml {
+        let report = pc_info::collect_system_report();
+        println!("{}", report.to_yaml()?);
+    } else if args.toml {
+        let report = pc_info::collect_system_report();
+        println!("{}", report.to_toml()?);
+    } else {
+        pc_info::run_tui()?;
+    }
     Ok(())
 }
 

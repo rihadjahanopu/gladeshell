@@ -8,7 +8,7 @@ pub fn group() -> AliasGroup {
         only_shells: vec![],
         aliases: vec![
             AliasEntry { key: "ffmedia".into(), value: "fancybash ffmedia".into(), description: "Interactive 24-in-1 FFmpeg multimedia suite".into(), only_shells: vec![] },
-            AliasEntry { key: "ff".into(),      value: "fancybash ff".into(),      description: "Native high-performance fast file search engine".into(), only_shells: vec![] },
+            // ff is a shell function (not alias) — defined in init so it can open files & cd
             AliasEntry { key: "ut".into(),      value: "fancybash ut".into(),      description: "PC Arsenal - interactive CLI tool installer & optimizer".into(), only_shells: vec![] },
             AliasEntry { key: "uu".into(),      value: "fancybash uu".into(),      description: "Interactive universal app uninstaller".into(), only_shells: vec![] },
             AliasEntry { key: "uup".into(),     value: "fancybash uup".into(),     description: "Mega system updater with interactive menu".into(), only_shells: vec![] },
@@ -40,6 +40,8 @@ pub fn group() -> AliasGroup {
             AliasEntry { key: "html".into(),    value: "fancybash html".into(),    description: "Serve / run index.html with Bun or browser".into(), only_shells: vec![] },
             AliasEntry { key: "gen".into(),     value: "fancybash gen".into(),     description: "Cryptographically-secure secret key generator".into(), only_shells: vec![] },
             AliasEntry { key: "sysmon".into(),  value: "fancybash sysmon".into(),  description: "Interactive system performance monitor".into(), only_shells: vec![] },
+            AliasEntry { key: "pc-info".into(), value: "fancybash pc-info".into(), description: "Advanced system hardware diagnostics & live sensors profiler TUI".into(), only_shells: vec![] },
+            AliasEntry { key: "pcinfo".into(),  value: "fancybash pc-info".into(), description: "Advanced system hardware diagnostics & live sensors profiler TUI".into(), only_shells: vec![] },
             AliasEntry { key: "t".into(),       value: "fancybash t".into(),       description: "Smart file creation helper".into(), only_shells: vec![] },
             AliasEntry { key: "fancy".into(),   value: "fancybash theme".into(),   description: "Interactive TUI theme picker & switcher".into(), only_shells: vec![] },
             AliasEntry { key: "theme".into(),   value: "fancybash theme".into(),   description: "Interactive TUI theme picker & switcher".into(), only_shells: vec![] },

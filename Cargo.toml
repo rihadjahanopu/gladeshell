@@ -29,6 +29,8 @@ clap = { version = "4", features = ["derive", "env", "string"] }
 
 # Serialization / config
 serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
 toml = "0.8"
 
 # Async runtime (optional, not needed for the daemon which uses std threads)
@@ -42,8 +44,11 @@ gix = { version = "0.66", default-features = false, features = [
     "worktree-mutation",     # enables index/worktree status APIs
 ], optional = true }
 
-# System info (Phase 2 prompt / Phase 4 tools)
+# System info & PC Diagnostics (Phase 2 prompt / Phase 4 tools / pc-info)
 sysinfo = { version = "0.31", optional = true }
+battery = { version = "0.7.8", optional = true }
+raw-cpuid = { version = "11.1", optional = true }
+nvml-wrapper = { version = "0.10", optional = true }
 
 # Interactive prompts (Phase 4 tools: uup, uu)
 inquire = { version = "0.7", optional = true }
@@ -85,14 +90,21 @@ ureq = { version = "2.9", optional = true }
 # Data parallelism — parallel metric collection & file search
 rayon = { version = "1.10", optional = true }
 
+# Windows WMI Hardware Diagnostics
+[target.'cfg(target_os = "windows")'.dependencies]
+wmi = "0.14"
+
 # ── Feature Flags ─────────────────────────────────────────────────────────────
 [features]
 default = ["prompt-engine", "tools"]
 # Enable heavy Phase-2 prompt engine (git + async)
 prompt-engine = ["gix", "rayon"]
-# Enable Phase-4 tool subcommands
+# Enable Phase-4 tool subcommands & pc-info diagnostics
 tools = [
     "sysinfo",
+    "battery",
+    "raw-cpuid",
+    "nvml-wrapper",
     "inquire",
     "ratatui",
     "crossterm",

@@ -555,22 +555,59 @@ install_config() {
     else
         # Fallback: manually inject if binary not yet in PATH
         local MARKER='fancybash init'
-        if ! grep -qF "$MARKER" "$BASHRC" 2>/dev/null; then
-            {
-                echo ""
-                echo "$START"
-                echo "# Installed: $(date '+%Y-%m-%d %H:%M:%S')"
-                echo "# fancybash Rust Native Engine - auto-loaded every shell session"
-                echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"'
-                echo ""
-                echo 'if command -v fancybash >/dev/null 2>&1; then'
-                echo '    eval "$(fancybash init bash)"'
-                echo 'fi'
-                echo "$END"
-            } >> "$BASHRC"
-            printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.bashrc\n"
+        local user_shell="$(basename "${SHELL:-bash}")"
+
+        if [ "$user_shell" = "fish" ]; then
+            local fish_cfg="$HOME/.config/fish/config.fish"
+            mkdir -p "$(dirname "$fish_cfg")"
+            if ! grep -qF "$MARKER" "$fish_cfg" 2>/dev/null; then
+                {
+                    echo ""
+                    echo "# >>> fancy-fish >>>"
+                    echo 'set -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH'
+                    echo 'if type -q fancybash'
+                    echo '    fancybash init fish | source'
+                    echo 'end'
+                    echo "# <<< fancy-fish <<<"
+                } >> "$fish_cfg"
+                printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.config/fish/config.fish\n"
+            else
+                printf "  ${GREEN}✔${NC} fancybash already configured in ~/.config/fish/config.fish\n"
+            fi
+        elif [ "$user_shell" = "zsh" ]; then
+            local zshrc="$HOME/.zshrc"
+            if ! grep -qF "$MARKER" "$zshrc" 2>/dev/null; then
+                {
+                    echo ""
+                    echo "# >>> fancy-zshrc >>>"
+                    echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"'
+                    echo 'if (( ${+commands[fancybash]} )); then'
+                    echo '    eval "$(fancybash init zsh)"'
+                    echo 'fi'
+                    echo "# <<< fancy-zshrc <<<"
+                } >> "$zshrc"
+                printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.zshrc\n"
+            else
+                printf "  ${GREEN}✔${NC} fancybash already configured in ~/.zshrc\n"
+            fi
         else
-            printf "  ${GREEN}✔${NC} fancybash already configured in ~/.bashrc\n"
+            if ! grep -qF "$MARKER" "$BASHRC" 2>/dev/null; then
+                {
+                    echo ""
+                    echo "$START"
+                    echo "# Installed: $(date '+%Y-%m-%d %H:%M:%S')"
+                    echo "# fancybash Rust Native Engine - auto-loaded every shell session"
+                    echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"'
+                    echo ""
+                    echo 'if command -v fancybash >/dev/null 2>&1; then'
+                    echo '    eval "$(fancybash init bash)"'
+                    echo 'fi'
+                    echo "$END"
+                } >> "$BASHRC"
+                printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.bashrc\n"
+            else
+                printf "  ${GREEN}✔${NC} fancybash already configured in ~/.bashrc\n"
+            fi
         fi
     fi
 }

@@ -57,7 +57,7 @@ pub fn group() -> AliasGroup {
             },
             AliasEntry {
                 key: "rel".to_string(),
-                value: "pkill -f fancybash-daemon 2>/dev/null; rm -f /tmp/fancybash_*.sock 2>/dev/null; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\"".to_string(),
+                value: "pkill -f fancybash-daemon 2>/dev/null; sh -c 'rm -f /tmp/fancybash_*.sock 2>/dev/null'; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\"".to_string(),
                 description: "Reload Fish config".to_string(),
                 only_shells: vec!["fish".to_string()],
             },

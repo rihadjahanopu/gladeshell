@@ -6,7 +6,7 @@
 //
 //  Hook strategy:
 //    • fish_prompt()        — renders the full two-line prompt via Native Rust engine.
-//    • fish_right_prompt()  — shows command duration on the right side.
+//    • fish_right_prompt()  — disabled (handled by Native Rust prompt).
 //    • --on-variable PWD    — fires on directory change for auto-ls.
 //    • fish_command_not_found — fires when an unknown command is executed.
 // =============================================================================
@@ -60,14 +60,9 @@ function fish_prompt
         2>/dev/null
 end
 
-# ── Right-side prompt: shows command duration for slow commands (>2s) ──────
+# ── Right-side prompt: disabled (duration is handled in main prompt) ──────
 function fish_right_prompt
-    if test $CMD_DURATION -gt 2000
-        set -l _secs (math -s0 "$CMD_DURATION / 1000")
-        set_color --bold yellow
-        printf ' ⏱ %ds' $_secs
-        set_color normal
-    end
+    # Silent — duration is rendered in main prompt
 end
 
 # ── Fish greeting — replace default with fancybash welcome ─────────────────

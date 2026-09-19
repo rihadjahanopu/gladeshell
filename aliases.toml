@@ -50,7 +50,7 @@ value       = "cd ../../../.."
 description = "Go up four directories"
 
 [[group.aliases]]
-key         = "rd"
+key         = "root"
 value       = "cd /"
 description = "Jump to filesystem root"
 
@@ -64,6 +64,12 @@ key         = "path"
 value       = "echo $PATH | tr ':' '\\n'"
 description = "Display PATH entries line-by-line"
 only_shells = ["bash", "zsh"]
+
+[[group.aliases]]
+key         = "path"
+value       = "$env:PATH -split ';'"
+description = "Display PATH entries line-by-line"
+only_shells = ["pwsh"]
 
 # ── Developer Directory Shortcuts ────────────────────────────────────────────
 [[group]]
@@ -146,7 +152,7 @@ description = "Jump to Chrome downloads folder"
 
 [[group.aliases]]
 key         = "gp"
-value       = "cd ~/Downloads/Google\\ Photos"
+value       = "cd \"~/Downloads/Google Photos\""
 description = "Jump to Google Photos downloads folder"
 
 [[group.aliases]]
@@ -214,7 +220,7 @@ only_shells = ["bash"]
 
 [[group.aliases]]
 key         = "rel"
-value       = "pkill -f fancybash-daemon 2>/dev/null; rm -f /tmp/fancybash_*.sock 2>/dev/null; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\""
+value       = "pkill -f fancybash-daemon 2>/dev/null; sh -c 'rm -f /tmp/fancybash_*.sock 2>/dev/null'; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\""
 description = "Reload Fish config"
 only_shells = ["fish"]
 

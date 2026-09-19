@@ -626,36 +626,19 @@ fn cmd_pc_info(args: PcInfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 // ── setup ─────────────────────────────────────────────────────────────────────
 
 fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
-    // Detect current shell from $SHELL env var
-    let shell_bin = std::env::var("SHELL").unwrap_or_default();
-    let shell = if shell_bin.contains("zsh") {
-        "zsh"
-    } else if shell_bin.contains("fish") {
-        "fish"
+    eprintln!("\x1b[1;36m🔧 fancybash setup — checking all installed shells...\x1b[0m");
+
+    let _ = init::cleaner::ensure_auto_heal_hooks();
+
+    let configured = init::cleaner::ensure_all_installed_shells_configured()?;
+
+    if configured.is_empty() {
+        eprintln!("\x1b[1;33m✔  All installed shells are already configured — nothing to do.\x1b[0m");
     } else {
-        "bash"
-    };
-
-    let rc_label = match shell {
-        "zsh"  => "~/.zshrc",
-        "fish" => "~/.config/fish/config.fish",
-        _      => "~/.bashrc",
-    };
-
-    eprintln!("\x1b[1;36m🔧 fancybash setup — detected shell: {shell}\x1b[0m");
-
-    match init::cleaner::ensure_init_in_rc(shell) {
-        Ok(true) => {
-            eprintln!("\x1b[1;32m✅ Successfully injected `fancybash init {shell}` into {rc_label}\x1b[0m");
-            eprintln!("\x1b[1;36m💡 Run:  source {rc_label}  (or open a new terminal)\x1b[0m");
+        for sh in &configured {
+            eprintln!("\x1b[1;32m✅ Successfully injected fancybash into shell: {sh}\x1b[0m");
         }
-        Ok(false) => {
-            eprintln!("\x1b[1;33m✔  fancybash is already configured in {rc_label} — nothing to do.\x1b[0m");
-        }
-        Err(e) => {
-            eprintln!("\x1b[1;31m❌ Could not write to {rc_label}: {e}\x1b[0m");
-            return Err(e.into());
-        }
+        eprintln!("\x1b[1;36m💡 Restart your terminal or source your shell config to activate.\x1b[0m");
     }
 
     Ok(())

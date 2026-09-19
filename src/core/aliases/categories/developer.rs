@@ -99,7 +99,7 @@ pub fn group() -> AliasGroup {
             },
             AliasEntry {
                 key: "gp".to_string(),
-                value: "cd ~/Downloads/Google\\ Photos".to_string(),
+                value: "cd \"~/Downloads/Google Photos\"".to_string(),
                 description: "Jump to Google Photos downloads folder".to_string(),
                 only_shells: vec![],
             },

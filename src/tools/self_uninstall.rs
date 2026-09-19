@@ -17,7 +17,12 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let target_files = vec![
         home.join(".bashrc"),
         home.join(".zshrc"),
+        home.join(".zshenv"),
+        home.join(".profile"),
+        home.join(".bash_profile"),
         home.join(".config/fish/config.fish"),
+        home.join(".config/fish/conf.d/00_fancybash_heal.fish"),
+        home.join(".config/powershell/profile.ps1"),
     ];
 
     let mut cleaned_any = false;

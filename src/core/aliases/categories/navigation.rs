@@ -44,7 +44,7 @@ pub fn group() -> AliasGroup {
                 only_shells: vec![],
             },
             AliasEntry {
-                key: "rd".to_string(),
+                key: "root".to_string(),
                 value: "cd /".to_string(),
                 description: "Jump to filesystem root".to_string(),
                 only_shells: vec![],
@@ -60,6 +60,12 @@ pub fn group() -> AliasGroup {
                 value: "echo $PATH | tr ':' '\\n'".to_string(),
                 description: "Display PATH entries line-by-line".to_string(),
                 only_shells: vec!["bash".to_string(), "zsh".to_string()],
+            },
+            AliasEntry {
+                key: "path".to_string(),
+                value: "$env:PATH -split ';'".to_string(),
+                description: "Display PATH entries line-by-line".to_string(),
+                only_shells: vec!["pwsh".to_string()],
             },
         ],
     }

@@ -22,16 +22,22 @@ install:
 	@fancybash setup || true
 	@echo ""
 
-## update: Pull latest code and re-install
+## update: Pull latest code, re-install, and sync configuration
 update:
 	git pull
 	cargo install --path . --force
-	@echo "✨ fancybash updated successfully!"
+	@mkdir -p ~/.local/bin
+	@rm -f ~/.local/bin/fancybash 2>/dev/null || true
+	@cp -f ~/.cargo/bin/fancybash ~/.local/bin/fancybash 2>/dev/null || true
+	@fancybash setup || true
+	@echo "✨ fancybash updated and auto-configured successfully!"
 
-## uninstall: Remove fancybash binary
+## uninstall: Remove fancybash binary and restore shell configuration
 uninstall:
-	cargo uninstall fancybash 2>/dev/null || rm -f ~/.cargo/bin/fancybash
-	@echo "🗑️ fancybash uninstalled."
+	@fancybash uninstall 2>/dev/null || true
+	@rm -f ~/.local/bin/fancybash ~/.cargo/bin/fancybash 2>/dev/null || true
+	@cargo uninstall fancybash 2>/dev/null || true
+	@echo "🗑️ fancybash uninstalled and shell configuration cleaned."
 
 ## test: Run unit test suite
 test:
@@ -40,7 +46,7 @@ test:
 ## help: Display available targets
 help:
 	@echo "fancybash-rs Makefile targets:"
-	@echo "  make install    - Build and install fancybash into ~/.cargo/bin"
-	@echo "  make update     - Git pull and reinstall latest version"
-	@echo "  make uninstall  - Remove binary from system"
-	@echo "  make test       - Run unit tests"
+	@echo "  make install    - Build and install fancybash into ~/.cargo/bin and ~/.local/bin"
+	@echo "  make update     - Git pull, reinstall, and re-configure latest version"
+	@echo "  make uninstall  - Remove binary and restore shell configuration"
+	@echo "  make test       - Run unit test suite"

@@ -45,5 +45,6 @@ pub mod rmf;
 pub mod bak;
 pub mod trash;
 pub mod file_find;
+pub mod zed_setup;
 
 

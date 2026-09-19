@@ -243,6 +243,10 @@ enum Commands {
         name: String,
     },
 
+    /// Bulletproof Zed IDE settings installer (fancybash edition)
+    #[command(alias = "zed-setup", alias = "zed_setup")]
+    Zed,
+
     /// Run the persistent background Unix socket server daemon
     Serve,
 
@@ -520,6 +524,7 @@ fn main() {
             Commands::Rmf { name, force } => fancybash_core::tools::rmf::run(&name, force),
             Commands::Bak { name } => fancybash_core::tools::bak::run(&name),
             Commands::Trash { name } => fancybash_core::tools::trash::run(&name),
+            Commands::Zed => fancybash_core::tools::zed_setup::run(),
             Commands::Serve => cmd_serve(),
             Commands::Prompt(args) => cmd_prompt(args),
             Commands::InternalCleanRc => cmd_internal_clean_rc(),

@@ -105,6 +105,24 @@ fn load_shell_history() -> Vec<String> {
         }
     }
 
+    // 4. PowerShell history
+    let pwsh_paths = [
+        home.join("AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ConsoleHost_history.txt"),
+        home.join(".config/powershell/PSReadLine/ConsoleHost_history.txt"),
+    ];
+    for pwsh_path in &pwsh_paths {
+        if pwsh_path.exists() {
+            if let Ok(content) = fs::read_to_string(pwsh_path) {
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if !trimmed.is_empty() {
+                        entries.push(trimmed.to_string());
+                    }
+                }
+            }
+        }
+    }
+
     // Deduplicate from end to beginning to preserve newest unique commands
     let mut seen = std::collections::HashSet::new();
     let mut unique_reversed = Vec::with_capacity(entries.len());
@@ -128,7 +146,9 @@ fn clean_zsh_line(line: &str) -> &str {
 }
 
 fn dirs_home() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
 }
 
 // ── Ratatui App State ────────────────────────────────────────────────────────

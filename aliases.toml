@@ -129,6 +129,41 @@ key         = "fu"
 value       = "cd ~/Developer/fullstack"
 description = "Jump to Fullstack directory"
 
+[[group.aliases]]
+key         = "fig"
+value       = "cd ~/Developer/Figma"
+description = "Jump to Figma directory"
+
+[[group.aliases]]
+key         = "bv"
+value       = "cd ~/Downloads/Brave"
+description = "Jump to Brave downloads folder"
+
+[[group.aliases]]
+key         = "ch"
+value       = "cd ~/Downloads/Chrome"
+description = "Jump to Chrome downloads folder"
+
+[[group.aliases]]
+key         = "gp"
+value       = "cd ~/Downloads/Google\\ Photos"
+description = "Jump to Google Photos downloads folder"
+
+[[group.aliases]]
+key         = "pa"
+value       = "cd ~/Downloads/Packet"
+description = "Jump to Packet downloads folder"
+
+[[group.aliases]]
+key         = "ss"
+value       = "cd ~/Downloads/Screenshot"
+description = "Jump to Screenshot downloads folder"
+
+[[group.aliases]]
+key         = "vi"
+value       = "cd ~/Downloads/Video"
+description = "Jump to Video downloads folder"
+
 # ── Editor & Config ──────────────────────────────────────────────────────────
 [[group]]
 name = "Editor & Config"
@@ -762,5 +797,15 @@ description = "Advanced system hardware diagnostics & live sensors profiler TUI"
 key         = "pcinfo"
 value       = "fancybash pc-info"
 description = "Advanced system hardware diagnostics & live sensors profiler TUI"
+
+[[group.aliases]]
+key         = "zed-setup"
+value       = "fancybash zed-setup"
+description = "Bulletproof Zed IDE settings installer"
+
+[[group.aliases]]
+key         = "zed_setup"
+value       = "fancybash zed-setup"
+description = "Bulletproof Zed IDE settings installer"
 
 

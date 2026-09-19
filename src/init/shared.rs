@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 /// Get current user's HOME directory path.
 pub fn home_dir() -> String {
-    std_env::var("HOME").unwrap_or_default()
+    std_env::var("HOME").or_else(|_| std_env::var("USERPROFILE")).unwrap_or_default()
 }
 
 /// Find first file that exists among candidates on host system.

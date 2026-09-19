@@ -79,6 +79,48 @@ pub fn group() -> AliasGroup {
                 description: "Jump to Fullstack directory".to_string(),
                 only_shells: vec![],
             },
+            AliasEntry {
+                key: "fig".to_string(),
+                value: "cd ~/Developer/Figma".to_string(),
+                description: "Jump to Figma directory".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "bv".to_string(),
+                value: "cd ~/Downloads/Brave".to_string(),
+                description: "Jump to Brave downloads folder".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "ch".to_string(),
+                value: "cd ~/Downloads/Chrome".to_string(),
+                description: "Jump to Chrome downloads folder".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "gp".to_string(),
+                value: "cd ~/Downloads/Google\\ Photos".to_string(),
+                description: "Jump to Google Photos downloads folder".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "pa".to_string(),
+                value: "cd ~/Downloads/Packet".to_string(),
+                description: "Jump to Packet downloads folder".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "ss".to_string(),
+                value: "cd ~/Downloads/Screenshot".to_string(),
+                description: "Jump to Screenshot downloads folder".to_string(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "vi".to_string(),
+                value: "cd ~/Downloads/Video".to_string(),
+                description: "Jump to Video downloads folder".to_string(),
+                only_shells: vec![],
+            },
         ],
     }
 }

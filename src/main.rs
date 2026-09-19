@@ -244,7 +244,7 @@ enum Commands {
     },
 
     /// Bulletproof Zed IDE settings installer (fancybash edition)
-    #[command(alias = "zed-setup", alias = "zed_setup")]
+    #[command(name = "zed-setup", alias = "zed", alias = "zed_setup")]
     Zed,
 
     /// Run the persistent background Unix socket server daemon
@@ -459,6 +459,9 @@ fn main() {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(err) => {
+            if err.kind() == clap::error::ErrorKind::DisplayHelp || err.kind() == clap::error::ErrorKind::DisplayVersion {
+                err.exit();
+            }
             // Check if user ran `fancybash <unknown_cmd>`
             if raw_args.len() > 1 && !raw_args[1].starts_with('-') {
                 let unknown_subcmd = &raw_args[1];

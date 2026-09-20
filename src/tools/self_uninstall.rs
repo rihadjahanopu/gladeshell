@@ -4,20 +4,32 @@
 
 use std::error::Error;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    println!("\x1b[1;33m🗑️ Uninstalling fancybash...\x1b[0m");
+    println!("\x1b[1;35m⚡ Initiating fancybash complete uninstallation protocol...\x1b[0m\n");
 
-    let home = match std::env::var("HOME") {
-        Ok(h) => PathBuf::from(h),
-        Err(_) => return Err("Could not determine HOME directory".into()),
+    let home_path = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .ok()
+        .map(PathBuf::from);
+
+    let home = match home_path {
+        Some(h) => h,
+        None => {
+            println!("\x1b[1;31m❌ Could not determine user HOME directory.\x1b[0m");
+            return Ok(());
+        }
     };
 
+    let timestamp = chrono_timestamp();
+
+    // ── 1. Target Shell Config Files ───────────────────────────────────────────
     let target_files = vec![
         home.join(".bashrc"),
         home.join(".zshrc"),
         home.join(".zshenv"),
+        home.join(".zprofile"),
         home.join(".profile"),
         home.join(".bash_profile"),
         home.join(".config/fish/config.fish"),
@@ -25,7 +37,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         home.join(".config/powershell/profile.ps1"),
     ];
 
-    let mut cleaned_any = false;
+    let mut cleaned_count = 0;
+    let mut backup_count = 0;
 
     for path in target_files {
         if path.exists() {
@@ -50,7 +63,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         modified = true;
                         continue;
                     }
-                    if line.contains("fancybash init") || line.contains("# fancybash shell initialization") {
+                    if line.contains("fancybash init")
+                        || line.contains("# fancybash shell initialization")
+                        || line.contains("fancybash completion")
+                    {
                         modified = true;
                         continue;
                     }
@@ -58,47 +74,139 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 }
 
                 if modified {
+                    // Create an automatic timestamped backup before touching the file
+                    let backup_filename = format!(
+                        "{}.fancybash_bak_{}",
+                        path.file_name().and_then(|s| s.to_str()).unwrap_or("config"),
+                        timestamp
+                    );
+                    let backup_path = path.with_file_name(backup_filename);
+
+                    if fs::write(&backup_path, &content).is_ok() {
+                        backup_count += 1;
+                        println!(
+                            "\x1b[1;36m💾 Created backup:\x1b[0m {}",
+                            tildify(&backup_path, &home)
+                        );
+                    }
+
                     let mut result_str = new_lines.join("\n");
                     if !result_str.is_empty() {
                         result_str.push('\n');
                     }
+
                     if fs::write(&path, result_str).is_ok() {
-                        println!("\x1b[1;32m✅ Cleaned fancybash block from: {}\x1b[0m", path.display());
-                        cleaned_any = true;
+                        println!(
+                            "\x1b[1;32m✅ Cleaned fancybash configuration from:\x1b[0m {}",
+                            tildify(&path, &home)
+                        );
+                        cleaned_count += 1;
                     }
                 }
             }
         }
     }
 
-    // Try removing installed binaries
+    // ── 2. Remove Config & Cache Data Directories ─────────────────────────────
+    let data_dirs = vec![
+        home.join(".fancybash"),
+        home.join(".config/fancybash"),
+        home.join(".cache/fancybash"),
+    ];
+
+    for dir in data_dirs {
+        if dir.exists() {
+            if fs::remove_dir_all(&dir).is_ok() {
+                println!(
+                    "\x1b[1;32m🗑️ Removed directory:\x1b[0m {}",
+                    tildify(&dir, &home)
+                );
+            }
+        }
+    }
+
+    // ── 3. Remove Binary Executables ──────────────────────────────────────────
     let bin_paths = vec![
         home.join(".cargo/bin/fancybash"),
+        home.join(".cargo/bin/fancybash.exe"),
         home.join(".local/bin/fancybash"),
+        home.join(".local/bin/fancybash.exe"),
+        PathBuf::from("/usr/local/bin/fancybash"),
     ];
 
     for bin in bin_paths {
         if bin.exists() {
             if fs::remove_file(&bin).is_ok() {
-                println!("\x1b[1;32m✅ Removed binary: {}\x1b[0m", bin.display());
+                println!(
+                    "\x1b[1;32m🗑️ Removed executable binary:\x1b[0m {}",
+                    tildify(&bin, &home)
+                );
             }
         }
     }
 
-    if cleaned_any {
-        println!("\n\x1b[1;32m🎉 fancybash uninstalled successfully!\x1b[0m");
-        println!("\x1b[1;36m💡 Restart your shell or terminal for changes to take effect.\x1b[0m");
-    } else {
-        println!("\x1b[0;33mℹ️ No fancybash initializations found in shell config files.\x1b[0m");
+    // ── 4. Self-Delete Current Running Executable ─────────────────────────────
+    if let Ok(current_exe) = std::env::current_exe() {
+        if current_exe.exists()
+            && current_exe
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|s| s.contains("fancybash"))
+                .unwrap_or(false)
+        {
+            let _ = fs::remove_file(&current_exe);
+        }
     }
+
+    // ── 5. Summary & Feedback ─────────────────────────────────────────────────
+    println!("\n\x1b[1;32m🎉 fancybash uninstallation protocol completed successfully!\x1b[0m");
+    if backup_count > 0 {
+        println!(
+            "\x1b[1;36m💡 Safe backups of your shell config files were created ({})\x1b[0m",
+            backup_count
+        );
+    }
+    if cleaned_count == 0 {
+        println!("\x1b[0;33mℹ️ No active fancybash initializations were found in shell configs.\x1b[0m");
+    }
+    println!("\x1b[1;35m🐚 Please restart your terminal session for all changes to take effect.\x1b[0m");
 
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_self_uninstall_does_not_panic() {
-        assert!(std::env::var("HOME").is_ok());
+fn chrono_timestamp() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    since_the_epoch.to_string()
+}
+
+fn tildify(path: &Path, home: &Path) -> String {
+    if let Ok(strip) = path.strip_prefix(home) {
+        format!("~/{}", strip.display())
+    } else {
+        path.display().to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_self_uninstall_does_not_panic() {
+        let _ = run();
+    }
+
+    #[test]
+    fn test_tildify() {
+        let home = PathBuf::from("/home/user");
+        let path = PathBuf::from("/home/user/.bashrc");
+        assert_eq!(tildify(&path, &home), "~/.bashrc");
+    }
+}
+
+

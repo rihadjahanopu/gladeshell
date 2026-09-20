@@ -299,6 +299,18 @@ struct PcInfoArgs {
     #[arg(long)]
     toml: bool,
 
+    /// Output system report in HTML format (interactive dashboard page)
+    #[arg(long)]
+    html: bool,
+
+    /// Output system report as an SVG status badge (for GitHub Profile READMEs)
+    #[arg(long, alias = "badge")]
+    svg: bool,
+
+    /// Output compact fastfetch/neofetch-style text summary
+    #[arg(long, short = 's')]
+    summary: bool,
+
     /// Launch interactive Ratatui TUI Dashboard
     #[arg(long, short)]
     tui: bool,
@@ -617,6 +629,15 @@ fn cmd_pc_info(args: PcInfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     } else if args.toml {
         let report = pc_info::collect_system_report();
         println!("{}", report.to_toml()?);
+    } else if args.html {
+        let report = pc_info::collect_system_report();
+        println!("{}", report.to_html());
+    } else if args.svg {
+        let report = pc_info::collect_system_report();
+        println!("{}", report.to_svg());
+    } else if args.summary {
+        let report = pc_info::collect_system_report();
+        println!("{}", report.to_summary());
     } else {
         pc_info::run_tui()?;
     }

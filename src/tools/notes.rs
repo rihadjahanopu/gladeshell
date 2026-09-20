@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind, EnableMouseCapture, DisableMouseCapture, EnableBracketedPaste, DisableBracketedPaste},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -21,6 +21,29 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame, Terminal,
 };
+
+fn is_ctrl_v(key: &KeyEvent) -> bool {
+    match key.code {
+        KeyCode::Char('v') | KeyCode::Char('V') if key.modifiers.contains(KeyModifiers::CONTROL) => true,
+        KeyCode::Char('\x16') => true,
+        _ => false,
+    }
+}
+
+fn sanitize_text(text: &str) -> String {
+    let text = text.replace("\r\n", "\n").replace('\r', "\n");
+    let mut clean = String::with_capacity(text.len());
+    for c in text.chars() {
+        if c == '\n' || !c.is_control() {
+            if c == '\t' {
+                clean.push_str("    ");
+            } else {
+                clean.push(c);
+            }
+        }
+    }
+    clean
+}
 
 // ── Colour Palette (fkill & gwip consistent dark violet/teal) ───────────────
 const C_BG: Color = Color::Rgb(8, 12, 22);
@@ -76,11 +99,11 @@ pub struct ActionItem {
 
 pub const ACTION_ITEMS: &[ActionItem] = &[
     ActionItem { label: "Edit Content",    desc: "Edit note text in interactive buffer",  emoji: "✏️", shortcut: "Enter / e" },
-    ActionItem { label: "Copy Content",    desc: "Copy note text strictly to clipboard", emoji: "📋", shortcut: "c"         },
-    ActionItem { label: "Open VS Code",    desc: "Open note file in VS Code editor",      emoji: "💻", shortcut: "Ctrl+V"    },
-    ActionItem { label: "Open Folder",     desc: "Open containing folder in file manager",emoji: "📂", shortcut: "o"         },
+    ActionItem { label: "Copy Content",    desc: "Copy note text strictly to clipboard", emoji: "📋", shortcut: "Ctrl+C"    },
+    ActionItem { label: "Open VS Code",    desc: "Open note file in VS Code editor",      emoji: "💻", shortcut: "F10"       },
+    ActionItem { label: "Open Folder",     desc: "Open containing folder in file manager",emoji: "📂", shortcut: "Ctrl+O"    },
     ActionItem { label: "Note Statistics", desc: "View word, line, and character stats",  emoji: "📊", shortcut: "s"         },
-    ActionItem { label: "Delete Note",     desc: "Delete note file permanently",          emoji: "🗑️", shortcut: "d"         },
+    ActionItem { label: "Delete Note",     desc: "Delete note file permanently",          emoji: "🗑️", shortcut: "Ctrl+D / Delete" },
     ActionItem { label: "Back to Catalog", desc: "Return to notes search catalog",        emoji: "🔙", shortcut: "Esc"       },
 ];
 
@@ -110,6 +133,12 @@ pub struct NotesApp {
     pub is_editing_content: bool,
     pub edit_buffer: String,
 
+    // Interactive 2D Editor State
+    pub edit_lines: Vec<String>,
+    pub cursor_line: usize,
+    pub cursor_col: usize,
+    pub editor_scroll_top: usize,
+
     modal: Modal,
 }
 
@@ -127,6 +156,10 @@ impl NotesApp {
             action_cursor: 0,
             is_editing_content: false,
             edit_buffer: String::new(),
+            edit_lines: Vec::new(),
+            cursor_line: 0,
+            cursor_col: 0,
+            editor_scroll_top: 0,
             modal: Modal::None,
         };
         app.load_notes();
@@ -156,6 +189,7 @@ impl NotesApp {
                                         .map(format_system_time)
                                         .unwrap_or_else(|_| "—".to_string());
                                     let content = fs::read_to_string(&file_path).unwrap_or_default();
+                                    let content = sanitize_text(&content);
                                     self.items.push(NoteItem {
                                         category: cat_name.clone(),
                                         title: stem,
@@ -260,28 +294,231 @@ impl NotesApp {
     pub fn open_detail_page(&mut self) {
         if let Some(note) = self.selected_note() {
             self.edit_buffer = note.content.clone();
+            self.init_editor_state();
             self.page = AppPage::Detail;
             self.action_cursor = 0;
             self.is_editing_content = false;
         }
     }
 
+    pub fn init_editor_state(&mut self) {
+        self.edit_buffer = sanitize_text(&self.edit_buffer);
+        let lines: Vec<String> = if self.edit_buffer.is_empty() {
+            vec![String::new()]
+        } else {
+            self.edit_buffer.split('\n').map(|s| s.to_string()).collect()
+        };
+        self.edit_lines = lines;
+        self.cursor_line = 0;
+        self.cursor_col = 0;
+        self.editor_scroll_top = 0;
+    }
+
+    pub fn sync_edit_buffer(&mut self) {
+        self.edit_buffer = self.edit_lines.join("\n");
+    }
+
+    pub fn clamp_cursor(&mut self) {
+        if self.edit_lines.is_empty() {
+            self.edit_lines.push(String::new());
+        }
+        if self.cursor_line >= self.edit_lines.len() {
+            self.cursor_line = self.edit_lines.len().saturating_sub(1);
+        }
+        let char_cnt = self.edit_lines[self.cursor_line].chars().count();
+        if self.cursor_col > char_cnt {
+            self.cursor_col = char_cnt;
+        }
+    }
+
+    pub fn ensure_cursor_visible(&mut self, viewport_h: usize) {
+        if viewport_h == 0 { return; }
+        if self.cursor_line < self.editor_scroll_top {
+            self.editor_scroll_top = self.cursor_line;
+        } else if self.cursor_line >= self.editor_scroll_top + viewport_h {
+            self.editor_scroll_top = self.cursor_line + 1 - viewport_h;
+        }
+    }
+
+    pub fn move_cursor_up(&mut self) {
+        if self.cursor_line > 0 {
+            self.cursor_line -= 1;
+            self.clamp_cursor();
+        }
+    }
+
+    pub fn move_cursor_down(&mut self) {
+        if self.cursor_line + 1 < self.edit_lines.len() {
+            self.cursor_line += 1;
+            self.clamp_cursor();
+        }
+    }
+
+    pub fn move_cursor_left(&mut self) {
+        if self.cursor_col > 0 {
+            self.cursor_col -= 1;
+        } else if self.cursor_line > 0 {
+            self.cursor_line -= 1;
+            self.cursor_col = self.edit_lines[self.cursor_line].chars().count();
+        }
+    }
+
+    pub fn move_cursor_right(&mut self) {
+        let char_cnt = self.edit_lines[self.cursor_line].chars().count();
+        if self.cursor_col < char_cnt {
+            self.cursor_col += 1;
+        } else if self.cursor_line + 1 < self.edit_lines.len() {
+            self.cursor_line += 1;
+            self.cursor_col = 0;
+        }
+    }
+
+    pub fn insert_char(&mut self, c: char) {
+        self.clamp_cursor();
+        let line = &mut self.edit_lines[self.cursor_line];
+        let byte_idx = line
+            .char_indices()
+            .nth(self.cursor_col)
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| line.len());
+        line.insert(byte_idx, c);
+        self.cursor_col += 1;
+        self.sync_edit_buffer();
+    }
+
+    pub fn insert_newline(&mut self) {
+        self.clamp_cursor();
+        let line = &self.edit_lines[self.cursor_line];
+        let byte_idx = line
+            .char_indices()
+            .nth(self.cursor_col)
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| line.len());
+        let left = line[..byte_idx].to_string();
+        let right = line[byte_idx..].to_string();
+        self.edit_lines[self.cursor_line] = left;
+        self.cursor_line += 1;
+        self.edit_lines.insert(self.cursor_line, right);
+        self.cursor_col = 0;
+        self.sync_edit_buffer();
+    }
+
+    pub fn backspace(&mut self) {
+        self.clamp_cursor();
+        if self.cursor_col > 0 {
+            let line = &mut self.edit_lines[self.cursor_line];
+            if let Some((byte_idx, _)) = line.char_indices().nth(self.cursor_col - 1) {
+                line.remove(byte_idx);
+                self.cursor_col -= 1;
+            }
+        } else if self.cursor_line > 0 {
+            let current_line = self.edit_lines.remove(self.cursor_line);
+            self.cursor_line -= 1;
+            let prev_len = self.edit_lines[self.cursor_line].chars().count();
+            self.edit_lines[self.cursor_line].push_str(&current_line);
+            self.cursor_col = prev_len;
+        }
+        self.sync_edit_buffer();
+    }
+
+    pub fn delete_char(&mut self) {
+        self.clamp_cursor();
+        let char_cnt = self.edit_lines[self.cursor_line].chars().count();
+        if self.cursor_col < char_cnt {
+            let line = &mut self.edit_lines[self.cursor_line];
+            if let Some((byte_idx, _)) = line.char_indices().nth(self.cursor_col) {
+                line.remove(byte_idx);
+            }
+        } else if self.cursor_line + 1 < self.edit_lines.len() {
+            let next_line = self.edit_lines.remove(self.cursor_line + 1);
+            self.edit_lines[self.cursor_line].push_str(&next_line);
+        }
+        self.sync_edit_buffer();
+    }
+
+    pub fn paste_text_to_editor(&mut self, text: &str) {
+        let clean = sanitize_text(text);
+        if clean.is_empty() { return; }
+        let parts: Vec<&str> = clean.split('\n').collect();
+        self.clamp_cursor();
+
+        if parts.len() == 1 {
+            let line = &mut self.edit_lines[self.cursor_line];
+            let byte_idx = line
+                .char_indices()
+                .nth(self.cursor_col)
+                .map(|(i, _)| i)
+                .unwrap_or_else(|| line.len());
+            line.insert_str(byte_idx, parts[0]);
+            self.cursor_col += parts[0].chars().count();
+        } else {
+            let line = &self.edit_lines[self.cursor_line];
+            let byte_idx = line
+                .char_indices()
+                .nth(self.cursor_col)
+                .map(|(i, _)| i)
+                .unwrap_or_else(|| line.len());
+            let left = line[..byte_idx].to_string();
+            let right = line[byte_idx..].to_string();
+
+            self.edit_lines[self.cursor_line] = format!("{}{}", left, parts[0]);
+            let n = parts.len();
+            for (i, p) in parts[1..n - 1].iter().enumerate() {
+                self.edit_lines.insert(self.cursor_line + 1 + i, p.to_string());
+            }
+            let last_part = parts[n - 1];
+            let last_part_len = last_part.chars().count();
+            let new_last = format!("{}{}", last_part, right);
+            self.edit_lines.insert(self.cursor_line + n - 1, new_last);
+
+            self.cursor_line += n - 1;
+            self.cursor_col = last_part_len;
+        }
+        self.sync_edit_buffer();
+        self.status_msg = Some(("📋 Pasted content into editor".to_string(), false));
+    }
+
+    pub fn paste_clipboard_to_editor(&mut self) {
+        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+            if let Ok(text) = clipboard.get_text() {
+                self.paste_text_to_editor(&text);
+            }
+        }
+    }
+
     pub fn open_in_vscode(&mut self) {
         if let Some(note) = self.selected_note() {
             let path = &note.file_path;
-            match Command::new("code").arg(path).spawn() {
-                Ok(_) => {
-                    self.status_msg = Some((format!("💻 Opened '{}' in VS Code", note.title), false));
-                }
-                Err(_) => {
-                    if let Ok(editor) = std::env::var("EDITOR") {
-                        let _ = Command::new(editor).arg(path).spawn();
-                        self.status_msg = Some((format!("💻 Opened '{}' in $EDITOR", note.title), false));
-                    } else {
-                        self.status_msg = Some(("❌ Could not launch VS Code ('code' not found)".to_string(), true));
-                    }
+            if Command::new("code").arg(path).spawn().is_ok() {
+                self.status_msg = Some((format!("💻 Opened '{}' in VS Code", note.title), false));
+                return;
+            }
+            if Command::new("code-insiders").arg(path).spawn().is_ok() {
+                self.status_msg = Some((format!("💻 Opened '{}' in VS Code Insiders", note.title), false));
+                return;
+            }
+            if let Ok(editor) = std::env::var("EDITOR") {
+                if Command::new(editor).arg(path).spawn().is_ok() {
+                    self.status_msg = Some((format!("💻 Opened '{}' in $EDITOR", note.title), false));
+                    return;
                 }
             }
+            #[cfg(target_os = "linux")]
+            let res = Command::new("xdg-open").arg(path).spawn();
+            #[cfg(target_os = "macos")]
+            let res = Command::new("open").arg(path).spawn();
+            #[cfg(target_os = "windows")]
+            let res = Command::new("explorer").arg(path).spawn();
+            #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+            let res = Command::new("xdg-open").arg(path).spawn();
+
+            if res.is_ok() {
+                self.status_msg = Some((format!("💻 Opened '{}' with default editor", note.title), false));
+            } else {
+                self.status_msg = Some(("❌ Could not launch VS Code ('code' command not found in PATH)".to_string(), true));
+            }
+        } else {
+            self.status_msg = Some(("⚠ No note selected to open in VS Code".to_string(), true));
         }
     }
 
@@ -369,211 +606,323 @@ impl NotesApp {
         loop {
             terminal.draw(|f| self.render_ui(f))?;
 
-            if let Event::Key(key) = event::read()? {
-                if key.kind != KeyEventKind::Press { continue; }
-
-                // ── Modal handling ────────────────────────────────────────────
-                match &self.modal.clone() {
-                    Modal::ConfirmDelete(_) => {
-                        match key.code {
-                            KeyCode::Char('y') | KeyCode::Char('Y') => self.delete_selected(),
-                            _ => self.modal = Modal::None,
+            match event::read()? {
+                Event::Paste(text) => {
+                    let clean = sanitize_text(&text);
+                    match &self.modal.clone() {
+                        Modal::NewNoteField(active, cat, title, content) => {
+                            let (active, mut cat, mut title, mut content) = (*active, cat.clone(), title.clone(), content.clone());
+                            if active == 0 { cat.push_str(&clean); }
+                            else if active == 1 { title.push_str(&clean); }
+                            else { content.push_str(&clean); }
+                            self.modal = Modal::NewNoteField(active, cat, title, content);
                         }
-                        continue;
-                    }
-                    Modal::NewNoteField(active, cat, title, content) => {
-                        let (mut active, mut cat, mut title, mut content) = (*active, cat.clone(), title.clone(), content.clone());
-                        match (key.code, key.modifiers) {
-                            (KeyCode::Esc, _) => { self.modal = Modal::None; }
-                            (KeyCode::Tab, _) => {
-                                active = (active + 1) % 3;
-                                self.modal = Modal::NewNoteField(active, cat, title, content);
-                            }
-                            (KeyCode::Char('s'), KeyModifiers::CONTROL)
-                            | (KeyCode::Enter, KeyModifiers::CONTROL) => {
-                                let c = cat.clone();
-                                let t = title.clone();
-                                let cnt = content.clone();
-                                self.create_note(&c, &t, &cnt);
-                            }
-                            (KeyCode::Enter, _) => {
-                                if active == 0 {
-                                    active = 1;
-                                    self.modal = Modal::NewNoteField(active, cat, title, content);
-                                } else if active == 1 {
-                                    active = 2;
-                                    self.modal = Modal::NewNoteField(active, cat, title, content);
-                                } else {
-                                    content.push('\n');
-                                    self.modal = Modal::NewNoteField(active, cat, title, content);
+                        Modal::ConfirmDelete(_) => {}
+                        Modal::None => {
+                            if self.page == AppPage::Detail {
+                                if self.is_editing_content {
+                                    self.paste_text_to_editor(&clean);
                                 }
+                            } else {
+                                self.query.push_str(&clean);
+                                self.filter_items();
                             }
-                            (KeyCode::Backspace, _) => {
-                                if active == 0 { cat.pop(); }
-                                else if active == 1 { title.pop(); }
-                                else { content.pop(); }
-                                self.modal = Modal::NewNoteField(active, cat, title, content);
-                            }
-                            (KeyCode::Char(c), _) => {
-                                if active == 0 { cat.push(c); }
-                                else if active == 1 { title.push(c); }
-                                else { content.push(c); }
-                                self.modal = Modal::NewNoteField(active, cat, title, content);
-                            }
-                            _ => {}
                         }
-                        continue;
                     }
-                    Modal::None => {}
                 }
 
-                // ── Page 2 GWIP-style UX Handling ─────────────────────────────
-                if self.page == AppPage::Detail {
-                    if self.is_editing_content {
-                        // Right Pane Note Content Editor
-                        match (key.code, key.modifiers) {
-                            (KeyCode::Esc, _) | (KeyCode::Left, KeyModifiers::NONE) => {
-                                self.is_editing_content = false;
-                            }
-                            (KeyCode::Char('s'), KeyModifiers::CONTROL)
-                            | (KeyCode::Enter, KeyModifiers::CONTROL) => {
-                                self.save_current_detail_edit();
-                            }
-                            (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                                self.copy_selected_note_content();
-                            }
-                            (KeyCode::Enter, _) => {
-                                self.edit_buffer.push('\n');
-                            }
-                            (KeyCode::Tab, _) => {
-                                self.edit_buffer.push_str("    ");
-                            }
-                            (KeyCode::Backspace, _) => {
-                                self.edit_buffer.pop();
-                            }
-                            (KeyCode::Char(c), _) => {
-                                self.edit_buffer.push(c);
-                            }
-                            _ => {}
+                Event::Mouse(mouse) => match mouse.kind {
+                    MouseEventKind::ScrollUp => {
+                        if self.page == AppPage::List {
+                            self.scroll_offset = self.scroll_offset.saturating_sub(3);
+                        } else {
+                            self.editor_scroll_top = self.editor_scroll_top.saturating_sub(3);
                         }
-                    } else {
-                        // Left Pane Action Menu Navigation
-                        match (key.code, key.modifiers) {
-                            (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) => {
-                                self.page = AppPage::List;
+                    }
+                    MouseEventKind::ScrollDown => {
+                        if self.page == AppPage::List {
+                            self.scroll_offset = self.scroll_offset.saturating_add(3);
+                        } else {
+                            self.editor_scroll_top = self.editor_scroll_top.saturating_add(3);
+                        }
+                    }
+                    _ => {}
+                },
+
+                Event::Key(key) => {
+                    if key.kind != KeyEventKind::Press { continue; }
+
+                    // ── Modal handling ────────────────────────────────────────────
+                    match &self.modal.clone() {
+                        Modal::ConfirmDelete(_) => {
+                            match key.code {
+                                KeyCode::Char('y') | KeyCode::Char('Y') => self.delete_selected(),
+                                _ => self.modal = Modal::None,
                             }
-                            (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => {
-                                if self.action_cursor > 0 { self.action_cursor -= 1; }
-                            }
-                            (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => {
-                                if self.action_cursor < ACTION_ITEMS.len() - 1 { self.action_cursor += 1; }
-                            }
-                            (KeyCode::Tab, _) | (KeyCode::Right, _) => {
-                                self.is_editing_content = true;
-                            }
-                            (KeyCode::Enter, _) => {
-                                match self.action_cursor {
-                                    0 => self.is_editing_content = true,
-                                    1 => self.copy_selected_note_content(),
-                                    2 => self.open_in_vscode(),
-                                    3 => self.open_folder(),
-                                    4 => {
-                                        let words = self.edit_buffer.split_whitespace().count();
-                                        let chars = self.edit_buffer.chars().count();
-                                        self.status_msg = Some((format!("📊 Note stats: {words} words, {chars} characters"), false));
+                            continue;
+                        }
+                        Modal::NewNoteField(active, cat, title, content) => {
+                            let (mut active, mut cat, mut title, mut content) = (*active, cat.clone(), title.clone(), content.clone());
+
+                            if is_ctrl_v(&key) {
+                                if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                                    if let Ok(pasted) = clipboard.get_text() {
+                                        let clean = sanitize_text(&pasted);
+                                        if active == 0 { cat.push_str(&clean); }
+                                        else if active == 1 { title.push_str(&clean); }
+                                        else { content.push_str(&clean); }
+                                        self.modal = Modal::NewNoteField(active, cat, title, content);
                                     }
-                                    5 => {
+                                }
+                                continue;
+                            }
+
+                            match (key.code, key.modifiers) {
+                                (KeyCode::Esc, _) => { self.modal = Modal::None; }
+                                (KeyCode::Tab, _) => {
+                                    active = (active + 1) % 3;
+                                    self.modal = Modal::NewNoteField(active, cat, title, content);
+                                }
+                                (KeyCode::Char('s'), KeyModifiers::CONTROL)
+                                | (KeyCode::Enter, KeyModifiers::CONTROL) => {
+                                    let c = cat.clone();
+                                    let t = title.clone();
+                                    let cnt = content.clone();
+                                    self.create_note(&c, &t, &cnt);
+                                }
+                                (KeyCode::Enter, _) => {
+                                    if active == 0 {
+                                        active = 1;
+                                        self.modal = Modal::NewNoteField(active, cat, title, content);
+                                    } else if active == 1 {
+                                        active = 2;
+                                        self.modal = Modal::NewNoteField(active, cat, title, content);
+                                    } else {
+                                        content.push('\n');
+                                        self.modal = Modal::NewNoteField(active, cat, title, content);
+                                    }
+                                }
+                                (KeyCode::Backspace, _) => {
+                                    if active == 0 { cat.pop(); }
+                                    else if active == 1 { title.pop(); }
+                                    else { content.pop(); }
+                                    self.modal = Modal::NewNoteField(active, cat, title, content);
+                                }
+                                (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                                    if active == 0 { cat.push(c); }
+                                    else if active == 1 { title.push(c); }
+                                    else { content.push(c); }
+                                    self.modal = Modal::NewNoteField(active, cat, title, content);
+                                }
+                                _ => {}
+                            }
+                            continue;
+                        }
+                        Modal::None => {}
+                    }
+
+                    // ── Page 2 GWIP-style UX Handling ─────────────────────────────
+                    if self.page == AppPage::Detail {
+                        if self.is_editing_content {
+                            // Right Pane Note Content Editor
+                            if is_ctrl_v(&key) {
+                                self.paste_clipboard_to_editor();
+                            } else {
+                                match (key.code, key.modifiers) {
+                                    (KeyCode::Esc, _) => {
+                                        self.is_editing_content = false;
+                                    }
+                                    (KeyCode::F(10), _) => {
+                                        self.open_in_vscode();
+                                    }
+                                    (KeyCode::Char('o'), KeyModifiers::CONTROL) => {
+                                        self.open_folder();
+                                    }
+                                    (KeyCode::Char('s'), KeyModifiers::CONTROL)
+                                    | (KeyCode::Enter, KeyModifiers::CONTROL) => {
+                                        self.save_current_detail_edit();
+                                    }
+                                    (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                                        self.copy_selected_note_content();
+                                    }
+                                    (KeyCode::Up, _) => self.move_cursor_up(),
+                                    (KeyCode::Down, _) => self.move_cursor_down(),
+                                    (KeyCode::Left, _) => self.move_cursor_left(),
+                                    (KeyCode::Right, _) => self.move_cursor_right(),
+                                    (KeyCode::Home, _) => self.cursor_col = 0,
+                                    (KeyCode::End, _) => {
+                                        if !self.edit_lines.is_empty() {
+                                            self.cursor_col = self.edit_lines[self.cursor_line].chars().count();
+                                        }
+                                    }
+                                    (KeyCode::PageUp, _) => {
+                                        for _ in 0..10 { self.move_cursor_up(); }
+                                    }
+                                    (KeyCode::PageDown, _) => {
+                                        for _ in 0..10 { self.move_cursor_down(); }
+                                    }
+                                    (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
+                                        self.editor_scroll_top = self.editor_scroll_top.saturating_sub(5);
+                                    }
+                                    (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
+                                        self.editor_scroll_top = self.editor_scroll_top.saturating_add(5);
+                                    }
+                                    (KeyCode::Enter, _) => self.insert_newline(),
+                                    (KeyCode::Tab, _) => {
+                                        self.insert_char(' ');
+                                        self.insert_char(' ');
+                                        self.insert_char(' ');
+                                        self.insert_char(' ');
+                                    }
+                                    (KeyCode::Backspace, _) => self.backspace(),
+                                    (KeyCode::Delete, _) => self.delete_char(),
+                                    (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                                        self.insert_char(c);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        } else {
+                            // Left Pane Action Menu Navigation
+                            if is_ctrl_v(&key) {
+                                self.is_editing_content = true;
+                                self.paste_clipboard_to_editor();
+                            } else {
+                                match (key.code, key.modifiers) {
+                                    (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) => {
+                                        self.page = AppPage::List;
+                                    }
+                                    (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => {
+                                        if self.action_cursor > 0 { self.action_cursor -= 1; }
+                                    }
+                                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => {
+                                        if self.action_cursor < ACTION_ITEMS.len() - 1 { self.action_cursor += 1; }
+                                    }
+                                    (KeyCode::Tab, _) | (KeyCode::Right, _) => {
+                                        self.is_editing_content = true;
+                                    }
+                                    (KeyCode::Enter, _) => {
+                                        match self.action_cursor {
+                                            0 => self.is_editing_content = true,
+                                            1 => self.copy_selected_note_content(),
+                                            2 => self.open_in_vscode(),
+                                            3 => self.open_folder(),
+                                            4 => {
+                                                let words = self.edit_buffer.split_whitespace().count();
+                                                let chars = self.edit_buffer.chars().count();
+                                                self.status_msg = Some((format!("📊 Note stats: {words} words, {chars} characters"), false));
+                                            }
+                                            5 => {
+                                                if let Some(sel) = self.list_state.selected() {
+                                                    self.modal = Modal::ConfirmDelete(sel);
+                                                }
+                                            }
+                                            6 => self.page = AppPage::List,
+                                            _ => {}
+                                        }
+                                    }
+                                    (KeyCode::Char('e'), KeyModifiers::NONE) => self.is_editing_content = true,
+                                    (KeyCode::Char('c'), KeyModifiers::CONTROL) => self.copy_selected_note_content(),
+                                    (KeyCode::F(10), _) => self.open_in_vscode(),
+                                    (KeyCode::Char('o'), KeyModifiers::CONTROL) => self.open_folder(),
+                                    (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                                        self.modal = Modal::NewNoteField(0, String::new(), String::new(), String::new());
+                                    }
+                                    (KeyCode::Char('d'), KeyModifiers::CONTROL) | (KeyCode::Delete, _) => {
                                         if let Some(sel) = self.list_state.selected() {
                                             self.modal = Modal::ConfirmDelete(sel);
                                         }
                                     }
-                                    6 => self.page = AppPage::List,
                                     _ => {}
                                 }
                             }
-                            (KeyCode::Char('e'), KeyModifiers::NONE) => self.is_editing_content = true,
-                            (KeyCode::Char('c'), KeyModifiers::NONE) | (KeyCode::Char('y'), KeyModifiers::NONE) => self.copy_selected_note_content(),
-                            (KeyCode::Char('v'), KeyModifiers::CONTROL) => self.open_in_vscode(),
-                            (KeyCode::Char('o'), KeyModifiers::NONE) => self.open_folder(),
-                            (KeyCode::Char('d'), KeyModifiers::NONE) => {
+                        }
+                        continue;
+                    }
+
+                    // ── Page 1 Normal mode ─────────────────────────────────────────
+                    if is_ctrl_v(&key) {
+                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                            if let Ok(pasted) = clipboard.get_text() {
+                                let clean = sanitize_text(&pasted);
+                                self.query.push_str(&clean);
+                                self.filter_items();
+                            }
+                        }
+                    } else {
+                        match (key.code, key.modifiers) {
+                            (KeyCode::Esc, _) => {
+                                if !self.query.is_empty() {
+                                    self.query.clear();
+                                    self.filter_items();
+                                } else {
+                                    return Ok(None);
+                                }
+                            }
+                            (KeyCode::Char('q'), KeyModifiers::CONTROL) => return Ok(None),
+
+                            // Open Page 2 (GWIP Note Detail & Action UX)
+                            (KeyCode::Enter, _) => {
+                                self.open_detail_page();
+                            }
+
+                            // Open in VS Code (F10)
+                            (KeyCode::F(10), _) => {
+                                self.open_in_vscode();
+                            }
+
+                            // Open folder (Ctrl+O)
+                            (KeyCode::Char('o'), KeyModifiers::CONTROL) => {
+                                self.open_folder();
+                            }
+
+                            // New note shortcut (Ctrl+N)
+                            (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                                self.modal = Modal::NewNoteField(0, String::new(), String::new(), String::new());
+                            }
+
+                            // Copy shortcut (Ctrl+C)
+                            (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                                self.copy_selected_note_content();
+                            }
+
+                            // Delete shortcut (Ctrl+D / Delete)
+                            (KeyCode::Char('d'), KeyModifiers::CONTROL) | (KeyCode::Delete, _) => {
                                 if let Some(sel) = self.list_state.selected() {
                                     self.modal = Modal::ConfirmDelete(sel);
                                 }
                             }
+
+                            (KeyCode::Up, _) => self.move_select(-1),
+                            (KeyCode::Down, _) => self.move_select(1),
+                            (KeyCode::PageUp, _) => self.move_select(-10),
+                            (KeyCode::PageDown, _) => self.move_select(10),
+                            (KeyCode::Home, _) => { self.list_state.select(Some(0)); self.scroll_offset = 0; }
+                            (KeyCode::End, _) => {
+                                let last = self.filtered_indices.len().saturating_sub(1);
+                                self.list_state.select(Some(last));
+                            }
+
+                            // Scroll preview
+                            (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
+                                self.scroll_offset = self.scroll_offset.saturating_sub(5);
+                            }
+
+                            // Search typing
+                            (KeyCode::Backspace, _) => {
+                                self.query.pop();
+                                self.filter_items();
+                            }
+                            (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                                self.query.push(c);
+                                self.filter_items();
+                            }
+
                             _ => {}
                         }
                     }
-                    continue;
                 }
-
-                // ── Page 1 Normal mode ─────────────────────────────────────────
-                match (key.code, key.modifiers) {
-                    (KeyCode::Esc, _)
-                    | (KeyCode::Char('q'), KeyModifiers::NONE) => return Ok(None),
-
-                    // Open Page 2 (GWIP Note Detail & Action UX)
-                    (KeyCode::Enter, _) | (KeyCode::Char('e'), KeyModifiers::NONE) => {
-                        self.open_detail_page();
-                    }
-
-                    // Copy ONLY note content to clipboard
-                    (KeyCode::Char('c'), KeyModifiers::NONE)
-                    | (KeyCode::Char('y'), KeyModifiers::NONE) => {
-                        self.copy_selected_note_content();
-                    }
-
-                    // Open in VS Code directly
-                    (KeyCode::Char('v'), KeyModifiers::CONTROL) => {
-                        self.open_in_vscode();
-                    }
-
-                    // Open containing folder
-                    (KeyCode::Char('o'), KeyModifiers::NONE) => {
-                        self.open_folder();
-                    }
-
-                    (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => self.move_select(-1),
-                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => self.move_select(1),
-                    (KeyCode::PageUp, _) => self.move_select(-10),
-                    (KeyCode::PageDown, _) => self.move_select(10),
-                    (KeyCode::Home, _) => { self.list_state.select(Some(0)); self.scroll_offset = 0; }
-                    (KeyCode::End, _) => {
-                        let last = self.filtered_indices.len().saturating_sub(1);
-                        self.list_state.select(Some(last));
-                    }
-
-                    // Scroll preview
-                    (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
-                        self.scroll_offset = self.scroll_offset.saturating_sub(5);
-                    }
-                    (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
-                        self.scroll_offset = self.scroll_offset.saturating_add(5);
-                    }
-
-                    // Delete
-                    (KeyCode::Delete, _) | (KeyCode::Char('d'), KeyModifiers::NONE) => {
-                        if let Some(sel) = self.list_state.selected() {
-                            self.modal = Modal::ConfirmDelete(sel);
-                        }
-                    }
-
-                    // New note
-                    (KeyCode::Char('n'), KeyModifiers::NONE) => {
-                        self.modal = Modal::NewNoteField(0, String::new(), String::new(), String::new());
-                    }
-
-                    // Search typing
-                    (KeyCode::Backspace, _) => {
-                        self.query.pop();
-                        self.filter_items();
-                    }
-                    (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
-                        self.query.push(c);
-                        self.filter_items();
-                    }
-
-                    _ => {}
-                }
+                _ => {}
             }
         }
     }
@@ -679,13 +1028,22 @@ impl NotesApp {
             Span::styled("↵ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
             Span::styled("Open", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("n ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+N ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
             Span::styled("New", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("d ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+D ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
             Span::styled("Delete", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+V ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+C ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Copy", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_BORDER)),
+            Span::styled("Ctrl+V ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Paste", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_BORDER)),
+            Span::styled("Ctrl+O ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled("Folder", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_BORDER)),
+            Span::styled("F10 ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
             Span::styled("⎋ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
@@ -772,10 +1130,22 @@ impl NotesApp {
             Span::styled("↵ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
             Span::styled("Select", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("d ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+N ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("New", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_BORDER)),
+            Span::styled("Ctrl+D ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
             Span::styled("Delete", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
+            Span::styled("Ctrl+C ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Copy", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_BORDER)),
             Span::styled("Ctrl+V ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled("Paste", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_BORDER)),
+            Span::styled("Ctrl+O ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled("Folder", Style::default().fg(C_DIM)),
+            Span::styled("  ·  ", Style::default().fg(C_BORDER)),
+            Span::styled("F10 ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
             Span::styled("⎋ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
@@ -847,7 +1217,7 @@ impl NotesApp {
         );
     }
 
-    fn draw_detail_right_panel(&self, f: &mut Frame, area: Rect) {
+    fn draw_detail_right_panel(&mut self, f: &mut Frame, area: Rect) {
         let editor_active = self.is_editing_content;
 
         let inner_layout = Layout::default()
@@ -865,7 +1235,7 @@ impl NotesApp {
 
         let words = self.edit_buffer.split_whitespace().count();
         let chars = self.edit_buffer.chars().count();
-        let lines_cnt = self.edit_buffer.lines().count();
+        let lines_cnt = self.edit_lines.len();
         let file_bytes = self.edit_buffer.len();
 
         // ── 1. Note Info & Metrics Card ───────────────────────────────────────
@@ -899,6 +1269,11 @@ impl NotesApp {
         );
 
         // ── 2. Interactive Editor / Content Preview Box ───────────────────────
+        let viewport_h = inner_layout[1].height.saturating_sub(2) as usize;
+        if editor_active {
+            self.ensure_cursor_visible(viewport_h);
+        }
+
         let border_style = if editor_active {
             Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)
         } else {
@@ -906,14 +1281,22 @@ impl NotesApp {
         };
 
         let title_span = if editor_active {
-            Span::styled(" ✏️ EDIT NOTE CONTENT (ACTIVE — Ctrl+S to Save) ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD))
+            Span::styled(
+                format!(
+                    " ✏️ EDIT NOTE CONTENT (ACTIVE — Ctrl+S Save)  [Ln {}, Col {}] ",
+                    self.cursor_line + 1,
+                    self.cursor_col + 1
+                ),
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            )
         } else {
-            Span::styled(" 📄 NOTE CONTENT PREVIEW (Press Enter or e to edit) ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+            Span::styled(
+                format!(" 📄 NOTE CONTENT PREVIEW (Press Enter or e to edit — {} lines) ", self.edit_lines.len()),
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            )
         };
 
         let mut display_lines: Vec<Line> = Vec::new();
-        let lines_vec: Vec<&str> = self.edit_buffer.split('\n').collect();
-        let total = lines_vec.len();
 
         if self.edit_buffer.trim().is_empty() && !editor_active {
             display_lines.push(Line::from(Span::styled(
@@ -921,17 +1304,46 @@ impl NotesApp {
                 Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
             )));
         } else {
-            for (idx, line) in lines_vec.iter().enumerate() {
-                if editor_active && idx == total - 1 {
-                    display_lines.push(Line::from(vec![
-                        Span::raw("  "),
-                        Span::styled(*line, Style::default().fg(C_WHITE)),
-                        Span::styled("█", Style::default().fg(C_CYAN)),
-                    ]));
+            let start = self.editor_scroll_top.min(self.edit_lines.len().saturating_sub(1));
+            let end = (start + viewport_h.max(1)).min(self.edit_lines.len());
+
+            for line_idx in start..end {
+                let line_str = &self.edit_lines[line_idx];
+
+                if editor_active && line_idx == self.cursor_line {
+                    let char_count = line_str.chars().count();
+                    let col = self.cursor_col.min(char_count);
+
+                    let mut spans = vec![Span::raw("  ")];
+
+                    let byte_offset = line_str
+                        .char_indices()
+                        .nth(col)
+                        .map(|(i, _)| i)
+                        .unwrap_or_else(|| line_str.len());
+
+                    let head = &line_str[..byte_offset];
+                    let tail = &line_str[byte_offset..];
+
+                    spans.push(Span::styled(head, Style::default().fg(C_WHITE)));
+
+                    if let Some(c) = tail.chars().next() {
+                        let cursor_char = c.to_string();
+                        let rest = &tail[c.len_utf8()..];
+                        spans.push(Span::styled(
+                            cursor_char,
+                            Style::default().bg(C_CYAN).fg(C_BG).add_modifier(Modifier::BOLD),
+                        ));
+                        spans.push(Span::styled(rest, Style::default().fg(C_WHITE)));
+                    } else {
+                        spans.push(Span::styled("█", Style::default().fg(C_CYAN)));
+                    }
+
+                    display_lines.push(Line::from(spans));
                 } else {
                     display_lines.push(Line::from(vec![
                         Span::raw("  "),
-                        Span::styled(*line, Style::default().fg(C_CONTENT)),
+                        Span::styled(line_str.as_str(), Style::default().fg(C_CONTENT)),
                     ]));
                 }
             }
@@ -1317,14 +1729,14 @@ fn print_notes_help(root_dir: &PathBuf) {
 fn run_tui(app: &mut NotesApp) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture, EnableBracketedPaste)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let res = app.run_loop(&mut terminal);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture, DisableBracketedPaste)?;
     terminal.show_cursor()?;
 
     if let Ok(Some(note)) = res {
@@ -1525,6 +1937,110 @@ mod tests {
         let content_on_disk = fs::read_to_string(&file_p).unwrap();
         assert_eq!(content_on_disk, "Modified in Page 2 editor");
         assert_eq!(app.items[0].content, "Modified in Page 2 editor");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_is_ctrl_v_helper() {
+        let key_v_ctrl = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL);
+        let key_v_ctrl_upper = KeyEvent::new(KeyCode::Char('V'), KeyModifiers::CONTROL);
+        let key_v_ctrl_syn = KeyEvent::new(KeyCode::Char('\x16'), KeyModifiers::NONE);
+        let key_v_plain = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::NONE);
+
+        assert!(is_ctrl_v(&key_v_ctrl));
+        assert!(is_ctrl_v(&key_v_ctrl_upper));
+        assert!(is_ctrl_v(&key_v_ctrl_syn));
+        assert!(!is_ctrl_v(&key_v_plain));
+    }
+
+    #[test]
+    fn test_paste_text_to_editor_multiline() {
+        let dir = tmp();
+        let mut app = NotesApp::new(dir.clone());
+        app.edit_buffer = "Line 1\nLine 3".to_string();
+        app.init_editor_state();
+        app.cursor_line = 0;
+        app.cursor_col = 6;
+
+        app.paste_text_to_editor(" pasted\nLine 2");
+
+        assert_eq!(app.edit_lines.len(), 3);
+        assert_eq!(app.edit_lines[0], "Line 1 pasted");
+        assert_eq!(app.edit_lines[1], "Line 2");
+        assert_eq!(app.edit_lines[2], "Line 3");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_2d_editor_cursor_navigation_and_editing() {
+        let dir = tmp();
+        let cat = dir.join("General");
+        fs::create_dir_all(&cat).unwrap();
+        fs::write(cat.join("long_note.txt"), "Line 1\nLine 2\nLine 3").unwrap();
+
+        let mut app = NotesApp::new(dir.clone());
+        app.list_state.select(Some(0));
+        app.open_detail_page();
+
+        assert_eq!(app.edit_lines.len(), 3);
+        assert_eq!(app.cursor_line, 0);
+        assert_eq!(app.cursor_col, 0);
+
+        // Move down
+        app.move_cursor_down();
+        assert_eq!(app.cursor_line, 1);
+
+        // Move right
+        app.move_cursor_right();
+        assert_eq!(app.cursor_col, 1);
+
+        // Insert character
+        app.insert_char('X');
+        assert_eq!(app.edit_lines[1], "LXine 2");
+        assert_eq!(app.cursor_col, 2);
+
+        // Backspace
+        app.backspace();
+        assert_eq!(app.edit_lines[1], "Line 2");
+        assert_eq!(app.cursor_col, 1);
+
+        // Move up & insert newline
+        app.move_cursor_up();
+        app.cursor_col = 4; // after 'Line'
+        app.insert_newline();
+        assert_eq!(app.edit_lines.len(), 4);
+        assert_eq!(app.edit_lines[0], "Line");
+        assert_eq!(app.edit_lines[1], " 1");
+        assert_eq!(app.cursor_line, 1);
+        assert_eq!(app.cursor_col, 0);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_viewport_scrolling_and_auto_scroll() {
+        let dir = tmp();
+        let mut app = NotesApp::new(dir.clone());
+
+        // Create a 100 line note buffer
+        app.edit_buffer = (1..=100).map(|i| format!("Line {i}")).collect::<Vec<_>>().join("\n");
+        app.init_editor_state();
+
+        assert_eq!(app.edit_lines.len(), 100);
+        assert_eq!(app.editor_scroll_top, 0);
+
+        // Move cursor down 30 lines
+        for _ in 0..30 {
+            app.move_cursor_down();
+        }
+        assert_eq!(app.cursor_line, 30);
+
+        // Ensure visible with viewport height of 15 lines
+        app.ensure_cursor_visible(15);
+        assert!(app.editor_scroll_top <= 30);
+        assert!(app.editor_scroll_top + 15 > 30);
 
         let _ = fs::remove_dir_all(&dir);
     }

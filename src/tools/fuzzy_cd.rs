@@ -536,8 +536,8 @@ impl FuzzyCdApp {
                                 CfAction::OpenExplorer,
                             )));
                         }
-                        // Ctrl+V or F2 → Open selected item in VS Code
-                        (KeyCode::Char('v'), KeyModifiers::CONTROL) | (KeyCode::F(2), _) => {
+                        // F10 → Open selected item in VS Code
+                        (KeyCode::F(10), _) => {
                             if let Some(idx) = self.list_state.selected() {
                                 if let Some(&orig_idx) = self.filtered_indices.get(idx) {
                                     let item = &self.all_items[orig_idx];
@@ -846,7 +846,7 @@ impl FuzzyCdApp {
             Span::styled("e ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
             Span::styled("Explorer", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("Ctrl+V ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled("F10 ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
             Span::styled("⇥ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),

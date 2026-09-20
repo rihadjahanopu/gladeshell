@@ -823,7 +823,7 @@ fn tui_loop<B: ratatui::backend::Backend>(
                 Span::styled("Open  │ ", Style::default().fg(C_TEXT)),
                 Span::styled(" [Ctrl+C / F3] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
                 Span::styled("Copy Path  │ ", Style::default().fg(C_TEXT)),
-                Span::styled(" [F10/Ctrl+O] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+                Span::styled(" [F10] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
                 Span::styled("VS Code  │ ", Style::default().fg(C_TEXT)),
                 Span::styled(" [Esc] ", Style::default().fg(Color::Rgb(255, 85, 85)).add_modifier(Modifier::BOLD)),
                 Span::styled("Exit", Style::default().fg(C_TEXT)),
@@ -868,13 +868,6 @@ fn tui_loop<B: ratatui::backend::Backend>(
                         }
                     }
                     KeyCode::F(10) => {
-                        if let Some(i) = list_state.selected() {
-                            if let Some(item) = items.get(i) {
-                                return Ok(Some(FfAction::OpenCode(item.path.to_string_lossy().to_string())));
-                            }
-                        }
-                    }
-                    KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
                                 return Ok(Some(FfAction::OpenCode(item.path.to_string_lossy().to_string())));

@@ -154,17 +154,17 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
 
             match app.mode.clone() {
                 Mode::List => match (key.modifiers, key.code) {
-                    (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
+                    (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('q')) => break,
                     (_, KeyCode::Up) | (KeyModifiers::CONTROL, KeyCode::Char('p')) => app.move_up(),
                     (_, KeyCode::Down) | (KeyModifiers::CONTROL, KeyCode::Char('n')) => app.move_down(),
-                    (_, KeyCode::Char('a')) | (_, KeyCode::Char('i')) => {
+                    (KeyModifiers::CONTROL, KeyCode::Char('a')) | (KeyModifiers::CONTROL, KeyCode::Char('i')) => {
                         app.mode = Mode::Add;
                         app.input.clear();
                     }
-                    (_, KeyCode::Enter) | (_, KeyCode::Char('d')) | (_, KeyCode::Char(' ')) => {
+                    (_, KeyCode::Enter) | (_, KeyCode::Char(' ')) => {
                         app.complete_selected(&todo_file_c);
                     }
-                    (_, KeyCode::Char('c')) => {
+                    (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
                         if !app.tasks.is_empty() {
                             app.mode = Mode::ConfirmClear;
                         }
@@ -311,11 +311,11 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
                     Span::styled("↵ ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
                     Span::styled("Done", Style::default().fg(C_DIM)),
                     Span::styled("  ·  ", Style::default().fg(C_DIM)),
-                    Span::styled("n ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled("Ctrl+A ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
                     Span::styled("New", Style::default().fg(C_DIM)),
                     Span::styled("  ·  ", Style::default().fg(C_DIM)),
-                    Span::styled("d ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
-                    Span::styled("Delete", Style::default().fg(C_DIM)),
+                    Span::styled("Ctrl+C ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+                    Span::styled("Clear", Style::default().fg(C_DIM)),
                     Span::styled("  ·  ", Style::default().fg(C_DIM)),
                     Span::styled("⎋ ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
                     Span::styled("Quit ", Style::default().fg(C_DIM)),

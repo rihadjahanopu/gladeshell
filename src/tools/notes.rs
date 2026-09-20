@@ -789,13 +789,13 @@ impl NotesApp {
                                 self.paste_clipboard_to_editor();
                             } else {
                                 match (key.code, key.modifiers) {
-                                    (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) => {
+                                    (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
                                         self.page = AppPage::List;
                                     }
-                                    (KeyCode::Up, _) | (KeyCode::Char('k'), KeyModifiers::NONE) => {
+                                    (KeyCode::Up, _) => {
                                         if self.action_cursor > 0 { self.action_cursor -= 1; }
                                     }
-                                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => {
+                                    (KeyCode::Down, _) => {
                                         if self.action_cursor < ACTION_ITEMS.len() - 1 { self.action_cursor += 1; }
                                     }
                                     (KeyCode::Tab, _) | (KeyCode::Right, _) => {
@@ -821,7 +821,7 @@ impl NotesApp {
                                             _ => {}
                                         }
                                     }
-                                    (KeyCode::Char('e'), KeyModifiers::NONE) => self.is_editing_content = true,
+                                    (KeyCode::Char('e'), KeyModifiers::CONTROL) => self.is_editing_content = true,
                                     (KeyCode::Char('c'), KeyModifiers::CONTROL) => self.copy_selected_note_content(),
                                     (KeyCode::F(10), _) => self.open_in_vscode(),
                                     (KeyCode::Char('o'), KeyModifiers::CONTROL) => self.open_folder(),

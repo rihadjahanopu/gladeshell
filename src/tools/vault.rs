@@ -474,7 +474,7 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                             }
                         }
                     }
-                    (_, KeyCode::Char(' ')) | (_, KeyCode::Char('l')) | (_, KeyCode::Char('L')) => {
+                    (_, KeyCode::Char(' ')) | (KeyModifiers::CONTROL, KeyCode::Char('l')) => {
                         let sel = app.folder_state.selected().unwrap_or(0);
                         let has_parent = app.has_parent_folder();
                         let target_folder = if has_parent && sel == 0 {

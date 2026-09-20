@@ -231,11 +231,11 @@ impl ThemePickerApp {
 
                 match (key.code, key.modifiers) {
                     (KeyCode::Esc, _)
-                    | (KeyCode::Char('q'), KeyModifiers::NONE)
+                    | (KeyCode::Char('q'), KeyModifiers::CONTROL)
                     | (KeyCode::Char('c'), KeyModifiers::CONTROL) => break,
 
-                    (KeyCode::Up, _)   | (KeyCode::Char('k'), KeyModifiers::NONE) => self.move_select(-1),
-                    (KeyCode::Down, _) | (KeyCode::Char('j'), KeyModifiers::NONE) => self.move_select(1),
+                    (KeyCode::Up, _) => self.move_select(-1),
+                    (KeyCode::Down, _) => self.move_select(1),
                     (KeyCode::PageUp, _)   => self.move_select(-10),
                     (KeyCode::PageDown, _) => self.move_select(10),
                     (KeyCode::Home, _) => { self.list_state.select(Some(0)); }
@@ -244,8 +244,8 @@ impl ThemePickerApp {
                         self.list_state.select(Some(last));
                     }
 
-                    // Open Page 2: Color Customizer with 'e' (or 'c') when search query is empty
-                    (KeyCode::Char('e'), KeyModifiers::NONE) if self.query.is_empty() => {
+                    // Open Page 2: Color Customizer with Ctrl+E
+                    (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
                         self.status = None;
                         self.current_page = CurrentPage::ColorEditor;
                         self.color_element_idx = 0;
@@ -362,7 +362,7 @@ impl ThemePickerApp {
             Line::from(Span::styled(msg.clone(), Style::default().fg(col).add_modifier(Modifier::BOLD)))
         } else {
             Line::from(vec![
-                Span::styled(" ↑↓/jk ", Style::default().fg(C_DIM)),
+                Span::styled(" ↑↓ ", Style::default().fg(C_DIM)),
                 Span::styled("Navigate", Style::default().fg(C_DIM)),
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
                 Span::styled("Type ", Style::default().fg(C_DIM)),
@@ -374,10 +374,10 @@ impl ThemePickerApp {
                 Span::styled("Space ", Style::default().fg(C_ACCENT)),
                 Span::styled("Quick Apply", Style::default().fg(C_DIM)),
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("e ", Style::default().fg(C_YELLOW)),
+                Span::styled("Ctrl+E ", Style::default().fg(C_YELLOW)),
                 Span::styled("Edit Colors (Page 2)", Style::default().fg(C_DIM)),
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("q ", Style::default().fg(C_DIM)),
+                Span::styled("Esc/Ctrl+Q ", Style::default().fg(C_DIM)),
                 Span::styled("Quit", Style::default().fg(C_DIM)),
             ])
         };

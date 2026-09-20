@@ -520,10 +520,8 @@ impl FuzzyCdApp {
                                 CfAction::CdInto,
                             )));
                         }
-                        // [e] or Ctrl+E or F3 → Open selected item / folder in OS File Explorer
-                        (KeyCode::Char('e'), KeyModifiers::CONTROL)
-                        | (KeyCode::Char('e'), KeyModifiers::ALT)
-                        | (KeyCode::F(3), _) => {
+                        // Ctrl+O → Open selected item / folder in OS File Explorer
+                        (KeyCode::Char('o'), KeyModifiers::CONTROL) => {
                             if let Some(idx) = self.list_state.selected() {
                                 if let Some(&orig_idx) = self.filtered_indices.get(idx) {
                                     let item = &self.all_items[orig_idx];
@@ -565,19 +563,6 @@ impl FuzzyCdApp {
                                 self.query.pop();
                                 self.filter_items();
                             }
-                        }
-                        (KeyCode::Char('e'), KeyModifiers::NONE) if self.query.is_empty() => {
-                            if let Some(idx) = self.list_state.selected() {
-                                if let Some(&orig_idx) = self.filtered_indices.get(idx) {
-                                    let item = &self.all_items[orig_idx];
-                                    let path = item.path.to_string_lossy().to_string();
-                                    return Ok(Some((path, CfAction::OpenExplorer)));
-                                }
-                            }
-                            return Ok(Some((
-                                self.current_dir.to_string_lossy().to_string(),
-                                CfAction::OpenExplorer,
-                            )));
                         }
                         (KeyCode::Char(c), KeyModifiers::NONE)
                         | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
@@ -843,7 +828,7 @@ impl FuzzyCdApp {
             Span::styled("Ctrl+↵ ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
             Span::styled("Cd Here", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("e ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("Ctrl+O ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
             Span::styled("Explorer", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
             Span::styled("F10 ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),

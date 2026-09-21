@@ -33,54 +33,61 @@ const NC: &str = "\x1b[0m";
 
 // ── Settings Payload (Valid JSONC) ────────────────────────────
 pub const ZED_SETTINGS: &str = r#"{
+
+
   "cursor_animation": {
-    "enabled": true
+    "enabled": true,
   },
   "file_scan_exclusions": [
     "**/.git**",
     "**/node_modules**",
     "**/dist**",
     "**/build**",
-    "**/*.json",
-    "**/*.csv"
+    "**/.next**",
+    "**/.turbo**",
+    "**/target**",
+    "**/*.csv",
   ],
 
   "enable_language_server": true,
   "hide_mouse": "never",
-  "disable_ai": false,
+  "disable_ai": true,
   "cli_default_open_behavior": "existing_window",
   "code_lens": "on",
   "bottom_dock_layout": "contained",
   "colorize_brackets": true,
   "indent_guides": {
-    "background_coloring": "disabled"
+    "background_coloring": "disabled",
   },
   "agent_servers": {
+    "antigravity-acp": {
+      "type": "registry",
+    },
     "opencode": {
-      "type": "registry"
-    }
+      "type": "registry",
+    },
   },
   "agent": {
     "dock": "right",
     "favorite_models": [],
-    "model_parameters": []
+    "model_parameters": [],
   },
   "instrumentation": {
     "performance_profiler": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "proxy": "",
   "focus_follows_mouse": {
-    "enabled": false
+    "enabled": false,
   },
   "which_key": {
-    "enabled": false
+    "enabled": false,
   },
   "icon_theme": {
     "mode": "dark",
     "light": "Material Icon Theme",
-    "dark": "Material Icon Theme"
+    "dark": "Material Icon Theme",
   },
   "base_keymap": "VSCode",
   "selection_highlight": true,
@@ -100,45 +107,47 @@ pub const ZED_SETTINGS: &str = r#"{
   "buffer_font_size": 22.0,
   "buffer_font_family": "Cascadia Code",
   "buffer_font_fallbacks": ["JetBrains Mono", "Fira Code"],
+  "confirm_quit": true,
   "session": {
-    "trust_all_worktrees": true
+    "trust_all_worktrees": true,
   },
   "project_panel": {
+    "default_width": 400.0,
     "dock": "left",
     "auto_fold_dirs": false,
     "hide_root": false,
     "git_status_indicator": true,
     "diagnostic_badges": true,
-    "bold_folder_labels": true
+    "bold_folder_labels": true,
   },
   "preview_tabs": {
     "enabled": false,
     "enable_preview_from_file_finder": true,
-    "enable_preview_multibuffer_from_code_navigation": true
+    "enable_preview_multibuffer_from_code_navigation": true,
   },
   "status_bar": {
     "line_endings_button": true,
     "experimental.show": true,
-    "show_active_file": true
+    "show_active_file": true,
   },
   "sticky_scroll": {
-    "enabled": false
+    "enabled": false,
   },
   "minimap": {
-    "show": "always"
+    "show": "always",
   },
   "scrollbar": {
     "axes": {
-      "horizontal": true
-    }
+      "horizontal": true,
+    },
   },
   "file_types": {
-    "html": ["*html", "*njk", "*.ejs"]
+    "HTML": ["*.html", "*.njk", "*.ejs"],
   },
   "theme": {
     "mode": "dark",
     "light": "Ayu Light",
-    "dark": "Tokyo Night Storm"
+    "dark": "Tokyo Night Storm",
   },
   "terminal": {
     "font_weight": 400.0,
@@ -146,55 +155,61 @@ pub const ZED_SETTINGS: &str = r#"{
     "blinking": "on",
     "cursor_shape": "block",
     "line_height": {
-      "custom": 1.3
+      "custom": 1.3,
     },
     "font_fallbacks": ["JetBrains Mono", "FiraCode Nerd Font"],
     "font_family": "Cascadia Code",
     "font_size": 22.0,
     "env": {
-      "TERM": "xterm-256color"
+      "TERM": "xterm-256color",
     },
     "toolbar": {
-      "breadcrumbs": true
+      "breadcrumbs": true,
     },
-    "show_count_badge": true
+    "show_count_badge": true,
+    "max_scroll_history_lines": 10000,
   },
   "git": {
     "inline_blame": {
       "show_commit_summary": true,
-      "delay_ms": 500
-    }
+      "delay_ms": 500,
+    },
   },
   "git_panel": {
     "tree_view": true,
     "show_count_badge": true,
-    "file_icons": true
+    "file_icons": true,
   },
   "tabs": {
     "file_icons": true,
-    "git_status": true
+    "git_status": true,
   },
   "title_bar": {
     "button_layout": "platform_default",
     "show_menus": false,
-    "show_branch_status_icon": true
+    "show_branch_status_icon": true,
   },
   "diagnostics": {
     "inline": {
       "enabled": true,
-      "max_severity": "all"
-    }
+      "max_severity": "all",
+    },
   },
   "prettier": {
-    "parser": "",
-    "allowed": true
+    "allowed": true,
+    "options": {
+      "semi": true,
+      "singleQuote": true,
+      "tabWidth": 2,
+      "trailingComma": "es5",
+    },
   },
   "inlay_hints": {
     "show_background": true,
-    "enabled": false
+    "enabled": false,
   },
   "toolbar": {
-    "code_actions": true
+    "code_actions": true,
   },
   "format_on_save": "on",
   "formatter": "prettier",
@@ -202,86 +217,117 @@ pub const ZED_SETTINGS: &str = r#"{
     "JavaScript": {
       "formatter": "prettier",
       "code_actions_on_format": {
-        "source.organizeImports": true
-      }
+        "source.organizeImports": true,
+      },
     },
     "TypeScript": {
       "formatter": "prettier",
       "code_actions_on_format": {
         "source.organizeImports": true,
-        "source.fixAll.eslint": true
+        "source.fixAll.eslint": true,
       },
-      "language_servers": ["vtsls", "..."]
+      "language_servers": ["vtsls", "..."],
     },
     "TSX": {
       "formatter": "prettier",
       "code_actions_on_format": {
         "source.organizeImports": true,
-        "source.fixAll.eslint": true
+        "source.fixAll.eslint": true,
       },
-      "language_servers": ["vtsls", "..."]
+      "language_servers": ["vtsls", "..."],
+    },
+
+    "Rust": {
+      "formatter": {
+        "external": {
+          "command": "rustfmt",
+        },
+      },
     },
     "HTML": {
-      "formatter": "prettier"
-    }
+      "formatter": "prettier",
+    },
   },
   "lsp": {
+    "rust-analyzer": {
+      "settings": {
+        "checkOnSave": {
+          "command": "clippy",
+        },
+        "cargo": {
+          "allFeatures": true,
+        },
+        "procMacro": {
+          "enable": true,
+        },
+      },
+    },
     "vtsls": {
       "settings": {
         "typescript": {
           "suggest": {
-            "autoImports": true
+            "autoImports": true,
           },
           "implementationsCodeLens": {
             "enabled": true,
-            "showOnAllClassMethods": true
+            "showOnAllClassMethods": true,
           },
           "referencesCodeLens": {
             "enabled": true,
-            "showOnAllFunctions": true
-          }
+            "showOnAllFunctions": true,
+          },
         },
         "javascript": {
           "suggest": {
-            "autoImports": true
+            "autoImports": true,
           },
           "implementationsCodeLens": {
             "enabled": true,
-            "showOnAllClassMethods": true
+            "showOnAllClassMethods": true,
           },
           "referencesCodeLens": {
             "enabled": true,
-            "showOnAllFunctions": true
-          }
-        }
+            "showOnAllFunctions": true,
+          },
+        },
       },
       "initialization_options": {
         "typescript": {
           "suggest": {
             "autoImports": true,
-            "completeFunctionCalls": true
-          },
-          "javascript": {
-            "suggest": {
-              "autoImports": true,
-              "completeFunctionCalls": true
-            }
+            "completeFunctionCalls": true,
           },
           "preferences": {
-            "includeCompletionsWithInsertText": true
-          }
-        }
-      }
+            "includeCompletionsWithInsertText": true,
+          },
+        },
+        "javascript": {
+          "suggest": {
+            "autoImports": true,
+            "completeFunctionCalls": true,
+          },
+          "preferences": {
+            "includeCompletionsWithInsertText": true,
+          },
+        },
+      },
     },
     "typescript-language-server": {
       "initialization_options": {
         "preferences": {
-          "includeCompletionsWithInsertText": true
-        }
-      }
+          "includeCompletionsWithInsertText": true,
+        },
+      },
     },
     "tailwindcss-language-server": {
       "settings": {
+        "includeLanguages": {
+          "typescriptreact": "html",
+          "javascriptreact": "html",
+        },
+        "userLanguages": {
+          "typescriptreact": "html",
+        },
         "experimental": {
           "classRegex": [
             "\\.className\\s*[+]?=\\s*['\"]([^'\"]*)['\"]",
@@ -292,19 +338,19 @@ pub const ZED_SETTINGS: &str = r#"{
             "\\.classList\\.toggle\\(['\"]([^'\"]*)['\"]",
             "\\.classList\\.contains\\(['\"]([^'\"]*)['\"]",
             "\\.classList\\.replace\\(\\s*['\"]([^'\"]*)['\"]",
-            "\\.classList\\.replace\\([^,)]+,\\s*['\"]([^'\"]*)['\"]"
-          ]
-        }
-      }
+            "\\.classList\\.replace\\([^,)]+,\\s*['\"]([^'\"]*)['\"]",
+          ],
+        },
+      },
     },
     "eslint": {
       "settings": {
         "rulesCustomizations": [{ "rule": "*", "severity": "warn" }],
         "problems": {
-          "shortenToSingleLine": true
-        }
-      }
-    }
+          "shortenToSingleLine": true,
+        },
+      },
+    },
   },
   "show_edit_predictions": true,
   "show_completion_documentation": true,
@@ -314,7 +360,7 @@ pub const ZED_SETTINGS: &str = r#"{
   "remove_trailing_whitespace_on_save": true,
   "ensure_final_newline_on_save": true,
   "outline_panel": {
-    "dock": "right"
+    "dock": "right",
   },
   "seed_search_query_from_cursor": "always",
   "use_smartcase_search": true,
@@ -324,7 +370,10 @@ pub const ZED_SETTINGS: &str = r#"{
   "wrap_guides": [80, 120],
   "preferred_line_length": 80,
   "window_title_format": "${projectName}${separator}${branch}",
-  "window_title_separator": " — "
+  "window_title_separator": " — ",
+
+
+
 }"#;
 
 // ── RAII Guard to ensure cursor visibility on exit/panic ──────

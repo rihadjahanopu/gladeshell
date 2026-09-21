@@ -166,8 +166,7 @@ impl ThemePickerApp {
                 if self.current_page == CurrentPage::ColorEditor {
                     match (key.code, key.modifiers) {
                         // Exit Page 2 -> Back to Page 1
-                        (KeyCode::Esc, _)
-                        | (KeyCode::Char('b'), KeyModifiers::NONE) if self.color_input_buffer.is_empty() => {
+                        (KeyCode::Esc, _) => {
                             self.current_page = CurrentPage::ThemeList;
                             self.status = None;
                         }
@@ -197,8 +196,8 @@ impl ThemePickerApp {
                             }
                         }
 
-                        // Reset colors with 'r' when input is empty
-                        (KeyCode::Char('r'), KeyModifiers::NONE) if self.color_input_buffer.is_empty() => {
+                        // Reset colors with Ctrl+R
+                        (KeyCode::Char('r') | KeyCode::Char('R'), modifiers) if modifiers.contains(KeyModifiers::CONTROL) => {
                             if let Some(theme_idx) = self.selected_theme_idx() {
                                 let theme_name = THEMES[theme_idx].name;
                                 let _ = reset_theme_color_overrides(Some(theme_name));
@@ -814,16 +813,16 @@ impl ThemePickerApp {
         } else {
             Line::from(vec![
                 Span::styled(" ↑↓ ", Style::default().fg(C_DIM)),
-                Span::styled("Select Element", Style::default().fg(C_DIM)),
+                Span::styled("Select", Style::default().fg(C_DIM)),
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
                 Span::styled("Enter ", Style::default().fg(C_YELLOW)),
                 Span::styled("Save Color", Style::default().fg(C_DIM)),
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("r ", Style::default().fg(C_ACCENT)),
-                Span::styled("Reset Theme Colors", Style::default().fg(C_DIM)),
+                Span::styled("Ctrl+R ", Style::default().fg(C_ACCENT)),
+                Span::styled("Reset Colors", Style::default().fg(C_DIM)),
                 Span::styled("  │  ", Style::default().fg(C_BORDER)),
-                Span::styled("Esc / b ", Style::default().fg(C_WHITE)),
-                Span::styled("Back to Page 1", Style::default().fg(C_DIM)),
+                Span::styled("Esc ", Style::default().fg(C_WHITE)),
+                Span::styled("Back", Style::default().fg(C_DIM)),
             ])
         };
 

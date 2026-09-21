@@ -36,13 +36,15 @@ toml = "0.8"
 # Async runtime (optional, not needed for the daemon which uses std threads)
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time"], optional = true }
 
-# Git internals – gitoxide (zero-fork, pure Rust)
-# Features: revision + worktree-mutation for index reads; max-performance for SIMD
+# Git internals – gitoxide & git2 (zero-fork, pure Rust)
+git2 = { version = "0.19", default-features = false, optional = true }
+
 gix = { version = "0.66", default-features = false, features = [
     "revision",
     "max-performance-safe",  # uses simdutf8 + fast SHA1 without unsafe AVX
     "worktree-mutation",     # enables index/worktree status APIs
 ], optional = true }
+
 
 # System info & PC Diagnostics (Phase 2 prompt / Phase 4 tools / pc-info)
 sysinfo = { version = "0.31", optional = true }
@@ -86,6 +88,7 @@ rpassword = { version = "7.3", optional = true }
 rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
 ureq = { version = "2.9", optional = true }
+open = { version = "5.3", optional = true }
 
 # Data parallelism — parallel metric collection & file search
 rayon = { version = "1.10", optional = true }
@@ -98,7 +101,8 @@ wmi = "0.14"
 [features]
 default = ["prompt-engine", "tools"]
 # Enable heavy Phase-2 prompt engine (git + async)
-prompt-engine = ["gix", "rayon"]
+prompt-engine = ["gix", "git2", "rayon"]
+
 # Enable Phase-4 tool subcommands & pc-info diagnostics
 tools = [
     "sysinfo",
@@ -127,9 +131,11 @@ tools = [
     "rand",
     "rand_chacha",
     "ureq",
+    "open",
     "rayon",
 ]
 # Convenience: all features
+
 full = ["prompt-engine", "tools"]
 
 # ── Release Profile (strict performance constraints) ──────────────────────────

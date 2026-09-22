@@ -25,7 +25,6 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -39,6 +38,11 @@ const TTL_MONOREPO_MS: u64 = 5000;
 
 /// Directory count threshold for monorepo detection.
 const MONOREPO_THRESHOLD: usize = 4;
+
+/// Maximum number of distinct git repos held in the in-process cache.
+/// When exceeded, the stalest entry is evicted (LRU-lite). Prevents unbounded
+/// memory growth when the user visits many different repositories.
+const CACHE_MAX_ENTRIES: usize = 32;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -82,6 +86,7 @@ impl Default for GitStatus {
 
 struct CacheEntry {
     status: GitStatus,
+    /// Cached monorepo flag — computed once on first insert, reused on refresh.
     is_monorepo: bool,
 }
 
@@ -89,15 +94,27 @@ struct CacheEntry {
 
 /// Multi-path cache: keyed by git repository root for monorepo awareness.
 /// Each nested CWD within the same repo shares one cache entry.
+/// Capped at CACHE_MAX_ENTRIES to prevent unbounded memory growth.
 static GIT_CACHE: std::sync::OnceLock<Arc<Mutex<HashMap<PathBuf, CacheEntry>>>> =
     std::sync::OnceLock::new();
 
-/// Whether the background updater thread is running.
-#[allow(dead_code)]
-static UPDATER_RUNNING: AtomicBool = AtomicBool::new(false);
-
 fn cache() -> &'static Arc<Mutex<HashMap<PathBuf, CacheEntry>>> {
     GIT_CACHE.get_or_init(|| Arc::new(Mutex::new(HashMap::with_capacity(8))))
+}
+
+/// Insert a new entry, evicting the stalest one if the cache is full.
+fn insert_with_cap(guard: &mut HashMap<PathBuf, CacheEntry>, key: PathBuf, entry: CacheEntry) {
+    if guard.len() >= CACHE_MAX_ENTRIES && !guard.contains_key(&key) {
+        // Evict the entry with the oldest last_updated timestamp
+        let stalest = guard
+            .iter()
+            .min_by_key(|(_, e)| e.status.last_updated)
+            .map(|(k, _)| k.clone());
+        if let Some(k) = stalest {
+            guard.remove(&k);
+        }
+    }
+    guard.insert(key, entry);
 }
 
 // ── TTL helper ────────────────────────────────────────────────────────────────
@@ -161,9 +178,17 @@ pub fn get_status(cwd: &std::path::Path) -> GitStatus {
     status.last_updated = Some(Instant::now());
 
     if let Some(ref git_root) = git_root_opt {
-        let is_monorepo = detect_monorepo(git_root);
+        // Reuse cached is_monorepo flag if entry exists (avoids re-running read_dir).
+        // Only run detect_monorepo() on the very first insert for this repo.
+        let is_monorepo = cache()
+            .lock()
+            .ok()
+            .and_then(|g| g.get(git_root).map(|e| e.is_monorepo))
+            .unwrap_or_else(|| detect_monorepo(git_root));
+
         if let Ok(mut guard) = cache().lock() {
-            guard.insert(
+            insert_with_cap(
+                &mut guard,
                 git_root.clone(),
                 CacheEntry { status: status.clone(), is_monorepo },
             );
@@ -194,9 +219,14 @@ pub fn refresh(cwd: &std::path::Path) {
     let mut status = query_git_status(cwd);
     status.last_updated = Some(Instant::now());
     if let Some(git_root) = git_root_opt {
-        let is_monorepo = detect_monorepo(&git_root);
+        // Reuse cached is_monorepo — only detect once per repo, not on every refresh
+        let is_monorepo = cache()
+            .lock()
+            .ok()
+            .and_then(|g| g.get(&git_root).map(|e| e.is_monorepo))
+            .unwrap_or_else(|| detect_monorepo(&git_root));
         if let Ok(mut guard) = cache().lock() {
-            guard.insert(git_root, CacheEntry { status, is_monorepo });
+            insert_with_cap(&mut guard, git_root, CacheEntry { status, is_monorepo });
         }
     }
 }

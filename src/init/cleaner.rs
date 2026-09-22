@@ -127,8 +127,15 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
     }
     final_content.push('\n');
 
-    // Write back atomically using a temp file
-    let tmp_path = rc_path.with_extension("tmp");
+    // Write back atomically using a PID-stamped temp file.
+    // PID stamp prevents collision if another process writes the same file,
+    // and avoids overwriting a user file that happens to be named ".zshrc.tmp".
+    let tmp_name = format!(
+        "{}.tmp.{}",
+        rc_path.file_name().unwrap_or_default().to_string_lossy(),
+        std::process::id()
+    );
+    let tmp_path = rc_path.with_file_name(tmp_name);
     fs::write(&tmp_path, final_content)?;
     fs::rename(&tmp_path, rc_path)?;
 

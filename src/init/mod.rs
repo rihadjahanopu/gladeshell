@@ -41,6 +41,10 @@ pub fn generate(shell: &str) -> Result<String, String> {
     };
 
     // Cache the generated bootstrap script to ~/.fancybash/cache/init.<shell>
+    //
+    // ATOMIC WRITE GUARANTEE: write to a temp file first, then rename.
+    // rename(2) is atomic on POSIX — a crash mid-write can never leave
+    // a partial/corrupt cache file that would break the user's shell.
     let lowered_shell = shell.to_ascii_lowercase();
     let normalized = match lowered_shell.as_str() {
         "powershell" => "pwsh",
@@ -50,7 +54,18 @@ pub fn generate(shell: &str) -> Result<String, String> {
         let cache_dir = std::path::PathBuf::from(home_dir).join(".fancybash").join("cache");
         if std::fs::create_dir_all(&cache_dir).is_ok() {
             let cache_file = cache_dir.join(format!("init.{normalized}"));
-            let _ = std::fs::write(&cache_file, &script);
+            // Write to a pid-stamped temp file so concurrent runs don't collide
+            let tmp_file = cache_dir.join(format!(
+                "init.{normalized}.tmp.{}",
+                std::process::id()
+            ));
+            if std::fs::write(&tmp_file, &script).is_ok() {
+                // Atomic rename: either the full file is visible or nothing changes
+                if std::fs::rename(&tmp_file, &cache_file).is_err() {
+                    // Rename failed (e.g. cross-device) — clean up tmp
+                    let _ = std::fs::remove_file(&tmp_file);
+                }
+            }
         }
     }
 

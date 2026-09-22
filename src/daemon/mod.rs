@@ -30,10 +30,25 @@ use std::time::Duration;
 #[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
 
-/// Return user-specific daemon socket path cross-platform
+/// Return user-specific daemon socket path.
+/// Each OS user gets their own socket \u2014 prevents cross-user connections.
 pub fn socket_path() -> PathBuf {
     let temp_dir = std::env::temp_dir();
-    temp_dir.join("fancybash_daemon.sock")
+    // Build a user-unique tag without any external crate dependency:
+    //   Unix  → read UID from /proc/self/status (Linux) or $UID env var
+    //   Other → fall back to USERNAME / USER env var
+    let user_tag = std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find(|l| l.starts_with("Uid:"))
+                .and_then(|l| l.split_whitespace().nth(1).map(|u| u.to_string()))
+        })
+        .or_else(|| std::env::var("UID").ok())
+        .or_else(|| std::env::var("USER").ok())
+        .or_else(|| std::env::var("USERNAME").ok())
+        .unwrap_or_else(|| "default".to_string());
+    temp_dir.join(format!("fancybash_{user_tag}.sock"))
 }
 
 /// Run the daemon server loop. This blocks the current thread.
@@ -50,14 +65,22 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
         let running = Arc::new(AtomicBool::new(true));
 
-        // Spawn background Git status update thread
+        // Spawn background Git status update thread.
+        // Checks every 500 ms but only refreshes when the TTL has expired —
+        // avoids redundant I/O when the cache is still fresh.
         let r = running.clone();
         thread::spawn(move || {
             while r.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(500));
-                let cached_path = git::read_cached().path;
-                if !cached_path.as_os_str().is_empty() {
-                    git::refresh(&cached_path);
+                let cached = git::read_cached();
+                // Only refresh when the cached entry is actually stale
+                if !cached.path.as_os_str().is_empty() {
+                    if cached.last_updated
+                        .map(|t| t.elapsed() >= Duration::from_millis(1500))
+                        .unwrap_or(true)
+                    {
+                        git::refresh(&cached.path);
+                    }
                 }
             }
         });
@@ -169,9 +192,10 @@ fn handle_client(mut stream: UnixStream, buf: &mut Vec<u8>) {
     }
 
     // Legacy text-protocol fallback (old format: fields separated by \x1f, newline-terminated)
+    // Use a distinct name (`legacy_parts`) to avoid shadowing the `parts` binding above.
     parts_storage = line.trim_end_matches('\n').to_string();
-    let parts: Vec<&str> = parts_storage.split('\x1f').collect();
-    handle_prompt_parts(&parts, buf);
+    let legacy_parts: Vec<&str> = parts_storage.split('\x1f').collect();
+    handle_prompt_parts(&legacy_parts, buf);
     let written = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
     let _ = stream.write_all(&buf[..written]);
 }

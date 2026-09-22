@@ -468,10 +468,112 @@ struct KpArgs {
     port: Option<String>,
 }
 
+// ── Fast-path CLI parser for hot-path subcommands (bypasses heavy clap metadata initialization) ──
+fn fast_parse_prompt_args(args: &[String]) -> Option<PromptArgs> {
+    let mut cwd = String::from(".");
+    let mut exit_code = 0i32;
+    let mut theme_id = 0usize;
+    let mut user = String::new();
+    let mut host = String::new();
+    let mut cmd_duration = 0u64;
+    let mut shell = String::from("zsh");
+
+    let mut i = 0;
+    while i < args.len() {
+        let arg = &args[i];
+        if arg == "-h" || arg == "--help" {
+            return None; // Fall back to clap for rendering help
+        }
+        if let Some(val) = arg.strip_prefix("--cwd=") {
+            cwd = val.to_string();
+        } else if arg == "--cwd" && i + 1 < args.len() {
+            i += 1;
+            cwd = args[i].clone();
+        } else if let Some(val) = arg.strip_prefix("--exit-code=") {
+            // Use safe default 0 on invalid value — never abort the fast-path
+            exit_code = val.parse().unwrap_or(0);
+        } else if arg == "--exit-code" && i + 1 < args.len() {
+            i += 1;
+            exit_code = args[i].parse().unwrap_or(0);
+        } else if let Some(val) = arg.strip_prefix("--theme-id=") {
+            theme_id = val.parse().unwrap_or(0);
+        } else if arg == "--theme-id" && i + 1 < args.len() {
+            i += 1;
+            theme_id = args[i].parse().unwrap_or(0);
+        } else if let Some(val) = arg.strip_prefix("--user=") {
+            user = val.to_string();
+        } else if arg == "--user" && i + 1 < args.len() {
+            i += 1;
+            user = args[i].clone();
+        } else if let Some(val) = arg.strip_prefix("--host=") {
+            host = val.to_string();
+        } else if arg == "--host" && i + 1 < args.len() {
+            i += 1;
+            host = args[i].clone();
+        } else if let Some(val) = arg.strip_prefix("--cmd-duration=") {
+            cmd_duration = val.parse().unwrap_or(0);
+        } else if arg == "--cmd-duration" && i + 1 < args.len() {
+            i += 1;
+            cmd_duration = args[i].parse().unwrap_or(0);
+        } else if let Some(val) = arg.strip_prefix("--shell=") {
+            shell = val.to_string();
+        } else if arg == "--shell" && i + 1 < args.len() {
+            i += 1;
+            shell = args[i].clone();
+        } else {
+            return None; // Truly unknown flag — fallback to clap for proper help/error
+        }
+        i += 1;
+    }
+
+    Some(PromptArgs {
+        cwd,
+        exit_code,
+        theme_id,
+        user,
+        host,
+        cmd_duration,
+        shell,
+    })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 fn main() {
     let raw_args: Vec<String> = std::env::args().collect();
+
+    // Fast-path dispatcher for hot-path subcommands (`prompt`, `version`, `auto-ls`)
+    if raw_args.len() > 1 {
+        let subcmd = &raw_args[1];
+        let has_help = raw_args.iter().any(|arg| arg == "-h" || arg == "--help");
+        if !has_help {
+            if subcmd == "prompt" {
+                if let Some(prompt_args) = fast_parse_prompt_args(&raw_args[2..]) {
+                    if let Err(e) = cmd_prompt(prompt_args) {
+                        eprintln!("error: {e}");
+                        std::process::exit(1);
+                    }
+                    return;
+                }
+            } else if subcmd == "init" && raw_args.len() >= 3 && !raw_args[2].starts_with('-') {
+                let shell = &raw_args[2];
+                let no_header = raw_args.iter().any(|arg| arg == "--no-header");
+                if let Err(e) = cmd_init(InitArgs { shell: shell.clone(), no_header }) {
+                    eprintln!("error: {e}");
+                    std::process::exit(1);
+                }
+                return;
+            } else if subcmd == "version" || subcmd == "-V" || subcmd == "--version" {
+                println!("fancybash {}", env!("CARGO_PKG_VERSION"));
+                return;
+            } else if subcmd == "auto-ls" {
+                let path = raw_args.get(2).map(|s| s.as_str());
+                fancybash_core::tools::auto_ls::run_path(path);
+                return;
+            }
+        }
+    }
+
     let _prog_name = raw_args
         .get(0)
         .map(|s| std::path::Path::new(s).file_name().unwrap_or_default().to_string_lossy().to_string())

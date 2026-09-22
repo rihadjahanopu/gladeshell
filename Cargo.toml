@@ -176,6 +176,10 @@ harness = false
 name    = "bench_secret_gen"
 harness = false
 
+[[bench]]
+name    = "bench_git"
+harness = false
+
 # ── Test / Bench profiles ────────────────────────────────────────────────────
 [profile.test]
 opt-level = 1

@@ -154,16 +154,16 @@ pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
 
     let eval_block = match shell.to_ascii_lowercase().as_str() {
         "zsh" => format!(
-            "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif (( ${{+commands[fancybash]}} )); then\n    eval \"$(fancybash init zsh)\"\nfi\n{end_marker}"
+            "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif (( ${{+commands[fancybash]}} )); then\n    _fb_cache=\"$HOME/.fancybash/cache/init.zsh\"\n    _fb_bin=\"${{commands[fancybash]}}\"\n    if [[ -f \"$_fb_cache\" && -n \"$_fb_bin\" && \"$_fb_cache\" -nt \"$_fb_bin\" ]]; then\n        source \"$_fb_cache\"\n    else\n        eval \"$(fancybash init zsh)\"\n    fi\nfi\n{end_marker}"
         ),
         "bash" => format!(
-            "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif type fancybash >/dev/null 2>&1; then\n    eval \"$(fancybash init bash)\"\nfi\n{end_marker}"
+            "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif type fancybash >/dev/null 2>&1; then\n    _fb_cache=\"$HOME/.fancybash/cache/init.bash\"\n    _fb_bin=\"$(command -v fancybash 2>/dev/null)\"\n    if [[ -f \"$_fb_cache\" && -n \"$_fb_bin\" && \"$_fb_cache\" -nt \"$_fb_bin\" ]]; then\n        source \"$_fb_cache\"\n    else\n        eval \"$(fancybash init bash)\"\n    fi\nfi\n{end_marker}"
         ),
         "fish" => format!(
-            "{start_marker}\nset -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH\nif type -q fancybash\n    fancybash init fish | source\nend\n{end_marker}"
+            "{start_marker}\nset -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH\nif type -q fancybash\n    set -l _fb_cache \"$HOME/.fancybash/cache/init.fish\"\n    set -l _fb_bin (command -v fancybash 2>/dev/null)\n    if test -f \"$_fb_cache\" -a -n \"$_fb_bin\" -a \"$_fb_cache\" -nt \"$_fb_bin\"\n        source \"$_fb_cache\"\n    else\n        fancybash init fish | source\n    end\nend\n{end_marker}"
         ),
         "pwsh" | "powershell" => format!(
-            "{start_marker}\n$env:PATH = \"$env:USERPROFILE\\.cargo\\bin;$env:USERPROFILE\\.local\\bin;\" + $env:PATH\nif (Get-Command fancybash -ErrorAction SilentlyContinue) {{\n    fancybash init pwsh | Invoke-Expression\n}}\n{end_marker}"
+            "{start_marker}\n$env:PATH = \"$env:USERPROFILE\\.cargo\\bin;$env:USERPROFILE\\.local\\bin;\" + $env:PATH\nif (Get-Command fancybash -ErrorAction SilentlyContinue) {{\n    $fb_cache = \"$HOME\\.fancybash\\cache\\init.pwsh\"\n    $fb_bin   = (Get-Command fancybash).Source\n    if ((Test-Path $fb_cache) -and ((Get-Item $fb_cache).LastWriteTime -gt (Get-Item $fb_bin).LastWriteTime)) {{\n        . $fb_cache\n    }} else {{\n        fancybash init pwsh | Invoke-Expression\n    }}\n}}\n{end_marker}"
         ),
         other => format!(
             "{start_marker}\neval \"$(fancybash init {other})\"\n{end_marker}"

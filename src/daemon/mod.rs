@@ -121,17 +121,63 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+/// Packed binary IPC wire format:
+///   Request:  [u32-LE payload_len][payload bytes] where payload = fields joined by '\x1f'
+///   Response: [u32-LE response_len][prompt bytes]
+///   Fallback: plain text (old format) for compatibility
 #[cfg(unix)]
 fn handle_client(mut stream: UnixStream, buf: &mut Vec<u8>) {
-    let mut reader = BufReader::new(&stream);
-    let mut line = String::new();
+    use std::io::Read;
 
-    if reader.read_line(&mut line).is_err() || line.is_empty() {
+    // Try to read 4-byte binary length prefix (new packed protocol)
+    let mut len_buf = [0u8; 4];
+    let line: String;
+    let parts: Vec<&str>;
+    let parts_storage: String;
+
+    if stream.read_exact(&mut len_buf).is_ok() {
+        let payload_len = u32::from_le_bytes(len_buf) as usize;
+        // Sanity check: max 4096 bytes for a request payload
+        if payload_len > 0 && payload_len <= 4096 {
+            let mut payload = vec![0u8; payload_len];
+            if stream.read_exact(&mut payload).is_err() {
+                return;
+            }
+            parts_storage = String::from_utf8_lossy(&payload).into_owned();
+            parts = parts_storage.split('\x1f').collect();
+
+            // Handle request using packed binary protocol
+            handle_prompt_parts(&parts, buf);
+
+            // Send response: [u32-LE len][prompt bytes]
+            let written = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+            let resp_len = (written as u32).to_le_bytes();
+            let _ = stream.write_all(&resp_len);
+            let _ = stream.write_all(&buf[..written]);
+            return;
+        }
+        // If length is 0 or implausibly large, fall through to legacy text protocol
+        // by treating the 4 bytes as the start of a text line
+        let prefix = String::from_utf8_lossy(&len_buf).into_owned();
+        let mut rest = String::new();
+        let mut reader = BufReader::new(&stream);
+        let _ = reader.read_line(&mut rest);
+        line = prefix + &rest;
+    } else {
+        // EOF or error on initial read
         return;
     }
 
-    // Protocol format: cwd\x1fexit_code\x1ftheme_id\x1fuser\x1fhost\x1fcmd_duration_ms
-    let parts: Vec<&str> = line.trim_end_matches('\n').split('\x1f').collect();
+    // Legacy text-protocol fallback (old format: fields separated by \x1f, newline-terminated)
+    parts_storage = line.trim_end_matches('\n').to_string();
+    let parts: Vec<&str> = parts_storage.split('\x1f').collect();
+    handle_prompt_parts(&parts, buf);
+    let written = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+    let _ = stream.write_all(&buf[..written]);
+}
+
+#[cfg(unix)]
+fn handle_prompt_parts(parts: &[&str], buf: &mut Vec<u8>) {
 
     let mut ctx = PromptContext::default();
 
@@ -194,12 +240,9 @@ fn handle_client(mut stream: UnixStream, buf: &mut Vec<u8>) {
         ctx.shell = parts[6].parse::<u8>().unwrap_or(0);
     }
 
-    match prompt::render(&ctx, buf) {
-        Ok(written) => {
-            let _ = stream.write_all(&buf[..written]);
-        }
-        Err(_) => {
-            let _ = stream.write_all(b"fancybash: buffer overflow\n");
-        }
+    buf.resize(4096, 0);
+    if prompt::render(&ctx, buf).is_err() {
+        let msg = b"fancybash: buffer overflow\n";
+        buf[..msg.len()].copy_from_slice(msg);
     }
 }

@@ -6,20 +6,26 @@
 
 // =============================================================================
 //  src/daemon/client.rs — Unix socket client & prompt fallback
-
+//
+//  Wire Protocol (Layer 3 — Packed Binary IPC):
+//    Request:  [u32-LE payload_len][payload: fields joined by '\x1f']
+//    Response: [u32-LE response_len][prompt bytes]
+//
+//  On non-unix OS or when daemon is offline, falls back gracefully to
+//  in-process rendering (render_fallback).
 // =============================================================================
 
 use super::socket_path;
 use crate::core::prompt::{self, PromptContext};
 use crate::git;
-use std::io::{BufReader, Write};
+use std::io::Write;
 use std::time::Duration;
 
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 
-/// Request a prompt from the running daemon.
-/// Returns `Ok(rendered_string)` or `Err` if the daemon is unreachable.
+/// Request a prompt from the running daemon using packed binary IPC.
+/// Falls back to Err if daemon is unreachable (caller uses render_fallback).
 pub fn request_prompt(
     cwd: &str,
     exit_code: i32,
@@ -31,30 +37,53 @@ pub fn request_prompt(
 ) -> Result<String, Box<dyn std::error::Error>> {
     #[cfg(unix)]
     {
+        use std::io::Read;
+
         let path = socket_path();
         let mut stream = UnixStream::connect(&path)?;
         stream.set_read_timeout(Some(Duration::from_millis(50)))?;
         stream.set_write_timeout(Some(Duration::from_millis(50)))?;
 
-        let req = format!("{cwd}\x1f{exit_code}\x1f{theme_id}\x1f{user}\x1f{host}\x1f{cmd_duration_ms}\x1f{shell}\n");
-        stream.write_all(req.as_bytes())?;
+        // Build packed payload: fields joined by \x1f (same as daemon parses)
+        let payload = format!(
+            "{cwd}\x1f{exit_code}\x1f{theme_id}\x1f{user}\x1f{host}\x1f{cmd_duration_ms}\x1f{shell}"
+        );
+        let payload_bytes = payload.as_bytes();
+        let payload_len = (payload_bytes.len() as u32).to_le_bytes();
 
-        use std::io::Read;
-        let mut reader = BufReader::new(stream);
-        let mut response = String::new();
-        reader.read_to_string(&mut response)?;
+        // Send [4-byte LE length header][payload bytes] — zero-copy framing
+        stream.write_all(&payload_len)?;
+        stream.write_all(payload_bytes)?;
 
-        return Ok(response);
+        // Read [4-byte LE response length header][prompt bytes]
+        let mut len_buf = [0u8; 4];
+        stream.read_exact(&mut len_buf)?;
+        let resp_len = u32::from_le_bytes(len_buf) as usize;
+
+        // Reject only implausibly large payloads; zero-length is a valid
+        // (though unusual) response \u2014 return empty string rather than error.
+        if resp_len > 8192 {
+            return Err("daemon response too large (> 8 KiB); possible protocol error".into());
+        }
+        if resp_len == 0 {
+            return Ok(String::new());
+        }
+
+        let mut resp_buf = vec![0u8; resp_len];
+        stream.read_exact(&mut resp_buf)?;
+
+        return Ok(String::from_utf8_lossy(&resp_buf).into_owned());
     }
 
     #[cfg(not(unix))]
     {
-        let _ = (cmd_duration_ms,);
-        Err("Daemon sockets not supported on non-unix OS; falling back to in-process rendering".into())
+        let _ = (cwd, exit_code, theme_id, user, host, cmd_duration_ms, shell);
+        Err("Daemon IPC not supported on this OS; falling back to in-process rendering".into())
     }
 }
 
 /// Fallback renderer when daemon is offline: renders prompt in-process synchronously.
+/// Zero I/O — pure Rust stack computation with TTL git cache.
 pub fn render_fallback(
     cwd: &str,
     exit_code: i32,
@@ -84,7 +113,7 @@ pub fn render_fallback(
     ctx.host[..hlen].copy_from_slice(&h_bytes[..hlen]);
     ctx.host_len = hlen;
 
-    // Check git status synchronously
+    // Git status: benefits from 1.5s TTL in-memory cache (Layer 4)
     let cwd_path = std::path::Path::new(cwd);
     let status = git::get_status(cwd_path);
     if status.is_git_repo {

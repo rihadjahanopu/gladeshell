@@ -29,16 +29,32 @@ pub mod zsh;
 
 /// Dispatch table: map shell name → generator function.
 pub fn generate(shell: &str) -> Result<String, String> {
-    match shell.to_ascii_lowercase().as_str() {
-        "bash" => Ok(bash::generate()),
-        "zsh"  => Ok(zsh::generate()),
-        "fish" => Ok(fish::generate()),
-        "pwsh" | "powershell" => Ok(pwsh::generate()),
-        other => Err(format!(
+    let script = match shell.to_ascii_lowercase().as_str() {
+        "bash" => bash::generate(),
+        "zsh"  => zsh::generate(),
+        "fish" => fish::generate(),
+        "pwsh" | "powershell" => pwsh::generate(),
+        other => return Err(format!(
             "unsupported shell: '{other}'. \
              Supported: bash, zsh, fish, pwsh (powershell)"
         )),
+    };
+
+    // Cache the generated bootstrap script to ~/.fancybash/cache/init.<shell>
+    let lowered_shell = shell.to_ascii_lowercase();
+    let normalized = match lowered_shell.as_str() {
+        "powershell" => "pwsh",
+        s => s,
+    };
+    if let Ok(home_dir) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+        let cache_dir = std::path::PathBuf::from(home_dir).join(".fancybash").join("cache");
+        if std::fs::create_dir_all(&cache_dir).is_ok() {
+            let cache_file = cache_dir.join(format!("init.{normalized}"));
+            let _ = std::fs::write(&cache_file, &script);
+        }
     }
+
+    Ok(script)
 }
 
 // ── Shared header / footer helpers ───────────────────────────────────────────

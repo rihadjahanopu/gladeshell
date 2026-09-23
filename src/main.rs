@@ -253,6 +253,10 @@ enum Commands {
     #[command(name = "zed-setup", alias = "zed", alias = "zed_setup")]
     Zed,
 
+    /// Bulletproof VS Code settings + extensions installer (fancybash edition)
+    #[command(name = "code-setup", alias = "vscode", alias = "code_setup")]
+    Code,
+
     /// Run the persistent background Unix socket server daemon
     Serve,
 
@@ -651,6 +655,7 @@ fn main() {
             Commands::Bak { name } => fancybash_core::tools::bak::run(&name),
             Commands::Trash { name } => fancybash_core::tools::trash::run(&name),
             Commands::Zed => fancybash_core::tools::zed_setup::run(),
+            Commands::Code => fancybash_core::tools::code_setup::run(),
             Commands::Serve => cmd_serve(),
             Commands::Prompt(args) => cmd_prompt(args),
             Commands::InternalCleanRc => cmd_internal_clean_rc(),

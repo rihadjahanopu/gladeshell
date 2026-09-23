@@ -814,4 +814,19 @@ key         = "zed_setup"
 value       = "fancybash zed-setup"
 description = "Bulletproof Zed IDE settings installer"
 
+[[group.aliases]]
+key         = "code-setup"
+value       = "fancybash code-setup"
+description = "Bulletproof VS Code settings + extensions installer"
+
+[[group.aliases]]
+key         = "code_setup"
+value       = "fancybash code-setup"
+description = "Bulletproof VS Code settings + extensions installer"
+
+[[group.aliases]]
+key         = "vscode"
+value       = "fancybash code-setup"
+description = "Bulletproof VS Code settings + extensions installer"
+
 

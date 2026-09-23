@@ -372,7 +372,20 @@ pub const ZED_SETTINGS: &str = r#"{
   "wrap_guides": [80, 120],
   "preferred_line_length": 80,
   "window_title_format": "${projectName}${separator}${branch}",
-  "window_title_separator": " — "
+  "window_title_separator": " — ",
+  "auto_install_extensions": {
+    "html": true,
+    "git-firefly": true,
+    "dockerfile": true,
+    "material-icon-theme": true,
+    "tokyo-night": true,
+    "emmet": true,
+    "prisma": true,
+    "docker-compose": true,
+    "colorizer": true,
+    "color-highlight": true,
+    "es7-react-redux-snippets": true
+  }
 }"#;
 
 // ── RAII Guard to ensure cursor visibility on exit/panic ──────

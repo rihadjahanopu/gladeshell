@@ -51,8 +51,11 @@ pub fn group() -> AliasGroup {
             AliasEntry { key: "t".into(),       value: "fancybash t".into(),       description: "Smart file creation helper".into(), only_shells: vec![] },
             AliasEntry { key: "fancy".into(),   value: "fancybash theme".into(),   description: "Interactive TUI theme picker & switcher".into(), only_shells: vec![] },
             AliasEntry { key: "theme".into(),   value: "fancybash theme".into(),   description: "Interactive TUI theme picker & switcher".into(), only_shells: vec![] },
-            AliasEntry { key: "zed-setup".into(), value: "fancybash zed-setup".into(), description: "Bulletproof Zed IDE settings installer".into(), only_shells: vec![] },
-            AliasEntry { key: "zed_setup".into(), value: "fancybash zed-setup".into(), description: "Bulletproof Zed IDE settings installer".into(), only_shells: vec![] },
+            AliasEntry { key: "zed-setup".into(),  value: "fancybash zed-setup".into(),  description: "Bulletproof Zed IDE settings installer".into(),                    only_shells: vec![] },
+            AliasEntry { key: "zed_setup".into(),  value: "fancybash zed-setup".into(),  description: "Bulletproof Zed IDE settings installer".into(),                    only_shells: vec![] },
+            AliasEntry { key: "code-setup".into(), value: "fancybash code-setup".into(), description: "Bulletproof VS Code settings + extensions installer".into(),       only_shells: vec![] },
+            AliasEntry { key: "code_setup".into(), value: "fancybash code-setup".into(), description: "Bulletproof VS Code settings + extensions installer".into(),       only_shells: vec![] },
+            AliasEntry { key: "vscode".into(),     value: "fancybash code-setup".into(), description: "Bulletproof VS Code settings + extensions installer".into(),       only_shells: vec![] },
         ],
     }
 }

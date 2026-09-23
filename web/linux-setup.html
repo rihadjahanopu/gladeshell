@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>Linux Dev &amp; Creative App Ecosystem — fancybash</title>
+    <meta name="title" content="Linux Dev &amp; Creative App Ecosystem — fancybash">
+    <meta name="description" content="A curated directory of essential Linux applications for developers, creators, and power users. Discover top IDEs, creative suites, dev tools, and utilities.">
+    <meta name="keywords" content="linux apps, linux development environment, dev tools linux, creative apps linux, linux desktop tools, flatpak apps, snap apps, fancybash linux setup">
+    <meta name="author" content="Rihad Jahan Opu">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="canonical" href="https://fancybash.netlify.app/linux-setup.html">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+    <!-- Open Graph / Facebook / LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://fancybash.netlify.app/linux-setup.html">
+    <meta property="og:title" content="Linux Dev &amp; Creative App Ecosystem — fancybash">
+    <meta property="og:description" content="Curated directory of essential Linux applications for development, creative design, browsers, and power utilities.">
+    <meta property="og:image" content="https://fancybash.netlify.app/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="fancybash Linux Application Ecosystem Banner">
+    <meta property="og:site_name" content="fancybash">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://fancybash.netlify.app/linux-setup.html">
+    <meta name="twitter:title" content="Linux Dev &amp; Creative App Ecosystem — fancybash">
+    <meta name="twitter:description" content="Curated list of essential applications for a modern Linux development and creative environment.">
+    <meta name="twitter:image" content="https://fancybash.netlify.app/og-image.png">
+    <meta name="twitter:creator" content="@rihadjahanopu">
+
+    <!-- Fonts & Styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="linux-setup.css">
+
+    <!-- Schema.org JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "Linux Dev & Creative App Ecosystem",
+      "url": "https://fancybash.netlify.app/linux-setup.html",
+      "description": "Curated directory of essential applications for Linux development and creative workflows.",
+      "publisher": {
+        "@type": "Person",
+        "name": "Rihad Jahan Opu",
+        "url": "https://github.com/rihadjahanopu"
+      },
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "fancybash",
+        "url": "https://fancybash.netlify.app/"
+      }
+    }
+    </script>
+</head>
+<body>
+    <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <main class="container">
+        <header>
+            <h1 class="gradient-text">Linux App Ecosystem</h1>
+            <p class="subtitle">Your ultimate curated list for Development, Creativity, and Utilities.</p>
+            <div style="margin-bottom: 2rem; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                <a href="index.html" style="color: var(--accent-primary); text-decoration: none;">&larr; Back to Home</a>
+                <a href="docs.html" style="color: #22d3ee; text-decoration: none; font-weight: 600;">📖 Open Docs</a>
+                <a href="contribute.html" style="color: #a855f7; text-decoration: none; font-weight: 600;">🤝 Contribute</a>
+            </div>
+            
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search applications, categories, formats..." autocomplete="off">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+            </div>
+            
+            <div class="filters" id="categoryFilters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="Creative Application">Creative</button>
+                <button class="filter-btn" data-filter="Development IDE">IDEs</button>
+                <button class="filter-btn" data-filter="Browser">Browsers</button>
+                <button class="filter-btn" data-filter="Dev Tools">Dev Tools</button>
+                <button class="filter-btn" data-filter="Tools">System Tools</button>
+            </div>
+        </header>
+
+        <div class="app-grid" id="appGrid">
+            <!-- Cards will be dynamically injected here via JS -->
+        </div>
+    </main>
+
+    <script src="linux-setup.js"></script>
+</body>
+</html>

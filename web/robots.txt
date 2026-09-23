@@ -1,0 +1,22 @@
+# Allow all web crawlers and AI Agents to access all pages & specification files
+User-agent: *
+Allow: /
+Allow: /AGENT.md
+Allow: /llms.txt
+
+# AI Web Crawlers (Google Gemini, OpenAI, Anthropic, Perplexity)
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# Sitemap & AI Specifications Location
+Sitemap: https://fancybash.netlify.app/sitemap.xml
+

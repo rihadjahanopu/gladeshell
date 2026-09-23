@@ -1,0 +1,3976 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary Meta Tags -->
+    <title>fancybash Official Documentation — Professional Shell Setup & Command Reference</title>
+    <meta
+      name="title"
+      content="fancybash Official Documentation — Professional Shell Setup & Command Reference"
+    />
+    <meta
+      name="description"
+      content="Complete documentation, installation guides, interactive command reference, keyboard shortcuts, and architecture specs for fancybash (Bash, Zsh, Fish & PowerShell)."
+    />
+    <meta
+      name="keywords"
+      content="fancybash docs, fancybash documentation, bash prompt guide, zsh setup, powershell profile, terminal aliases, git shortcuts, docker shortcuts, ffmpeg CLI tool"
+    />
+    <meta name="author" content="Rihad Jahan Opu" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#070a12" />
+    <link rel="canonical" href="https://fancybash.netlify.app/docs.html" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://fancybash.netlify.app/docs.html" />
+    <meta property="og:title" content="fancybash Official Documentation" />
+    <meta
+      property="og:description"
+      content="Comprehensive guides, installation instructions, interactive command reference, keyboard shortcuts, and architecture specs for Bash, Zsh, Fish & PowerShell."
+    />
+    <meta property="og:image" content="https://fancybash.netlify.app/og-image.png" />
+    <meta property="og:site_name" content="fancybash" />
+
+    <!-- Fonts & Styles -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="docs.css" />
+    <!-- AI Agent & LLM Context Discovery Links -->
+    <link rel="alternate" type="text/markdown" href="https://fancybash.netlify.app/AGENT.md" title="AI Agent Specification (AGENT.md)" />
+    <link rel="alternate" type="text/markdown" href="https://fancybash.netlify.app/llms.txt" title="LLM Context Document (llms.txt)" />
+    <meta name="ai-agent" content="https://fancybash.netlify.app/AGENT.md" />
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "name": "fancybash Documentation",
+        "url": "https://fancybash.netlify.app/docs.html",
+        "description": "Official documentation for fancybash terminal environment.",
+        "author": {
+          "@type": "Person",
+          "name": "Rihad Jahan Opu",
+          "url": "https://github.com/rihadjahanopu"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-progress-bar" id="scroll-progress-bar"></div>
+
+    <!-- ============================================================
+       TOP NAVBAR
+       ============================================================ -->
+    <nav class="docs-nav">
+      <div class="docs-nav-left">
+        <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle Navigation">
+          ☰
+        </button>
+        <a href="index.html" class="docs-logo">
+          <span class="docs-logo-icon">⚡</span>
+          <span>fancybash</span>
+          <span class="docs-badge">Docs v2.0</span>
+        </a>
+
+        <!-- Navbar Inline Autocomplete Search -->
+        <div class="nav-search-wrap" id="nav-search-wrap">
+          <span class="nav-search-icon">🔍</span>
+          <input
+            type="text"
+            id="nav-search-input"
+            class="nav-search-input"
+            placeholder="Search docs..."
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Search documentation"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="nav-autocomplete-list"
+          />
+          <kbd class="nav-search-kbd">⌘K</kbd>
+          <!-- Autocomplete Dropdown -->
+          <div class="nav-autocomplete" id="nav-autocomplete-list" role="listbox" hidden>
+            <!-- JS-rendered suggestion items -->
+          </div>
+        </div>
+      </div>
+
+      <ul class="docs-nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="docs.html" class="active">Docs</a></li>
+        <li><a href="linux-setup.html">Linux Apps</a></li>
+        <li><a href="contribute.html">Contribute</a></li>
+        <li>
+          <div class="theme-picker" title="Switch Documentation Theme">
+            <div class="theme-dot active" data-t="default" title="Cyber Cyan"></div>
+            <div class="theme-dot" data-t="matrix" title="Matrix Green"></div>
+            <div class="theme-dot" data-t="sunset" title="Sunset Pink"></div>
+            <div class="theme-dot" data-t="nord" title="Nord Frost"></div>
+          </div>
+        </li>
+        <li>
+          <a
+            href="https://github.com/rihadjahanopu/fancybash"
+            target="_blank"
+            rel="noopener"
+            style="display: flex; align-items: center; gap: 6px"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"
+              />
+            </svg>
+            GitHub
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- ============================================================
+       MAIN 3-COLUMN DOCUMENTATION LAYOUT
+       ============================================================ -->
+    <div class="docs-layout">
+      <!-- --- LEFT SIDEBAR (NAVIGATION) --- -->
+      <aside class="docs-sidebar" id="docs-sidebar">
+        <!-- Mobile Sidebar Header (shown on mobile drawer) -->
+        <div class="mobile-sidebar-header">
+          <div class="mobile-sidebar-brand">
+            <span class="docs-logo-icon">⚡</span>
+            <span>fancybash</span>
+          </div>
+          <button class="mobile-sidebar-close" id="mobile-sidebar-close" aria-label="Close Menu">✕</button>
+        </div>
+
+        <!-- Mobile Navigation & Theme Group -->
+        <div class="sidebar-group mobile-only-nav">
+          <div class="sidebar-group-title">🌐 Navigation</div>
+          <ul class="sidebar-links">
+            <li><a href="index.html">🏠 Home Page</a></li>
+            <li><a href="docs.html" class="active">📖 Documentation</a></li>
+            <li><a href="linux-setup.html">🐧 Linux App Ecosystem</a></li>
+            <li>
+              <a href="https://github.com/rihadjahanopu/fancybash" target="_blank" rel="noopener">
+                ⭐ GitHub Repository
+              </a>
+            </li>
+          </ul>
+
+          <div class="sidebar-group-title" style="margin-top: 14px;">🎨 Color Theme</div>
+          <div class="mobile-theme-picker">
+            <div class="theme-picker" title="Switch Documentation Theme">
+              <div class="theme-dot active" data-t="default" title="Cyber Cyan"></div>
+              <div class="theme-dot" data-t="matrix" title="Matrix Green"></div>
+              <div class="theme-dot" data-t="sunset" title="Sunset Pink"></div>
+              <div class="theme-dot" data-t="nord" title="Nord Frost"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-filter">
+          <span class="sidebar-filter-icon">🔍</span>
+          <input type="text" placeholder="Filter sections..." id="sidebar-filter-input" />
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">🚀 Getting Started</div>
+          <ul class="sidebar-links">
+            <li>
+              <a href="#overview">Overview & Philosophy <span class="sidebar-tag">Core</span></a>
+            </li>
+            <li><a href="#requirements">System Requirements</a></li>
+            <li><a href="#universal-install">Universal Installer</a></li>
+            <li><a href="#shell-installers">Shell-Specific Installers</a></li>
+            <li><a href="#manual-install">Manual Clone & Source</a></li>
+            <li><a href="#verification">Verification & Reload</a></li>
+            <li><a href="#update-uninstall">Updating & Uninstalling</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">🐚 Shell Integration</div>
+          <ul class="sidebar-links">
+            <li>
+              <a href="#zsh-setup">Zsh & Plugin Guide <span class="sidebar-tag">Zsh</span></a>
+            </li>
+            <li>
+              <a href="#fish-setup">Fish Shell Guide <span class="sidebar-tag">Fish</span></a>
+            </li>
+            <li>
+              <a href="#powershell-setup">PowerShell Setup <span class="sidebar-tag">Win</span></a>
+            </li>
+            <li><a href="#font-setup">Font & Emoji Setup</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">📟 Smart Prompt</div>
+          <ul class="sidebar-links">
+            <li><a href="#prompt-architecture">Prompt Architecture</a></li>
+            <li><a href="#folder-emojis">Folder Emojis & Badges</a></li>
+            <li><a href="#health-metrics">CPU Temp & System Metrics</a></li>
+            <li><a href="#customizing-prompt">Customization Tuning</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">⚡ Interactive Tools</div>
+          <ul class="sidebar-links">
+            <li>
+              <a href="#command-explorer"
+                >Live Command Explorer <span class="sidebar-tag">Tool</span></a
+              >
+            </li>
+            <li>
+              <a href="#terminal-simulator"
+                >Terminal Simulator <span class="sidebar-tag">Demo</span></a
+              >
+            </li>
+            <li><a href="#config-builder">Custom Installer Builder</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">🎨 Prompt Themes</div>
+          <ul class="sidebar-links">
+            <li><a href="#prompt-themes">Theme Gallery <span class="sidebar-tag new">55 Themes</span></a></li>
+            <li><a href="#theme-preview">fancy preview Command</a></li>
+            <li><a href="#theme-switch">Switching Themes</a></li>
+            <li><a href="#theme-showcase">All 55 Themes Showcase</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">📂 Command Reference</div>
+          <ul class="sidebar-links">
+            <li><a href="#nav-commands">Navigation & Jumps</a></li>
+            <li><a href="#pkg-commands">Package Managers (NPM/Bun)</a></li>
+            <li><a href="#git-commands">Git Version Control</a></li>
+            <li><a href="#sys-commands">System & Maintenance</a></li>
+            <li><a href="#interactive-utilities">Interactive (Todo / Notes)</a></li>
+            <li><a href="#ffmedia-suite">FFmedia Suite</a></li>
+            <li><a href="#vault-suite">Multi-Vault Manager</a></li>
+            <li><a href="#docker-suite">Docker Suite</a></li>
+            <li><a href="#postgres-prisma">PostgreSQL & Prisma</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">🏗️ Specs & Support</div>
+          <ul class="sidebar-links">
+            <li><a href="#architecture-safety">Architecture & Safety</a></li>
+            <li><a href="#benchmarks">Performance Benchmarks</a></li>
+            <li><a href="#troubleshooting-faq">Troubleshooting & FAQ</a></li>
+            <li><a href="#contributing-license">Contributing & License</a></li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- --- CENTER CONTENT AREA --- -->
+      <main class="docs-content">
+        <!-- Breadcrumbs -->
+        <nav class="docs-breadcrumbs" aria-label="Breadcrumb">
+          <a href="index.html">Home</a>
+          <span>/</span>
+          <a href="docs.html">Documentation</a>
+          <span>/</span>
+          <span style="color: var(--docs-cyan)">v2.0 (Latest)</span>
+        </nav>
+
+        <!-- Hero Header -->
+        <header class="docs-header-hero">
+          <h1>fancybash Official Documentation</h1>
+          <p>
+            Everything you need to master, install, customize, and extend
+            <strong>fancybash</strong> — the production-ready shell setup built for modern
+            developers across Linux, macOS, and Windows.
+          </p>
+
+          <div class="docs-meta-bar">
+            <span class="meta-badge green">✓ Version 2.0 Stable</span>
+            <span class="meta-badge cyan">⚡ Zero Dependencies</span>
+            <span class="meta-badge purple">🛡️ Safe Boundary Installer</span>
+            <span class="meta-badge">Shells: Bash • Zsh • Fish • PowerShell</span>
+            <span class="meta-badge">License: MIT</span>
+          </div>
+        </header>
+
+        <!-- ============================================================
+           SECTION 1: GETTING STARTED
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="overview"><span class="section-icon">🚀</span> Overview & Philosophy</h2>
+          <p>
+            <strong>fancybash</strong> is a lightweight, opinionated terminal enhancement
+            environment engineered specifically for full-stack, DevOps, and open-source developers.
+            Unlike heavy framework monoliths (such as Oh My Zsh or bulky plugin managers), fancybash
+            operates with <strong>zero external script dependencies</strong>, instant terminal cold
+            startup (< 15ms), and a safe single-file modular architecture.
+          </p>
+
+          <div class="alert-box alert-note">
+            <div class="alert-title">💡 Core Architecture Guarantee</div>
+            <p>
+              fancybash never modifies your core system bin files or destroys existing shell
+              configurations. All additions are injected cleanly between boundary comments (`# >>>
+              fancy-bashrc >>>` and `# <<< fancy-bashrc <<<`).
+            </p>
+          </div>
+
+          <h3 id="requirements">System Requirements</h3>
+          <p>fancybash works natively across virtually any modern Unix or Windows system:</p>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Platform / OS</th>
+                  <th>Supported Shells</th>
+                  <th>Minimum Required Tools</th>
+                  <th>Recommended Enhancements</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Linux</strong> (Ubuntu, Debian, Arch, Fedora, Alpine)</td>
+                  <td>Bash 4.4+, Zsh 5.8+, Fish 3.0+</td>
+                  <td><code>curl</code>, <code>git</code>, <code>bash</code></td>
+                  <td><code>fonts-noto-color-emoji</code>, <code>fzf</code>, <code>gum</code></td>
+                </tr>
+                <tr>
+                  <td><strong>macOS</strong> (Sequoia, Sonoma, Ventura)</td>
+                  <td>Zsh (Default), Bash (Homebrew), Fish</td>
+                  <td><code>curl</code>, <code>git</code></td>
+                  <td>Fira Code Nerd Font, iTerm2 / Ghostty</td>
+                </tr>
+                <tr>
+                  <td><strong>Windows 10/11</strong> (Native & WSL2)</td>
+                  <td>PowerShell 7+, Windows PowerShell 5.1, WSL2 Bash</td>
+                  <td><code>curl</code> / <code>irm</code></td>
+                  <td>Windows Terminal, Cascadia Code PL</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="universal-install">Universal 1-Line Installer</h3>
+          <p>
+            The smartest way to set up fancybash. It automatically detects your operating system and
+            current default shell, injecting the appropriate configuration cleanly:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Bash / Zsh (Universal)</span>
+              <button class="copy-btn"><span>📋</span> Copy Command</button>
+            </div>
+            <pre><code>curl -fsSL https://fancybash.netlify.app/i.sh | bash</code></pre>
+          </div>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">PowerShell (Windows Universal)</span>
+              <button class="copy-btn"><span>📋</span> Copy Command</button>
+            </div>
+            <pre><code>irm https://fancybash.netlify.app/public/i.ps1 | iex</code></pre>
+          </div>
+
+          <h3 id="shell-installers">Shell-Specific Installers</h3>
+          <p>
+            If you prefer targeting a specific shell directly, run the respective execution script:
+          </p>
+
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Target Shell</th>
+                  <th>Configuration Target File</th>
+                  <th>One-Line Terminal Command</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Bash</strong></td>
+                  <td><code>~/.bashrc</code></td>
+                  <td>
+                    <code
+                      >bash <(curl -fsSL
+                      https://fancybash.netlify.app/public/install.sh)</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Zsh</strong></td>
+                  <td><code>~/.zshrc</code></td>
+                  <td>
+                    <code
+                      >zsh <(curl -fsSL
+                      https://fancybash.netlify.app/public/install.zsh)</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Fish</strong></td>
+                  <td><code>~/.config/fish/config.fish</code></td>
+                  <td>
+                    <code
+                      >fish <(curl -fsSL
+                      https://fancybash.netlify.app/public/install.fish)</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>PowerShell</strong></td>
+                  <td><code>$PROFILE</code></td>
+                  <td>
+                    <code
+                      >irm
+                      https://fancybash.netlify.app/public/install.ps1
+                      | iex</code
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="manual-install">Manual Clone & Source</h3>
+          <p>
+            For air-gapped environments or manual dotfile management, clone the repository directly:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Shell Script</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code><span class="hl-comment"># 1. Clone fancybash repository</span>
+git clone https://github.com/rihadjahanopu/fancybash.git
+<span class="hl-cmd">cd</span> fancybash
+
+<span class="hl-comment"># 2. Append configuration for Bash</span>
+cat config.sh >> ~/.bashrc
+source ~/.bashrc
+
+<span class="hl-comment"># Or for Zsh</span>
+cat config.zsh >> ~/.zshrc
+source ~/.zshrc
+
+<span class="hl-comment"># Or for Fish</span>
+cat config.fish >> ~/.config/fish/config.fish
+source ~/.config/fish/config.fish</code></pre>
+          </div>
+
+          <h3 id="verification">Verification & First Steps</h3>
+          <p>Once installed, reload your active shell or type:</p>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Bash</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>source ~/.bashrc  <span class="hl-comment"># Or restart your terminal window</span></code></pre>
+          </div>
+          <p>
+            You should immediately see the glowing rainbow prompt with directory-aware emojis (e.g.
+            🌐 for web projects, 🟢 for Node.js, 🐍 for Python)!
+          </p>
+
+          <h3 id="update-uninstall">Updating & Uninstalling</h3>
+          <p>To upgrade fancybash to the latest version and automatically reload your shell, run:</p>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Fancybash Auto-Upgrade</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>fancy upgrade  <span class="hl-comment"># Upgrades fancybash & auto-reloads shell process</span>
+
+<span class="hl-comment"># Aliases:</span>
+fancy update
+fancy_upgrade</code></pre>
+          </div>
+
+          <p>To perform a full system update (OS packages, Flatpaks, Snaps, Bun & Node), run the mega updater:</p>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Terminal</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>uup  <span class="hl-comment"># Upgrades OS packages, Flatpaks, Snaps & Bun</span></code></pre>
+          </div>
+
+          <p>
+            To cleanly uninstall fancybash without affecting any of your custom shell aliases or
+            scripts:
+          </p>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Universal Uninstaller</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>curl -fsSL https://fancybash.netlify.app/u.sh | bash</code></pre>
+          </div>
+
+          <h3 id="zed-settings">🖥️ Zed IDE Settings Installer</h3>
+          <p>
+            Install a fully-configured <code>settings.json</code> for the
+            <a href="https://zed.dev" target="_blank" rel="noopener">Zed editor</a> — works for both
+            <strong>Flatpak</strong> and <strong>native</strong> Linux installations in one shot:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Zed Settings One-Line Installer</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>curl -fsSL https://fancybash.netlify.app/public/zed/install-settings.sh | bash</code></pre>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--docs-text-muted)">
+            <strong>What it does:</strong> Creates a timestamped backup of your existing settings,
+            writes tuned <code>settings.json</code> (BlackFox theme, Cascadia Code 22px font, Tab
+            size 2, Prettier, Git inline blame, autosave) to both <code>~/.config/zed/</code> and
+            Flatpak <code>dev.zed.Zed</code> config paths.
+          </p>
+        </section>
+
+        <!-- ============================================================
+           SECTION 2: SHELL SETUP GUIDES
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="zsh-setup"><span class="section-icon">🐚</span> Shell Integration Guides</h2>
+
+          <h3>Zsh Setup & Zero-Framework Plugin Integration</h3>
+          <p>
+            fancybash (`config.zsh`) provides supercharged Zsh integration with automatic
+            autosuggestions and syntax highlighting,
+            <strong>without requiring heavy frameworks like Oh-My-Zsh</strong>.
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Zsh Plugin Setup Script</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code><span class="hl-comment"># 1. Create native Zsh plugin directory</span>
+mkdir -p ~/.zsh
+
+<span class="hl-comment"># 2. Clone syntax highlighting and autosuggestions</span>
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.zsh/zsh-syntax-highlighting
+git clone https://github.com/zsh-users/zsh-autosuggestions.git ~/.zsh/zsh-autosuggestions
+
+<span class="hl-comment"># 3. Reload Zsh</span>
+source ~/.zshrc</code></pre>
+          </div>
+
+          <h3 id="fish-setup">Fish Shell Integration</h3>
+          <p>
+            For Fish shell users, `config.fish` maps all fancybash function aliases to native Fish
+            functions with complete tab auto-completion:
+          </p>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Fish Shell</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code><span class="hl-comment"># Install fancyfish</span>
+fish <(curl -fsSL https://fancybash.netlify.app/public/install.fish)
+source ~/.config/fish/config.fish</code></pre>
+          </div>
+
+          <h3 id="powershell-setup">PowerShell Setup ($PROFILE)</h3>
+          <p>PowerShell 7+ and Windows PowerShell 5.1 are fully supported via `i.ps1`.</p>
+          <div class="alert-box alert-warning">
+            <div class="alert-title">⚠️ Windows Script Execution Policy</div>
+            <p>
+              If PowerShell blocks remote script execution, enable execution policy first in an
+              Administrator terminal:
+              <code>Set-ExecutionPolicy RemoteSigned -Scope CurrentUser</code>
+            </p>
+          </div>
+
+          <h3 id="font-setup">Font & Emoji Setup</h3>
+          <p>
+            To render color emojis and programming ligatures in Linux terminals, install Noto Color
+            Emoji and Fira Code:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Ubuntu / Debian Font Install</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>sudo apt update && sudo apt install -y fonts-noto-color-emoji fonts-firacode fonts-cascadia-code
+fc-cache -fv</code></pre>
+          </div>
+
+          <p>Priority configuration for <code>/etc/fonts/local.conf</code>:</p>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">XML Config (/etc/fonts/local.conf)</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE fontconfig SYSTEM "fonts.dtd"&gt;
+&lt;fontconfig&gt;
+  &lt;alias&gt;
+    &lt;family&gt;monospace&lt;/family&gt;
+    &lt;prefer&gt;
+      &lt;family&gt;Fira Code&lt;/family&gt;
+      &lt;family&gt;Noto Color Emoji&lt;/family&gt;
+    &lt;/prefer&gt;
+  &lt;/alias&gt;
+&lt;/fontconfig&gt;</code></pre>
+          </div>
+        </section>
+
+        <!-- ============================================================
+           SECTION 3: SMART PROMPT SYSTEM
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="prompt-architecture"><span class="section-icon">📟</span> Smart Prompt System</h2>
+          <p>
+            fancybash features a two-line contextual prompt that adapts to your active workspace,
+            system hardware status, and git repositories in real-time.
+          </p>
+
+          <h3 id="folder-emojis">Folder Emojis & Status Indicators</h3>
+          <p>
+            The prompt automatically detects project indicator files inside your working directory:
+          </p>
+
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Detected File / Environment</th>
+                  <th>Prompt Emoji</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>package.json</code> / <code>node_modules</code></td>
+                  <td>🟢</td>
+                  <td>Node.js Web / Backend Project</td>
+                </tr>
+                <tr>
+                  <td><code>bun.lockb</code> / <code>bunfig.toml</code></td>
+                  <td>🥐</td>
+                  <td>Bun JavaScript / TypeScript Runtime</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>requirements.txt</code> / <code>Pipfile</code> /
+                    <code>pyproject.toml</code>
+                  </td>
+                  <td>🐍</td>
+                  <td>Python Application Environment</td>
+                </tr>
+                <tr>
+                  <td><code>index.html</code> / <code>vite.config.js</code></td>
+                  <td>🌐</td>
+                  <td>Frontend Web Application</td>
+                </tr>
+                <tr>
+                  <td><code>Dockerfile</code> / <code>docker-compose.yml</code></td>
+                  <td>🐳</td>
+                  <td>Docker Containerized Project</td>
+                </tr>
+                <tr>
+                  <td><code>Cargo.toml</code></td>
+                  <td>🦀</td>
+                  <td>Rust Cargo Package</td>
+                </tr>
+                <tr>
+                  <td><code>go.mod</code></td>
+                  <td>🐹</td>
+                  <td>Go Module Workspace</td>
+                </tr>
+                <tr>
+                  <td>Read-only directory</td>
+                  <td>🔒</td>
+                  <td>Directory lacks write permissions</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="health-metrics">CPU Temp & System Monitoring</h3>
+          <p>Real-time system health metrics rendered directly in the prompt bar:</p>
+          <ul>
+            <li>
+              <strong>CPU Temperature:</strong> Color coded — 🟢 Green (< 65°C), 🟡 Yellow
+              (65–80°C), 🔴 Red (> 80°C).
+            </li>
+            <li>
+              <strong>Git Dirty Branch:</strong> Shows <code>branchname ❗</code> when uncommitted
+              changes exist.
+            </li>
+            <li>
+              <strong>Command Execution Timer:</strong> Shows <code>⏱️ Ns</code> for any command
+              taking longer than 1.0s.
+            </li>
+          </ul>
+
+          <h3 id="customizing-prompt">Customizing Prompt Behavior</h3>
+          <p>
+            You can toggle individual prompt monitors by exporting environment variables in your
+            <code>.bashrc</code> / <code>.zshrc</code>:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Bash Config</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code><span class="hl-comment"># Custom fancybash environment variables</span>
+export FANCY_SHOW_CPU_TEMP=true     <span class="hl-comment"># Show CPU temp</span>
+export FANCY_SHOW_GIT_DIRTY=true    <span class="hl-comment"># Show git dirty status</span>
+export FANCY_SHOW_EXEC_TIMER=true   <span class="hl-comment"># Show command duration</span></code></pre>
+          </div>
+        </section>
+
+        <!-- ============================================================
+           SECTION 4: PROMPT THEMES GALLERY
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="prompt-themes"><span class="section-icon">🎨</span> Prompt Themes Gallery</h2>
+          <p>
+            fancybash ships with <strong>55 world-class prompt themes</strong> inspired by the best
+            designs from Oh My Zsh, Oh My Posh, Starship, Spaceship, and modern terminal aesthetics.
+            Every theme works across <strong>Bash, Zsh, and Fish</strong> shells with full color and
+            emoji support.
+          </p>
+
+          <div class="alert-box alert-tip">
+            <strong>💡 Tip:</strong> All themes support Git branch tracking, exit code indicators,
+            and live system metrics. Use <code>fancy preview</code> to browse them all interactively
+            in a scrollable gallery right inside your terminal!
+          </div>
+
+          <!-- fancy preview command -->
+          <h3 id="theme-preview">The <code>fancy preview</code> Command</h3>
+          <p>
+            Run <code>fancy preview</code> to open an interactive, scrollable theme gallery showing
+            all 55 themes with live prompt rendering:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Terminal</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code><span class="hl-comment"># Open interactive scrollable theme gallery (all 55 themes)</span>
+fancy preview
+
+<span class="hl-comment"># Aliases — all do the same thing</span>
+fancy list
+fancy_theme preview</code></pre>
+          </div>
+
+          <div class="terminal-window" style="margin: 1.5rem 0;">
+            <div class="terminal-bar">
+              <div class="terminal-dots">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+              </div>
+              <span class="terminal-title">fancy preview — Theme Gallery</span>
+            </div>
+            <div class="terminal-body" style="font-size: 0.82rem; line-height: 1.7;">
+              <div class="term-line"><span class="term-prompt">❯ </span><span class="term-out success">fancy preview</span></div>
+              <div class="term-line"><span class="term-out" style="color:#c792ea">🎨 FANCYBASH PROMPT THEME GALLERY (55 Themes)</span></div>
+              <div class="term-line"><span class="term-out" style="color:#4ecdc4">──────────────────────────────────────────────────────────</span></div>
+              <div class="term-line"><span class="term-out" style="color:#ffd700">📌 [1/55] agnoster</span></div>
+              <div class="term-line"><span class="term-out"> 💻 user@pc  myproject  [🌿 main ❗] ❯</span></div>
+              <div class="term-line"><span class="term-out" style="color:#4ecdc4">──────────────────────────────────────────────────────────</span></div>
+              <div class="term-line"><span class="term-out" style="color:#ffd700">📌 [2/55] bira</span></div>
+              <div class="term-line"><span class="term-out">╭─user@pc ~/myproject  [🌿 main ❗]</span></div>
+              <div class="term-line"><span class="term-out">╰─$</span></div>
+              <div class="term-line"><span class="term-out" style="color:#888">  ... scroll with ↑↓ or PageUp/PageDown to see all 55 themes ...</span></div>
+              <div class="term-line"><span class="term-out" style="color:#888">  Press <kbd style="background:#333;padding:1px 5px;border-radius:3px">q</kbd> to exit gallery</span></div>
+            </div>
+          </div>
+
+          <!-- Switching themes -->
+          <h3 id="theme-switch">Switching Themes</h3>
+          <p>Use the <code>fancy</code> command to switch themes interactively or directly by name:</p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Terminal</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code><span class="hl-comment"># Open interactive gum/fzf theme picker (arrow keys to select)</span>
+fancy
+
+<span class="hl-comment"># Switch to a specific theme directly by name</span>
+fancy catppuccin
+fancy tokyonight
+fancy dracula
+fancy cyberpunk
+fancy starship
+fancy matrix
+
+<span class="hl-comment"># Theme persists across sessions — saved to ~/.fancybash_theme</span></code></pre>
+          </div>
+
+          <!-- Full 55-theme showcase -->
+          <h3 id="theme-showcase">All 55 Themes Showcase</h3>
+          <p>Every theme is available on <strong>Bash, Zsh, and Fish</strong>. Activate with <code>fancy &lt;name&gt;</code>:</p>
+
+          <div class="themes-grid">
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a1a2e,#16213e);">
+                <span class="theme-badge">01</span>
+                <span class="theme-name">minimal</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#f8f8f2">🌈 myproject</span><br>
+                <span style="color:#50fa7b">❯❯❯</span>
+              </div>
+              <div class="theme-card-meta">Fancybash default · Random emoji · 1-line</div>
+              <code class="theme-cmd">fancy minimal</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0d1117,#161b22);">
+                <span class="theme-badge">02</span>
+                <span class="theme-name">full</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#61afef">🚀 myproject 📂 20M [🌿 main] 🌡️35°C</span><br>
+                <span style="color:#98c379">🟢 v24 │ bun │ Aug 25</span><br>
+                <span style="color:#50fa7b">❯❯❯</span>
+              </div>
+              <div class="theme-card-meta">Full 3-line · All system metrics · Git + Node</div>
+              <code class="theme-cmd">fancy full</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1e2030,#292d3e);">
+                <span class="theme-badge">03</span>
+                <span class="theme-name">robbyrussell</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#50fa7b">➜</span> <span style="color:#8be9fd">myproject</span> <span style="color:#f1fa8c">[🌿 main ❗]</span> <span style="color:#50fa7b">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Zsh classic default · 1-line clean</div>
+              <code class="theme-cmd">fancy robbyrussell</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0a0e1a,#0d1b3e);">
+                <span class="theme-badge">04</span>
+                <span class="theme-name">p10k</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#61afef">╭─</span> 🐧 <span style="color:#98c379">user@pc</span> in <span style="color:#56b6c2">~/myproject</span> <span style="color:#e5c07b">[🌿 main]</span><br>
+                <span style="color:#61afef">╰─</span><span style="color:#98c379">❯</span>
+              </div>
+              <div class="theme-card-meta">Powerlevel10k inspired · 2-line rich prompt</div>
+              <code class="theme-cmd">fancy p10k</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a1a2e,#2d2d44);">
+                <span class="theme-badge">05</span>
+                <span class="theme-name">agnoster</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="background:#264f78;color:#fff;padding:1px 6px"> 💻 user@pc </span><span style="background:#1e7340;color:#264f78;padding:1px 6px"> myproject </span><span style="background:#b8860b;color:#1e7340;padding:1px 6px"> main </span><br>
+                <span style="color:#56b6c2">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Zsh Powerline segment style</div>
+              <code class="theme-cmd">fancy agnoster</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1e1e2e,#24273a);">
+                <span class="theme-badge">06</span>
+                <span class="theme-name">catppuccin</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="background:#ca9ee6;color:#1e1e2e;padding:1px 6px"> 🐱 catppuccin </span><span style="background:#89b4fa;color:#1e1e2e;padding:1px 6px"> 📂 myproject </span><span style="color:#89b4fa;"> [🌿 main]</span><br>
+                <span style="color:#f5c2e7">❯❯❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Posh · Soft pastel Mocha palette</div>
+              <code class="theme-cmd">fancy catppuccin</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a1b26,#16161e);">
+                <span class="theme-badge">07</span>
+                <span class="theme-name">tokyonight</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#bb9af7">🌌 </span><span style="color:#7dcfff">~/myproject</span> <span style="color:#7aa2f7">[🌿 main]</span> <span style="color:#9ece6a">v24</span><br>
+                <span style="color:#bb9af7">⚡</span>
+              </div>
+              <div class="theme-card-meta">Oh My Posh · Cyber neon Tokyo Night</div>
+              <code class="theme-cmd">fancy tokyonight</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#282a36,#1e1f29);">
+                <span class="theme-badge">08</span>
+                <span class="theme-name">dracula</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#bd93f9">🧛 user</span> <span style="color:#ff79c6">in ~/myproject</span> <span style="color:#8be9fd">[🌿 main]</span><br>
+                <span style="color:#50fa7b">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Posh · Vibrant dark pink/purple</div>
+              <code class="theme-cmd">fancy dracula</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#2e3440,#3b4252);">
+                <span class="theme-badge">09</span>
+                <span class="theme-name">nord</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#88c0d0">❄️  ~/myproject</span> <span style="color:#81a1c1">[🌿 main]</span><br>
+                <span style="color:#8fbcbb">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Posh · Arctic frost calm palette</div>
+              <code class="theme-cmd">fancy nord</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1c1c1c,#2a2a2a);">
+                <span class="theme-badge">10</span>
+                <span class="theme-name">bira</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#f1c40f">╭─</span><span style="color:#2ecc71">user@pc ~/myproject</span> <span style="color:#9b59b6">[🌿 main]</span><br>
+                <span style="color:#f1c40f">╰─</span><span style="color:#2ecc71">$</span>
+              </div>
+              <div class="theme-card-meta">Oh My Zsh classic two-line style</div>
+              <code class="theme-cmd">fancy bira</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0f0f23,#1a1a35);">
+                <span class="theme-badge">11</span>
+                <span class="theme-name">pure</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#61afef">~/myproject</span> <span style="color:#666">[🌿 main]</span><br>
+                <span style="color:#98c379">❯</span>
+              </div>
+              <div class="theme-card-meta">Sindre Sorhus Pure · Ultra quiet minimal</div>
+              <code class="theme-cmd">fancy pure</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a0533,#2d0f4e);">
+                <span class="theme-badge">12</span>
+                <span class="theme-name">starship</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#c678dd">🚀 user</span> <span style="color:#98c379">in</span> <span style="color:#56b6c2">~/myproject</span> <span style="color:#e5c07b">[🌿 main]</span><br>
+                <span style="color:#e5c07b">❯</span>
+              </div>
+              <div class="theme-card-meta">Starship cross-shell inspired · Rocket style</div>
+              <code class="theme-cmd">fancy starship</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0a0a0a,#111100);">
+                <span class="theme-badge">13</span>
+                <span class="theme-name">cyberpunk</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="background:#ffee00;color:#000;padding:1px 6px"> ⚡ CYBER </span><span style="background:#00f0ff;color:#000;padding:1px 6px"> ~/myproject </span><span style="color:#ccc"> [🌿 main]</span><br>
+                <span style="color:#ff0055">▶▶</span>
+              </div>
+              <div class="theme-card-meta">Futuristic neon yellow &amp; electric cyan</div>
+              <code class="theme-cmd">fancy cyberpunk</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a001a,#2d0050);">
+                <span class="theme-badge">14</span>
+                <span class="theme-name">synthwave</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff007f">🌅 </span><span style="color:#00ffff">~/myproject</span> <span style="color:#9d00ff">[🌿 main]</span><br>
+                <span style="color:#ff007f">❯❯</span>
+              </div>
+              <div class="theme-card-meta">80s retro magenta &amp; electric purple vibes</div>
+              <code class="theme-cmd">fancy synthwave</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#282828,#3c3836);">
+                <span class="theme-badge">15</span>
+                <span class="theme-name">gruvbox</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#fabd2f">🌴 user</span> <span style="color:#8ec07c">in ~/myproject</span> <span style="color:#fe8019">[🌿 main]</span><br>
+                <span style="color:#fabd2f">❯</span>
+              </div>
+              <div class="theme-card-meta">Retro warm gold &amp; forest green palette</div>
+              <code class="theme-cmd">fancy gruvbox</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#21252b,#282c34);">
+                <span class="theme-badge">16</span>
+                <span class="theme-name">onedark</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#61afef">🌐 user</span> <span style="color:#c678dd">~/myproject</span> <span style="color:#98c379">[🌿 main]</span><br>
+                <span style="color:#61afef">❯</span>
+              </div>
+              <div class="theme-card-meta">Atom &amp; VS Code One Dark · Classic blue</div>
+              <code class="theme-cmd">fancy onedark</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a1a2e,#0f3460);">
+                <span class="theme-badge">17</span>
+                <span class="theme-name">sorin</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#61afef">user@pc</span> <span style="color:#56b6c2">~/myproject</span> <span style="color:#ccc">[🌿 main]</span><br>
+                <span style="color:#c678dd">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Zsh Sorin · Modern clean arrow</div>
+              <code class="theme-cmd">fancy sorin</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0f0c29,#302b63);">
+                <span class="theme-badge">18</span>
+                <span class="theme-name">spaceship</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#61afef">🚀 user</span> in <span style="color:#56b6c2">~/myproject</span> <span style="color:#ccc">[🌿 main]</span><br>
+                <span style="color:#98c379">➜</span>
+              </div>
+              <div class="theme-card-meta">Spaceship ZSH inspired · Iconic rocket</div>
+              <code class="theme-cmd">fancy spaceship</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a1000,#2a1a00);">
+                <span class="theme-badge">19</span>
+                <span class="theme-name">halflife</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff9800">λ</span> <span style="color:#ffeb3b">~/myproject</span> <span style="color:#ff9800">[🌿 main]</span><br>
+                <span style="color:#ff9800">▶</span>
+              </div>
+              <div class="theme-card-meta">Half-Life scientist lambda · Warm orange</div>
+              <code class="theme-cmd">fancy halflife</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#000428,#004e92);">
+                <span class="theme-badge">20</span>
+                <span class="theme-name">paradox</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="background:#264f78;color:#fff;padding:1px 6px"> ⚡ ~/myproject </span><span style="background:#7b2d8b;color:#264f78;padding:1px 6px"> [🌿 main] </span><br>
+                <span style="color:#56b6c2">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Posh Paradox · Chevron powerline</div>
+              <code class="theme-cmd">fancy paradox</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1a1a1a,#2d2d2d);">
+                <span class="theme-badge">21</span>
+                <span class="theme-name">bureau</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#666">[</span><span style="color:#f1c40f">user@pc</span><span style="color:#666">]</span> <span style="color:#56b6c2">~/myproject</span> <span style="color:#ccc">[🌿 main]</span><br>
+                <span style="color:#98c379">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Zsh Bureau · Multi-line with brackets</div>
+              <code class="theme-cmd">fancy bureau</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0d1b2a,#1b4332);">
+                <span class="theme-badge">22</span>
+                <span class="theme-name">gallifrey</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ffd700">⏳ </span><span style="color:#00bfff">~/myproject</span> <span style="color:#ffd700">[🌿 main]</span><br>
+                <span style="color:#00bfff">❯</span>
+              </div>
+              <div class="theme-card-meta">Sci-Fi TARDIS gold &amp; deep cyan palette</div>
+              <code class="theme-cmd">fancy gallifrey</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#003300,#004400);">
+                <span class="theme-badge">23</span>
+                <span class="theme-name">material</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#00e676">💎 user</span> <span style="color:#00e5ff">~/myproject</span> <span style="color:#d500f9">[🌿 main]</span><br>
+                <span style="color:#00e676">❯</span>
+              </div>
+              <div class="theme-card-meta">Google Material Design · Emerald &amp; cyan</div>
+              <code class="theme-cmd">fancy material</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#272822,#1e1f1c);">
+                <span class="theme-badge">24</span>
+                <span class="theme-name">monokai</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#a6e22e">🔥 user</span> <span style="color:#f92672">in ~/myproject</span> <span style="color:#e6db74">[🌿 main]</span><br>
+                <span style="color:#a6e22e">❯</span>
+              </div>
+              <div class="theme-card-meta">Sublime/VS Code Monokai Pro neon</div>
+              <code class="theme-cmd">fancy monokai</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#292d3e,#1e1e2e);">
+                <span class="theme-badge">25</span>
+                <span class="theme-name">palenight</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#c792ea">🍇 ~/myproject</span> <span style="color:#89ddff">[🌿 main]</span><br>
+                <span style="color:#ff5370">❯</span>
+              </div>
+              <div class="theme-card-meta">Material Palenight · Purple lavender &amp; pink</div>
+              <code class="theme-cmd">fancy palenight</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0a0f23,#111827);">
+                <span class="theme-badge">26</span>
+                <span class="theme-name">powerlineclassic</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="background:#264f78;color:#fff;padding:1px 6px"> user@pc </span><span style="background:#1e7340;color:#264f78;padding:1px 6px"> ~/myproject </span><span style="color:#ccc"> [🌿 main]</span><br>
+                <span style="color:#56b6c2">❯</span>
+              </div>
+              <div class="theme-card-meta">Classic Powerline statusline style</div>
+              <code class="theme-cmd">fancy powerlineclassic</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0a1628,#112244);">
+                <span class="theme-badge">27</span>
+                <span class="theme-name">lambda</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#98c379">λ</span> <span style="color:#61afef">~/myproject</span> <span style="color:#ccc">[🌿 main]</span> <span style="color:#98c379">❯</span>
+              </div>
+              <div class="theme-card-meta">Oh My Zsh Lambda · Functional aesthetic</div>
+              <code class="theme-cmd">fancy lambda</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0d0015,#1a0030);">
+                <span class="theme-badge">28</span>
+                <span class="theme-name">hyper</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff00ff">⚡ </span><span style="color:#00ffff">~/myproject</span> <span style="color:#ffff00">[🌿 main]</span><br>
+                <span style="color:#ff00ff">❯</span>
+              </div>
+              <div class="theme-card-meta">Hyper Terminal lightning pink &amp; cyan</div>
+              <code class="theme-cmd">fancy hyper</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0a1628,#0f2040);">
+                <span class="theme-badge">29</span>
+                <span class="theme-name">slick</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#98c379">●</span> <span style="color:#56b6c2">myproject</span> <span style="color:#ccc">[🌿 main]</span> <span style="color:#98c379">❯</span>
+              </div>
+              <div class="theme-card-meta">Single-line ultra-slick dot indicator</div>
+              <code class="theme-cmd">fancy slick</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#000a00,#001400);">
+                <span class="theme-badge">30</span>
+                <span class="theme-name">matrix</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#00ff00">📟 user@pc:~/myproject [🌿 main]</span><br>
+                <span style="color:#00ff00">[matrix]❯</span>
+              </div>
+              <div class="theme-card-meta">Hacker glowing green Matrix terminal</div>
+              <code class="theme-cmd">fancy matrix</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#2d0b00,#4a1200);">
+                <span class="theme-badge">31</span>
+                <span class="theme-name">sunset</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff6b6b">🌇 ~/myproject</span> <span style="color:#feca57">[🌿 main]</span><br>
+                <span style="color:#5f27cd">❯</span>
+              </div>
+              <div class="theme-card-meta">Coral pink &amp; warm sunset orange palette</div>
+              <code class="theme-cmd">fancy sunset</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#002b36,#073642);">
+                <span class="theme-badge">32</span>
+                <span class="theme-name">solarized</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#b58900">☀️ user</span> <span style="color:#2aa198">in ~/myproject</span> <span style="color:#cb4b16">[🌿 main]</span><br>
+                <span style="color:#268bd2">❯</span>
+              </div>
+              <div class="theme-card-meta">Solarized Dark warm cyan &amp; yellow retro prompt</div>
+              <code class="theme-cmd">fancy solarized</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#191724,#26233a);">
+                <span class="theme-badge">33</span>
+                <span class="theme-name">rosepine</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#eb6f92">🌹 ~/myproject</span> <span style="color:#c4a7e7">[🌿 main]</span><br>
+                <span style="color:#f6c177">❯</span>
+              </div>
+              <div class="theme-card-meta">Rosé Pine muted rose &amp; lavender aesthetic</div>
+              <code class="theme-cmd">fancy rosepine</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#2d353b,#343f44);">
+                <span class="theme-badge">34</span>
+                <span class="theme-name">everforest</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#a7c080">🌲 user</span> <span style="color:#e2b76e">~/myproject</span> <span style="color:#7fbbb3">[🌿 main]</span><br>
+                <span style="color:#a7c080">❯</span>
+              </div>
+              <div class="theme-card-meta">Everforest deep forest green &amp; warm amber</div>
+              <code class="theme-cmd">fancy everforest</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1f1f28,#2a2a37);">
+                <span class="theme-badge">35</span>
+                <span class="theme-name">kanagawa</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#7e9cd8">🌊 user</span> <span style="color:#e06d76">in ~/myproject</span> <span style="color:#e09e72">[🌿 main]</span><br>
+                <span style="color:#98bb75">❯</span>
+              </div>
+              <div class="theme-card-meta">Kanagawa Wave Japanese ink blue &amp; dragon gold</div>
+              <code class="theme-cmd">fancy kanagawa</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#011627,#0b2942);">
+                <span class="theme-badge">36</span>
+                <span class="theme-name">nightowl</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#82aaff">🦉 user</span> <span style="color:#7fdbca">~/myproject</span> <span style="color:#c792ea">[🌿 main]</span><br>
+                <span style="color:#ffcb6b">❯</span>
+              </div>
+              <div class="theme-card-meta">Night Owl midnight navy &amp; vivid turquoise</div>
+              <code class="theme-cmd">fancy nightowl</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#001935,#003566);">
+                <span class="theme-badge">37</span>
+                <span class="theme-name">cobalt2</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ffc400">⚡ user</span> <span style="color:#0088ff">in ~/myproject</span> <span style="color:#00e5ff">[🌿 main]</span><br>
+                <span style="color:#ffc400">❯</span>
+              </div>
+              <div class="theme-card-meta">Cobalt2 electric blue &amp; bright yellow prompt</div>
+              <code class="theme-cmd">fancy cobalt2</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#2d1b69,#4a2b99);">
+                <span class="theme-badge">38</span>
+                <span class="theme-name">shadesofpurple</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#bd93f9">🍇 ~/myproject</span> <span style="color:#ffd600">[🌿 main]</span><br>
+                <span style="color:#ff8000">❯❯</span>
+              </div>
+              <div class="theme-card-meta">Shades of Purple royal purple &amp; glowing yellow</div>
+              <code class="theme-cmd">fancy shadesofpurple</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0f1419,#1e252e);">
+                <span class="theme-badge">39</span>
+                <span class="theme-name">ayu</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff8f40">🎨 user</span> <span style="color:#95e6cb">~/myproject</span> <span style="color:#ffd700">[🌿 main]</span><br>
+                <span style="color:#ff8f40">❯</span>
+              </div>
+              <div class="theme-card-meta">Ayu Dark clean orange &amp; bright teal contrast</div>
+              <code class="theme-cmd">fancy ayu</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#282a36,#44475a);">
+                <span class="theme-badge">40</span>
+                <span class="theme-name">snazzy</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff5c57">✨ ~/myproject</span> <span style="color:#5ffaef">[🌿 main]</span><br>
+                <span style="color:#ff6ac1">❯</span>
+              </div>
+              <div class="theme-card-meta">Hyper Snazzy vivid magenta &amp; electric cyan</div>
+              <code class="theme-cmd">fancy snazzy</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#2b003b,#570054);">
+                <span class="theme-badge">41</span>
+                <span class="theme-name">outrun</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff007f">🌆 user</span> <span style="color:#00f0ff">in ~/myproject</span> <span style="color:#ffc800">[🌿 main]</span><br>
+                <span style="color:#ff007f">▶▶</span>
+              </div>
+              <div class="theme-card-meta">Outrun 84 80s neon sunset pink &amp; cyan</div>
+              <code class="theme-cmd">fancy outrun</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1b2b34,#343d46);">
+                <span class="theme-badge">42</span>
+                <span class="theme-name">oceanic</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#6699cc">🌊 ~/myproject</span> <span style="color:#ec5f67">[🌿 main]</span><br>
+                <span style="color:#5fb3b3">❯</span>
+              </div>
+              <div class="theme-card-meta">Oceanic Next deep sea cyan &amp; coral red</div>
+              <code class="theme-cmd">fancy oceanic</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#191a2a,#2b2d42);">
+                <span class="theme-badge">43</span>
+                <span class="theme-name">moonlight</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#82aaff">🌙 user</span> <span style="color:#b4a0ff">~/myproject</span> <span style="color:#87ddff">[🌿 main]</span><br>
+                <span style="color:#c586c0">❯</span>
+              </div>
+              <div class="theme-card-meta">Moonlight deep indigo &amp; sky blue accent</div>
+              <code class="theme-cmd">fancy moonlight</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1c1c1c,#303030);">
+                <span class="theme-badge">44</span>
+                <span class="theme-name">papercolor</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#5faf87">📜 user@pc</span> <span style="color:#d78700">~/myproject</span> <span style="color:#af005f">[🌿 main]</span><br>
+                <span style="color:#005f87">❯</span>
+              </div>
+              <div class="theme-card-meta">PaperColor high contrast monochrome accent</div>
+              <code class="theme-cmd">fancy papercolor</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1c1e26,#2e313d);">
+                <span class="theme-badge">45</span>
+                <span class="theme-name">horizon</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#e95c72">🌄 ~/myproject</span> <span style="color:#f0907a">[🌿 main]</span><br>
+                <span style="color:#fac591">❯</span>
+              </div>
+              <div class="theme-card-meta">Horizon Dark warm coral &amp; peach sunset</div>
+              <code class="theme-cmd">fancy horizon</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#302d41,#575268);">
+                <span class="theme-badge">46</span>
+                <span class="theme-name">catppuccin_frappe</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ca9ee6">☕ user</span> <span style="color:#bac2de">in ~/myproject</span> <span style="color:#99d1db">[🌿 main]</span><br>
+                <span style="color:#f4b8e4">❯❯</span>
+              </div>
+              <div class="theme-card-meta">Catppuccin Frappé cool muted pastel lavender</div>
+              <code class="theme-cmd">fancy catppuccin_frappe</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#22212c,#454158);">
+                <span class="theme-badge">47</span>
+                <span class="theme-name">dracula_pro</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#a27aff">🗡️ user</span> <span style="color:#ff80bf">~/myproject</span> <span style="color:#80ffea">[🌿 main]</span><br>
+                <span style="color:#50fa7b">▶</span>
+              </div>
+              <div class="theme-card-meta">Dracula Pro neon violet &amp; emerald blade</div>
+              <code class="theme-cmd">fancy dracula_pro</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#0d0221,#261447);">
+                <span class="theme-badge">48</span>
+                <span class="theme-name">cyber_samurai</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ff2a6d">🥷 user</span> <span style="color:#05d9e8">~/myproject</span> <span style="color:#fff200">[🌿 main]</span><br>
+                <span style="color:#ff2a6d">❯❯❯</span>
+              </div>
+              <div class="theme-card-meta">Cyber Samurai crimson red &amp; neon cyan edge</div>
+              <code class="theme-cmd">fancy cyber_samurai</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#112211,#1f3a24);">
+                <span class="theme-badge">49</span>
+                <span class="theme-name">evergreen</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#2ecc71">🍃 ~/myproject</span> <span style="color:#1abc9c">[🌿 main]</span><br>
+                <span style="color:#3498db">❯</span>
+              </div>
+              <div class="theme-card-meta">Evergreen fresh mint &amp; leaf green prompt</div>
+              <code class="theme-cmd">fancy evergreen</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#2c3e50,#34495e);">
+                <span class="theme-badge">50</span>
+                <span class="theme-name">ghost</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#bdc3c7">👻 user</span> <span style="color:#95a5a6">in ~/myproject</span> <span style="color:#ecf0f1">[🌿 main]</span><br>
+                <span style="color:#7f8c8d">❯</span>
+              </div>
+              <div class="theme-card-meta">Ghost Shell translucent grey &amp; phantom white</div>
+              <code class="theme-cmd">fancy ghost</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#3e2723,#4e342e);">
+                <span class="theme-badge">51</span>
+                <span class="theme-name">oxide</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#d35400">⚙️ ~/myproject</span> <span style="color:#e67e22">[🌿 main]</span><br>
+                <span style="color:#f1c40f">❯</span>
+              </div>
+              <div class="theme-card-meta">Oxide Rust burnt orange &amp; copper tone</div>
+              <code class="theme-cmd">fancy oxide</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#12002b,#330066);">
+                <span class="theme-badge">52</span>
+                <span class="theme-name">neon_pulse</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#39ff14">🔮 user</span> <span style="color:#ff1493">~/myproject</span> <span style="color:#00ffff">[🌿 main]</span><br>
+                <span style="color:#39ff14">⚡</span>
+              </div>
+              <div class="theme-card-meta">Neon Pulse vivid lime &amp; electric pink prompt</div>
+              <code class="theme-cmd">fancy neon_pulse</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#4a0000,#7a0000);">
+                <span class="theme-badge">53</span>
+                <span class="theme-name">volcano</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#e74c3c">🌋 ~/myproject</span> <span style="color:#c0392b">[🌿 main]</span><br>
+                <span style="color:#f39c12">▶</span>
+              </div>
+              <div class="theme-card-meta">Volcano Magma fiery red &amp; obsidian obsidian</div>
+              <code class="theme-cmd">fancy volcano</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#3d232a,#633744);">
+                <span class="theme-badge">54</span>
+                <span class="theme-name">sakura</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#ffb7b2">🌸 user</span> <span style="color:#ffda09">in ~/myproject</span> <span style="color:#e2f0cb">[🌿 main]</span><br>
+                <span style="color:#ff9aa2">❯</span>
+              </div>
+              <div class="theme-card-meta">Sakura Cherry blossom pink &amp; pastel green</div>
+              <code class="theme-cmd">fancy sakura</code>
+            </div>
+
+            <div class="theme-card">
+              <div class="theme-card-header" style="background: linear-gradient(135deg,#1f1035,#391c5e);">
+                <span class="theme-badge">55</span>
+                <span class="theme-name">galaxy</span>
+              </div>
+              <div class="theme-card-preview">
+                <span style="color:#9b59b6">🌌 user</span> <span style="color:#8e44ad">~/myproject</span> <span style="color:#3498db">[🌿 main]</span><br>
+                <span style="color:#f1c40f">✨ ❯</span>
+              </div>
+              <div class="theme-card-meta">Galaxy Nebula deep space indigo &amp; purple</div>
+              <code class="theme-cmd">fancy galaxy</code>
+            </div>
+
+          </div><!-- /.themes-grid -->
+        </section>
+
+        <!-- ============================================================
+           SECTION 5: INTERACTIVE TOOLS & PLAYGROUND
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="command-explorer">
+            <span class="section-icon">⚡</span> Interactive Command Explorer
+          </h2>
+          <p>
+            Search over 60 built-in developer aliases and commands instantly by name, category, or
+            command expansion:
+          </p>
+
+          <div class="explorer-container">
+            <div class="explorer-header">
+              <div class="explorer-search-box">
+                <span class="explorer-search-icon">🔍</span>
+                <input
+                  type="text"
+                  id="explorer-search-input"
+                  placeholder="Type to filter commands (e.g. git, bun, docker, ports, gen)..."
+                />
+              </div>
+
+              <div class="explorer-filters">
+                <button class="filter-chip active" data-cat="all">All</button>
+                <button class="filter-chip" data-cat="git">Git</button>
+                <button class="filter-chip" data-cat="bun">Package Managers</button>
+                <button class="filter-chip" data-cat="system">System</button>
+                <button class="filter-chip" data-cat="docker">Docker</button>
+                <button class="filter-chip" data-cat="postgres">Postgres/Prisma</button>
+                <button class="filter-chip" data-cat="utility">Utilities</button>
+                <button class="filter-chip" data-cat="nav">Navigation</button>
+              </div>
+            </div>
+
+            <div class="explorer-grid" id="explorer-grid">
+              <!-- Dynamically populated by docs.js -->
+            </div>
+          </div>
+
+          <h2 id="terminal-simulator"><span class="section-icon">🛠️</span> Terminal Simulator</h2>
+          <p>
+            Click any quick command chip below to test how fancybash executes interactive utilities
+            live:
+          </p>
+
+          <div class="terminal-window">
+            <div class="terminal-bar">
+              <div class="terminal-dots">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+              </div>
+              <span class="terminal-title">fancybash terminal simulator v2.0</span>
+              <span style="font-size: 0.75rem; color: var(--docs-cyan)">tty1</span>
+            </div>
+
+            <div class="terminal-body" id="term-playground-body">
+              <div class="term-line">
+                <span class="term-prompt">🚀 fancybash ❯ </span>
+                <span class="term-out success"
+                  >System initialized. Click any chip below to simulate a command!</span
+                >
+              </div>
+            </div>
+
+            <div class="terminal-quick-chips">
+              <button class="quick-chip" data-cmd="gen 32">gen 32</button>
+              <button class="quick-chip" data-cmd="uup">uup</button>
+              <button class="quick-chip" data-cmd="sysinfo">sysinfo</button>
+              <button class="quick-chip" data-cmd="ex demo.tar.gz">ex demo.tar.gz</button>
+              <button class="quick-chip" data-cmd="dps">dps</button>
+              <button class="quick-chip" data-cmd="glog">glog</button>
+            </div>
+          </div>
+
+          <h2 id="config-builder">
+            <span class="section-icon">⚙️</span> Custom Installer & Config Builder
+          </h2>
+          <p>Tailor your installation script and custom environment flags:</p>
+
+          <div class="builder-box">
+            <h3>1. Select Shell Target:</h3>
+            <div class="builder-options">
+              <label class="builder-opt">
+                <input type="radio" name="builder-shell" value="bash" checked />
+                <span class="builder-opt-label">Bash (.bashrc)</span>
+              </label>
+              <label class="builder-opt">
+                <input type="radio" name="builder-shell" value="zsh" />
+                <span class="builder-opt-label">Zsh (.zshrc)</span>
+              </label>
+              <label class="builder-opt">
+                <input type="radio" name="builder-shell" value="fish" />
+                <span class="builder-opt-label">Fish Shell</span>
+              </label>
+              <label class="builder-opt">
+                <input type="radio" name="builder-shell" value="powershell" />
+                <span class="builder-opt-label">PowerShell ($PROFILE)</span>
+              </label>
+            </div>
+
+            <h3>2. Select Optional Features:</h3>
+            <div class="builder-options">
+              <label class="builder-opt">
+                <input type="checkbox" class="builder-feat-check" value="cputemp" checked />
+                <span class="builder-opt-label">CPU Temp Alert</span>
+              </label>
+              <label class="builder-opt">
+                <input type="checkbox" class="builder-feat-check" value="gitdirty" checked />
+                <span class="builder-opt-label">Git Dirty Branch</span>
+              </label>
+              <label class="builder-opt">
+                <input type="checkbox" class="builder-feat-check" value="bun" checked />
+                <span class="builder-opt-label">Bun Aliases</span>
+              </label>
+              <label class="builder-opt">
+                <input type="checkbox" class="builder-feat-check" value="docker" checked />
+                <span class="builder-opt-label">Docker Suite</span>
+              </label>
+              <label class="builder-opt">
+                <input type="checkbox" class="builder-feat-check" value="timer" checked />
+                <span class="builder-opt-label">Execution Timer</span>
+              </label>
+            </div>
+
+            <h3>Generated Installation Command:</h3>
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span class="code-lang">Tailored Installer Command</span>
+                <button class="copy-btn" data-copy-target="builder-output-cmd">
+                  <span>📋</span> Copy Command
+                </button>
+              </div>
+              <pre><code id="builder-output-cmd">curl -fsSL https://fancybash.netlify.app/public/install.sh | bash</code></pre>
+            </div>
+
+            <h3>Generated Environment Config Block:</h3>
+            <div class="code-wrapper">
+              <div class="code-header">
+                <span class="code-lang">Custom Config Flags</span>
+                <button class="copy-btn" data-copy-target="builder-output-code">
+                  <span>📋</span> Copy Config
+                </button>
+              </div>
+              <pre><code id="builder-output-code"># fancybash custom configuration</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+           SECTION 5: COMPLETE COMMAND REFERENCE
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="nav-commands"><span class="section-icon">📂</span> Complete Command Reference</h2>
+          <p>
+            Every alias and command available in fancybash — mirrored exactly from the home page.
+            Not a single one is missing.
+          </p>
+
+          <!-- 1. NAVIGATION -->
+          <h3 id="nav-commands-detail">📂 Navigation &amp; Movement</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>..</code></td>
+                  <td>Go up one directory</td>
+                </tr>
+                <tr>
+                  <td><code>...</code></td>
+                  <td>Go up two directories</td>
+                </tr>
+                <tr>
+                  <td><code>....</code></td>
+                  <td>Go up three directories</td>
+                </tr>
+                <tr>
+                  <td><code>dev</code></td>
+                  <td>Jump to <code>~/Development</code></td>
+                </tr>
+                <tr>
+                  <td><code>fr</code></td>
+                  <td>Jump to Frontend folder</td>
+                </tr>
+                <tr>
+                  <td><code>ba</code></td>
+                  <td>Jump to Backend folder</td>
+                </tr>
+                <tr>
+                  <td><code>fu</code></td>
+                  <td>Jump to Fullstack folder</td>
+                </tr>
+                <tr>
+                  <td><code>fig</code></td>
+                  <td>Jump to Figma folder</td>
+                </tr>
+                <tr>
+                  <td><code>ar</code></td>
+                  <td>Jump to Archive folder</td>
+                </tr>
+                <tr>
+                  <td><code>de</code></td>
+                  <td>Jump to Dev folder</td>
+                </tr>
+                <tr>
+                  <td><code>des</code></td>
+                  <td>Jump to Desktop</td>
+                </tr>
+                <tr>
+                  <td><code>doc</code></td>
+                  <td>Jump to Documents</td>
+                </tr>
+                <tr>
+                  <td><code>dow</code></td>
+                  <td>Jump to Downloads</td>
+                </tr>
+                <tr>
+                  <td><code>bv</code></td>
+                  <td>Jump to Brave Downloads (<code>~/Downloads/Brave</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>ch</code></td>
+                  <td>Jump to Chrome Downloads (<code>~/Downloads/Chrome</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>gp</code></td>
+                  <td>Jump to Google Photos Downloads</td>
+                </tr>
+                <tr>
+                  <td><code>pic</code></td>
+                  <td>Jump to Pictures</td>
+                </tr>
+                <tr>
+                  <td><code>vid</code></td>
+                  <td>Jump to Videos</td>
+                </tr>
+                <tr>
+                  <td><code>mus</code></td>
+                  <td>Jump to Music</td>
+                </tr>
+                <tr>
+                  <td><code>rd</code></td>
+                  <td>Jump to root directory (<code>/</code>)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 2. NPM & BUN -->
+          <h3 id="pkg-commands">📦 NPM &amp; Bun Commands</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Alias</th>
+                  <th>Expands To</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>ni</code></td>
+                  <td><code>npm install</code></td>
+                </tr>
+                <tr>
+                  <td><code>nid</code></td>
+                  <td><code>npm install -D</code></td>
+                </tr>
+                <tr>
+                  <td><code>nr</code></td>
+                  <td><code>npm run</code></td>
+                </tr>
+                <tr>
+                  <td><code>nrd</code></td>
+                  <td><code>npm run dev</code></td>
+                </tr>
+                <tr>
+                  <td><code>nrb</code></td>
+                  <td><code>npm run build</code></td>
+                </tr>
+                <tr>
+                  <td><code>nrs</code></td>
+                  <td><code>npm run start</code></td>
+                </tr>
+                <tr>
+                  <td><code>bi</code></td>
+                  <td><code>bun install</code></td>
+                </tr>
+                <tr>
+                  <td><code>br</code></td>
+                  <td><code>bun run</code></td>
+                </tr>
+                <tr>
+                  <td><code>brd</code></td>
+                  <td><code>bun run dev</code></td>
+                </tr>
+                <tr>
+                  <td><code>bhot</code></td>
+                  <td><code>bun --hot</code></td>
+                </tr>
+                <tr>
+                  <td><code>w</code></td>
+                  <td><code>bun --watch</code></td>
+                </tr>
+                <tr>
+                  <td><code>brb</code></td>
+                  <td><code>bun run build</code></td>
+                </tr>
+                <tr>
+                  <td><code>brs</code></td>
+                  <td><code>bun run start</code></td>
+                </tr>
+                <tr>
+                  <td><code>html</code></td>
+                  <td><code>bun run index.html</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 3. GIT -->
+          <h3 id="git-commands">🌿 Git Version Control</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>gi</code></td>
+                  <td>Initialize new git repository</td>
+                </tr>
+                <tr>
+                  <td><code>gs</code></td>
+                  <td>Git status (short format)</td>
+                </tr>
+                <tr>
+                  <td><code>ga</code></td>
+                  <td>Stage all files (<code>git add .</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>gcm "msg"</code></td>
+                  <td>Commit with message</td>
+                </tr>
+                <tr>
+                  <td><code>gps</code></td>
+                  <td>Push to remote</td>
+                </tr>
+                <tr>
+                  <td><code>gpl</code></td>
+                  <td>Pull from remote</td>
+                </tr>
+                <tr>
+                  <td><code>gl</code></td>
+                  <td>Pretty git log with graph</td>
+                </tr>
+                <tr>
+                  <td><code>gco &lt;branch&gt;</code></td>
+                  <td>Checkout branch</td>
+                </tr>
+                <tr>
+                  <td><code>gcb &lt;name&gt;</code></td>
+                  <td>Create &amp; checkout new branch</td>
+                </tr>
+                <tr>
+                  <td><code>gd</code></td>
+                  <td>View diff</td>
+                </tr>
+                <tr>
+                  <td><code>gst</code> / <code>gsta</code> / <code>gpop</code></td>
+                  <td>Stash / Apply stash / Pop stash</td>
+                </tr>
+                <tr>
+                  <td><code>gwip</code></td>
+                  <td>Quick WIP commit + auto push to current branch</td>
+                </tr>
+                <tr>
+                  <td><code>gc [URL]</code></td>
+                  <td>Git Clone project</td>
+                </tr>
+                <tr>
+                  <td><code>gbranch</code></td>
+                  <td>
+                    Interactive Git branch manager — sorted by most-recently-committed. Flags:
+                    <code>-l</code> local · <code>-r</code> remote · <code>-a</code> all ·
+                    <code>-h</code> help
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- gbranch Deep Dive -->
+          <div class="alert-box alert-note" style="margin-top: 20px">
+            <div class="alert-title">
+              🌿 <code>gbranch</code> — Interactive Git Branch Manager Deep-Dive
+            </div>
+            <p>
+              Usage: <code>gbranch [-l] [-r] [-a] [-h]</code> — Replaces standard
+              <code>git branch</code> with an interactive fuzzy branch manager. Branches are sorted
+              by most recently committed.
+            </p>
+
+            <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Flags:</h4>
+            <table class="docs-table" style="margin-bottom: 12px">
+              <thead>
+                <tr>
+                  <th>Flag</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>-l</code>, <code>--local</code></td>
+                  <td>Show local branches only</td>
+                </tr>
+                <tr>
+                  <td><code>-r</code>, <code>--remote</code></td>
+                  <td>Show remote branches only</td>
+                </tr>
+                <tr>
+                  <td><code>-a</code>, <code>--all</code></td>
+                  <td>Show all local and remote branches (default)</td>
+                </tr>
+                <tr>
+                  <td><code>-h</code>, <code>--help</code></td>
+                  <td>Print usage reference and keybindings</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
+              Interactive FZF Keybindings:
+            </h4>
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Keybinding</th>
+                  <th>Action / Operation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><kbd>Enter</kbd></td>
+                  <td>Checkout selected branch (<code>git checkout</code>)</td>
+                </tr>
+                <tr>
+                  <td><kbd>Ctrl-D</kbd></td>
+                  <td>Delete local branch (<code>git branch -D</code>) with confirmation prompt</td>
+                </tr>
+                <tr>
+                  <td><kbd>Ctrl-R</kbd></td>
+                  <td>Rebase current branch onto selected (<code>git rebase</code>)</td>
+                </tr>
+                <tr>
+                  <td><kbd>Ctrl-O</kbd></td>
+                  <td>Merge selected branch into current (<code>git merge</code>)</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="margin-top: 8px; font-size: 0.85rem">
+              <strong>Features:</strong> Live commit graph preview on the right (hash, author, date,
+              subject). Smart remote checkout auto-strips <code>origin/</code> prefix. Fallback
+              chain: <code>fzf</code> → <code>gum filter</code> → numbered menu.
+            </p>
+          </div>
+
+          <!-- 4. PROJECT SETUP -->
+          <h3 id="project-commands">🔧 Project Initialization</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>ii</code></td>
+                  <td>Interactive project init — choose Bun or NPM</td>
+                </tr>
+                <tr>
+                  <td><code>next</code></td>
+                  <td>Scaffold Next.js app via Bun or NPM</td>
+                </tr>
+                <tr>
+                  <td><code>vite</code></td>
+                  <td>Scaffold Vite project with optional Tailwind CSS v4</td>
+                </tr>
+                <tr>
+                  <td><code>ui</code></td>
+                  <td>Install &amp; init Shadcn/UI with component selection</td>
+                </tr>
+                <tr>
+                  <td><code>css</code></td>
+                  <td>Auto-install Tailwind CSS + clsx + tailwind-merge</td>
+                </tr>
+                <tr>
+                  <td><code>run</code></td>
+                  <td>Interactive JS/TS file runner via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>pg &lt;file&gt;</code></td>
+                  <td>Smart Universal Package Converter (.deb, .rpm, .tgz)</td>
+                </tr>
+                <tr>
+                  <td><code>makecpp</code></td>
+                  <td>Advance C/C++ boilerplate generator (auto cd, makefile, git, vscode)</td>
+                </tr>
+                <tr>
+                  <td><code>make run</code></td>
+                  <td>Compile and run the generated C/C++ project</td>
+                </tr>
+                <tr>
+                  <td><code>make clean</code></td>
+                  <td>Remove compiled binary file</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 5. SYSTEM -->
+          <h3 id="sys-commands">⚙️ System &amp; Maintenance</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>uup</code></td>
+                  <td>Mega Updater — OS + Snap + Flatpak + Bun + Node.js via fzf</td>
+                </tr>
+                <tr>
+                  <td><code>uu</code></td>
+                  <td>Universal Uninstaller — fuzzy search across all package managers</td>
+                </tr>
+                <tr>
+                  <td><code>uc</code></td>
+                  <td>Universal system clean (cache, orphans, logs)</td>
+                </tr>
+                <tr>
+                  <td><code>update</code></td>
+                  <td>Update system packages</td>
+                </tr>
+                <tr>
+                  <td><code>clean</code></td>
+                  <td>Clean apt cache &amp; remove orphaned packages</td>
+                </tr>
+                <tr>
+                  <td><code>setuppc</code></td>
+                  <td>Bootstrap a new PC with all essential developer tools</td>
+                </tr>
+                <tr>
+                  <td><code>rt</code></td>
+                  <td>Install Node.js (via nvm), Bun, and Deno</td>
+                </tr>
+                <tr>
+                  <td><code>ut</code></td>
+                  <td>Setup optimized CLI tooling for the PC</td>
+                </tr>
+                <tr>
+                  <td><code>rel</code></td>
+                  <td>Reload <code>.bashrc</code> configuration</td>
+                </tr>
+                <tr>
+                  <td><code>myip</code></td>
+                  <td>Show your public IP address</td>
+                </tr>
+                <tr>
+                  <td><code>iploc</code></td>
+                  <td>Show IP + city/region/org info via <code>ipinfo.io</code></td>
+                </tr>
+                <tr>
+                  <td><code>ports</code></td>
+                  <td>List all open ports</td>
+                </tr>
+                <tr>
+                  <td><code>kp &lt;port&gt;</code></td>
+                  <td>Kill the process running on a given port</td>
+                </tr>
+                <tr>
+                  <td><code>serve</code></td>
+                  <td>Start a local Python HTTP server in current directory</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 6. DOCKER -->
+          <h3 id="docker-suite">🐳 Docker Container Suite</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>dman</code></td>
+                  <td>
+                    🐳 Docker Desktop &amp; DevOps Terminal Edition (interactive TUI dashboard)
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>dstats</code></td>
+                  <td>Live realtime Docker resource usage dashboard</td>
+                </tr>
+                <tr>
+                  <td><code>dps</code></td>
+                  <td>List running containers (clean table format)</td>
+                </tr>
+                <tr>
+                  <td><code>dpsa</code></td>
+                  <td>List all containers (clean table format)</td>
+                </tr>
+                <tr>
+                  <td><code>sdps</code> / <code>sdpsa</code></td>
+                  <td><code>sudo</code> versions of <code>dps</code> / <code>dpsa</code></td>
+                </tr>
+                <tr>
+                  <td><code>sdi</code></td>
+                  <td><code>sudo docker images</code></td>
+                </tr>
+                <tr>
+                  <td><code>sdvl</code> / <code>sdnl</code></td>
+                  <td><code>sudo</code> volume / network list</td>
+                </tr>
+                <tr>
+                  <td><code>sdsize</code> / <code>sdtop</code></td>
+                  <td><code>sudo</code> disk usage / live stats</td>
+                </tr>
+                <tr>
+                  <td><code>di</code></td>
+                  <td>List all images</td>
+                </tr>
+                <tr>
+                  <td><code>dvl</code></td>
+                  <td>List all volumes</td>
+                </tr>
+                <tr>
+                  <td><code>dnl</code></td>
+                  <td>List all networks</td>
+                </tr>
+                <tr>
+                  <td><code>dsize</code></td>
+                  <td>Monitor Docker disk space</td>
+                </tr>
+                <tr>
+                  <td><code>dtop</code></td>
+                  <td>Monitor container stats</td>
+                </tr>
+                <tr>
+                  <td><code>dstop</code></td>
+                  <td>Stop a container</td>
+                </tr>
+                <tr>
+                  <td><code>drestart &lt;name&gt;</code></td>
+                  <td>Restart a container</td>
+                </tr>
+                <tr>
+                  <td><code>dkill</code></td>
+                  <td>Force kill a container</td>
+                </tr>
+                <tr>
+                  <td><code>drm</code></td>
+                  <td>Remove container</td>
+                </tr>
+                <tr>
+                  <td><code>drmi</code></td>
+                  <td>Remove image</td>
+                </tr>
+                <tr>
+                  <td><code>dstopall</code></td>
+                  <td>Stop all containers</td>
+                </tr>
+                <tr>
+                  <td><code>drmall</code></td>
+                  <td>Remove all containers</td>
+                </tr>
+                <tr>
+                  <td><code>dsh &lt;name&gt;</code></td>
+                  <td>Enter container terminal</td>
+                </tr>
+                <tr>
+                  <td><code>dlogs &lt;name&gt;</code></td>
+                  <td>Live tail container logs</td>
+                </tr>
+                <tr>
+                  <td><code>dbuild</code></td>
+                  <td>Build Docker image</td>
+                </tr>
+                <tr>
+                  <td><code>dbuild-nocache</code></td>
+                  <td>Build image without cache</td>
+                </tr>
+                <tr>
+                  <td><code>dhist &lt;image&gt;</code></td>
+                  <td>View image layer history</td>
+                </tr>
+                <tr>
+                  <td><code>dports &lt;name&gt;</code></td>
+                  <td>Check open port bindings of a container</td>
+                </tr>
+                <tr>
+                  <td><code>dcup</code></td>
+                  <td>Docker Compose up -d</td>
+                </tr>
+                <tr>
+                  <td><code>dcdn</code></td>
+                  <td>Docker Compose down</td>
+                </tr>
+                <tr>
+                  <td><code>dclogs</code></td>
+                  <td>Follow compose service logs</td>
+                </tr>
+                <tr>
+                  <td><code>dcupb</code></td>
+                  <td>Rebuild images and start services (<code>up -d --build</code>)</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>dtest-ubuntu</code> / <code>dtest-node</code> / <code>dtest-alpine</code>
+                  </td>
+                  <td>Quick test sandbox containers</td>
+                </tr>
+                <tr>
+                  <td><code>dfind &lt;name&gt;</code></td>
+                  <td>Search containers and images by name</td>
+                </tr>
+                <tr>
+                  <td><code>droot &lt;name&gt;</code></td>
+                  <td>Enter container as root user</td>
+                </tr>
+                <tr>
+                  <td><code>dip &lt;name&gt;</code></td>
+                  <td>Show container local IP address</td>
+                </tr>
+                <tr>
+                  <td><code>dwatch &lt;name&gt;</code></td>
+                  <td>Watch live file changes inside container</td>
+                </tr>
+                <tr>
+                  <td><code>dnetstat &lt;name&gt;</code></td>
+                  <td>Inspect active network connections inside container</td>
+                </tr>
+                <tr>
+                  <td><code>dtop-proc &lt;name&gt;</code></td>
+                  <td>Show process tree inside container</td>
+                </tr>
+                <tr>
+                  <td><code>dbackup &lt;vol&gt; &lt;file&gt;</code></td>
+                  <td>Backup Docker volume to .tar archive</td>
+                </tr>
+                <tr>
+                  <td><code>dkill-force</code></td>
+                  <td>Force kill all running containers with confirmation</td>
+                </tr>
+                <tr>
+                  <td><code>dclean</code></td>
+                  <td>Deep clean system (prune all unused resources with gum UI)</td>
+                </tr>
+                <tr>
+                  <td><code>dstart</code></td>
+                  <td>Start the Docker service (<code>systemctl start docker</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>doff</code></td>
+                  <td>Stop the Docker service (<code>systemctl stop docker</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>dstatus</code></td>
+                  <td>Check if Docker is running or stopped</td>
+                </tr>
+                <tr>
+                  <td><code>denable</code></td>
+                  <td>Enable Docker auto-start on boot</td>
+                </tr>
+                <tr>
+                  <td><code>ddisable</code></td>
+                  <td>Disable Docker auto-start on boot</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 7. POSTGRESQL -->
+          <h3 id="postgres-prisma">🐘 PostgreSQL</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Alias</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>pgstart</code></td>
+                  <td>Start the PostgreSQL service</td>
+                </tr>
+                <tr>
+                  <td><code>pgstop</code></td>
+                  <td>Stop the PostgreSQL service</td>
+                </tr>
+                <tr>
+                  <td><code>pgrestart</code></td>
+                  <td>Restart the PostgreSQL service</td>
+                </tr>
+                <tr>
+                  <td><code>pgstatus</code></td>
+                  <td>Check PostgreSQL service status</td>
+                </tr>
+                <tr>
+                  <td><code>pgenable</code></td>
+                  <td>Enable PostgreSQL auto-start on boot</td>
+                </tr>
+                <tr>
+                  <td><code>pgdisable</code></td>
+                  <td>Disable PostgreSQL auto-start on boot</td>
+                </tr>
+                <tr>
+                  <td><code>pglogs</code></td>
+                  <td>Follow the PostgreSQL log file live</td>
+                </tr>
+                <tr>
+                  <td><code>pgl</code></td>
+                  <td>Login as <code>postgres</code> user via psql</td>
+                </tr>
+                <tr>
+                  <td><code>pgdb &lt;name&gt;</code></td>
+                  <td>Connect to a specific database (<code>pgdb mydb</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>pgls</code></td>
+                  <td>List all databases (<code>\l</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>pgtables</code></td>
+                  <td>List all tables in current DB (<code>\dt</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>pgdump &lt;db&gt;</code></td>
+                  <td>Dump / backup a database</td>
+                </tr>
+                <tr>
+                  <td><code>pgrestore &lt;db&gt;</code></td>
+                  <td>Restore a database from file</td>
+                </tr>
+                <tr>
+                  <td><code>pgusers</code></td>
+                  <td>List all users / roles (<code>\du</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>pgsize</code></td>
+                  <td>Show size of each database</td>
+                </tr>
+                <tr>
+                  <td><code>pgver</code></td>
+                  <td>Show PostgreSQL version</td>
+                </tr>
+                <tr>
+                  <td><code>pgconn</code></td>
+                  <td>Show active connections count</td>
+                </tr>
+                <tr>
+                  <td><code>pgcreate &lt;db&gt;</code></td>
+                  <td>Create a new database</td>
+                </tr>
+                <tr>
+                  <td><code>pgdrop &lt;db&gt;</code></td>
+                  <td>Drop / delete a database</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 8. PRISMA ORM -->
+          <h3 id="prisma-commands">💎 Prisma ORM</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Alias</th>
+                  <th>Full Command</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td
+                    colspan="3"
+                    style="
+                      background: rgba(168, 85, 247, 0.08);
+                      color: var(--docs-purple);
+                      font-weight: 700;
+                      padding: 10px 18px;
+                    "
+                  >
+                    🟢 Node / NPX Prisma — <code>np*</code>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>np</code></td>
+                  <td><code>npx prisma</code></td>
+                  <td>Base Prisma CLI command</td>
+                </tr>
+                <tr>
+                  <td><code>npi</code></td>
+                  <td><code>npx prisma init</code></td>
+                  <td>Initialize Prisma in project</td>
+                </tr>
+                <tr>
+                  <td><code>npg</code></td>
+                  <td><code>npx prisma generate</code></td>
+                  <td>Generate Prisma Client</td>
+                </tr>
+                <tr>
+                  <td><code>nps</code></td>
+                  <td><code>npx prisma studio</code></td>
+                  <td>Open Prisma Studio GUI</td>
+                </tr>
+                <tr>
+                  <td><code>npmd</code></td>
+                  <td><code>npx prisma migrate dev</code></td>
+                  <td>Run dev migrations</td>
+                </tr>
+                <tr>
+                  <td><code>npmdn &lt;name&gt;</code></td>
+                  <td><code>npx prisma migrate dev --name</code></td>
+                  <td>Run named migration</td>
+                </tr>
+                <tr>
+                  <td><code>npmr</code></td>
+                  <td><code>npx prisma migrate reset</code></td>
+                  <td>Reset DB &amp; re-run migrations</td>
+                </tr>
+                <tr>
+                  <td><code>npmdp</code></td>
+                  <td><code>npx prisma migrate deploy</code></td>
+                  <td>Apply pending migrations in production</td>
+                </tr>
+                <tr>
+                  <td><code>npms</code></td>
+                  <td><code>npx prisma migrate status</code></td>
+                  <td>Check migration status</td>
+                </tr>
+                <tr>
+                  <td><code>npdp</code></td>
+                  <td><code>npx prisma db push</code></td>
+                  <td>Push schema state directly to DB</td>
+                </tr>
+                <tr>
+                  <td><code>npdl</code></td>
+                  <td><code>npx prisma db pull</code></td>
+                  <td>Pull schema from DB (Introspect)</td>
+                </tr>
+                <tr>
+                  <td><code>npds</code></td>
+                  <td><code>npx prisma db seed</code></td>
+                  <td>Seed database using seed script</td>
+                </tr>
+                <tr>
+                  <td><code>npf</code></td>
+                  <td><code>npx prisma format</code></td>
+                  <td>Format schema.prisma file</td>
+                </tr>
+                <tr>
+                  <td><code>npv</code></td>
+                  <td><code>npx prisma version</code></td>
+                  <td>Show Prisma CLI &amp; engine version</td>
+                </tr>
+                <tr>
+                  <td
+                    colspan="3"
+                    style="
+                      background: rgba(168, 85, 247, 0.08);
+                      color: var(--docs-purple);
+                      font-weight: 700;
+                      padding: 10px 18px;
+                    "
+                  >
+                    🥐 Bun Prisma — <code>bp*</code>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>bp</code></td>
+                  <td><code>bunx prisma</code></td>
+                  <td>Base Prisma CLI via Bun runner</td>
+                </tr>
+                <tr>
+                  <td><code>bpi</code></td>
+                  <td><code>bunx prisma init</code></td>
+                  <td>Initialize Prisma via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpg</code></td>
+                  <td><code>bunx prisma generate</code></td>
+                  <td>Generate Prisma Client via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bps</code></td>
+                  <td><code>bunx prisma studio</code></td>
+                  <td>Open Prisma Studio GUI via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpmd</code></td>
+                  <td><code>bunx prisma migrate dev</code></td>
+                  <td>Run dev migrations via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpmdn &lt;name&gt;</code></td>
+                  <td><code>bunx prisma migrate dev --name</code></td>
+                  <td>Run named migration via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpmr</code></td>
+                  <td><code>bunx prisma migrate reset</code></td>
+                  <td>Reset database via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpmdp</code></td>
+                  <td><code>bunx prisma migrate deploy</code></td>
+                  <td>Apply migrations in prod via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpms</code></td>
+                  <td><code>bunx prisma migrate status</code></td>
+                  <td>Check migration status via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpdp</code></td>
+                  <td><code>bunx prisma db push</code></td>
+                  <td>Push schema directly to DB via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpdl</code></td>
+                  <td><code>bunx prisma db pull</code></td>
+                  <td>Pull schema from DB via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpds</code></td>
+                  <td><code>bunx prisma db seed</code></td>
+                  <td>Seed database via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpf</code></td>
+                  <td><code>bunx prisma format</code></td>
+                  <td>Format schema.prisma file via Bun</td>
+                </tr>
+                <tr>
+                  <td><code>bpv</code></td>
+                  <td><code>bunx prisma version</code></td>
+                  <td>Check Prisma version via Bun</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 9. UTILITIES -->
+          <h3 id="interactive-utilities">🔨 Utility Tools</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                  <th>Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>cf [dir]</code></td>
+                  <td>
+                    Dev Walk &amp; Quick CD — live syntax preview (bat), image thumbnails (chafa),
+                    zoxide jump (CTRL-Z), video (CTRL-V), PDF (CTRL-P), code editor (CTRL-O),
+                    explorer (CTRL-E)
+                  </td>
+                  <td><code>cf .</code></td>
+                </tr>
+                <tr>
+                  <td><code>mkd &lt;name&gt;</code></td>
+                  <td>Create directory and <code>cd</code> into it</td>
+                  <td><code>mkd my-app</code></td>
+                </tr>
+                <tr>
+                  <td><code>t &lt;file&gt;</code></td>
+                  <td>Create a file with feedback</td>
+                  <td><code>t index.js</code></td>
+                </tr>
+                <tr>
+                  <td><code>rmd &lt;name&gt;</code></td>
+                  <td>Force remove directory recursively</td>
+                  <td><code>rmd old-build</code></td>
+                </tr>
+                <tr>
+                  <td><code>rmf &lt;file&gt;</code></td>
+                  <td>Remove file with confirmation</td>
+                  <td><code>rmf test.txt</code></td>
+                </tr>
+                <tr>
+                  <td><code>rn [dir]</code></td>
+                  <td>Clean and bulk rename files in directory</td>
+                  <td><code>rn .</code></td>
+                </tr>
+                <tr>
+                  <td><code>bak &lt;file&gt;</code></td>
+                  <td>Create a <code>.bak</code> backup copy</td>
+                  <td><code>bak .env</code></td>
+                </tr>
+                <tr>
+                  <td><code>trash &lt;file&gt;</code></td>
+                  <td>Move file to system trash (safe delete)</td>
+                  <td><code>trash temp.log</code></td>
+                </tr>
+                <tr>
+                  <td><code>ex &lt;archive&gt;</code></td>
+                  <td>Extract any archive format</td>
+                  <td><code>ex project.tar.gz</code></td>
+                </tr>
+                <tr>
+                  <td><code>ff &lt;name&gt;</code></td>
+                  <td>Find file by name (skips <code>node_modules</code>)</td>
+                  <td><code>ff tsconfig</code></td>
+                </tr>
+                <tr>
+                  <td><code>gen &lt;len&gt;</code></td>
+                  <td>Generate cryptographically secure secret key</td>
+                  <td><code>gen 32</code></td>
+                </tr>
+                <tr>
+                  <td><code>h &lt;word&gt;</code></td>
+                  <td>Search command history</td>
+                  <td><code>h docker</code></td>
+                </tr>
+                <tr>
+                  <td><code>to</code></td>
+                  <td>Open current directory in VS Code</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>v</code></td>
+                  <td>Play video in terminal</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>c</code> / <code>cls</code></td>
+                  <td>Clear the terminal screen</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>gbranch</code></td>
+                  <td>
+                    Interactive Git branch manager — sorted by most-recently-committed. Flags:
+                    <code>-l</code> local · <code>-r</code> remote · <code>-a</code> all
+                  </td>
+                  <td><code>gbranch -l</code></td>
+                </tr>
+                <tr>
+                  <td><code>fkill [query|port]</code></td>
+                  <td>
+                    Advanced interactive process killer — sorted by CPU. Pre-filter by name or kill
+                    by port number
+                  </td>
+                  <td><code>fkill node</code> / <code>fkill 3000</code></td>
+                </tr>
+                <tr>
+                  <td><code>fcd</code></td>
+                  <td>Fuzzy quick directory jump (fzf / gum)</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- cf Deep-Dive Card -->
+          <div class="alert-box alert-note" style="margin-top: 20px">
+            <div class="alert-title">
+              ⚡ <code>cf</code> — Dev Walk &amp; Quick CD Keybindings &amp; Live Preview
+            </div>
+            <p>
+              Usage: <code>cf [directory]</code> (Defaults to <code>.</code>) — Interactive fuzzy
+              navigator and multimedia launcher with live preview.
+            </p>
+
+            <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
+              FZF Interactive Keybindings:
+            </h4>
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Keybinding</th>
+                  <th>Operation / Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><kbd>ENTER</kbd></td>
+                  <td>Navigate into directory OR open file in default app/editor</td>
+                </tr>
+                <tr>
+                  <td><kbd>CTRL-Z</kbd></td>
+                  <td>Switch candidate list to System Frecent Directories (<code>zoxide</code>)</td>
+                </tr>
+                <tr>
+                  <td><kbd>CTRL-V</kbd></td>
+                  <td>Play selected video file with <code>v()</code> player</td>
+                </tr>
+                <tr>
+                  <td><kbd>CTRL-P</kbd></td>
+                  <td>Open selected PDF document in Browser</td>
+                </tr>
+                <tr>
+                  <td><kbd>CTRL-O</kbd></td>
+                  <td>
+                    Open file or directory in Code Editor (<code>code</code> / <code>cursor</code> /
+                    <code>nvim</code>)
+                  </td>
+                </tr>
+                <tr>
+                  <td><kbd>CTRL-E</kbd></td>
+                  <td>Open directory in GUI File Manager (Nautilus / Dolphin / Explorer)</td>
+                </tr>
+                <tr>
+                  <td><kbd>CTRL-Y</kbd></td>
+                  <td>
+                    Copy path to Clipboard (<code>wl-copy</code> / <code>xclip</code> /
+                    <code>pbcopy</code>)
+                  </td>
+                </tr>
+                <tr>
+                  <td><kbd>CTRL-H</kbd></td>
+                  <td>Navigate to Parent Directory (<code>..</code>) inside FZF</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Live Preview Features:</h4>
+            <ul style="font-size: 0.85rem; padding-left: 20px; color: var(--docs-text-muted)">
+              <li>
+                📁 <strong>Directories:</strong> Interactive folder tree (<code>eza</code> /
+                <code>tree</code> / <code>ls</code>), Git active branch &amp; recent 3 commits.
+              </li>
+              <li>
+                📄 <strong>Code &amp; Text:</strong> Colorized syntax-highlighted preview via
+                <code>bat</code> / <code>batcat</code>.
+              </li>
+              <li>
+                🖼️ <strong>Images:</strong> High-resolution terminal thumbnail preview powered by
+                <code>chafa</code>.
+              </li>
+              <li>
+                📦 <strong>Archives:</strong> Previews <code>.zip</code>, <code>.tar.gz</code>,
+                <code>.7z</code>, <code>.rar</code> contents without extracting.
+              </li>
+              <li>
+                🎵 <strong>Audio &amp; Video:</strong> Audio metadata preview
+                (<code>mediainfo</code>) and video quick actions.
+              </li>
+            </ul>
+          </div>
+
+          <!-- fkill Deep-Dive Card -->
+          <div class="alert-box alert-note" style="margin-top: 20px">
+            <div class="alert-title">
+              ⚡ <code>fkill</code> — Advanced Interactive Process Killer Deep-Dive
+            </div>
+            <p>
+              Usage: <code>fkill [query] [port_number]</code> — Processes are sorted by CPU usage
+              (highest first) so resource-hungry processes are instantly visible.
+            </p>
+
+            <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Arguments &amp; Usage:</h4>
+            <table class="docs-table" style="margin-bottom: 12px">
+              <thead>
+                <tr>
+                  <th>Argument</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><em>(none)</em></td>
+                  <td>Open all processes sorted by CPU descending</td>
+                </tr>
+                <tr>
+                  <td><code>fkill node</code></td>
+                  <td>Pre-filter process list to show only <code>node</code> processes</td>
+                </tr>
+                <tr>
+                  <td><code>fkill 3000</code></td>
+                  <td>
+                    Directly find and kill process running on <strong>port 3000</strong> (via
+                    <code>ss</code> / <code>lsof</code>)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
+              FZF Interactive Keybindings:
+            </h4>
+            <table class="docs-table" style="margin-bottom: 12px">
+              <thead>
+                <tr>
+                  <th>Keybinding</th>
+                  <th>Action / Operation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><kbd>Tab</kbd></td>
+                  <td>Multi-select multiple processes at once</td>
+                </tr>
+                <tr>
+                  <td><kbd>Enter</kbd></td>
+                  <td>
+                    <strong>Soft kill</strong> selected process(es) (<code>SIGTERM</code> — graceful
+                    shutdown)
+                  </td>
+                </tr>
+                <tr>
+                  <td><kbd>Ctrl-X</kbd></td>
+                  <td>
+                    <strong>Force kill</strong> selected process(es) (<code>SIGKILL -9</code> —
+                    immediate)
+                  </td>
+                </tr>
+                <tr>
+                  <td><kbd>Ctrl-R</kbd></td>
+                  <td>Reload live process list without closing FZF</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Process Type Badges:</h4>
+            <ul style="font-size: 0.85rem; padding-left: 20px; color: var(--docs-text-muted)">
+              <li>
+                <span
+                  class="sidebar-tag"
+                  style="background: rgba(34, 211, 238, 0.15); color: var(--docs-cyan)"
+                  >[APP]</span
+                >
+                User GUI Applications (Chrome, VS Code, Slack, Discord, Firefox, VLC, Zed, Spotify)
+              </li>
+              <li>
+                <span
+                  class="sidebar-tag"
+                  style="background: rgba(236, 72, 153, 0.15); color: var(--docs-pink)"
+                  >[SYS]</span
+                >
+                System Services &amp; Daemons (<code>root</code>, <code>systemd</code>,
+                <code>dbus</code>)
+              </li>
+              <li>
+                <span
+                  class="sidebar-tag"
+                  style="background: rgba(168, 85, 247, 0.15); color: var(--docs-purple)"
+                  >[USR]</span
+                >
+                User CLI, Scripts &amp; Shell processes (<code>node</code>, <code>python</code>,
+                <code>npm</code>, <code>bash</code>)
+              </li>
+            </ul>
+          </div>
+
+          <!-- 10. TODO & NOTES -->
+          <h3 id="ffmedia-suite">📋 Todo &amp; Notes Manager</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                  <th>Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td
+                    colspan="3"
+                    style="
+                      background: rgba(168, 85, 247, 0.08);
+                      color: var(--docs-purple);
+                      font-weight: 700;
+                      padding: 10px 18px;
+                    "
+                  >
+                    📋 Todo Manager — <code>~/.todo_list.txt</code>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>todo</code></td>
+                  <td>Open interactive gum menu, or show numbered task list</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>todo add "task"</code></td>
+                  <td>Add a new task directly as argument</td>
+                  <td><code>todo add "Buy milk"</code></td>
+                </tr>
+                <tr>
+                  <td><code>todo add</code></td>
+                  <td>Add task via interactive prompt (gum / read)</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>todo list</code></td>
+                  <td>Show all pending tasks with line numbers</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>todo done</code></td>
+                  <td>Mark done — fzf picker → gum chooser → ask for number</td>
+                  <td><code>todo done 2</code></td>
+                </tr>
+                <tr>
+                  <td><code>todo clear</code></td>
+                  <td>Clear all tasks from the list</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>todo --help</code></td>
+                  <td>Show full usage reference</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td
+                    colspan="3"
+                    style="
+                      background: rgba(168, 85, 247, 0.08);
+                      color: var(--docs-purple);
+                      font-weight: 700;
+                      padding: 10px 18px;
+                    "
+                  >
+                    📝 Notes Manager — <code>~/.my_notes/</code>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>notes</code></td>
+                  <td>Browse all notes with fzf + live preview</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>notes add</code></td>
+                  <td>Add a note — pick category, enter title, write content</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>notes search</code></td>
+                  <td>Full-text search inside all notes (fzf + grep -F)</td>
+                  <td><code>notes search "docker"</code></td>
+                </tr>
+                <tr>
+                  <td><code>notes find</code></td>
+                  <td>Alias for <code>notes search</code></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td><code>notes --help</code></td>
+                  <td>Show full usage reference</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 11. FFMEDIA SUITE -->
+          <h3 id="ffmedia-commands">🎬 FFmedia Suite — 24-in-1 FFmpeg Powerhouse</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                  <th>Options &amp; Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>ffmedia</code></td>
+                  <td>Interactive 24-in-1 FFmpeg multimedia menu (gum / fzf / prompt)</td>
+                  <td>Aliases: <code>ffstudio</code>, <code>fftool</code></td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia compress</code></td>
+                  <td>Compress video preserving quality (50%–80% size reduction)</td>
+                  <td>CRF 23 / 28 / 32</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia trim</code></td>
+                  <td>Fast &amp; Lossless video trim without re-encoding</td>
+                  <td>Instant cut</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia concat</code></td>
+                  <td>Merge multiple video clips seamlessly into one file</td>
+                  <td>Wildcard match</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia resolution</code></td>
+                  <td>Convert resolution (1080p/720p) or crop/blur to 9:16 Reels</td>
+                  <td>Shorts &amp; Reels</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia speed</code></td>
+                  <td>Slow Motion (0.25x–0.5x) or Time-lapse (2x–8x)</td>
+                  <td>Video &amp; Audio synced</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia rotate</code></td>
+                  <td>Rotate (90°/180°) or Flip horizontally/vertically</td>
+                  <td>Mirroring &amp; Transpose</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia watermark</code></td>
+                  <td>Apply image logo or custom text banner watermark</td>
+                  <td>5 positions</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia grid</code></td>
+                  <td>Side-by-Side (2 videos) or 2×2 grid (4 videos) comparison</td>
+                  <td>Reaction &amp; Compare</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia audio-extract</code></td>
+                  <td>Extract audio to MP3, AAC, WAV, FLAC, M4A</td>
+                  <td>Lossless / High quality</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia mute</code></td>
+                  <td>Strip audio stream completely from video</td>
+                  <td>Instant stream mute</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia audio-replace</code></td>
+                  <td>Replace or mix background audio with existing video sound</td>
+                  <td>Background score</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia loudness</code></td>
+                  <td>Loudness Normalization (–14 LUFS YouTube / –23 LUFS EBU)</td>
+                  <td>EBU R128 standard</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia visualizer</code></td>
+                  <td>Generate Waveform or Frequency Spectrum video from audio</td>
+                  <td>Neon wave / Spectrum</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia audio-speed</code></td>
+                  <td>Change audio playback speed while preserving voice pitch</td>
+                  <td>atempo filter</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia snapshot</code></td>
+                  <td>Extract Ultra HD image frame (JPG/PNG) at exact timestamp</td>
+                  <td>High-res frame</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia bulk-frames</code></td>
+                  <td>Bulk extract video frames as image sequence</td>
+                  <td>fps interval</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia gif</code></td>
+                  <td>Render pro-quality ultra-sharp GIF using 2-pass palette</td>
+                  <td>Lanczos palettegen</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia contact-sheet</code></td>
+                  <td>Generate 3×3 (9 snapshots) or 4×4 mosaic thumbnail grid image</td>
+                  <td>Video preview grid</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia screen-record</code></td>
+                  <td>Record desktop screen + system audio straight from terminal</td>
+                  <td>x11grab / avfoundation</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia subtitle-burn</code></td>
+                  <td>Hardcode .srt or .ass subtitle file into video stream</td>
+                  <td>Permanent burn-in</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia subtitle-extract</code></td>
+                  <td>Extract embedded subtitle tracks from MKV/MP4 files</td>
+                  <td>Subrip .srt export</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia privacy-clean</code></td>
+                  <td>Wipe EXIF, GPS location, camera settings, and editing history</td>
+                  <td>Metadata removal</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia convert</code></td>
+                  <td>Convert video/audio format between MP4, MKV, WEBM, MOV, AVI</td>
+                  <td>Universal format swap</td>
+                </tr>
+                <tr>
+                  <td><code>ffmedia batch</code></td>
+                  <td>Run bulk compression/conversion/metadata wiping on a folder</td>
+                  <td>Batch automation</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 12. MULTI-VAULT SECURITY SUITE -->
+          <h3 id="vault-suite">🔐 Hardened Multi-Vault Security Suite</h3>
+          <div class="docs-table-wrapper">
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Description</th>
+                  <th>Security Features &amp; Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>vault</code></td>
+                  <td>Open interactive GUM/FZF multi-vault manager menu</td>
+                  <td>Aliases: <code>secvault</code>, <code>fvault</code>, <code>fancy_vault</code></td>
+                </tr>
+                <tr>
+                  <td><code>vault lock [path]</code></td>
+                  <td>Encrypt directory with AES-256 PBKDF2 (500,000 iter) &amp; shred original</td>
+                  <td>Multi-pass secure shredding</td>
+                </tr>
+                <tr>
+                  <td><code>vault unlock [name]</code></td>
+                  <td>Decrypt vault directly into RAM (<code>/dev/shm</code>) &amp; symlink to <code>$HOME</code></td>
+                  <td>RAM execution guard</td>
+                </tr>
+                <tr>
+                  <td><code>vault list</code></td>
+                  <td>List all encrypted vaults stored in <code>~/.secret_vaults</code></td>
+                  <td>File sizes &amp; active status</td>
+                </tr>
+                <tr>
+                  <td><code>vault delete [name]</code></td>
+                  <td>Permanently shred encrypted vault file after password verification</td>
+                  <td>Aliases: <code>vault remove</code>, <code>vault rm</code></td>
+                </tr>
+                <tr>
+                  <td><code>vault config</code></td>
+                  <td>Configure Telegram Bot Token &amp; Chat ID for instant alert notifications</td>
+                  <td>Telegram Bot API</td>
+                </tr>
+                <tr>
+                  <td><code>vault --help</code></td>
+                  <td>Show complete multi-vault usage reference</td>
+                  <td>Panic password &amp; auto-relock details</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================================
+           SECTION 6: ARCHITECTURE, FAQ & TROUBLESHOOTING
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="architecture-safety">
+            <span class="section-icon">🏗️</span> Architecture & Safety Specs
+          </h2>
+          <p>
+            fancybash is engineered with safety as its primary design principle. Every modification
+            made to shell configs is protected by boundary markers and automatic backup snapshots.
+          </p>
+
+          <!-- ══════════════════════════════════════════════════
+               ADVANCED PERFORMANCE BENCHMARK SECTION
+               ══════════════════════════════════════════════════ -->
+          <h2 id="benchmarks" style="margin-top:0">
+            <span class="section-icon">⚡</span> Performance Benchmark
+          </h2>
+
+          <!-- Hero Card -->
+          <div class="bench-hero">
+            <div class="bench-hero-title">⚡ Shell Performance Deep-Dive · v2.0.0</div>
+            <div class="bench-hero-sub">
+              Real empirical measurements across <strong>7 shell environments</strong> — Bash, Zsh, Fish, PowerShell, Oh My Zsh, Oh My Posh, and FancyBash — captured on live hardware using <code style="color:var(--docs-cyan);background:rgba(34,211,238,0.08);padding:1px 6px;border-radius:4px;font-size:0.8em">hyperfine</code> &amp; POSIX <code style="color:var(--docs-cyan);background:rgba(34,211,238,0.08);padding:1px 6px;border-radius:4px;font-size:0.8em">time</code>. Lower is better for startup &amp; latency. Higher is better for feature scores.
+            </div>
+            <div class="bench-env-pills">
+              <span class="bench-env-pill"><span class="dot"></span>Intel i5-1145G7 @ 2.60GHz</span>
+              <span class="bench-env-pill"><span class="dot"></span>7.5 GB RAM · Linux Deepin 25</span>
+              <span class="bench-env-pill"><span class="dot"></span>Kernel 6.18.38-amd64-desktop</span>
+              <span class="bench-env-pill"><span class="dot"></span>Bash 5.2.21 · Zsh 5.9 · Fish 3.7.1</span>
+              <span class="bench-env-pill"><span class="dot"></span>PS 7.4.6 · OMZ 5.9 · OMP 24.8</span>
+              <span class="bench-env-pill"><span class="dot"></span>hyperfine 1.18 · 10 warmup runs</span>
+            </div>
+          </div>
+
+          <!-- Quick Score Cards -->
+          <div class="bench-scorecard-grid">
+            <div class="bench-scorecard top">
+              <div class="bench-scorecard-icon">⚡</div>
+              <div class="bench-scorecard-shell">FancyBash</div>
+              <div class="bench-scorecard-score score-cyan">25ms</div>
+              <div class="bench-scorecard-label">Config Source · .zwc bytecode</div>
+            </div>
+            <div class="bench-scorecard">
+              <div class="bench-scorecard-icon">🐚</div>
+              <div class="bench-scorecard-shell">Bash 5.2</div>
+              <div class="bench-scorecard-score score-green">30ms</div>
+              <div class="bench-scorecard-label">Config Source · plain text</div>
+            </div>
+            <div class="bench-scorecard">
+              <div class="bench-scorecard-icon">🐟</div>
+              <div class="bench-scorecard-shell">Fish 3.7</div>
+              <div class="bench-scorecard-score score-cyan">68ms</div>
+              <div class="bench-scorecard-label">Cold interactive startup</div>
+            </div>
+            <div class="bench-scorecard">
+              <div class="bench-scorecard-icon">🔷</div>
+              <div class="bench-scorecard-shell">Zsh Raw</div>
+              <div class="bench-scorecard-score score-yellow">102ms</div>
+              <div class="bench-scorecard-label">Interactive startup · optimised</div>
+            </div>
+            <div class="bench-scorecard">
+              <div class="bench-scorecard-icon">🔵</div>
+              <div class="bench-scorecard-shell">PowerShell 7</div>
+              <div class="bench-scorecard-score score-blue">380ms</div>
+              <div class="bench-scorecard-label">PS7 cold start · Windows compat</div>
+            </div>
+            <div class="bench-scorecard">
+              <div class="bench-scorecard-icon">🎨</div>
+              <div class="bench-scorecard-shell">Oh My Posh</div>
+              <div class="bench-scorecard-score score-orange">210ms</div>
+              <div class="bench-scorecard-label">Zsh + OMP binary per prompt</div>
+            </div>
+            <div class="bench-scorecard">
+              <div class="bench-scorecard-icon">🔴</div>
+              <div class="bench-scorecard-shell">Oh My Zsh</div>
+              <div class="bench-scorecard-score score-red">890ms</div>
+              <div class="bench-scorecard-label">Default plugins cold start</div>
+            </div>
+          </div>
+
+          <!-- Tab Switcher -->
+          <div class="bench-tabs" role="tablist" aria-label="Benchmark categories">
+            <button class="bench-tab-btn active" role="tab" aria-selected="true"  data-bench-tab="startup"  id="btab-startup">⏱ Shell Startup</button>
+            <button class="bench-tab-btn"        role="tab" aria-selected="false" data-bench-tab="prompt"   id="btab-prompt">🖊 Prompt Latency</button>
+            <button class="bench-tab-btn"        role="tab" aria-selected="false" data-bench-tab="memory"   id="btab-memory">💾 Memory Usage</button>
+            <button class="bench-tab-btn"        role="tab" aria-selected="false" data-bench-tab="overview" id="btab-overview">🗺 Full Overview</button>
+          </div>
+
+          <!-- ── TAB 1 · Shell Startup ── -->
+          <div class="bench-panel active" id="bpanel-startup" role="tabpanel" aria-labelledby="btab-startup">
+            <p style="font-size:0.83rem;color:var(--docs-text-muted);margin-bottom:20px;line-height:1.6">
+              Cold interactive shell startup measured via <code style="color:var(--docs-cyan)">hyperfine --warmup 3 'zsh -i -c exit'</code> and equivalent per shell.
+              FancyBash Zsh uses pre-compiled <strong>.zwc bytecode</strong> + single-pass <code style="color:var(--docs-cyan)">compinit -C</code> dump cache.
+              Bars are scaled relative to the worst performer (Oh My Zsh · 890 ms).
+            </p>
+
+            <div class="bench-chart-grid" id="bench-startup-chart">
+              <!-- FancyBash Zsh .zwc -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label">
+                  <span class="shell-icon fb">⚡</span>
+                  FancyBash (.zwc)
+                  <span class="bench-winner-badge">⚡ FAST</span>
+                </div>
+                <div class="bench-bar-track">
+                  <div class="bench-bar-fill fb winner" data-pct="2.8"></div>
+                </div>
+                <div class="bench-bar-val winner">25 ms</div>
+              </div>
+              <!-- Bash -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon bash">$</span> Bash 5.2</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill bash" data-pct="3.4"></div></div>
+                <div class="bench-bar-val">30 ms</div>
+              </div>
+              <!-- Fish -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon fish">🐟</span> Fish 3.7</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill fish" data-pct="7.6"></div></div>
+                <div class="bench-bar-val">68 ms</div>
+              </div>
+              <!-- Zsh Optimised (no .zwc) -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon zsh">%</span> Zsh (Optimised)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill zsh" data-pct="11.5"></div></div>
+                <div class="bench-bar-val">102 ms</div>
+              </div>
+              <!-- Zsh Raw Unoptimised -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon zsh">%</span> Zsh (Unoptimised)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill zsh" data-pct="52.5"></div></div>
+                <div class="bench-bar-val">~457 ms</div>
+              </div>
+              <!-- Oh My Posh -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill omp" data-pct="23.6"></div></div>
+                <div class="bench-bar-val">210 ms</div>
+              </div>
+              <!-- PowerShell 7 -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon ps1">🔵</span> PowerShell 7</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill ps1" data-pct="42.7"></div></div>
+                <div class="bench-bar-val">380 ms</div>
+              </div>
+              <!-- Oh My Zsh -->
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omz">😱</span> Oh My Zsh</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill omz" data-pct="100"></div></div>
+                <div class="bench-bar-val">890 ms</div>
+              </div>
+            </div>
+
+            <!-- Hyperfine raw output -->
+            <div class="bench-hyperfine">
+              <div class="hf-title">📊 hyperfine --warmup 3 raw output (summarised)</div>
+<span class="hf-cmd">Benchmark 1: zsh -i -c exit   # FancyBash .zwc</span>
+  <span class="hf-fast">Time (mean ± σ):      25.3 ms ±   1.2 ms</span>    [User: 14.8 ms, System: 8.7 ms]
+  Range (min … max):   23.9 ms …  27.1 ms    <span class="hf-dim">10 runs</span>
+
+<span class="hf-cmd">Benchmark 2: bash --login -i -c exit</span>
+  <span class="hf-dim">Time (mean ± σ):      30.1 ms ±   0.9 ms</span>    [User: 18.2 ms, System: 10.4 ms]
+  Range (min … max):   29.0 ms …  31.8 ms    <span class="hf-dim">10 runs</span>
+
+<span class="hf-cmd">Benchmark 3: fish -c exit</span>
+  <span class="hf-dim">Time (mean ± σ):      68.4 ms ±   2.1 ms</span>    [User: 42.1 ms, System: 24.8 ms]
+  Range (min … max):   65.2 ms …  72.9 ms    <span class="hf-dim">10 runs</span>
+
+<span class="hf-cmd">Benchmark 4: pwsh -NonInteractive -Command exit</span>
+  <span class="hf-dim">Time (mean ± σ):     380.2 ms ±  12.4 ms</span>    [User: 290.7 ms, System: 85.4 ms]
+  Range (min … max):  362.1 ms … 401.5 ms    <span class="hf-dim">10 runs</span>
+
+<span class="hf-cmd">Benchmark 5: zsh -i -c exit   # Oh My Zsh default</span>
+  <span class="hf-slow">Time (mean ± σ):     890.0 ms ±  38.7 ms</span>    [User: 610.3 ms, System: 278.4 ms]
+  Range (min … max):  843.2 ms … 954.1 ms    <span class="hf-dim">10 runs</span>
+
+<span class="hf-winner">Summary: FancyBash (.zwc) is 35.2× faster than Oh My Zsh · 12.6× faster than PowerShell 7</span>
+            </div>
+
+            <div class="bench-method-note">
+              <span class="icon">🔬</span>
+              <span>All startup times measured with <strong>10 warm-up runs</strong> + 10 timed runs (hyperfine defaults). Zsh FancyBash cold start (first ever launch, no bytecode) measured at <strong>~169 ms</strong>; subsequent launches with pre-compiled <code>.zwc</code> drop to <strong>25 ms</strong>. PowerShell measured on Linux (pwsh 7.4.6); Windows figures are typically 200–250 ms faster due to native assembly caching.</span>
+            </div>
+          </div>
+
+          <!-- ── TAB 2 · Prompt Latency ── -->
+          <div class="bench-panel" id="bpanel-prompt" role="tabpanel" aria-labelledby="btab-prompt">
+            <p style="font-size:0.83rem;color:var(--docs-text-muted);margin-bottom:20px;line-height:1.6">
+              Per-keypress prompt render latency (precmd / PROMPT_COMMAND hook). Measured via <code style="color:var(--docs-cyan)">zsh -c 'time (source ~/.zshrc; print -P $PROMPT)'</code> and equivalent. FancyBash uses async background workers + RAM <code style="color:var(--docs-cyan)">tmpfs</code> caching to keep prompt rendering under 1 ms.
+            </p>
+
+            <div class="bench-chart-grid" id="bench-prompt-chart">
+              <div class="bench-bar-row">
+                <div class="bench-bar-label">
+                  <span class="shell-icon fb">⚡</span> FancyBash precmd
+                  <span class="bench-winner-badge">🏆 &lt;1ms</span>
+                </div>
+                <div class="bench-bar-track"><div class="bench-bar-fill fb winner" data-pct="0.7"></div></div>
+                <div class="bench-bar-val winner">&lt;1 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon bash">$</span> Bash PROMPT_COMMAND</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill bash" data-pct="24"></div></div>
+                <div class="bench-bar-val">36 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon fish">🐟</span> Fish prompt</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill fish" data-pct="20"></div></div>
+                <div class="bench-bar-val">30 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon zsh">%</span> Zsh (native async)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill zsh" data-pct="14"></div></div>
+                <div class="bench-bar-val">21 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon ps1">🔵</span> PS7 $PROFILE prompt</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill ps1" data-pct="53"></div></div>
+                <div class="bench-bar-val">80 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh (binary)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill omp" data-pct="100"></div></div>
+                <div class="bench-bar-val">150 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omz">😱</span> Oh My Zsh prompt</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill omz" data-pct="65"></div></div>
+                <div class="bench-bar-val">97 ms</div>
+              </div>
+            </div>
+
+            <div class="bench-section-divider"><span class="bench-section-title">Tool Version Cache (per prompt call)</span></div>
+
+            <div class="bench-chart-grid">
+              <div class="bench-bar-row">
+                <div class="bench-bar-label" style="font-size:0.8rem;color:var(--docs-text-muted)"><code style="font-size:0.78rem">npm -v</code> live call</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill bad" data-pct="77"></div></div>
+                <div class="bench-bar-val" style="color:var(--docs-red)">115 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label" style="font-size:0.8rem;color:var(--docs-text-muted)"><code style="font-size:0.78rem">node -v</code> live call</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill ok" data-pct="2.7"></div></div>
+                <div class="bench-bar-val" style="color:var(--docs-yellow)">4 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label" style="font-size:0.8rem;color:var(--docs-text-muted)"><code style="font-size:0.78rem">bun -v</code> live call</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill ok" data-pct="2"></div></div>
+                <div class="bench-bar-val" style="color:var(--docs-yellow)">3 ms</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label" style="font-size:0.8rem">
+                  <span class="shell-icon fb" style="width:20px;height:20px;font-size:0.75rem">⚡</span>
+                  FancyBash RAM cache (all tools)
+                  <span class="bench-winner-badge">🏆 INSTANT</span>
+                </div>
+                <div class="bench-bar-track"><div class="bench-bar-fill good" data-pct="0.5"></div></div>
+                <div class="bench-bar-val winner">&lt;1 ms</div>
+              </div>
+            </div>
+
+            <div class="bench-method-note">
+              <span class="icon">⚡</span>
+              <span>FancyBash replaces all external binary calls in the prompt with <strong>RAM tmpfs cache reads</strong> (background worker populates once per session) and <strong>native Zsh parameter expansions</strong> (<code>${PWD:t}</code>, <code>${USER}</code>). This saves <strong>~122 ms per prompt render</strong> vs. naive shell configs calling <code>npm -v</code>, <code>basename</code>, <code>whoami</code>, etc. on every keypress.</span>
+            </div>
+          </div>
+
+          <!-- ── TAB 3 · Memory Usage ── -->
+          <div class="bench-panel" id="bpanel-memory" role="tabpanel" aria-labelledby="btab-memory">
+            <p style="font-size:0.83rem;color:var(--docs-text-muted);margin-bottom:20px;line-height:1.6">
+              RSS memory footprint after interactive shell is fully loaded. Measured via
+              <code style="color:var(--docs-cyan)">/usr/bin/time -v zsh -i -c exit 2&gt;&amp;1 | grep 'Maximum resident'</code>.
+              FancyBash has 0 mandatory plugin dependencies.
+            </p>
+
+            <div class="bench-chart-grid" id="bench-memory-chart">
+              <div class="bench-bar-row">
+                <div class="bench-bar-label">
+                  <span class="shell-icon fb">⚡</span> FancyBash
+                  <span class="bench-winner-badge">🏆 LIGHTEST</span>
+                </div>
+                <div class="bench-bar-track"><div class="bench-bar-fill fb winner" data-pct="3.9"></div></div>
+                <div class="bench-bar-val winner">3.9 MB</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon bash">$</span> Bash 5.2</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill bash" data-pct="4.2"></div></div>
+                <div class="bench-bar-val">4.2 MB</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon fish">🐟</span> Fish 3.7</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill fish" data-pct="8.7"></div></div>
+                <div class="bench-bar-val">8.7 MB</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon zsh">%</span> Zsh (Optimised)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill zsh" data-pct="5.4"></div></div>
+                <div class="bench-bar-val">5.4 MB</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon ps1">🔵</span> PowerShell 7</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill ps1" data-pct="78"></div></div>
+                <div class="bench-bar-val">78 MB</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh (+Zsh)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill omp" data-pct="17.5"></div></div>
+                <div class="bench-bar-val">17.5 MB</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omz">😱</span> Oh My Zsh (default plugins)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill omz" data-pct="100"></div></div>
+                <div class="bench-bar-val">~100 MB</div>
+              </div>
+            </div>
+
+            <div class="bench-section-divider"><span class="bench-section-title">External binary subshell forks per prompt render</span></div>
+
+            <div class="bench-chart-grid">
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon fb">⚡</span> FancyBash</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill good" data-pct="0"></div></div>
+                <div class="bench-bar-val winner">0 forks</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon bash">$</span> Bash (typical)</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill ok" data-pct="30"></div></div>
+                <div class="bench-bar-val">3 forks</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omz">😱</span> Oh My Zsh</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill bad" data-pct="80"></div></div>
+                <div class="bench-bar-val" style="color:var(--docs-red)">8+ forks</div>
+              </div>
+              <div class="bench-bar-row">
+                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh</div>
+                <div class="bench-bar-track"><div class="bench-bar-fill bad" data-pct="100"></div></div>
+                <div class="bench-bar-val" style="color:var(--docs-red)">1 binary/prompt</div>
+              </div>
+            </div>
+
+            <div class="bench-method-note">
+              <span class="icon">💾</span>
+              <span>PowerShell's high RSS (~78 MB) is expected — it loads the .NET runtime. Oh My Zsh with <strong>git, nvm, docker, python, npm</strong> plugins active can exceed <strong>100 MB RSS</strong> due to plugin autoloads. FancyBash uses <strong>zero mandatory plugins</strong>; optional plugin integrations (zsh-autosuggestions, zsh-syntax-highlighting) add ~1.2 MB combined.</span>
+            </div>
+          </div>
+
+          <!-- ── TAB 4 · Full Overview ── -->
+          <div class="bench-panel" id="bpanel-overview" role="tabpanel" aria-labelledby="btab-overview">
+            <!-- Radar chart -->
+            <div class="bench-radar-wrap" style="margin-bottom:28px">
+              <div class="bench-radar-canvas-wrap">
+                <canvas id="bench-radar" width="320" height="320" aria-label="Shell performance radar chart"></canvas>
+              </div>
+              <div class="bench-radar-legend">
+                <div class="bench-radar-legend-title">Legend — Performance Axes</div>
+                <ul class="bench-radar-legend-list">
+                  <li>
+                    <span class="bench-legend-dot" style="background:#22d3ee"></span>
+                    <div>
+                      <div class="bench-legend-name">FancyBash (Zsh .zwc)</div>
+                      <div class="bench-legend-sub">Bytecode · RAM cache · 0 subshells</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="bench-legend-dot" style="background:#22c55e"></span>
+                    <div>
+                      <div class="bench-legend-name">Bash 5.2</div>
+                      <div class="bench-legend-sub">Fast · minimal features</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="bench-legend-dot" style="background:#0891b2"></span>
+                    <div>
+                      <div class="bench-legend-name">Fish 3.7</div>
+                      <div class="bench-legend-sub">Good UX · no POSIX compat</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="bench-legend-dot" style="background:#3b82f6"></span>
+                    <div>
+                      <div class="bench-legend-name">PowerShell 7</div>
+                      <div class="bench-legend-sub">Cross-platform · .NET runtime</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="bench-legend-dot" style="background:#ef4444"></span>
+                    <div>
+                      <div class="bench-legend-name">Oh My Zsh</div>
+                      <div class="bench-legend-sub">Feature-rich · very heavy</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="bench-legend-dot" style="background:#f97316"></span>
+                    <div>
+                      <div class="bench-legend-name">Oh My Posh</div>
+                      <div class="bench-legend-sub">Beautiful themes · binary cost</div>
+                    </div>
+                  </li>
+                </ul>
+                <div style="margin-top:18px;font-size:0.75rem;color:var(--docs-text-dim);line-height:1.6">
+                  Axes: <strong style="color:var(--docs-text-muted)">Startup Speed · Prompt Speed · Memory Efficiency · Feature Count · Theme Richness · POSIX Compat</strong><br>
+                  All axes normalised 0–10. Higher = better.
+                </div>
+              </div>
+            </div>
+
+            <!-- Master comparison table -->
+            <div class="bench-section-divider"><span class="bench-section-title">Complete Metrics Matrix</span></div>
+            <div class="bench-master-table-wrap">
+              <table class="bench-master-table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th><div class="th-shell-pill"><span class="icon">⚡</span><span class="name">FancyBash</span></div></th>
+                    <th><div class="th-shell-pill"><span class="icon">🐚</span><span class="name">Bash 5.2</span></div></th>
+                    <th><div class="th-shell-pill"><span class="icon">🔷</span><span class="name">Zsh Raw</span></div></th>
+                    <th><div class="th-shell-pill"><span class="icon">🐟</span><span class="name">Fish 3.7</span></div></th>
+                    <th><div class="th-shell-pill"><span class="icon">🔵</span><span class="name">PS7</span></div></th>
+                    <th><div class="th-shell-pill"><span class="icon">🔴</span><span class="name">Oh My Zsh</span></div></th>
+                    <th><div class="th-shell-pill"><span class="icon">🎨</span><span class="name">Oh My Posh</span></div></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="row-fb">
+                    <td>Cold Startup</td>
+                    <td class="cell-best">25 ms ⚡</td>
+                    <td class="cell-good">30 ms</td>
+                    <td class="cell-ok">102 ms</td>
+                    <td class="cell-good">68 ms</td>
+                    <td class="cell-ok">380 ms</td>
+                    <td class="cell-bad">890 ms</td>
+                    <td class="cell-bad">210 ms</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Prompt Latency</td>
+                    <td class="cell-best">&lt;1 ms ⚡</td>
+                    <td class="cell-ok">36 ms</td>
+                    <td class="cell-good">21 ms</td>
+                    <td class="cell-ok">30 ms</td>
+                    <td class="cell-bad">80 ms</td>
+                    <td class="cell-bad">97 ms</td>
+                    <td class="cell-bad">150 ms</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Config Source</td>
+                    <td class="cell-best">25 ms (.zwc)</td>
+                    <td class="cell-good">30 ms</td>
+                    <td class="cell-ok">169 ms</td>
+                    <td class="cell-na">N/A</td>
+                    <td class="cell-na">N/A</td>
+                    <td class="cell-bad">340 ms</td>
+                    <td class="cell-na">N/A</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Memory (RSS)</td>
+                    <td class="cell-best">3.9 MB</td>
+                    <td class="cell-best">4.2 MB</td>
+                    <td class="cell-good">5.4 MB</td>
+                    <td class="cell-good">8.7 MB</td>
+                    <td class="cell-bad">78 MB</td>
+                    <td class="cell-bad">~100 MB</td>
+                    <td class="cell-bad">17.5 MB</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Subshell Forks/Prompt</td>
+                    <td class="cell-best">0 ⚡</td>
+                    <td class="cell-ok">3</td>
+                    <td class="cell-ok">2–4</td>
+                    <td class="cell-good">0–1</td>
+                    <td class="cell-ok">1–2</td>
+                    <td class="cell-bad">8+</td>
+                    <td class="cell-bad">1 binary</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>compinit Calls</td>
+                    <td class="cell-best">1 (cached)</td>
+                    <td class="cell-na">N/A</td>
+                    <td class="cell-bad">3 (redundant)</td>
+                    <td class="cell-na">N/A</td>
+                    <td class="cell-na">N/A</td>
+                    <td class="cell-bad">2–3</td>
+                    <td class="cell-na">N/A</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Themes / Prompts</td>
+                    <td class="cell-best">55 built-in</td>
+                    <td class="cell-ok">Manual</td>
+                    <td class="cell-ok">Manual</td>
+                    <td class="cell-ok">Manual</td>
+                    <td class="cell-ok">Manual</td>
+                    <td class="cell-good">150+</td>
+                    <td class="cell-good">100+</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Git Branch (async)</td>
+                    <td class="cell-best">0 ms ⚡</td>
+                    <td class="cell-bad">~150 ms</td>
+                    <td class="cell-bad">~150 ms</td>
+                    <td class="cell-good">async</td>
+                    <td class="cell-ok">~80 ms</td>
+                    <td class="cell-bad">~200 ms</td>
+                    <td class="cell-good">async</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Cross-Platform</td>
+                    <td class="cell-best">Linux/Mac/Win</td>
+                    <td class="cell-good">Linux/Mac</td>
+                    <td class="cell-good">Linux/Mac</td>
+                    <td class="cell-good">Linux/Mac/Win</td>
+                    <td class="cell-best">All OSes</td>
+                    <td class="cell-good">Linux/Mac</td>
+                    <td class="cell-best">All OSes</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>POSIX Compatible</td>
+                    <td class="cell-best">✅ Yes</td>
+                    <td class="cell-best">✅ Yes</td>
+                    <td class="cell-best">✅ Yes</td>
+                    <td class="cell-bad">❌ No</td>
+                    <td class="cell-bad">❌ No</td>
+                    <td class="cell-best">✅ Yes</td>
+                    <td class="cell-na">Wrapper</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>bytecode cache</td>
+                    <td class="cell-best">✅ .zwc</td>
+                    <td class="cell-na">—</td>
+                    <td class="cell-ok">Manual</td>
+                    <td class="cell-na">—</td>
+                    <td class="cell-na">—</td>
+                    <td class="cell-na">—</td>
+                    <td class="cell-na">—</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Install (1-line)</td>
+                    <td class="cell-best">✅ All shells</td>
+                    <td class="cell-bad">❌ Manual</td>
+                    <td class="cell-bad">❌ Manual</td>
+                    <td class="cell-bad">❌ Manual</td>
+                    <td class="cell-bad">❌ Manual</td>
+                    <td class="cell-good">✅ curl</td>
+                    <td class="cell-good">✅ winget/brew</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Optimization Tips -->
+            <div class="bench-section-divider"><span class="bench-section-title">Key Optimisation Techniques</span></div>
+            <div class="bench-tips-grid">
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">⚙️</div>
+                <div class="bench-tip-title">Zsh Bytecode Compilation</div>
+                <div class="bench-tip-body">
+                  Run <code>zcompile ~/.zshrc</code> to produce a <code>.zwc</code> binary. Zsh loads it directly without re-parsing text, reducing sourcing from ~169 ms → <strong>25 ms</strong>.
+                  FancyBash auto-recompiles via the <code>fb-recompile</code> command.
+                </div>
+              </div>
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">🔒</div>
+                <div class="bench-tip-title">Single-Pass compinit Caching</div>
+                <div class="bench-tip-body">
+                  Replace 3× redundant <code>compinit</code> calls with one guarded block using <code>compinit -C -d ~/.zcompdump</code> and a 24-hour freshness check. Saves <strong>~150 ms</strong> per launch.
+                </div>
+              </div>
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">🚀</div>
+                <div class="bench-tip-title">Native Parameter Expansions</div>
+                <div class="bench-tip-body">
+                  Replace <code>$(basename "$PWD")</code> with <code>${PWD:t}</code>, <code>$(whoami)</code> with <code>$USER</code>, and <code>$(cat file)</code> with <code>${(&lt;file)}</code>. Eliminates all subshell forks from prompt rendering.
+                </div>
+              </div>
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">⏩</div>
+                <div class="bench-tip-title">Async Background Workers</div>
+                <div class="bench-tip-body">
+                  Git branch, node version, and system health metrics are computed in disowned subshells (<code>&amp;!</code>) and written to RAM tmpfs. The prompt reads cached values with zero latency.
+                </div>
+              </div>
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">🛡️</div>
+                <div class="bench-tip-title">Non-Interactive Guarding</div>
+                <div class="bench-tip-body">
+                  All UI/prompt code is wrapped in <code>[[ -o interactive ]]</code> guards. Non-interactive Zsh scripts run in <strong>~3 ms</strong> instead of ~180 ms (UI plugins fully skipped).
+                </div>
+              </div>
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">🐟</div>
+                <div class="bench-tip-title">Fish: Separate Config</div>
+                <div class="bench-tip-body">
+                  Fish has no POSIX compat overhead — its startup is naturally fast (<strong>68 ms</strong>). FancyBash's <code>config.fish</code> brings the same themes and command set with pure Fish syntax.
+                </div>
+              </div>
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">🔵</div>
+                <div class="bench-tip-title">PowerShell: Module Autoload</div>
+                <div class="bench-tip-body">
+                  PS7's 380 ms startup is the .NET runtime. Use <code>Import-Module</code> inside <code>if ($Host.Name -eq 'ConsoleHost')</code> guards and <code>oh-my-posh init pwsh</code> only on interactive sessions to minimise overhead.
+                </div>
+              </div>
+              <div class="bench-tip-card">
+                <div class="bench-tip-icon">🎨</div>
+                <div class="bench-tip-title">Oh My Posh: Theme Pre-cache</div>
+                <div class="bench-tip-body">
+                  Oh My Posh spawns a Go binary every prompt render (~150 ms). Mitigate with <code>--config ~/.omp.json</code> referencing a minimal theme and enabling OMP's built-in concurrency flags. FancyBash avoids this entirely.
+                </div>
+              </div>
+            </div>
+
+            <div class="bench-method-note" style="margin-top:20px">
+              <span class="icon">📋</span>
+              <span>All data measured on Intel Core i5-1145G7 @ 2.60GHz, 7.5 GB RAM, Linux Deepin 25 (Kernel 6.18.38). Hyperfine v1.18, 10 warmup + 10 timed runs. Oh My Zsh version 5.9 with default plugin set. Oh My Posh 24.8 on Zsh 5.9. PowerShell 7.4.6 (pwsh) on Linux. All shells tested on the same machine session, cold filesystem caches cleared between runs. Figures reproduced from <a href="https://github.com/rihadjahanopu/fancybash/blob/main/BENCHMARK.md" target="_blank" rel="noopener">BENCHMARK.md</a>.</span>
+            </div>
+          </div><!-- /bench-panel overview -->
+
+          <h3 id="troubleshooting-faq">Troubleshooting & FAQ</h3>
+
+          <div class="alert-box alert-caution">
+            <div class="alert-title">❓ Emojis or icons display as broken rectangles?</div>
+            <p>
+              This indicates your terminal emulator does not have an emoji fallback font installed.
+              On Linux, run:
+              <code>sudo apt install fonts-noto-color-emoji && fc-cache -fv</code> and restart your
+              terminal.
+            </p>
+          </div>
+
+          <div class="alert-box alert-note">
+            <div class="alert-title">
+              ❓ How do I revert to my original pre-fancybash shell config?
+            </div>
+            <p>
+              The installer automatically creates a timestamped backup before touching your files.
+              Check your home directory for files like
+              <code>~/.bashrc.backup_YYYYMMDD_HHMMSS</code> and copy it back over
+              <code>~/.bashrc</code>.
+            </p>
+          </div>
+
+          <h3 id="contributing-license">Contributing & License</h3>
+          <p>
+            fancybash is free and open-source software licensed under the
+            <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener"
+              >MIT License</a
+            >. Contributions, bug reports, and feature pull requests are warmly welcomed on the
+            official GitHub repository!
+          </p>
+
+          <!-- Documentation Footer -->
+          <footer class="docs-footer">
+            <div>
+              © 2026 <strong>fancybash</strong> • Created by
+              <a href="https://github.com/rihadjahanopu" target="_blank" rel="noopener"
+                >Rihad Jahan Opu</a
+              >
+            </div>
+            <div style="display: flex; gap: 16px">
+              <a href="index.html">Home</a>
+              <a href="linux-setup.html">Linux Apps</a>
+              <a href="https://github.com/rihadjahanopu/fancybash" target="_blank" rel="noopener"
+                >GitHub</a
+              >
+              <a href="#">Back to Top ↑</a>
+            </div>
+          </footer>
+        </section>
+      </main>
+
+      <!-- --- RIGHT SIDEBAR (ON-THIS-PAGE TOC) --- -->
+      <aside class="docs-toc">
+        <div class="toc-title">On This Page</div>
+        <ul class="toc-links">
+          <li><a href="#overview" class="active">Overview & Philosophy</a></li>
+          <li><a href="#requirements">System Requirements</a></li>
+          <li><a href="#universal-install">Universal Installer</a></li>
+          <li><a href="#shell-installers">Shell Installers</a></li>
+          <li><a href="#zed-settings">Zed IDE Settings</a></li>
+          <li><a href="#zsh-setup">Zsh Setup Guide</a></li>
+          <li><a href="#font-setup">Font & Emoji Setup</a></li>
+          <li><a href="#prompt-architecture">Smart Prompt</a></li>
+          <li><a href="#command-explorer">Command Explorer</a></li>
+          <li><a href="#terminal-simulator">Terminal Simulator</a></li>
+          <li><a href="#config-builder">Custom Installer Builder</a></li>
+          <li><a href="#nav-commands">Command Reference</a></li>
+          <li><a href="#benchmarks">Benchmarks</a></li>
+          <li><a href="#troubleshooting-faq">Troubleshooting & FAQ</a></li>
+        </ul>
+      </aside>
+    </div>
+
+    <!-- ============================================================
+       GLOBAL SEARCH MODAL (press '/' anywhere to open)
+       ============================================================ -->
+    <div class="search-modal-backdrop" id="search-modal-backdrop">
+      <div class="search-modal">
+        <div class="search-modal-input-wrap">
+          <span style="font-size: 1.2rem">🔍</span>
+          <input
+            type="text"
+            id="modal-search-input"
+            placeholder="Deep search — sections, commands, aliases (e.g. docker, prisma, uup)..."
+            autofocus
+          />
+          <span class="docs-shortcut-kbd">ESC to close</span>
+        </div>
+
+        <div class="search-modal-results" id="modal-search-results">
+          <!-- Search items dynamically rendered by docs.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="docs.js"></script>
+    <script>
+      // Scroll Progress Bar
+      window.addEventListener('scroll', () => {
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const scrollHeight =
+          document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+        const bar = document.getElementById('scroll-progress-bar');
+        if (bar) bar.style.width = progress + '%';
+      });
+
+      // Sidebar section filter input
+      const filterInput = document.getElementById('sidebar-filter-input');
+      if (filterInput) {
+        filterInput.addEventListener('input', function () {
+          const q = this.value.toLowerCase();
+          document.querySelectorAll('.sidebar-links a').forEach((link) => {
+            const match = link.textContent.toLowerCase().includes(q);
+            link.parentElement.style.display = match ? '' : 'none';
+          });
+          document.querySelectorAll('.sidebar-group').forEach((group) => {
+            const visible = [...group.querySelectorAll('li')].some(
+              (li) => li.style.display !== 'none'
+            );
+            group.style.display = q && !visible ? 'none' : '';
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

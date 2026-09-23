@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary Meta Tags -->
+    <title>Contribute to fancybash — Developer &amp; Contributor Guide</title>
+    <meta name="title" content="Contribute to fancybash — Developer &amp; Contributor Guide" />
+    <meta
+      name="description"
+      content="Learn how to contribute to fancybash. Setup your local development environment for Bash, Zsh, Fish, and PowerShell in 3 easy steps and submit your first Pull Request."
+    />
+    <meta
+      name="keywords"
+      content="fancybash contributing, bash dev setup, zsh development, powershell setup, open source contribution, git hooks, dotfiles setup"
+    />
+    <meta name="author" content="Rihad Jahan Opu" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="canonical" href="https://fancybash.netlify.app/contribute.html" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+
+    <!-- Open Graph / Facebook / LinkedIn -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://fancybash.netlify.app/contribute.html" />
+    <meta
+      property="og:title"
+      content="Contribute to fancybash — Developer &amp; Contributor Guide"
+    />
+    <meta
+      property="og:description"
+      content="Set up your local environment for Bash, Zsh, Fish, and PowerShell in 3 steps. Start contributing to fancybash today!"
+    />
+    <meta property="og:image" content="https://fancybash.netlify.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="fancybash Contributor Guide Banner" />
+    <meta property="og:site_name" content="fancybash" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://fancybash.netlify.app/contribute.html" />
+    <meta name="twitter:title" content="Contribute to fancybash — Developer Guide" />
+    <meta
+      name="twitter:description"
+      content="Set up your local environment in 3 steps and open a PR on GitHub."
+    />
+    <meta name="twitter:image" content="https://fancybash.netlify.app/og-image.png" />
+    <meta name="twitter:creator" content="@rihadjahanopu" />
+
+    <!-- Fonts & Styles -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- AI Agent & LLM Context Discovery Links -->
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://fancybash.netlify.app/AGENT.md"
+      title="AI Agent Specification (AGENT.md)"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://fancybash.netlify.app/llms.txt"
+      title="LLM Context Document (llms.txt)"
+    />
+    <meta name="ai-agent" content="https://fancybash.netlify.app/AGENT.md" />
+
+    <!-- Schema.org JSON-LD Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to Contribute to fancybash",
+        "description": "Step-by-step developer setup guide for contributing to fancybash on GitHub.",
+        "url": "https://fancybash.netlify.app/contribute.html",
+        "author": {
+          "@type": "Person",
+          "name": "Rihad Jahan Opu",
+          "url": "https://github.com/rihadjahanopu"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="main-content">
+      <!-- Hero Section -->
+      <section class="hero" style="padding-top: 4rem; padding-bottom: 3rem">
+        <div
+          class="hero-inner text-center"
+          style="max-width: 860px; margin: 0 auto; padding: 0 1.5rem"
+        >
+          <div style="margin-bottom: 1.75rem; display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <a href="index.html" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.9rem;">
+              &larr; Back to Home
+            </a>
+            <a href="docs.html" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px; color: var(--clr-cyan); font-weight: 600; font-size: 0.9rem;">
+              📖 Open Docs
+            </a>
+          </div>
+          <div class="badge badge-purple" style="margin-bottom: 1.25rem">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Open Source Community
+          </div>
+          <h1 class="hero-title" style="font-size: clamp(2.2rem, 5vw, 3.6rem); margin-bottom: 1rem">
+            Contribute to <span class="text-gradient">fancybash</span>
+          </h1>
+          <p
+            class="hero-subtitle"
+            style="
+              font-size: 1.15rem;
+              color: var(--clr-text-muted);
+              max-width: 720px;
+              margin: 0 auto 2rem;
+              line-height: 1.6;
+            "
+          >
+            Help us build the fastest, most intelligent shell environment for Bash, Zsh, Fish, and
+            PowerShell. Whether you're adding new dev aliases, improving shell compatibility, or
+            refining docs — every PR matters.
+          </p>
+          <div
+            style="
+              display: flex;
+              gap: 12px;
+              justify-content: center;
+              flex-wrap: wrap;
+              margin-bottom: 3rem;
+            "
+          >
+            <a
+              href="https://github.com/rihadjahanopu/fancybash/fork"
+              target="_blank"
+              rel="noopener"
+              class="btn btn-primary"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="18" r="3"></circle>
+                <circle cx="6" cy="6" r="3"></circle>
+                <circle cx="18" cy="6" r="3"></circle>
+                <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
+                <path d="M12 12v3"></path>
+              </svg>
+              Fork on GitHub
+            </a>
+            <a
+              href="https://github.com/rihadjahanopu/fancybash/blob/main/CONTRIBUTING.md"
+              target="_blank"
+              rel="noopener"
+              class="btn btn-outline"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              Read CONTRIBUTING.md
+            </a>
+          </div>
+
+          <!-- Highlight Grid -->
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+              gap: 1.25rem;
+              margin-top: 1rem;
+            "
+          >
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid var(--clr-border);
+                backdrop-filter: blur(12px);
+                padding: 1.25rem;
+                border-radius: var(--radius-md);
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 1.75rem;
+                  font-weight: 800;
+                  color: var(--clr-cyan);
+                  font-family: var(--font-mono);
+                "
+              >
+                4 Shells
+              </div>
+              <div style="font-size: 0.875rem; color: var(--clr-text-muted); margin-top: 0.25rem">
+                Bash, Zsh, Fish, PowerShell
+              </div>
+            </div>
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid var(--clr-border);
+                backdrop-filter: blur(12px);
+                padding: 1.25rem;
+                border-radius: var(--radius-md);
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 1.75rem;
+                  font-weight: 800;
+                  color: var(--clr-purple);
+                  font-family: var(--font-mono);
+                "
+              >
+                100% Free
+              </div>
+              <div style="font-size: 0.875rem; color: var(--clr-text-muted); margin-top: 0.25rem">
+                MIT Licensed Open Source
+              </div>
+            </div>
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid var(--clr-border);
+                backdrop-filter: blur(12px);
+                padding: 1.25rem;
+                border-radius: var(--radius-md);
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 1.75rem;
+                  font-weight: 800;
+                  color: var(--clr-cyan);
+                  font-family: var(--font-mono);
+                "
+              >
+                &lt; 48 Hours
+              </div>
+              <div style="font-size: 0.875rem; color: var(--clr-text-muted); margin-top: 0.25rem">
+                Fast PR Reviews &amp; Feedback
+              </div>
+            </div>
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid var(--clr-border);
+                backdrop-filter: blur(12px);
+                padding: 1.25rem;
+                border-radius: var(--radius-md);
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  font-size: 1.75rem;
+                  font-weight: 800;
+                  color: var(--clr-purple);
+                  font-family: var(--font-mono);
+                "
+              >
+                Auto-Sync
+              </div>
+              <div style="font-size: 0.875rem; color: var(--clr-text-muted); margin-top: 0.25rem">
+                Git Hook Pre-commit Pipeline
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contributor Setup Timeline Section -->
+      <section
+        id="contribute"
+        class="section contribute-section"
+        aria-labelledby="contribute-heading"
+      >
+        <div class="section-inner">
+          <div class="section-header text-center">
+            <div class="badge badge-purple">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              Quickstart Timeline
+            </div>
+            <h2 id="contribute-heading" class="section-title">
+              Local Dev Setup in <span class="text-gradient">3 Steps</span>
+            </h2>
+            <p class="section-subtitle">
+              Get your local environment set up and start shipping code in minutes.
+            </p>
+          </div>
+
+          <div class="contribute-timeline">
+            <!-- Step 1 -->
+            <div class="contribute-card">
+              <div class="contribute-card-aside">
+                <div class="contribute-num" aria-hidden="true">1</div>
+                <div class="contribute-connector" aria-hidden="true"></div>
+              </div>
+              <div class="contribute-card-body">
+                <div class="contribute-card-header">
+                  <span class="contribute-icon" aria-hidden="true">🍴</span>
+                  <h3 class="contribute-card-title">Fork &amp; Clone</h3>
+                </div>
+                <p class="contribute-card-desc">
+                  Fork
+                  <a
+                    href="https://github.com/rihadjahanopu/fancybash"
+                    target="_blank"
+                    rel="noopener"
+                    class="contribute-link"
+                    >rihadjahanopu/fancybash</a
+                  >
+                  on GitHub, then clone your fork locally.
+                </p>
+                <div class="code-block" id="code-setup-clone">
+                  <div class="code-header">
+                    <span class="code-lang">bash</span>
+                    <button
+                      class="copy-btn"
+                      aria-label="Copy clone command"
+                      data-copy="git clone https://github.com/rihadjahanopu/fancybash.git && cd fancybash"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <pre><code>git clone https://github.com/rihadjahanopu/fancybash.git &amp;&amp; cd fancybash</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="contribute-card">
+              <div class="contribute-card-aside">
+                <div class="contribute-num" aria-hidden="true">2</div>
+                <div class="contribute-connector" aria-hidden="true"></div>
+              </div>
+              <div class="contribute-card-body">
+                <div class="contribute-card-header">
+                  <span class="contribute-icon" aria-hidden="true">⚙️</span>
+                  <h3 class="contribute-card-title">Run Setup Script</h3>
+                  <span class="contribute-badge">Git Hooks</span>
+                </div>
+                <p class="contribute-card-desc">
+                  Pick your shell — this installs Git hooks and syncs your dev environment
+                  automatically.
+                </p>
+                <div class="csh-tabs" role="tablist" aria-label="Shell setup commands">
+                  <button
+                    class="csh-tab is-active"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="csh-bash"
+                    id="tab-csh-bash"
+                  >
+                    Bash
+                  </button>
+                  <button
+                    class="csh-tab"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="csh-zsh"
+                    id="tab-csh-zsh"
+                  >
+                    Zsh
+                  </button>
+                  <button
+                    class="csh-tab"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="csh-fish"
+                    id="tab-csh-fish"
+                  >
+                    Fish
+                  </button>
+                  <button
+                    class="csh-tab"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="csh-ps"
+                    id="tab-csh-ps"
+                  >
+                    PowerShell
+                  </button>
+                </div>
+                <div class="csh-panels">
+                  <div
+                    class="code-block csh-panel is-active"
+                    id="csh-bash"
+                    role="tabpanel"
+                    aria-labelledby="tab-csh-bash"
+                  >
+                    <div class="code-header">
+                      <span class="code-lang">bash</span>
+                      <button
+                        class="copy-btn"
+                        aria-label="Copy bash setup"
+                        data-copy="bash setup.sh"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <pre><code>bash setup.sh</code></pre>
+                  </div>
+                  <div
+                    class="code-block csh-panel"
+                    id="csh-zsh"
+                    role="tabpanel"
+                    aria-labelledby="tab-csh-zsh"
+                    hidden
+                  >
+                    <div class="code-header">
+                      <span class="code-lang">zsh</span>
+                      <button
+                        class="copy-btn"
+                        aria-label="Copy zsh setup"
+                        data-copy="zsh setup.zsh"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <pre><code>zsh setup.zsh</code></pre>
+                  </div>
+                  <div
+                    class="code-block csh-panel"
+                    id="csh-fish"
+                    role="tabpanel"
+                    aria-labelledby="tab-csh-fish"
+                    hidden
+                  >
+                    <div class="code-header">
+                      <span class="code-lang">fish</span>
+                      <button
+                        class="copy-btn"
+                        aria-label="Copy fish setup"
+                        data-copy="fish setup.fish"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <pre><code>fish setup.fish</code></pre>
+                  </div>
+                  <div
+                    class="code-block csh-panel"
+                    id="csh-ps"
+                    role="tabpanel"
+                    aria-labelledby="tab-csh-ps"
+                    hidden
+                  >
+                    <div class="code-header">
+                      <span class="code-lang">powershell</span>
+                      <button
+                        class="copy-btn"
+                        aria-label="Copy PowerShell setup"
+                        data-copy=".\setup.ps1"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <pre><code>.\setup.ps1</code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="contribute-card contribute-card--last">
+              <div class="contribute-card-aside">
+                <div class="contribute-num" aria-hidden="true">3</div>
+              </div>
+              <div class="contribute-card-body">
+                <div class="contribute-card-header">
+                  <span class="contribute-icon" aria-hidden="true">🚀</span>
+                  <h3 class="contribute-card-title">Code, Commit &amp; PR</h3>
+                </div>
+                <p class="contribute-card-desc">
+                  Follow the
+                  <a
+                    href="https://github.com/rihadjahanopu/fancybash/blob/main/CONTRIBUTING.md"
+                    target="_blank"
+                    rel="noopener"
+                    class="contribute-link"
+                    >CONTRIBUTING.md</a
+                  >
+                  guide for branch naming, commit format, and the PR checklist. We review all PRs
+                  within 48&nbsp;hours.
+                </p>
+                <div class="contribute-pr-cta">
+                  <a
+                    href="https://github.com/rihadjahanopu/fancybash/pulls"
+                    target="_blank"
+                    rel="noopener"
+                    class="btn btn-outline contribute-pr-btn"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <circle cx="18" cy="18" r="3"></circle>
+                      <circle cx="6" cy="6" r="3"></circle>
+                      <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
+                      <line x1="6" y1="9" x2="6" y2="21"></line>
+                    </svg>
+                    Open a Pull Request
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- /.contribute-timeline -->
+        </div>
+      </section>
+
+      <!-- Guidelines Grid Section -->
+      <section class="section" style="padding-top: 2rem; padding-bottom: 5rem">
+        <div class="section-inner">
+          <div class="section-header text-center">
+            <div class="badge badge-purple">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Best Practices
+            </div>
+            <h2 class="section-title">
+              Contribution <span class="text-gradient">Guidelines</span>
+            </h2>
+            <p class="section-subtitle">
+              Follow these simple conventions to make code reviews swift and effortless.
+            </p>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+              gap: 1.5rem;
+            "
+          >
+            <!-- Card 1 -->
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-md);
+                padding: 1.75rem;
+                transition: var(--transition);
+              "
+              onmouseover="
+                this.style.borderColor = 'var(--clr-purple)';
+                this.style.transform = 'translateY(-3px)';
+              "
+              onmouseout="
+                this.style.borderColor = 'var(--clr-border)';
+                this.style.transform = 'none';
+              "
+            >
+              <div style="font-size: 2rem; margin-bottom: 1rem">🐛</div>
+              <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff">
+                Bug Reports &amp; Issues
+              </h3>
+              <p style="color: var(--clr-text-muted); font-size: 0.95rem; line-height: 1.6">
+                Before opening an issue, check existing open/closed issues on GitHub. Provide
+                details about your OS, shell version, and steps to reproduce.
+              </p>
+              <a
+                href="https://github.com/rihadjahanopu/fancybash/issues"
+                target="_blank"
+                rel="noopener"
+                class="contribute-link"
+                style="display: inline-block; margin-top: 1rem; font-weight: 600; font-size: 0.9rem"
+                >Browse GitHub Issues &rarr;</a
+              >
+            </div>
+
+            <!-- Card 2 -->
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-md);
+                padding: 1.75rem;
+                transition: var(--transition);
+              "
+              onmouseover="
+                this.style.borderColor = 'var(--clr-purple)';
+                this.style.transform = 'translateY(-3px)';
+              "
+              onmouseout="
+                this.style.borderColor = 'var(--clr-border)';
+                this.style.transform = 'none';
+              "
+            >
+              <div style="font-size: 2rem; margin-bottom: 1rem">💡</div>
+              <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff">
+                Feature Proposals
+              </h3>
+              <p style="color: var(--clr-text-muted); font-size: 0.95rem; line-height: 1.6">
+                Have an idea for a new alias, theme, or shell integration? Open an issue or start a
+                GitHub Discussion first to align on design.
+              </p>
+              <a
+                href="https://github.com/rihadjahanopu/fancybash/discussions"
+                target="_blank"
+                rel="noopener"
+                class="contribute-link"
+                style="display: inline-block; margin-top: 1rem; font-weight: 600; font-size: 0.9rem"
+                >Join Discussions &rarr;</a
+              >
+            </div>
+
+            <!-- Card 3 -->
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-md);
+                padding: 1.75rem;
+                transition: var(--transition);
+              "
+              onmouseover="
+                this.style.borderColor = 'var(--clr-purple)';
+                this.style.transform = 'translateY(-3px)';
+              "
+              onmouseout="
+                this.style.borderColor = 'var(--clr-border)';
+                this.style.transform = 'none';
+              "
+            >
+              <div style="font-size: 2rem; margin-bottom: 1rem">✍️</div>
+              <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff">
+                Conventional Commits
+              </h3>
+              <p style="color: var(--clr-text-muted); font-size: 0.95rem; line-height: 1.6">
+                Use clear commit prefix messages:
+                <code style="color: var(--clr-cyan); font-family: var(--font-mono)">feat:</code>,
+                <code style="color: var(--clr-cyan); font-family: var(--font-mono)">fix:</code>,
+                <code style="color: var(--clr-cyan); font-family: var(--font-mono)">docs:</code>, or
+                <code style="color: var(--clr-cyan); font-family: var(--font-mono)">style:</code> to
+                keep history clean.
+              </p>
+              <div
+                style="
+                  margin-top: 1rem;
+                  font-size: 0.85rem;
+                  color: var(--clr-text-muted);
+                  font-family: var(--font-mono);
+                  background: rgba(0, 0, 0, 0.3);
+                  padding: 0.5rem 0.75rem;
+                  border-radius: 6px;
+                "
+              >
+                feat(web): add contribute.html
+              </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div
+              style="
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid var(--clr-border);
+                border-radius: var(--radius-md);
+                padding: 1.75rem;
+                transition: var(--transition);
+              "
+              onmouseover="
+                this.style.borderColor = 'var(--clr-purple)';
+                this.style.transform = 'translateY(-3px)';
+              "
+              onmouseout="
+                this.style.borderColor = 'var(--clr-border)';
+                this.style.transform = 'none';
+              "
+            >
+              <div style="font-size: 2rem; margin-bottom: 1rem">🔄</div>
+              <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff">
+                Pre-commit Auto-Sync
+              </h3>
+              <p style="color: var(--clr-text-muted); font-size: 0.95rem; line-height: 1.6">
+                Editing shell config files automatically triggers pre-commit sync between root
+                dotfiles, setup scripts, and web mirror configs.
+              </p>
+              <a
+                href="https://github.com/rihadjahanopu/fancybash/blob/main/scripts/sync.sh"
+                target="_blank"
+                rel="noopener"
+                class="contribute-link"
+                style="display: inline-block; margin-top: 1rem; font-weight: 600; font-size: 0.9rem"
+                >View Auto-Sync Script &rarr;</a
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="cta-section" aria-labelledby="cta-heading">
+        <div class="section-inner">
+          <div class="cta-card">
+            <div class="cta-orb cta-orb-1" aria-hidden="true"></div>
+            <div class="cta-orb cta-orb-2" aria-hidden="true"></div>
+            <h2 id="cta-heading">Ready to submit your first PR?</h2>
+            <p>
+              Join developer contributors who are making terminal setups
+              <strong>faster, smarter, and accessible to everyone</strong>.
+            </p>
+            <div class="cta-actions">
+              <a
+                href="https://github.com/rihadjahanopu/fancybash/pulls"
+                target="_blank"
+                rel="noopener"
+                class="btn btn-primary"
+                id="cta-install-btn"
+                >🚀 Open Pull Request</a
+              >
+              <a
+                href="https://github.com/rihadjahanopu/fancybash"
+                target="_blank"
+                rel="noopener"
+                class="btn btn-outline"
+                id="cta-github-btn"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"
+                  />
+                </svg>
+                Star on GitHub
+              </a>
+            </div>
+            <p class="cta-note">MIT Licensed · Made with ❤️ in Bangladesh</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="logo-icon">⚡</span>
+          <span class="logo-text">fancybash</span>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="index.html#features">Features</a>
+          <a href="index.html#install">Install</a>
+          <a href="docs.html">Docs</a>
+          <a href="contribute.html">Contribute</a>
+          <a href="linux-setup.html">Linux Apps</a>
+          <a href="https://github.com/rihadjahanopu/fancybash" target="_blank" rel="noopener"
+            >GitHub</a
+          >
+          <a
+            href="https://github.com/rihadjahanopu/fancybash/blob/main/LICENSE"
+            target="_blank"
+            rel="noopener"
+            >MIT License</a
+          >
+        </nav>
+        <p class="footer-copy">
+          © 2026
+          <a
+            href="https://github.com/rihadjahanopu"
+            target="_blank"
+            rel="noopener"
+            class="text-link"
+            >Rihad Jahan Opu</a
+          >. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script src="main.js"></script>
+  </body>
+</html>

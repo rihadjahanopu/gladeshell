@@ -37,10 +37,15 @@ setopt AUTO_CD EXTENDED_GLOB HIST_IGNORE_DUPS HIST_IGNORE_ALL_DUPS
 setopt SHARE_HISTORY INC_APPEND_HISTORY HIST_REDUCE_BLANKS
 setopt AUTO_LIST AUTO_MENU COMPLETE_IN_WORD ALWAYS_TO_END
 setopt NO_BEEP
+setopt HIST_NO_FUNCTIONS
 
 HISTSIZE=50000
 SAVEHIST=50000
 HISTFILE="$HOME/.zsh_history"
+
+# Prevent git diff outputs, code snippets, multi-word junk from cluttering history
+# Lines that look like patch/diff stats or that start with } / ) / > are skipped.
+HISTORY_IGNORE='([[:space:]]#|[0-9]## file?(s) changed*|},|});|(*insertion*)|(*deletion*)|>*|)*|};)'
 "#);
 
     // ── Autocompletion engine & Plugins (Native Rust Resolved) ─────────────────
@@ -90,6 +95,8 @@ if [[ -o interactive ]]; then
 "#);
 
     // Dynamic plugin sourcing via Native Rust lookup
+    // NOTE: zsh-autocomplete and zsh-autosuggestions are mutually exclusive;
+    //       autocomplete takes precedence when installed.
     let ac_candidates = [
         format!("{}/.zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh", home),
         "/usr/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh".to_string(),
@@ -97,8 +104,27 @@ if [[ -o interactive ]]; then
         "/opt/homebrew/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh".to_string(),
         "/usr/local/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh".to_string(),
     ];
-    if let Some(ac) = shared::find_first_existing(&ac_candidates) {
+    let has_autocomplete = if let Some(ac) = shared::find_first_existing(&ac_candidates) {
         out.push_str(&format!("    source \"{}\" 2>/dev/null\n", ac));
+        true
+    } else {
+        false
+    };
+
+    // ── zsh-autosuggestions: set config BEFORE sourcing (required for MANUAL_REBIND) ──
+    // ZSH_AUTOSUGGEST_MANUAL_REBIND=1 stops the plugin from hooking into every
+    // ZLE widget (including Space). Without it, pressing Space or double-Space
+    // triggers history expansion and shows ghost-text like "1 file changed…" or
+    // "}," from previous commands. See: https://github.com/zsh-users/zsh-autosuggestions#disabling-automatic-widget-re-binding
+    if !has_autocomplete {
+        out.push_str(r#"    # zsh-autosuggestions settings (must precede source)
+    ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+    ZSH_AUTOSUGGEST_USE_ASYNC=1
+    ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+    ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+    # Ignore history lines that look like patch stats, code-output, or bare braces
+    ZSH_AUTOSUGGEST_HISTORY_IGNORE='[0-9]* file* changed*|([[:space:]]#[}),;>][[:space:]]#)'
+"#);
     }
 
     let as_candidates = [
@@ -108,11 +134,29 @@ if [[ -o interactive ]]; then
         "/opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh".to_string(),
         "/usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh".to_string(),
     ];
-    if let Some(as_path) = shared::find_first_existing(&as_candidates) {
-        out.push_str(&format!("    source \"{}\" 2>/dev/null\n", as_path));
+    if !has_autocomplete {
+        if let Some(as_path) = shared::find_first_existing(&as_candidates) {
+            out.push_str(&format!("    source \"{}\" 2>/dev/null\n", as_path));
+            out.push_str(r#"    # Ignore autosuggestions when buffer contains only whitespace
+    _zsh_autosuggest_fetch() {
+        local trimmed="${BUFFER#"${BUFFER%%[^[:space:]]*}"}"
+        if [[ -z "$trimmed" ]]; then
+            _zsh_autosuggest_clear
+            return
+        fi
+        if (( ${+ZSH_AUTOSUGGEST_USE_ASYNC} )); then
+            _zsh_autosuggest_async_request "$BUFFER"
+        else
+            local suggestion
+            _zsh_autosuggest_fetch_suggestion "$BUFFER"
+            _zsh_autosuggest_suggest "$suggestion"
+        fi
     }
-    out.push_str("    ZSH_AUTOSUGGEST_USE_ASYNC=true\n");
+"#);
+        }
+    }
 
+    // zsh-syntax-highlighting MUST be sourced LAST (upstream hard requirement)
     let sh_candidates = [
         format!("{}/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh", home),
         "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh".to_string(),

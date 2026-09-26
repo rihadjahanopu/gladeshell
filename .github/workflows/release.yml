@@ -29,6 +29,8 @@ jobs:
             os: macos-latest
           - target: x86_64-pc-windows-msvc
             os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
 
     steps:
       - name: Checkout repository
@@ -38,6 +40,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
 
       - name: Install musl tools (Linux musl)
         if: matrix.target == 'x86_64-unknown-linux-musl'
@@ -67,7 +74,16 @@ jobs:
             [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/fancybash.exe"
             cp "$BIN_PATH" "$STAGE_DIR/"
             cp "$BIN_PATH" "fancybash-${{ matrix.target }}.exe"
-            cp "$BIN_PATH" "fancybash-windows-amd64.exe"
+            
+            if [ "${{ matrix.target }}" = "aarch64-pc-windows-msvc" ]; then
+              cp "$BIN_PATH" "fancybash-windows-arm64.exe"
+              sha256sum "fancybash-windows-arm64.exe" > "fancybash-windows-arm64.exe.sha256" 2>/dev/null || true
+            else
+              cp "$BIN_PATH" "fancybash-windows-amd64.exe"
+              cp "$BIN_PATH" "fancybash.exe"
+              sha256sum "fancybash-windows-amd64.exe" > "fancybash-windows-amd64.exe.sha256" 2>/dev/null || true
+            fi
+
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
             7z a "${STAGE_DIR}.zip" "./${STAGE_DIR}/*"
           else
@@ -75,18 +91,43 @@ jobs:
             [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/fancybash"
             cp "$BIN_PATH" "$STAGE_DIR/"
             cp "$BIN_PATH" "fancybash-${{ matrix.target }}"
+
+            case "${{ matrix.target }}" in
+              x86_64-unknown-linux-gnu)
+                cp "$BIN_PATH" "fancybash-linux-amd64"
+                cp "$BIN_PATH" "fancybash-linux-amd64-baseline"
+                ;;
+              x86_64-unknown-linux-musl)
+                cp "$BIN_PATH" "fancybash-linux-musl"
+                cp "$BIN_PATH" "fancybash-linux-amd64-musl"
+                ;;
+              aarch64-unknown-linux-gnu)
+                cp "$BIN_PATH" "fancybash-linux-arm64"
+                ;;
+              x86_64-apple-darwin)
+                cp "$BIN_PATH" "fancybash-darwin-amd64"
+                cp "$BIN_PATH" "fancybash-darwin-amd64-baseline"
+                ;;
+              aarch64-apple-darwin)
+                cp "$BIN_PATH" "fancybash-darwin-arm64"
+                ;;
+            esac
+
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
             tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" fancybash README.md LICENSE 2>/dev/null || tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" fancybash
+            sha256sum "fancybash-${{ matrix.target }}" > "fancybash-${{ matrix.target }}.sha256" 2>/dev/null || true
           fi
+
+      - name: Generate Combined SHA256SUMS Manifest
+        shell: bash
+        run: |
+          sha256sum fancybash* 2>/dev/null > SHA256SUMS.txt || true
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
+          generate_release_notes: true
           files: |
-            fancybash-${{ matrix.target }}.tar.gz
-            fancybash-${{ matrix.target }}.zip
-            fancybash-${{ matrix.target }}
-            fancybash-${{ matrix.target }}.exe
-            fancybash-windows-amd64.exe
-
+            fancybash-*
+            SHA256SUMS.txt

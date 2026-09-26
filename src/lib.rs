@@ -26,6 +26,11 @@ pub mod core;
 pub mod daemon;
 pub mod git;
 pub mod init;
+pub mod plugins;
+pub mod input_parser;
+pub mod buffer_engine;
+pub mod renderer;
+pub mod plugin_engine;
 #[cfg(feature = "tools")]
 pub mod tools;
 

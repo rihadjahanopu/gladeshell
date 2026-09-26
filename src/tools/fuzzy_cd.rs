@@ -835,7 +835,7 @@ impl FuzzyCdApp {
             Span::styled("Cd Here", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
             Span::styled("Ctrl+O ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled("Explorer", Style::default().fg(C_DIM)),
+            Span::styled("Exp", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
             Span::styled("F10 ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
             Span::styled("Code", Style::default().fg(C_DIM)),

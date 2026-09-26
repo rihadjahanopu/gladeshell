@@ -32,10 +32,12 @@ pub fn generate() -> String {
     out.push_str(&shared::render_integrations(Shell::Pwsh));
 
     out.push_str(r#"
-# ── PSReadLine ──
+# ── PSReadLine & Native Rust Engine ──
 if (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue) {
     Set-PSReadLineOption -EditMode Emacs
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
+    Set-PSReadLineOption -PredictionSource History
+    Set-PSReadLineOption -PredictionViewStyle InlineView
     Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
     Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
@@ -44,6 +46,7 @@ if (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue) {
 # ── fancybash Prompt & Native Auto-LS ──
 $global:_fb_last_pwd = $null
 function Prompt {
+    $ErrorActionPreference = 'SilentlyContinue'
     $lastExit = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
     $cwd = (Get-Location).Path
     if ($cwd -ne $global:_fb_last_pwd) {
@@ -60,7 +63,7 @@ $PSDefaultParameterValues['*:Encoding'] = 'UTF8'
 # ── Typo Engine & Command Not Found Handler ──
 $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     param($commandName, $commandEventArgs)
-    fancybash correct $commandName
+    try { fancybash correct $commandName 2>$null } catch {}
 }
 "#);
 
@@ -69,3 +72,17 @@ $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     out.push_str("\n# fancybash pwsh init complete\n");
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_pwsh() {
+        let script = generate();
+        assert!(script.contains("function Prompt"));
+        assert!(script.contains("Set-PSReadLineOption"));
+        assert!(script.contains("fancybash pwsh init complete"));
+    }
+}
+

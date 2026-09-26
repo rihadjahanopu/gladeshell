@@ -29,22 +29,25 @@ use crossterm::{
 use ignore::WalkBuilder;
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Terminal,
 };
 
-// ── Color Palette (Adaptive Light & Dark Mode Compatible) ──
-const C_BORDER: Color = Color::Rgb(0, 180, 120);   // Emerald mint green
-const C_ACCENT: Color = Color::Rgb(0, 150, 220);   // Royal cyan
-const C_SELECTED: Color = Color::Rgb(255, 40, 120); // Hot pink / magenta
-const C_DIM: Color = Color::Rgb(100, 120, 150);     // Muted steel slate
-const C_TEXT: Color = Color::Reset;                 // Adaptive text (black in Light mode, white in Dark mode)
-const C_GREEN: Color = Color::Rgb(0, 160, 80);     // Rich emerald
-const C_YELLOW: Color = Color::Rgb(210, 120, 0);   // High-contrast Amber / Gold
-const C_CYAN: Color = Color::Rgb(0, 140, 210);     // Deep electric cyan
+// ── Color Palette (Modern Dark Violet — matching uup aesthetic) ──
+const C_BG: Color       = Color::Rgb(10, 10, 18);          // Deep void black
+const C_BORDER: Color   = Color::Rgb(180, 100, 255);        // Violet
+const C_ACCENT: Color   = Color::Rgb(200, 140, 255);        // Soft violet accent
+const C_SELECTED_BG: Color = Color::Rgb(45, 20, 70);       // Deep purple selection bg
+const C_SELECTED_FG: Color = Color::Rgb(240, 210, 255);    // Light lavender text
+const C_DIM: Color      = Color::Rgb(90, 80, 110);         // Muted purple-grey
+const C_GREEN: Color    = Color::Rgb(80, 220, 120);         // Neon emerald
+const C_YELLOW: Color   = Color::Rgb(255, 200, 80);         // Warm gold
+const C_CYAN: Color     = Color::Rgb(80, 220, 210);         // Electric cyan
+const C_WHITE: Color    = Color::Rgb(255, 255, 255);        // Pure white
+const C_RED: Color      = Color::Rgb(255, 90, 90);          // Soft red
 
 #[derive(Args, Debug, Clone)]
 pub struct FfArgs {
@@ -446,16 +449,14 @@ fn run_interactive(mut args: FfArgs) -> Result<(), Box<dyn Error>> {
     match res {
         Ok(Some(action)) => match action {
             FfAction::OpenDefault(path) => {
+                // Handled entirely by Rust — no shell prefix needed (avoids double open)
                 open_file_natively(&path);
-                println!("OPEN:{}", path);
             }
             FfAction::OpenCode(path) => {
-                open_in_vscode(&path);
                 println!("CODE:{}", path);
             }
             FfAction::CdInto(path) => println!("CD:{}", path),
             FfAction::Explore(path) => {
-                open_in_explorer(&path);
                 println!("EXPLORE:{}", path);
             }
             FfAction::CopyPath(path) => {
@@ -615,6 +616,11 @@ pub fn open_in_explorer(path: &str) {
     }
 }
 
+fn spinner_char(tick: u64) -> &'static str {
+    let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    frames[(tick as usize) % frames.len()]
+}
+
 fn tui_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     args: &mut FfArgs,
@@ -622,6 +628,7 @@ fn tui_loop<B: ratatui::backend::Backend>(
     let mut query = args.pattern.clone().unwrap_or_default();
     let mut list_state = ListState::default();
     let mut copy_notice_time: Option<Instant> = None;
+    let mut tick: u64 = 0;
 
     let indexed_files = Arc::new(Mutex::new(Vec::<FoundItem>::new()));
     let is_indexed = Arc::new(Mutex::new(false));
@@ -649,6 +656,7 @@ fn tui_loop<B: ratatui::backend::Backend>(
     let mut last_indexed_len = 0;
 
     loop {
+        tick = tick.wrapping_add(1);
         let is_done = *is_indexed.lock().unwrap();
         let all_files = indexed_files.lock().unwrap().clone();
         let total_indexed = all_files.len();
@@ -668,17 +676,21 @@ fn tui_loop<B: ratatui::backend::Backend>(
         }
 
         terminal.draw(|f| {
+            let area = f.area();
+            // Full dark background
+            f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
+
+            // Layout: Header | Body | Path Box | Footer
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(3), // Search Input Bar & Live Benchmark
-                    Constraint::Min(5),    // Full Width Matches List (Filenames)
-                    Constraint::Length(3), // Selected File Location & Path Box (Shows path + copy shortcut)
-                    Constraint::Length(1), // Footer Shortcut Bar
+                    Constraint::Length(4), // Header banner
+                    Constraint::Min(5),    // Body (list + preview)
+                    Constraint::Length(3), // Path box
+                    Constraint::Length(3), // Footer
                 ])
-                .split(f.area());
+                .split(area);
 
-            list_rect = chunks[1];
 
             let elapsed_ms = if query.trim().is_empty() {
                 if index_elapsed == Duration::ZERO {
@@ -690,51 +702,80 @@ fn tui_loop<B: ratatui::backend::Backend>(
                 search_elapsed.as_secs_f64() * 1000.0
             };
 
-            let header_title = if !is_done && total_indexed == 0 {
-                " ⚡ Fast File Finder — Indexing workspace... (Type to search) ".to_string()
+            // ── 1. Header Banner ──────────────────────────────────────────────
+            let spin = if is_done { "✨" } else { spinner_char(tick) };
+            let status_line = if !is_done && total_indexed == 0 {
+                format!("{}  Indexing workspace... please wait", spin)
             } else if query.trim().is_empty() {
-                format!(
-                    " ⚡ Fast File Finder — Type to search files (Indexed {} files in {:.2}ms) ",
-                    total_indexed,
-                    elapsed_ms
-                )
+                format!("{}  {} files indexed in {:.2}ms — type to search", spin, total_indexed, elapsed_ms)
             } else {
-                format!(
-                    " ⚡ Fast File Finder — {} matches found in {:.2}ms ",
-                    items.len(),
-                    elapsed_ms
-                )
+                format!("{}  {} matches  •  search took {:.2}ms", spin, items.len(), elapsed_ms)
             };
 
-            // 1. Search Box Input Bar
-            let search_box = Paragraph::new(Line::from(vec![
-                Span::styled(" 🔎 ", Style::default().fg(C_ACCENT)),
-                Span::styled(&query, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled("█", Style::default().fg(C_ACCENT)),
-            ]))
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(C_BORDER))
-                    .title(Span::styled(header_title, Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD))),
-            );
-            f.render_widget(search_box, chunks[0]);
-
-            // 2. Full-Width Matches List (Filename only display)
-            if query.trim().is_empty() {
-                let empty_placeholder = Paragraph::new(Line::from(vec![
-                    Span::styled("  💡 ", Style::default().fg(C_YELLOW)),
-                    Span::styled("Type filename or extension to search (e.g. 'main', 'config.json', 'rs')...", Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC)),
-                ]))
+            let header_lines = vec![
+                Line::from(vec![
+                    Span::styled("  🔍  ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled("FAST FILE FINDER", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled("  ff  ", Style::default().fg(C_DIM)),
+                ]),
+                Line::from(vec![
+                    Span::styled(status_line, Style::default().fg(C_DIM)),
+                ]),
+            ];
+            let header = Paragraph::new(header_lines)
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(C_BORDER))
-                        .title(Span::styled(format!(" Matches ({}) ", items.len()), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD))),
+                        .style(Style::default().bg(C_BG)),
+                )
+                .alignment(Alignment::Center);
+            f.render_widget(header, chunks[0]);
+
+            // ── 2. Full-Width File List ───────────────────────────────────────
+            list_rect = chunks[1];
+
+            // ── Search input inside list title ────────────────────────────────
+            let search_title = Line::from(vec![
+                Span::styled(" 🔎 ", Style::default().fg(C_ACCENT)),
+                Span::styled(&query, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled("▌", Style::default().fg(C_ACCENT)),
+                Span::styled(
+                    format!("  ({}/{}) ", items.len(), total_indexed),
+                    Style::default().fg(C_DIM),
+                ),
+            ]);
+
+            if query.trim().is_empty() {
+                let placeholder = Paragraph::new(vec![
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("  💡 ", Style::default().fg(C_YELLOW)),
+                        Span::styled(
+                            "Type to fuzzy search files...",
+                            Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+                        ),
+                    ]),
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("     e.g. ", Style::default().fg(C_DIM)),
+                        Span::styled("main.rs", Style::default().fg(C_ACCENT)),
+                        Span::styled("  or  ", Style::default().fg(C_DIM)),
+                        Span::styled(".json", Style::default().fg(C_ACCENT)),
+                        Span::styled("  or  ", Style::default().fg(C_DIM)),
+                        Span::styled("config", Style::default().fg(C_ACCENT)),
+                    ]),
+                ])
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(C_BORDER))
+                        .title(search_title)
+                        .style(Style::default().bg(C_BG)),
                 );
-                f.render_widget(empty_placeholder, chunks[1]);
+                f.render_widget(placeholder, chunks[1]);
             } else {
                 let list_items: Vec<ListItem> = items
                     .iter()
@@ -756,14 +797,23 @@ fn tui_loop<B: ratatui::backend::Backend>(
                         let dir_hint = if parent_dir.is_empty() {
                             String::new()
                         } else {
-                            format!(" ({}/)", parent_dir)
+                            format!("  {}/", parent_dir)
                         };
 
                         let line = Line::from(vec![
-                            Span::raw(format!("{} ", icon)),
-                            Span::styled(format!("{:<28}", file_name), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
-                            Span::styled(format!("{:<35}", dir_hint), Style::default().fg(C_DIM)),
-                            Span::styled(format!("  [{}]", size_badge), Style::default().fg(C_CYAN)),
+                            Span::styled(format!(" {} ", icon), Style::default()),
+                            Span::styled(
+                                format!("{:<28}", file_name),
+                                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                format!("{:<40}", dir_hint),
+                                Style::default().fg(C_DIM),
+                            ),
+                            Span::styled(
+                                format!(" [{}]", size_badge),
+                                Style::default().fg(C_CYAN),
+                            ),
                         ]);
 
                         ListItem::new(line)
@@ -776,66 +826,80 @@ fn tui_loop<B: ratatui::backend::Backend>(
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
                             .border_style(Style::default().fg(C_BORDER))
-                            .title(Span::styled(format!(" Matches ({}) ", items.len()), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD))),
+                            .title(search_title)
+                            .style(Style::default().bg(C_BG)),
                     )
                     .highlight_style(
                         Style::default()
-                            .bg(C_SELECTED)
-                            .fg(Color::Rgb(255, 255, 255))
+                            .bg(C_SELECTED_BG)
+                            .fg(C_SELECTED_FG)
                             .add_modifier(Modifier::BOLD),
                     )
-                    .highlight_symbol(" ❯ ");
+                    .highlight_symbol(" ▶ ");
 
                 f.render_stateful_widget(list_widget, chunks[1], &mut list_state);
             }
 
-            // 3. Selected File Path Box (Dedicated Path Display)
+            // ── 3. Path Box ───────────────────────────────────────────────────
             let selected_path_str = if let Some(i) = list_state.selected() {
                 if let Some(item) = items.get(i) {
                     item.relative_path.clone()
                 } else {
-                    "No file selected".to_string()
+                    String::new()
                 }
             } else {
-                "No file selected".to_string()
+                String::new()
             };
 
             let is_copied_recently = copy_notice_time.map_or(false, |t| t.elapsed() < Duration::from_secs(2));
 
             let path_title = if is_copied_recently {
-                Span::styled(" ✔ COPIED PATH TO CLIPBOARD! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+                Span::styled(" ✔ PATH COPIED TO CLIPBOARD! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
             } else {
-                Span::styled(" 📍 Selected File Path (Press 'F3' or 'Ctrl+C' to copy) ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+                Span::styled(" 📍 Full Path ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
             };
 
             let path_widget = Paragraph::new(Line::from(vec![
-                Span::styled("Path: ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
-                Span::styled(&selected_path_str, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled("  ", Style::default()),
+                Span::styled(
+                    if selected_path_str.is_empty() { "No file selected".to_string() } else { selected_path_str },
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
             ]))
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(if is_copied_recently { C_GREEN } else { C_ACCENT }))
-                    .title(path_title),
+                    .border_style(Style::default().fg(if is_copied_recently { C_GREEN } else { C_DIM }))
+                    .title(path_title)
+                    .style(Style::default().bg(C_BG)),
             );
             f.render_widget(path_widget, chunks[2]);
 
-            // 4. Footer Bar
-            let footer = Paragraph::new(Line::from(vec![
-                Span::styled(" [↑/↓/Click] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(" │ ", Style::default().fg(C_TEXT)),
-                Span::styled(" [Enter] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                Span::styled("Open  │ ", Style::default().fg(C_TEXT)),
-                Span::styled(" [Ctrl+C / F3] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled("Copy Path  │ ", Style::default().fg(C_TEXT)),
-                Span::styled(" [F10] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
-                Span::styled("VS Code  │ ", Style::default().fg(C_TEXT)),
-                Span::styled(" [Esc] ", Style::default().fg(Color::Rgb(255, 85, 85)).add_modifier(Modifier::BOLD)),
-                Span::styled("Exit", Style::default().fg(C_TEXT)),
-            ]))
-            .block(Block::default());
-
+            // ── 4. Footer Keybinding Bar ──────────────────────────────────────
+            let footer_spans = Line::from(vec![
+                Span::styled(" [↑↓] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled("Navigate  ", Style::default().fg(C_DIM)),
+                Span::styled("[Enter] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled("Open  ", Style::default().fg(C_DIM)),
+                Span::styled("[Ctrl+C] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled("Copy Path  ", Style::default().fg(C_DIM)),
+                Span::styled("[F10] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+                Span::styled("Code ", Style::default().fg(C_DIM)),
+                Span::styled("[Ctrl+O] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled("Exp ", Style::default().fg(C_DIM)),
+                Span::styled("[Esc] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+                Span::styled("Quit ", Style::default().fg(C_DIM)),
+            ]);
+            let footer = Paragraph::new(footer_spans)
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(C_DIM))
+                        .style(Style::default().bg(C_BG)),
+                )
+                .alignment(Alignment::Center);
             f.render_widget(footer, chunks[3]);
         })?;
 
@@ -843,7 +907,7 @@ fn tui_loop<B: ratatui::backend::Backend>(
             match event::read()? {
                 Event::Key(key) => match key.code {
                     KeyCode::Esc => return Ok(None),
-                    KeyCode::F(3) | KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
                                 copy_to_clipboard(&item.relative_path);
@@ -880,7 +944,7 @@ fn tui_loop<B: ratatui::backend::Backend>(
                             }
                         }
                     }
-                    KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
                                 return Ok(Some(FfAction::Explore(item.path.to_string_lossy().to_string())));

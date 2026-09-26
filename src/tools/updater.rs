@@ -697,8 +697,8 @@ fn draw_selecting(f: &mut Frame, app: &mut UpdaterApp) {
         Span::styled("[a] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
         Span::styled("Select All  ", Style::default().fg(C_DIM)),
         Span::styled("[Enter] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-        Span::styled("Run Updates  ", Style::default().fg(C_DIM)),
-        Span::styled("[q/Esc] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+        Span::styled("Updates  ", Style::default().fg(C_DIM)),
+        Span::styled("[Esc] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
         Span::styled("Quit ", Style::default().fg(C_DIM)),
     ]);
     let footer = Paragraph::new(footer_spans)
@@ -816,17 +816,21 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
                 StatusKind::Cancelled => ("⚠️ Cancelled".to_string(), Style::default().fg(C_ORANGE)),
             };
 
+            // Emoji glyphs are 2 terminal cells wide, but Rust's {:<N} format
+            // counts Unicode scalar values, not visual width. To prevent the
+            // status text from overflowing into the right log panel we keep
+            // the name and category fields tighter.
             let line = Line::from(vec![
                 pointer,
                 Span::styled(format!("{} ", state.tool.emoji), Style::default()),
                 Span::styled(
-                    format!("{:<12} ", state.tool.name),
+                    format!("{:<10} ", state.tool.name),
                     Style::default()
                         .fg(if is_running { C_WHITE } else { C_TEXT })
                         .add_modifier(if is_running { Modifier::BOLD } else { Modifier::empty() }),
                 ),
                 Span::styled(
-                    format!("[{:<7}] ", state.tool.category),
+                    format!("[{:<5}] ", state.tool.category),
                     Style::default().fg(category_color(state.tool.category)).add_modifier(Modifier::DIM),
                 ),
                 Span::styled(status_str, status_style),
@@ -957,14 +961,14 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             if let Event::Key(key) = event::read()? {
                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                 match key.code {
-                    KeyCode::Esc | KeyCode::Char('q') => break vec![],
+                    KeyCode::Esc => break vec![],
                     KeyCode::Char('c') if ctrl => break vec![],
                     KeyCode::Up | KeyCode::Char('k') => app.move_up(),
                     KeyCode::Char('p') if ctrl => app.move_up(),
                     KeyCode::Down | KeyCode::Char('j') => app.move_down(),
                     KeyCode::Char('n') if ctrl => app.move_down(),
                     KeyCode::Char(' ') => app.toggle_current(),
-                    KeyCode::Char('a') | KeyCode::Char('A') => app.toggle_all(),
+                    KeyCode::Char('a') => app.toggle_all(),
                     KeyCode::Enter => {
                         let mut tools: Vec<&'static UpdaterTool> = app
                             .available

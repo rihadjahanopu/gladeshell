@@ -1,37 +1,72 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
-BASHRC="$HOME/.bashrc"
+# ─── Windows NT Auto-Bridge ─────────────────────
+if [[ "${OS:-}" = "Windows_NT" ]] && [[ "$(uname -s 2>/dev/null)" != MINGW64* ]] && [[ "$(uname -s 2>/dev/null)" != MSYS* ]]; then
+    if command -v powershell.exe >/dev/null 2>&1; then
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash-rs/main/install.ps1 | iex"
+        exit $?
+    elif command -v powershell >/dev/null 2>&1; then
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash-rs/main/install.ps1 | iex"
+        exit $?
+    fi
+fi
+
 URL="https://raw.githubusercontent.com/rihadjahanopu/fancybash/refs/heads/main/config.sh"
 FALLBACK_URL="https://fancybash.netlify.app/public/config.sh"
-START="# >>> fancy-bashrc >>>"
-END="# <<< fancy-bashrc <<<"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "$PWD")"
 LOCAL_CONFIG="$SCRIPT_DIR/config.sh"
 
-# ─── Colors & Formatting ───────────────────
-RED='\033[38;2;243;139;168m'
-GREEN='\033[38;2;166;227;161m'
-YELLOW='\033[38;2;249;226;175m'
-BLUE='\033[38;2;137;180;250m'
-PURPLE='\033[38;2;203;166;247m'
-CYAN='\033[38;2;148;226;213m'
-GRAY='\033[38;2;147;153;178m'
-BOLD='\033[1m'
-NC='\033[0m'
+# ─── Terminal & Color Capability Probing ─────
+detect_colors() {
+    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
+        RED='\033[38;2;243;139;168m'
+        GREEN='\033[38;2;166;227;161m'
+        YELLOW='\033[38;2;249;226;175m'
+        BLUE='\033[38;2;137;180;250m'
+        PURPLE='\033[38;2;203;166;247m'
+        CYAN='\033[38;2;148;226;213m'
+        GRAY='\033[38;2;147;153;178m'
+        BOLD='\033[1m'
+        NC='\033[0m'
+    else
+        RED='' GREEN='' YELLOW='' BLUE='' PURPLE='' CYAN='' GRAY='' BOLD='' NC=''
+    fi
+}
+detect_colors
 
 tmpfile=""
-backup_file=""
-
-# ─── Unattended / Auto-Yes Detection ──────────────
+backup_files=()
 AUTO_YES=false
+TARGET_SHELL=""
+ALL_SHELLS=false
+MODE="install" # install | doctor | rollback | update
+
+# ─── Smart CLI Argument Parser ─────────────────────
 for arg in "$@"; do
-    if [[ "$arg" == "-y" || "$arg" == "--yes" || "$arg" == "--unattended" ]]; then
-        AUTO_YES=true
-        break
-    fi
+    case "$arg" in
+        -y|--yes|--unattended)
+            AUTO_YES=true
+            ;;
+        --shell=*)
+            TARGET_SHELL="${arg#*=}"
+            ;;
+        --all|--all-shells)
+            ALL_SHELLS=true
+            ;;
+        --doctor|--check|doctor|check)
+            MODE="doctor"
+            ;;
+        --rollback|--undo|rollback|undo)
+            MODE="rollback"
+            ;;
+        --update|--upgrade|update|upgrade)
+            MODE="update"
+            ;;
+    esac
 done
+
 if [[ "${FANCYBASH_AUTO_YES:-}" == "1" || "${NONINTERACTIVE:-}" == "1" || "${CI:-}" == "true" ]]; then
     AUTO_YES=true
 fi
@@ -60,10 +95,10 @@ spinner() {
     printf "\r  ${GREEN}✔${NC} %s\n" "$msg"
 }
 
-# ─── Progress Bar ──────────────────────────
+# ─── Dynamic Progress Bar ──────────────────
 draw_progress_bar() {
     local current=$1
-    local total=6
+    local total=${2:-5}
     local width=30
     local percentage=$((current * 100 / total))
     local completed=$((width * current / total))
@@ -86,13 +121,13 @@ show_header() {
     echo -e "${BLUE}          ██║     ██║  ██║██║ ╚████║╚██████╗   ██║   ██████╔╝██║  ██║███████║██║  ██║${NC}"
     echo -e "${BLUE}          ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝${NC}"
     echo ""
-    echo -e "   ✨ ${BOLD}${CYAN}F A N C Y B A S H${NC}  •  ${BOLD}Bash Config Installer${NC}"
+    echo -e "   ✨ ${BOLD}${CYAN}F A N C Y B A S H${NC}  •  ${BOLD}Smart Production Cross-Shell Engine (Bash, Zsh, Fish)${NC}"
     echo ""
 }
 
-# ─── System Information ────────────────────
+# ─── Shell Resolution & System Probing ────
 detect_shell() {
-    local current_shell="${FANCYBASH_SHELL:-}"
+    local current_shell="${TARGET_SHELL:-${FANCYBASH_SHELL:-}}"
     if [ -z "$current_shell" ]; then
         local _ppid_cmd
         _ppid_cmd=$(ps -p "$PPID" -o comm= 2>/dev/null | sed 's/^-//' | xargs basename 2>/dev/null)
@@ -104,6 +139,43 @@ detect_shell() {
         esac
     fi
     echo "$current_shell"
+}
+
+detect_all_installed_shells() {
+    local installed=()
+    for s in bash zsh fish; do
+        if command -v "$s" >/dev/null 2>&1; then
+            installed+=("$s")
+        fi
+    done
+    echo "${installed[*]}"
+}
+
+get_target_rc() {
+    local shell_name="${1:-$(detect_shell)}"
+    case "$shell_name" in
+        zsh)  echo "$HOME/.zshrc" ;;
+        fish) echo "$HOME/.config/fish/config.fish" ;;
+        *)
+            if [ -f "$HOME/.bashrc" ]; then
+                echo "$HOME/.bashrc"
+            elif [ -f "$HOME/.bash_profile" ]; then
+                echo "$HOME/.bash_profile"
+            elif [ -n "${XDG_CONFIG_HOME:-}" ] && [ -f "$XDG_CONFIG_HOME/.bashrc" ]; then
+                echo "$XDG_CONFIG_HOME/.bashrc"
+            else
+                echo "$HOME/.bashrc"
+            fi
+            ;;
+    esac
+}
+
+tildify() {
+    if [[ "$1" == "$HOME"* ]]; then
+        echo "~${1#"$HOME"}"
+    else
+        echo "$1"
+    fi
 }
 
 show_sysinfo() {
@@ -118,14 +190,20 @@ show_sysinfo() {
     local user=${USER:-$(whoami 2>/dev/null || echo "user")}
     local current_shell
     current_shell=$(detect_shell)
+    local all_shells
+    all_shells=$(detect_all_installed_shells)
+    local target_rc
+    target_rc=$(get_target_rc "$current_shell")
 
     echo -e "\n${BLUE}──────────────────────────────────────────────────${NC}"
     echo -e " 🖥️   ${BOLD}SYSTEM INFORMATION${NC}"
     echo -e "${BLUE}──────────────────────────────────────────────────${NC}"
-    echo -e "  💻  ${BOLD}OS:${NC}      ${CYAN}$os_name${NC}"
-    echo -e "  👤  ${BOLD}User:${NC}    ${CYAN}$user${NC}"
-    echo -e "  🐚  ${BOLD}Shell:${NC}   ${CYAN}$current_shell${NC}"
-    echo -e "  ⚙️   ${BOLD}Arch:${NC}    ${CYAN}$arch${NC}"
+    echo -e "  💻  ${BOLD}OS:${NC}            ${CYAN}$os_name${NC}"
+    echo -e "  👤  ${BOLD}User:${NC}          ${CYAN}$user${NC}"
+    echo -e "  🐚  ${BOLD}Active Shell:${NC}  ${CYAN}$current_shell${NC}"
+    echo -e "  🌐  ${BOLD}System Shells:${NC} ${CYAN}$all_shells${NC}"
+    echo -e "  📄  ${BOLD}Target Config:${NC} ${CYAN}$(tildify "$target_rc")${NC}"
+    echo -e "  ⚙️   ${BOLD}Arch:${NC}          ${CYAN}$arch${NC}"
     echo -e "${BLUE}──────────────────────────────────────────────────${NC}\n"
     echo ""
 }
@@ -184,12 +262,10 @@ check_and_install_fonts() {
     if [[ "$AUTO_YES" == true ]]; then
         response="y"
     else
-        # Interactive Prompt
         echo ""
         printf "${YELLOW}  ❯ Missing components detected (${missing_deps[*]}).${NC}\n"
         printf "    Would you like to auto-install missing dependencies and proceed? [${GREEN}Y${NC}/n]: "
 
-        # Read from /dev/tty safely for curl piped scripts
         if [ -t 0 ]; then
             read -r response || response=""
         elif [ -c /dev/tty ]; then
@@ -278,95 +354,105 @@ EOF
     fi
 }
 
-# ─── Install Zsh Plugins (Conditional) ───────────
-install_zsh_plugins() {
-    local current_shell
-    current_shell=$(detect_shell)
-    if [ "$current_shell" != "zsh" ]; then
-        return 0
-    fi
-
-    printf "  ${CYAN}➜${NC} Setting up Zsh plugins...\n"
-
-    local zsh_dir="$HOME/.zsh"
-    mkdir -p "$zsh_dir"
-
-    # zsh-syntax-highlighting
-    if [ -d "$zsh_dir/zsh-syntax-highlighting" ]; then
-        printf "  ${GREEN}✔${NC} zsh-syntax-highlighting already exists, skipping.\n"
+# ─── Check Existing Installation ───────────
+check_existing_install() {
+    local target_shells=()
+    if [ "$ALL_SHELLS" = true ]; then
+        read -r -a target_shells <<< "$(detect_all_installed_shells)"
     else
-        (
-            git clone --quiet https://github.com/zsh-users/zsh-syntax-highlighting.git \
-                "$zsh_dir/zsh-syntax-highlighting" 2>/dev/null
-        ) &
-        spinner $! "Cloning zsh-syntax-highlighting..."
+        target_shells=("$(detect_shell)")
     fi
 
-    # zsh-autosuggestions
-    if [ -d "$zsh_dir/zsh-autosuggestions" ]; then
-        printf "  ${GREEN}✔${NC} zsh-autosuggestions already exists, skipping.\n"
-    else
-        (
-            git clone --quiet https://github.com/zsh-users/zsh-autosuggestions.git \
-                "$zsh_dir/zsh-autosuggestions" 2>/dev/null
-        ) &
-        spinner $! "Cloning zsh-autosuggestions..."
-    fi
-
-    # zsh-completions
-    if [ -d "$zsh_dir/zsh-completions" ]; then
-        printf "  ${GREEN}✔${NC} zsh-completions already exists, skipping.\n"
-    else
-        (
-            git clone --quiet https://github.com/zsh-users/zsh-completions.git \
-                "$zsh_dir/zsh-completions" 2>/dev/null
-        ) &
-        spinner $! "Cloning zsh-completions..."
-    fi
-
-    printf "  ${GREEN}✔${NC} Zsh plugins ready in ${PURPLE}~/.zsh/${NC}\n"
+    for sh in "${target_shells[@]}"; do
+        local target_rc
+        target_rc=$(get_target_rc "$sh")
+        printf "  ${CYAN}➜${NC} Checking configuration file for ${BOLD}%s${NC} (${GRAY}%s${NC})...\n" "$sh" "$(tildify "$target_rc")"
+        mkdir -p "$(dirname "$target_rc")"
+        if [ ! -f "$target_rc" ]; then
+            printf "  ${YELLOW}⚠ Creating %s...${NC}\n" "$(tildify "$target_rc")"
+            touch "$target_rc"
+        fi
+    done
+    printf "  ${GREEN}✔${NC} Ready for installation.\n"
 }
 
 # ─── Remove Old Config Block ───────────────
 remove_old_config() {
-    if grep -qF "$START" "$BASHRC" 2>/dev/null; then
-        printf "  ${YELLOW}⚠${NC} Found existing fancy-bashrc block — removing old config first...\n"
-        while grep -qF "$START" "$BASHRC" 2>/dev/null; do
-            if [ "$(uname)" = "Darwin" ]; then
-                sed -i '' '/# >>> fancy-bashrc >>>/,/# <<< fancy-bashrc <<</d' "$BASHRC"
-            else
-                sed -i '/# >>> fancy-bashrc >>>/,/# <<< fancy-bashrc <<</d' "$BASHRC"
+    printf "  ${CYAN}➜${NC} Cleaning up legacy configuration blocks...\n"
+    local rcs=(
+        "${HOME}/.bashrc"
+        "${HOME}/.bash_profile"
+        "${HOME}/.zshrc"
+        "${HOME}/.config/fish/config.fish"
+    )
+    if [ -n "${XDG_CONFIG_HOME:-}" ]; then
+        rcs+=("$XDG_CONFIG_HOME/.bashrc" "$XDG_CONFIG_HOME/.bash_profile")
+    fi
+
+    local markers=(
+        "# >>> fancy-bashrc >>>|# <<< fancy-bashrc <<<"
+        "# >>> fancy-zshrc >>>|# <<< fancy-zshrc <<<"
+        "# >>> fancy-fish >>>|# <<< fancy-fish <<<"
+    )
+
+    local cleaned=false
+    for rc in "${rcs[@]}"; do
+        [ -f "$rc" ] || continue
+        for pair in "${markers[@]}"; do
+            local start_m="${pair%%|*}"
+            local end_m="${pair##*|}"
+            if grep -qF "$start_m" "$rc" 2>/dev/null; then
+                cleaned=true
+                if [ "$(uname)" = "Darwin" ]; then
+                    sed -i '' "/$start_m/,/$end_m/d" "$rc" 2>/dev/null || true
+                else
+                    sed -i "/$start_m/,/$end_m/d" "$rc" 2>/dev/null || true
+                fi
             fi
         done
-        printf "  ${GREEN}✔${NC} Old config removed.\n"
-    fi
-}
+    done
 
-# ─── Check Existing Installation ───────────
-check_existing_install() {
-    printf "  ${CYAN}➜${NC} Checking existing configuration...\n"
-    if [ ! -f "$BASHRC" ]; then
-        printf "  ${YELLOW}⚠ Creating $BASHRC...${NC}\n"
-        touch "$BASHRC"
-    fi
-    printf "  ${GREEN}✔${NC} Ready for installation.\n"
-}
-
-# ─── Backup ────────────────────────────────
-backup_bashrc() {
-    printf "  ${CYAN}➜${NC} Creating backup...\n"
-    backup_file="$BASHRC.backup.$(date +%Y%m%d_%H%M%S)"
-    cp "$BASHRC" "$backup_file"
-    printf "  ${GREEN}✔${NC} Backup created: ${PURPLE}$(basename "$backup_file")${NC}\n"
-}
-
-# ─── Helper: Tildify Path ───────────────────
-tildify() {
-    if [[ "$1" == "$HOME"* ]]; then
-        echo "~${1#"$HOME"}"
+    if [ "$cleaned" = true ]; then
+        printf "  ${GREEN}✔${NC} Old config blocks removed across shell RC files.\n"
     else
-        echo "$1"
+        printf "  ${GREEN}✔${NC} Shell configuration files are clean.\n"
     fi
+}
+
+# ─── Backup Target RC Files ────────────────
+backup_shell_rc() {
+    local target_shells=()
+    if [ "$ALL_SHELLS" = true ]; then
+        read -r -a target_shells <<< "$(detect_all_installed_shells)"
+    else
+        target_shells=("$(detect_shell)")
+    fi
+
+    backup_files=()
+    for sh in "${target_shells[@]}"; do
+        local target_rc
+        target_rc=$(get_target_rc "$sh")
+        if [ -f "$target_rc" ]; then
+            local bfile="$target_rc.backup.$(date +%Y%m%d_%H%M%S)"
+            cp "$target_rc" "$bfile"
+            backup_files+=("$bfile")
+            printf "  ${GREEN}✔${NC} Backup created for ${BOLD}%s${NC}: ${PURPLE}%s${NC}\n" "$sh" "$(basename "$bfile")"
+        fi
+    done
+}
+
+# ─── Atomic RC Injection Helper ────────────
+_atomic_inject_rc() {
+    local file="$1"
+    local content="$2"
+    local dir
+    dir="$(dirname "$file")"
+    mkdir -p "$dir"
+    local tmp
+    tmp="$(mktemp "${dir}/.fancybash_tmp.XXXXXX" 2>/dev/null || mktemp -t 'fancybash_tmp')"
+    cp "$file" "$tmp" 2>/dev/null || touch "$tmp"
+    printf "%s\n" "$content" >> "$tmp"
+    mv "$tmp" "$file"
 }
 
 # ─── Install / Verify Rust Binary ──────────
@@ -378,7 +464,6 @@ _copy_binary_to_dirs() {
     cp "$src" "$local_bin/fancybash"
     chmod +x "$local_bin/fancybash"
     export PATH="$local_bin:$PATH"
-    # Also copy to ~/.cargo/bin if cargo is installed (rustup puts it in PATH)
     if command -v cargo >/dev/null 2>&1 || [ -d "$cargo_bin" ]; then
         mkdir -p "$cargo_bin"
         cp "$src" "$cargo_bin/fancybash"
@@ -388,7 +473,6 @@ _copy_binary_to_dirs() {
     else
         printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC}\n" "$(tildify "$local_bin")"
     fi
-    # Show version
     local ver
     ver=$("$local_bin/fancybash" --version 2>/dev/null || echo "unknown")
     printf "  ${CYAN}ℹ${NC} Version: ${BOLD}%s${NC}\n" "$ver"
@@ -397,14 +481,12 @@ _copy_binary_to_dirs() {
 setup_rust_binary() {
     printf "  ${CYAN}➜${NC} Installing fancybash Rust engine binary...\n"
 
-    # 1. Local pre-built binary in target/release
     if [ -f "$SCRIPT_DIR/target/release/fancybash" ]; then
         printf "  ${CYAN}⚡ Found local release binary — installing...${NC}\n"
         _copy_binary_to_dirs "$SCRIPT_DIR/target/release/fancybash"
         return 0
     fi
 
-    # 2. Download pre-built release binary from GitHub Releases
     local os_type arch_type is_musl=false is_rosetta=false has_avx2=true
     os_type="$(uname -s | tr '[:upper:]' '[:lower:]')"
     arch_type="$(uname -m)"
@@ -421,7 +503,6 @@ setup_rust_binary() {
         *) arch_type="unknown" ;;
     esac
 
-    # Rosetta 2 detection on macOS (Apple Silicon running x86_64 shell)
     if [ "$os_type" = "darwin" ] && [ "$arch_type" = "amd64" ]; then
         if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
             arch_type="arm64"
@@ -430,12 +511,10 @@ setup_rust_binary() {
         fi
     fi
 
-    # Alpine Linux musl libc detection
     if [ "$os_type" = "linux" ] && [ -f /etc/alpine-release ]; then
         is_musl=true
     fi
 
-    # AVX2 instruction set probing
     if [ "$arch_type" = "amd64" ]; then
         if [ "$os_type" = "linux" ] && [ -f /proc/cpuinfo ] && ! grep -qi "avx2" /proc/cpuinfo 2>/dev/null; then
             has_avx2=false
@@ -493,7 +572,6 @@ setup_rust_binary() {
                         fi
                     fi
                 fi
-                # Also try tar.gz archive
                 local tar_url="https://github.com/${repo}/releases/latest/download/${asset}.tar.gz"
                 if curl -fsSL "$tar_url" -o "$dl_tmp/asset.tar.gz" 2>/dev/null; then
                     if tar -xzf "$dl_tmp/asset.tar.gz" -C "$dl_tmp" 2>/dev/null && [ -f "$bin_tmp" ]; then
@@ -511,7 +589,6 @@ setup_rust_binary() {
         rm -rf "$dl_tmp" 2>/dev/null || true
     fi
 
-    # 3. Build from local source if Cargo.toml exists
     if [ -f "$SCRIPT_DIR/Cargo.toml" ] && command -v cargo >/dev/null 2>&1; then
         printf "  ${YELLOW}⚡ Building fancybash from source (release mode)...${NC}\n"
         if (cd "$SCRIPT_DIR" && cargo build --release 2>&1); then
@@ -523,7 +600,6 @@ setup_rust_binary() {
         printf "  ${RED}✗ cargo build failed.${NC}\n"
     fi
 
-    # 4. Already installed on system PATH
     if command -v fancybash >/dev/null 2>&1; then
         local ver
         ver=$(fancybash --version 2>/dev/null || echo "unknown")
@@ -531,7 +607,6 @@ setup_rust_binary() {
         return 0
     fi
 
-    # 5. Fallback: cargo install from GitHub
     if command -v cargo >/dev/null 2>&1; then
         printf "  ${YELLOW}⚡ Installing via cargo from GitHub...${NC}\n"
         cargo install --git https://github.com/rihadjahanopu/fancybash-rs --quiet 2>/dev/null || true
@@ -545,88 +620,224 @@ setup_rust_binary() {
 }
 
 # ─── Fetch & Append Config ─────────────────
-install_config() {
-    printf "  ${CYAN}➜${NC} Configuring fancybash for your shell...\n"
-    export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+_inject_single_shell() {
+    local current_shell="$1"
+    local target_rc
+    target_rc=$(get_target_rc "$current_shell")
+
+    printf "  ${CYAN}➜${NC} Configuring fancybash for ${BOLD}%s${NC} (${GRAY}%s${NC})...\n" "$current_shell" "$(tildify "$target_rc")"
 
     if command -v fancybash >/dev/null 2>&1; then
-        # fancybash setup detects the shell and injects eval line idempotently
-        fancybash setup
+        FANCYBASH_SHELL="$current_shell" fancybash setup
     else
-        # Fallback: manually inject if binary not yet in PATH
         local MARKER='fancybash init'
-        local user_shell="$(basename "${SHELL:-bash}")"
+        local block=""
+        if [ "$current_shell" = "fish" ]; then
+            if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
+                block=$(cat << 'EOF'
 
-        if [ "$user_shell" = "fish" ]; then
-            local fish_cfg="$HOME/.config/fish/config.fish"
-            mkdir -p "$(dirname "$fish_cfg")"
-            if ! grep -qF "$MARKER" "$fish_cfg" 2>/dev/null; then
-                {
-                    echo ""
-                    echo "# >>> fancy-fish >>>"
-                    echo 'set -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH'
-                    echo 'if type -q fancybash'
-                    echo '    fancybash init fish | source'
-                    echo 'end'
-                    echo "# <<< fancy-fish <<<"
-                } >> "$fish_cfg"
-                printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.config/fish/config.fish\n"
+# >>> fancy-fish >>>
+set -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH
+if type -q fancybash
+    fancybash init fish | source
+end
+# <<< fancy-fish <<<
+EOF
+                )
+                _atomic_inject_rc "$target_rc" "$block"
+                printf "  ${GREEN}✔${NC} Injected fancybash init into %s\n" "$(tildify "$target_rc")"
             else
-                printf "  ${GREEN}✔${NC} fancybash already configured in ~/.config/fish/config.fish\n"
+                printf "  ${GREEN}✔${NC} fancybash already configured in %s\n" "$(tildify "$target_rc")"
             fi
-        elif [ "$user_shell" = "zsh" ]; then
-            local zshrc="$HOME/.zshrc"
-            if ! grep -qF "$MARKER" "$zshrc" 2>/dev/null; then
-                {
-                    echo ""
-                    echo "# >>> fancy-zshrc >>>"
-                    echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"'
-                    echo 'if (( ${+commands[fancybash]} )); then'
-                    echo '    eval "$(fancybash init zsh)"'
-                    echo 'fi'
-                    echo "# <<< fancy-zshrc <<<"
-                } >> "$zshrc"
-                printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.zshrc\n"
+        elif [ "$current_shell" = "zsh" ]; then
+            if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
+                block=$(cat << 'EOF'
+
+# >>> fancy-zshrc >>>
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+if (( ${+commands[fancybash]} )); then
+    eval "$(fancybash init zsh)"
+fi
+# <<< fancy-zshrc <<<
+EOF
+                )
+                _atomic_inject_rc "$target_rc" "$block"
+                printf "  ${GREEN}✔${NC} Injected fancybash init into %s\n" "$(tildify "$target_rc")"
             else
-                printf "  ${GREEN}✔${NC} fancybash already configured in ~/.zshrc\n"
+                printf "  ${GREEN}✔${NC} fancybash already configured in %s\n" "$(tildify "$target_rc")"
             fi
         else
-            if ! grep -qF "$MARKER" "$BASHRC" 2>/dev/null; then
-                {
-                    echo ""
-                    echo "$START"
-                    echo "# Installed: $(date '+%Y-%m-%d %H:%M:%S')"
-                    echo "# fancybash Rust Native Engine - auto-loaded every shell session"
-                    echo 'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"'
-                    echo ""
-                    echo 'if command -v fancybash >/dev/null 2>&1; then'
-                    echo '    eval "$(fancybash init bash)"'
-                    echo 'fi'
-                    echo "$END"
-                } >> "$BASHRC"
-                printf "  ${GREEN}✔${NC} Injected fancybash init into ~/.bashrc\n"
+            if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
+                block=$(cat << EOF
+
+# >>> fancy-bashrc >>>
+# Installed: $(date '+%Y-%m-%d %H:%M:%S')
+# fancybash Rust Native Engine - auto-loaded every shell session
+export PATH="\$HOME/.cargo/bin:\$HOME/.local/bin:\$PATH"
+
+if command -v fancybash >/dev/null 2>&1; then
+    eval "\$(fancybash init bash)"
+fi
+# <<< fancy-bashrc <<<
+EOF
+                )
+                _atomic_inject_rc "$target_rc" "$block"
+                printf "  ${GREEN}✔${NC} Injected fancybash init into %s\n" "$(tildify "$target_rc")"
             else
-                printf "  ${GREEN}✔${NC} fancybash already configured in ~/.bashrc\n"
+                printf "  ${GREEN}✔${NC} fancybash already configured in %s\n" "$(tildify "$target_rc")"
             fi
         fi
     fi
 }
 
+install_config() {
+    export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+    local target_shells=()
+    if [ "$ALL_SHELLS" = true ]; then
+        read -r -a target_shells <<< "$(detect_all_installed_shells)"
+    else
+        target_shells=("$(detect_shell)")
+    fi
+
+    for sh in "${target_shells[@]}"; do
+        _inject_single_shell "$sh"
+    done
+}
+
+# ─── Doctor / Diagnostics Mode ─────────────
+run_doctor() {
+    show_header
+    printf "  🩺 ${BOLD}${CYAN}FANCYBASH SYSTEM DOCTOR${NC}\n"
+    printf "  ──────────────────────────────────────────────────\n\n"
+
+    local current_shell
+    current_shell=$(detect_shell)
+    local all_shells
+    all_shells=$(detect_all_installed_shells)
+
+    printf "  🐚 Active Shell:      ${CYAN}%s${NC}\n" "$current_shell"
+    printf "  🌐 Installed Shells:  ${CYAN}%s${NC}\n" "$all_shells"
+
+    export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+    if command -v fancybash >/dev/null 2>&1; then
+        local bin_path ver
+        bin_path=$(command -v fancybash)
+        ver=$(fancybash --version 2>/dev/null || echo "unknown")
+        printf "  ⚡ Binary:            ${GREEN}[OK]${NC} %s (${CYAN}%s${NC})\n" "$bin_path" "$ver"
+    else
+        printf "  ⚡ Binary:            ${RED}[MISSING]${NC} fancybash binary not found in PATH\n"
+    fi
+
+    if command -v fc-list &>/dev/null; then
+        if fc-list : family | grep -qi "Fira Code\|FiraCode" && fc-list : family | grep -qi "Noto Color Emoji\|NotoColorEmoji"; then
+            printf "  🔤 Powerline Fonts:   ${GREEN}[OK]${NC} Fira Code & Noto Color Emoji installed\n"
+        else
+            printf "  🔤 Powerline Fonts:   ${YELLOW}[WARN]${NC} Fira Code / Noto Color Emoji missing\n"
+        fi
+    else
+        printf "  🔤 Powerline Fonts:   ${GRAY}[SKIP]${NC} fc-list not available\n"
+    fi
+
+    for sh in bash zsh fish; do
+        local rc
+        rc=$(get_target_rc "$sh")
+        if [ -f "$rc" ]; then
+            if grep -qF "fancybash init" "$rc" 2>/dev/null; then
+                printf "  📄 Hook (%s):       ${GREEN}[OK]${NC} %s\n" "$sh" "$(tildify "$rc")"
+            else
+                printf "  📄 Hook (%s):       ${YELLOW}[MISSING]${NC} No fancybash hook in %s\n" "$sh" "$(tildify "$rc")"
+            fi
+        fi
+    done
+
+    printf "\n  ──────────────────────────────────────────────────\n"
+    printf "  🎉 Doctor check completed.\n\n"
+    exit 0
+}
+
+# ─── Rollback / Restoration Mode ───────────
+run_rollback() {
+    show_header
+    printf "  🔄 ${BOLD}${YELLOW}FANCYBASH ROLLBACK & RESTORE${NC}\n"
+    printf "  ──────────────────────────────────────────────────\n\n"
+
+    remove_old_config
+
+    local target_shells=()
+    read -r -a target_shells <<< "$(detect_all_installed_shells)"
+
+    local restored=false
+    for sh in "${target_shells[@]}"; do
+        local target_rc
+        target_rc=$(get_target_rc "$sh")
+        local latest_backup
+        latest_backup=$(ls -t "${target_rc}.backup."* 2>/dev/null | head -n 1 || echo "")
+        if [ -n "$latest_backup" ] && [ -f "$latest_backup" ]; then
+            cp "$latest_backup" "$target_rc"
+            restored=true
+            printf "  ${GREEN}✔ Restored %s${NC} from ${PURPLE}%s${NC}\n" "$(tildify "$target_rc")" "$(basename "$latest_backup")"
+        fi
+    done
+
+    if [ "$restored" = true ]; then
+        printf "\n  🎉 Rollback completed successfully!\n\n"
+    else
+        printf "\n  ℹ Config blocks cleaned. No backup files found to restore.\n\n"
+    fi
+    exit 0
+}
+
 # ─── Reload & Summary ──────────────────────
 show_summary() {
+    local current_shell
+    current_shell=$(detect_shell)
+    local target_rc
+    target_rc=$(get_target_rc "$current_shell")
+    local reload_cmd
+
+    case "$current_shell" in
+        fish) reload_cmd="source ~/.config/fish/config.fish" ;;
+        zsh)  reload_cmd="source ~/.zshrc" ;;
+        *)    reload_cmd="source ~/.bashrc" ;;
+    esac
+
     echo ""
-    if source "$BASHRC" 2>/dev/null; then
-        printf "  ${GREEN}✨ Installation & auto-reload successful!${NC}\n\n"
+    local reloaded=false
+    case "$current_shell" in
+        fish)
+            if command -v fish >/dev/null 2>&1 && fish -c "source '$target_rc'" >/dev/null 2>&1; then
+                reloaded=true
+            fi
+            ;;
+        zsh)
+            if command -v zsh >/dev/null 2>&1 && zsh -c "source '$target_rc'" >/dev/null 2>&1; then
+                reloaded=true
+            fi
+            ;;
+        *)
+            if source "$target_rc" 2>/dev/null; then
+                reloaded=true
+            fi
+            ;;
+    esac
+
+    if [ "$reloaded" = true ]; then
+        printf "  ${GREEN}✨ Installation & auto-reload successful for %s!${NC}\n\n" "$current_shell"
     else
-        printf "  ${YELLOW}⚠ Auto-reload skipped.${NC} Please run: ${BOLD}source ~/.bashrc${NC}\n\n"
+        printf "  ${YELLOW}⚠ Auto-reload skipped.${NC} Please run: ${BOLD}%s${NC}\n\n" "$reload_cmd"
     fi
 
     echo -e "\n${CYAN}──────────────────────────────────────────────────────────${NC}"
     echo -e " 🚀  ${BOLD}INSTALLATION SUMMARY${NC}"
     echo -e "${CYAN}──────────────────────────────────────────────────────────${NC}\n"
-    echo -e "  📦  ${BOLD}Backup:${NC}    ${GREEN}$(basename "${backup_file:-none}")${NC}"
-    echo -e "  ⚙️   ${BOLD}Config:${NC}    ${GREEN}~/.bashrc${NC}"
-    echo -e "  🔄  ${BOLD}Reload:${NC}    ${PURPLE}source ~/.bashrc${NC}"
+    printf "  🐚  ${BOLD}Active Shell:${NC}  ${CYAN}%s${NC}\n" "$current_shell"
+    if [ ${#backup_files[@]} -gt 0 ]; then
+        for b in "${backup_files[@]}"; do
+            printf "  📦  ${BOLD}Backup:${NC}        ${GREEN}%s${NC}\n" "$(basename "$b")"
+        done
+    fi
+    printf "  ⚙️   ${BOLD}Target Config:${NC} ${GREEN}%s${NC}\n" "$(tildify "$target_rc")"
+    printf "  🔄  ${BOLD}Reload:${NC}        ${PURPLE}%s${NC}\n" "$reload_cmd"
     echo -e "${CYAN}──────────────────────────────────────────────────────────${NC}\n"
     echo -e "  🎉  ${BOLD}Installation complete!${NC}\n"
     echo ""
@@ -634,29 +845,32 @@ show_summary() {
 
 # ─── Main Execution ────────────────────────
 main() {
+    if [ "$MODE" = "doctor" ]; then
+        run_doctor
+    elif [ "$MODE" = "rollback" ]; then
+        run_rollback
+    fi
+
     show_header
     show_sysinfo
 
-    draw_progress_bar 1 6
+    draw_progress_bar 1 5
     if ! check_and_install_fonts; then
         exit 0
     fi
 
-    draw_progress_bar 2 6
+    draw_progress_bar 2 5
     setup_fontconfig
-    install_zsh_plugins
 
-    draw_progress_bar 3 6
+    draw_progress_bar 3 5
     setup_rust_binary
 
-    draw_progress_bar 4 6
+    draw_progress_bar 4 5
     check_existing_install
     remove_old_config
+    backup_shell_rc
 
-    draw_progress_bar 5 6
-    backup_bashrc
-
-    draw_progress_bar 6 6
+    draw_progress_bar 5 5
     install_config
 
     show_summary

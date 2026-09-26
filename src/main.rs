@@ -570,6 +570,20 @@ fn main() {
             } else if subcmd == "version" || subcmd == "-V" || subcmd == "--version" {
                 println!("fancybash {}", env!("CARGO_PKG_VERSION"));
                 return;
+            } else if subcmd == "suggest" {
+                let buffer = raw_args.get(2).map(|s| s.as_str()).unwrap_or("");
+                if let Some(suggestion) = fancybash_core::plugins::autosuggest::suggest(buffer) {
+                    print!("{}", suggestion);
+                }
+                return;
+            } else if subcmd == "highlight" {
+                let buffer = raw_args.get(2).map(|s| s.as_str()).unwrap_or("");
+                println!("{}", fancybash_core::plugins::highlight::highlight(buffer));
+                return;
+            } else if subcmd == "complete" {
+                let buffer = raw_args.get(2).map(|s| s.as_str()).unwrap_or("");
+                println!("{}", fancybash_core::plugins::autocomplete::complete(buffer));
+                return;
             } else if subcmd == "auto-ls" {
                 let path = raw_args.get(2).map(|s| s.as_str());
                 fancybash_core::tools::auto_ls::run_path(path);
@@ -666,7 +680,7 @@ fn main() {
             }
             Commands::Correct { command } => {
                 let msg = fancybash_core::core::typo_engine::render_pretty_suggestion(&command);
-                eprint!("{}", msg);
+                println!("{}", msg);
                 Ok(())
             }
             Commands::Setup => cmd_setup(),

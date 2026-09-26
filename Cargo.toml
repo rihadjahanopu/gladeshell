@@ -95,8 +95,8 @@ rayon = { version = "1.10", optional = true }
 
 # Windows WMI Hardware Diagnostics & Console APIs
 [target.'cfg(target_os = "windows")'.dependencies]
-wmi = "0.14"
-windows-sys = { version = "0.59", features = ["Win32_System_Console"] }
+wmi         = "0.18"
+windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
 
 # Unix Raw Mode termios handling
 [target.'cfg(unix)'.dependencies]

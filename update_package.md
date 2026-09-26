@@ -332,4 +332,4 @@ git commit -m "chore: upgrade <crate_name> vX.X → vY.Y"
 - [ ] ধাপ ৮ — `ansi_term` → `owo-colors`
 - [ ] ধাপ ৯ — `sysinfo`
 - [ ] ধাপ ১০ — `gix`
-- [ ] ধাপ ১১ — `wmi` + `windows-sys`
+- [x] ধাপ ১১ — `wmi` + `windows-sys`

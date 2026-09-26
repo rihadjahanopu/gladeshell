@@ -30,14 +30,14 @@ clap = { version = "4", features = ["derive", "env", "string"] }
 # Serialization / config
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.9"
+serde_yml = "0.0"
 toml = "0.8"
 
 # Async runtime (optional, not needed for the daemon which uses std threads)
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time"], optional = true }
 
 # Git internals – gitoxide & git2 (zero-fork, pure Rust)
-git2 = { version = "0.19", default-features = false, optional = true }
+git2 = { version = "0.21", default-features = false, optional = true }
 
 gix = { version = "0.66", default-features = false, features = [
     "revision",
@@ -47,24 +47,24 @@ gix = { version = "0.66", default-features = false, features = [
 
 
 # System info & PC Diagnostics (Phase 2 prompt / Phase 4 tools / pc-info)
-sysinfo = { version = "0.31", optional = true }
+sysinfo = { version = "0.32", optional = true }
 battery = { version = "0.7.8", optional = true }
 raw-cpuid = { version = "11.1", optional = true }
-nvml-wrapper = { version = "0.10", optional = true }
+nvml-wrapper = { version = "0.13", optional = true }
 
 # Interactive prompts (Phase 4 tools: uup, uu)
-inquire = { version = "0.7", optional = true }
+inquire = { version = "0.9", optional = true }
 
 # Terminal UI & Raw Mode (Phase 4 native TUI tools)
 ratatui = { version = "0.29", optional = true }
 crossterm = { version = "0.28", optional = true }
-unicode-width = { version = "0.2", optional = true }
+unicode-width = "0.2"
 
 # Fast Grep Engine (ripgrep crates)
 ignore = { version = "0.4", optional = true }
 grep-regex = { version = "0.1", optional = true }
 grep-searcher = { version = "0.1", optional = true }
-grep-printer = { version = "0.2", optional = true }
+grep-printer = { version = "0.3", optional = true }
 termcolor = { version = "1.4", optional = true }
 
 # Directory walking (Phase 4 tools: ex, makecpp)
@@ -85,17 +85,22 @@ tar = { version = "0.4", optional = true }
 flate2 = { version = "1.0", optional = true }
 zeroize = { version = "1.8", features = ["zeroize_derive"], optional = true }
 rpassword = { version = "7.3", optional = true }
-rand = { version = "0.8", optional = true }
-rand_chacha = { version = "0.3", optional = true }
-ureq = { version = "2.9", optional = true }
+rand = { version = "0.9", optional = true }
+rand_chacha = { version = "0.9", optional = true }
+ureq = { version = "2.12", optional = true }
 open = { version = "5.3", optional = true }
 
 # Data parallelism — parallel metric collection & file search
 rayon = { version = "1.10", optional = true }
 
-# Windows WMI Hardware Diagnostics
+# Windows WMI Hardware Diagnostics & Console APIs
 [target.'cfg(target_os = "windows")'.dependencies]
 wmi = "0.14"
+windows-sys = { version = "0.59", features = ["Win32_System_Console"] }
+
+# Unix Raw Mode termios handling
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 # ── Feature Flags ─────────────────────────────────────────────────────────────
 [features]
@@ -112,7 +117,6 @@ tools = [
     "inquire",
     "ratatui",
     "crossterm",
-    "unicode-width",
     "walkdir",
     "ansi_term",
     "arboard",
@@ -147,8 +151,9 @@ codegen-units = 1          # Single CGU → best inlining & dead-code eliminatio
 panic         = "abort"    # No unwinding machinery → smaller binary, faster panics
 strip         = true       # Strip debug symbols → minimal RSS
 debug         = false
-overflow-checks = false    # Omit overflow checks in release (same as C)
+overflow-checks = true     # Enforce overflow checks in release profile
 incremental   = false      # Disable incremental saves (incompatible with LTO=fat)
+
 
 # Aggressive fat LTO for the absolute smallest / fastest artefact
 # Uncomment when you are doing a final production build:

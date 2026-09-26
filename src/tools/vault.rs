@@ -1133,7 +1133,7 @@ fn derive_key(password: &str, salt: &[u8; SALT_LEN]) -> Zeroizing<[u8; 32]> {
 }
 
 fn encrypt_vault_payload(plaintext: &[u8], password: &str) -> Result<Vec<u8>, String> {
-    let mut rng = ChaCha20Rng::from_entropy();
+    let mut rng = ChaCha20Rng::from_os_rng();
     let mut salt = [0u8; SALT_LEN];
     rng.fill_bytes(&mut salt);
 
@@ -1231,7 +1231,7 @@ fn shred_file(path: &Path) -> Result<(), String> {
     let meta = fs::metadata(path).map_err(|e| e.to_string())?;
     let file_len = meta.len();
     let mut file = OpenOptions::new().write(true).open(path).map_err(|e| e.to_string())?;
-    let mut rng = ChaCha20Rng::from_entropy();
+    let mut rng = ChaCha20Rng::from_os_rng();
 
     let buf_size = 64 * 1024;
     let zeros = vec![0u8; buf_size];

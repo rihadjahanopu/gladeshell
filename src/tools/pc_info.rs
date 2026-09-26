@@ -147,8 +147,8 @@ impl SystemReport {
     }
 
     /// Serializes the system report into a YAML string.
-    pub fn to_yaml(&self) -> Result<String, serde_yaml::Error> {
-        serde_yaml::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, serde_yml::Error> {
+        serde_yml::to_string(self)
     }
 
     /// Serializes the system report into a TOML string.
@@ -557,8 +557,8 @@ impl SystemReport {
     }
 
     /// Deserializes a `SystemReport` from a YAML string.
-    pub fn from_yaml(yaml_str: &str) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_str(yaml_str)
+    pub fn from_yaml(yaml_str: &str) -> Result<Self, serde_yml::Error> {
+        serde_yml::from_str(yaml_str)
     }
 
     /// Deserializes a `SystemReport` from a TOML string.

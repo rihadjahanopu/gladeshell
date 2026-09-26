@@ -323,7 +323,7 @@ git commit -m "chore: upgrade <crate_name> vX.X → vY.Y"
 
 - [x] ধাপ ০ — `serde_yaml`, `rand`, `rand_chacha`, `git2`, `sysinfo`, `nvml-wrapper`, `inquire`, `grep-printer` আপডেট
 - [x] ধাপ ১ — `cargo update` (patch fixes)
-- [ ] ধাপ ২ — `criterion`
+- [x] ধাপ ২ — `criterion`
 - [ ] ধাপ ৩ — `ratatui` + `crossterm`
 - [ ] ধাপ ৪ — `ureq`
 - [ ] ধাপ ৫ — `aes-gcm` + `pbkdf2` + `sha2`

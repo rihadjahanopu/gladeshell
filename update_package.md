@@ -322,7 +322,7 @@ git commit -m "chore: upgrade <crate_name> vX.X → vY.Y"
 ## 📝 অগ্রগতি ট্র্যাকার
 
 - [x] ধাপ ০ — `serde_yaml`, `rand`, `rand_chacha`, `git2`, `sysinfo`, `nvml-wrapper`, `inquire`, `grep-printer` আপডেট
-- [ ] ধাপ ১ — `cargo update` (patch fixes)
+- [x] ধাপ ১ — `cargo update` (patch fixes)
 - [ ] ধাপ ২ — `criterion`
 - [ ] ধাপ ৩ — `ratatui` + `crossterm`
 - [ ] ধাপ ৪ — `ureq`

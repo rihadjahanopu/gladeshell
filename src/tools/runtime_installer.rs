@@ -50,8 +50,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             } else {
                 println!("\x1b[1;36m📥 Fetching NVM installer via pure Rust HTTP...\x1b[0m");
                 if let Ok(res) = ureq::get("https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh").call() {
-                    let mut body = String::new();
-                    if res.into_reader().read_to_string(&mut body).is_ok() {
+                    if let Ok(body) = res.into_body().read_to_string() {
                         let script_file = std::env::temp_dir().join("nvm_install.sh");
                         let _ = std::fs::write(&script_file, &body);
                         #[cfg(unix)]
@@ -85,8 +84,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             } else {
                 println!("\x1b[1;36m🥐 Fetching Bun installer via pure Rust HTTP...\x1b[0m");
                 if let Ok(res) = ureq::get("https://bun.sh/install").call() {
-                    let mut body = String::new();
-                    if res.into_reader().read_to_string(&mut body).is_ok() {
+                    if let Ok(body) = res.into_body().read_to_string() {
                         let script_file = std::env::temp_dir().join("bun_install.sh");
                         let _ = std::fs::write(&script_file, &body);
                         #[cfg(unix)]
@@ -102,8 +100,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             } else {
                 println!("\x1b[1;36m🦕 Fetching Deno installer via pure Rust HTTP...\x1b[0m");
                 if let Ok(res) = ureq::get("https://deno.land/install.sh").call() {
-                    let mut body = String::new();
-                    if res.into_reader().read_to_string(&mut body).is_ok() {
+                    if let Ok(body) = res.into_body().read_to_string() {
                         let script_file = std::env::temp_dir().join("deno_install.sh");
                         let _ = std::fs::write(&script_file, &body);
                         #[cfg(unix)]

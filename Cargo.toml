@@ -31,33 +31,25 @@ clap = { version = "4", features = ["derive", "env", "string"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 serde_yml = "0.0"
-toml = "0.8"
+toml = "1.1"
 
-# Async runtime (optional, not needed for the daemon which uses std threads)
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time"], optional = true }
-
-# Git internals – gitoxide & git2 (zero-fork, pure Rust)
-git2 = { version = "0.21", default-features = false, optional = true }
-
-gix = { version = "0.66", default-features = false, features = [
-    "revision",
-    "max-performance-safe",  # uses simdutf8 + fast SHA1 without unsafe AVX
-    "worktree-mutation",     # enables index/worktree status APIs
+# Git internals – gitoxide (pure Rust, zero C dependencies)
+gix = { version = "0.88", default-features = false, features = [
+    "revision",   # HEAD / branch name parsing
+    "status",     # enables repo.is_dirty() — index ↔ worktree comparison
+    "sha1",       # activates gix-hash SHA1 variant
 ], optional = true }
 
-
 # System info & PC Diagnostics (Phase 2 prompt / Phase 4 tools / pc-info)
-sysinfo = { version = "0.32", optional = true }
+sysinfo = { version = "0.39", optional = true }
 battery = { version = "0.7.8", optional = true }
-raw-cpuid = { version = "11.1", optional = true }
-nvml-wrapper = { version = "0.13", optional = true }
 
 # Interactive prompts (Phase 4 tools: uup, uu)
 inquire = { version = "0.9", optional = true }
 
 # Terminal UI & Raw Mode (Phase 4 native TUI tools)
-ratatui = { version = "0.29", optional = true }
-crossterm = { version = "0.28", optional = true }
+ratatui = { version = "0.30", optional = true }
+crossterm = { version = "0.29", optional = true }
 unicode-width = "0.2"
 
 # Fast Grep Engine (ripgrep crates)
@@ -73,21 +65,17 @@ walkdir = { version = "2", optional = true }
 # Native cross-platform clipboard (X11 + Wayland + macOS — zero external binary)
 arboard = { version = "3", optional = true }
 
-# String rendering helpers (zero-alloc ANSI)
-# We use the `ansi_term` crate only for the binary; the cdylib uses raw bytes.
-ansi_term = { version = "0.12", optional = true }
-
 # Pure Rust Cryptography & Vault Archiving Dependencies (Zero external binary)
-aes-gcm = { version = "0.10", optional = true }
-pbkdf2 = { version = "0.12", optional = true }
-sha2 = { version = "0.10", optional = true }
+aes-gcm = { version = "0.11", optional = true }
+pbkdf2 = { version = "0.13", optional = true }
+sha2 = { version = "0.11", optional = true }
 tar = { version = "0.4", optional = true }
 flate2 = { version = "1.0", optional = true }
 zeroize = { version = "1.8", features = ["zeroize_derive"], optional = true }
 rpassword = { version = "7.3", optional = true }
-rand = { version = "0.9", optional = true }
-rand_chacha = { version = "0.9", optional = true }
-ureq = { version = "2.12", optional = true }
+rand = { version = "0.10", optional = true }
+rand_chacha = { version = "0.10", optional = true }
+ureq = { version = "3", optional = true }
 open = { version = "5.3", optional = true }
 
 # Data parallelism — parallel metric collection & file search
@@ -106,19 +94,16 @@ libc = "0.2"
 [features]
 default = ["prompt-engine", "tools"]
 # Enable heavy Phase-2 prompt engine (git + async)
-prompt-engine = ["gix", "git2", "rayon"]
+prompt-engine = ["gix", "rayon"]
 
 # Enable Phase-4 tool subcommands & pc-info diagnostics
 tools = [
     "sysinfo",
     "battery",
-    "raw-cpuid",
-    "nvml-wrapper",
     "inquire",
     "ratatui",
     "crossterm",
     "walkdir",
-    "ansi_term",
     "arboard",
     "ignore",
     "grep-regex",

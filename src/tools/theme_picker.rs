@@ -158,7 +158,7 @@ impl ThemePickerApp {
     }
 
     // ── Event loop ────────────────────────────────────────────────────────────
-    fn run_loop<B: ratatui::backend::Backend>(
+    fn run_loop<B: ratatui::backend::Backend<Error = io::Error>>(
         &mut self,
         terminal: &mut Terminal<B>,
     ) -> io::Result<()> {

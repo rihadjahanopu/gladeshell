@@ -8,7 +8,8 @@
 //  HTML: target/criterion/Prompt/report/index.html
 // =============================================================================
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::hint::black_box;
 use fancybash_core::core::prompt::{render, PromptContext, THEMES};
 
 // ── Helper: build a filled PromptContext from plain &str values ───────────────

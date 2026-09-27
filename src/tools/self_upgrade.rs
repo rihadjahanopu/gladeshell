@@ -10,7 +10,6 @@
 
 use std::error::Error;
 use std::fs;
-use std::io::Read;
 use std::process::Command;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
@@ -27,11 +26,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Tier 1: ureq HTTP download
     for url in [GH_RS_URL, GH_URL, CDN_URL] {
-        if let Ok(response) = ureq::get(url).call() {
-            let mut reader = response.into_reader();
-            let mut script_content = String::new();
-            if reader.read_to_string(&mut script_content).is_ok() && !script_content.is_empty() {
-                if fs::write(&script_path, &script_content).is_ok() {
+        if let Ok(res) = ureq::get(url).call() {
+            if let Ok(script_content) = res.into_body().read_to_string() {
+                if !script_content.is_empty() && fs::write(&script_path, &script_content).is_ok() {
                     println!("\x1b[1;32m✨ fancybash upgrade script fetched successfully!\x1b[0m");
                     if run_installer(&script_path) {
                         return Ok(());

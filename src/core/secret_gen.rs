@@ -27,7 +27,7 @@ fn fill_random(buf: &mut [u8]) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    use rand::RngCore;
+    use rand::Rng;
     rand::rng().fill_bytes(buf);
     Ok(())
 }

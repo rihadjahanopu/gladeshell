@@ -160,7 +160,7 @@ impl UuApp {
         }
     }
 
-    pub fn run_loop<B: ratatui::backend::Backend>(
+    pub fn run_loop<B: ratatui::backend::Backend<Error = io::Error>>(
         &mut self,
         terminal: &mut Terminal<B>,
     ) -> io::Result<Option<Vec<AppItem>>> {

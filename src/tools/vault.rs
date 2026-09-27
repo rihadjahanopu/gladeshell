@@ -27,7 +27,7 @@ use aes_gcm::{
 };
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use pbkdf2::pbkdf2_hmac;
-use rand::{RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use sha2::{Digest, Sha256};
 use std::fs::{self, OpenOptions};
@@ -125,9 +125,8 @@ fn scan_directory(dir: &Path) -> Vec<PathBuf> {
 }
 
 fn hash_panic_password(password: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    format!("{:x}", hasher.finalize())
+    let result = Sha256::digest(password.as_bytes());
+    result.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
 fn get_telegram_config() -> (String, String) {
@@ -160,7 +159,7 @@ fn send_telegram_alert(msg: &str) {
     let message = format!("⚠️ VAULT ALERT: {}", msg);
     std::thread::spawn(move || {
         let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
-        let _ = ureq::post(&url).send_form(&[("chat_id", &chat_id), ("text", &message)]);
+        let _ = ureq::post(&url).send_form([("chat_id", chat_id.as_str()), ("text", message.as_str())]);
     });
 }
 
@@ -1133,7 +1132,7 @@ fn derive_key(password: &str, salt: &[u8; SALT_LEN]) -> Zeroizing<[u8; 32]> {
 }
 
 fn encrypt_vault_payload(plaintext: &[u8], password: &str) -> Result<Vec<u8>, String> {
-    let mut rng = ChaCha20Rng::from_os_rng();
+    let mut rng = ChaCha20Rng::from_rng(&mut rand::rng());
     let mut salt = [0u8; SALT_LEN];
     rng.fill_bytes(&mut salt);
 
@@ -1141,12 +1140,12 @@ fn encrypt_vault_payload(plaintext: &[u8], password: &str) -> Result<Vec<u8>, St
     rng.fill_bytes(&mut nonce_bytes);
 
     let derived_key = derive_key(password, &salt);
-    let key = Key::<Aes256Gcm>::from_slice(derived_key.as_ref());
-    let cipher = Aes256Gcm::new(key);
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let key = Key::<Aes256Gcm>::from(*derived_key);
+    let cipher = Aes256Gcm::new(&key);
+    let nonce = Nonce::from(nonce_bytes);
 
     let ciphertext = cipher
-        .encrypt(nonce, plaintext)
+        .encrypt(&nonce, plaintext)
         .map_err(|e| format!("AES-256-GCM encryption error: {}", e))?;
 
     let mut payload = Vec::with_capacity(SALT_LEN + NONCE_LEN + ciphertext.len());
@@ -1169,12 +1168,14 @@ fn decrypt_vault_payload(vault_data: &[u8], password: &str) -> Result<Zeroizing<
     salt.copy_from_slice(salt_bytes);
 
     let derived_key = derive_key(password, &salt);
-    let key = Key::<Aes256Gcm>::from_slice(derived_key.as_ref());
-    let cipher = Aes256Gcm::new(key);
-    let nonce = Nonce::from_slice(nonce_bytes);
+    let key = Key::<Aes256Gcm>::from(*derived_key);
+    let cipher = Aes256Gcm::new(&key);
+    let mut nonce_array = [0u8; NONCE_LEN];
+    nonce_array.copy_from_slice(nonce_bytes);
+    let nonce = Nonce::from(nonce_array);
 
     let decrypted = cipher
-        .decrypt(nonce, ciphertext)
+        .decrypt(&nonce, ciphertext)
         .map_err(|_| "Decryption failed: Incorrect password or corrupted vault file".to_string())?;
 
     Ok(Zeroizing::new(decrypted))
@@ -1231,7 +1232,7 @@ fn shred_file(path: &Path) -> Result<(), String> {
     let meta = fs::metadata(path).map_err(|e| e.to_string())?;
     let file_len = meta.len();
     let mut file = OpenOptions::new().write(true).open(path).map_err(|e| e.to_string())?;
-    let mut rng = ChaCha20Rng::from_os_rng();
+    let mut rng = ChaCha20Rng::from_rng(&mut rand::rng());
 
     let buf_size = 64 * 1024;
     let zeros = vec![0u8; buf_size];

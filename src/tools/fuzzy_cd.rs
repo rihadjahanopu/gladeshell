@@ -466,7 +466,7 @@ impl FuzzyCdApp {
         }
     }
 
-    pub fn run_loop<B: ratatui::backend::Backend>(
+    pub fn run_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
         &mut self,
         terminal: &mut Terminal<B>,
     ) -> Result<Option<(String, CfAction)>, Box<dyn Error>> {

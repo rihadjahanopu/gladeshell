@@ -621,7 +621,7 @@ fn spinner_char(tick: u64) -> &'static str {
     frames[(tick as usize) % frames.len()]
 }
 
-fn tui_loop<B: ratatui::backend::Backend>(
+fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
     terminal: &mut Terminal<B>,
     args: &mut FfArgs,
 ) -> Result<Option<FfAction>, Box<dyn Error>> {

@@ -26,7 +26,7 @@ use crossterm::{
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Style, Stylize},
+    style::Style,
     text::{Line, Span},
     widgets::{
         Block, BorderType, Borders, Gauge, List, ListItem, ListState, Paragraph, Row, Table,
@@ -1317,7 +1317,7 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
             "x86_64 Processor".to_string()
         };
 
-        let physical_cores = sys.physical_core_count().unwrap_or(cpus.len());
+        let physical_cores = System::physical_core_count().unwrap_or(cpus.len());
         let logical_threads = cpus.len();
 
         let per_core_utilization_pct: Vec<f32> = cpus.iter().map(|c| c.cpu_usage()).collect();
@@ -1335,17 +1335,15 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
                     let l = c.label().to_lowercase();
                     l.contains("cpu") || l.contains("core") || l.contains("package") || l.contains("tctl") || l.contains("tdie")
                 })
-                .map(|c| c.temperature())
-                .or_else(|| components.first().map(|c| c.temperature()));
+                .and_then(|c| c.temperature())
+                .or_else(|| components.first().and_then(|c| c.temperature()));
 
             if let Some(t) = comp_temp {
                 if t > 0.0 { Some(t) } else { None }
+            } else if let Ok(t_str) = std::fs::read_to_string("/sys/class/thermal/thermal_zone0/temp") {
+                t_str.trim().parse::<f32>().ok().map(|v| v / 1000.0)
             } else {
-                if let Ok(t_str) = std::fs::read_to_string("/sys/class/thermal/thermal_zone0/temp") {
-                    t_str.trim().parse::<f32>().ok().map(|v| v / 1000.0)
-                } else {
-                    None
-                }
+                None
             }
         };
 

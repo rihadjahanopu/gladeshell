@@ -354,7 +354,13 @@ pub fn run(target: Option<&str>, custom_out: Option<&str>, format_flag: Option<&
                     WorkerMsg::Progress { current_file, .. } => {
                         if !current_file.is_empty() {
                             let entry_log = format!("Compressing: {}", current_file);
-                            if app.compress_log.last() != Some(&entry_log) {
+                            if let Some(last) = app.compress_log.last_mut() {
+                                if last.starts_with("Compressing: Compressing 7-Zip") && entry_log.starts_with("Compressing: Compressing 7-Zip") {
+                                    *last = entry_log;
+                                } else if app.compress_log.last() != Some(&entry_log) {
+                                    app.compress_log.push(entry_log);
+                                }
+                            } else {
                                 app.compress_log.push(entry_log);
                             }
                         }
@@ -737,13 +743,25 @@ fn compress_7z(
     let total_f = files.len();
 
     let ticker_handle = thread::spawn(move || {
+        let mut last_max_written: u64 = 0;
         while !stop_clone.load(std::sync::atomic::Ordering::Relaxed) {
-            thread::sleep(Duration::from_millis(100));
-            let out_size = fs::metadata(&out_path_buf).map(|m| m.len()).unwrap_or(0);
-            let est_bytes = (out_size * 2).min(total_b);
+            thread::sleep(Duration::from_millis(150));
+            let raw_size = fs::metadata(&out_path_buf).map(|m| m.len()).unwrap_or(0);
+            
+            // Guarantee monotonic written bytes (prevent fluctuating numbers)
+            last_max_written = last_max_written.max(raw_size);
+            let out_size = last_max_written;
+
+            // Cap estimated bytes to 99.9% max so progress bar doesn't falsely claim 100% before 7z finishes
+            let max_est_bytes = total_b.saturating_sub(1024 * 1024).max(1);
+            let est_bytes = (out_size * 2).min(max_est_bytes);
+
+            // Scale estimated file count dynamically based on compression progress (e.g. 1/9 -> 8/9)
+            let est_ratio = if total_b > 0 { est_bytes as f64 / total_b as f64 } else { 0.0 };
+            let est_files = ((est_ratio * total_f as f64) as usize).max(1).min(total_f.saturating_sub(1).max(1));
 
             let _ = tx_ticker.send(WorkerMsg::Progress {
-                files_processed: 1,
+                files_processed: est_files,
                 total_files: total_f,
                 bytes_processed: est_bytes,
                 total_bytes: total_b,

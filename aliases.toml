@@ -829,4 +829,19 @@ key         = "vscode"
 value       = "fancybash code-setup"
 description = "Bulletproof VS Code settings + extensions installer"
 
+[[group.aliases]]
+key         = "cmp"
+value       = "fancybash cmp"
+description = "High-performance parallel multithreaded archive compressor"
+
+[[group.aliases]]
+key         = "pack"
+value       = "fancybash cmp"
+description = "High-performance parallel multithreaded archive compressor"
+
+[[group.aliases]]
+key         = "compress"
+value       = "fancybash cmp"
+description = "High-performance parallel multithreaded archive compressor"
+
 

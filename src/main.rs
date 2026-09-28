@@ -68,6 +68,10 @@ enum Commands {
     /// Universal archive extractor (zip, tar.gz, rar, 7z, bz2, xz, …)
     Ex(ExArgs),
 
+    /// High-performance parallel multithreaded archive compressor (7z, zip, tar.gz, tar.xz, …)
+    #[command(alias = "comp", alias = "pack", alias = "compress")]
+    Cmp(CmpArgs),
+
     /// Mega system updater with interactive multi-select menu (uup)
     Uup,
 
@@ -419,6 +423,21 @@ struct ExArgs {
 }
 
 #[derive(clap::Args, Debug)]
+struct CmpArgs {
+    /// File or directory to compress (defaults to current directory)
+    #[arg(value_name = "TARGET")]
+    target: Option<String>,
+
+    /// Output archive name (e.g. my_backup or archive.7z)
+    #[arg(short, long, value_name = "OUTPUT")]
+    output: Option<String>,
+
+    /// Archive format (7z, zip, tar.gz, tar.xz, tar.bz2, tar)
+    #[arg(short, long, value_name = "FORMAT")]
+    format: Option<String>,
+}
+
+#[derive(clap::Args, Debug)]
 struct MakecppArgs {
     /// Project name (used for directory and CMakeLists.txt target)
     #[arg(value_name = "NAME")]
@@ -629,6 +648,7 @@ fn main() {
             Commands::Theme(args) => cmd_theme(args),
             Commands::Gen(args) => cmd_gen(args),
             Commands::Ex(args) => cmd_ex(args),
+            Commands::Cmp(args) => cmd_cmp(args),
             Commands::Gwip { args } => cmd_gwip(args),
             Commands::Uup => cmd_uup(),
             Commands::Uu  => cmd_uu(),
@@ -911,6 +931,13 @@ fn cmd_gen(args: GenArgs) -> Result<(), Box<dyn std::error::Error>> {
 fn cmd_ex(args: ExArgs) -> Result<(), Box<dyn std::error::Error>> {
     use fancybash_core::tools::extractor;
     extractor::run(args.file.as_deref(), args.output.as_deref(), args.interactive)
+}
+
+// ── cmp ───────────────────────────────────────────────────────────────────────
+
+fn cmd_cmp(args: CmpArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use fancybash_core::tools::compressor;
+    compressor::run(args.target.as_deref(), args.output.as_deref(), args.format.as_deref())
 }
 
 // ── gwip ─────────────────────────────────────────────────────────────────────

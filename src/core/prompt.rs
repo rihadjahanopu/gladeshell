@@ -1283,5 +1283,41 @@ mod tests {
         let restored = get_effective_theme(0);
         assert_eq!(restored.path_color, base_theme.path_color);
     }
+
+    #[test]
+    fn test_empirical_performance_benchmark() {
+        use std::time::Instant;
+        let mut ctx = PromptContext::default();
+        let cwd_str = "/persistent/home/rihad/Developer/dev/fancybash-rs";
+        ctx.cwd[..cwd_str.len()].copy_from_slice(cwd_str.as_bytes());
+        ctx.cwd_len = cwd_str.len();
+        ctx.user_len = 5;
+        ctx.user[..5].copy_from_slice(b"rihad");
+        ctx.host_len = 4;
+        ctx.host[..4].copy_from_slice(b"arch");
+        ctx.git_branch_len = 4;
+        ctx.git_branch[..4].copy_from_slice(b"main");
+        ctx.git_dirty = false;
+        ctx.theme_id = 0;
+        let mut buf = [0u8; 4096];
+
+        // Warmup
+        for _ in 0..100 {
+            let _ = render(&ctx, &mut buf);
+        }
+
+        // Measure 10,000 renders
+        let start = Instant::now();
+        let iters = 10_000;
+        for _ in 0..iters {
+            let _ = render(&ctx, &mut buf);
+        }
+        let elapsed = start.elapsed();
+        let avg_nanos = elapsed.as_nanos() as f64 / iters as f64;
+        let avg_micros = avg_nanos / 1000.0;
+        println!("\n=== EMPIRICAL PROMPT BENCHMARK ===");
+        println!("Render 10k iterations: total {:?}, avg: {:.3} µs ({:.1} ns) per prompt", elapsed, avg_micros, avg_nanos);
+        assert!(avg_micros < 1000.0, "Prompt render must be < 1 ms");
+    }
 }
 

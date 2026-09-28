@@ -14,7 +14,7 @@
 // =============================================================================
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers, MouseEventKind, EnableMouseCapture, DisableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -79,24 +79,73 @@ fn has_brew() -> bool { crate::core::utils::cmd_exists("brew") }
 fn has_flatpak() -> bool { crate::core::utils::cmd_exists("flatpak") }
 
 fn clean_temp_dirs(tx: &Sender<Msg>) -> bool {
-    let mut cleaned_bytes = 0;
+    let mut cleaned_bytes: u64 = 0;
     let temp_dir = std::env::temp_dir();
     let _ = tx.send(Msg::Log(format!("🧹 Cleaning temporary directory: {}", temp_dir.display())));
     
     if let Ok(entries) = fs::read_dir(&temp_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_lowercase();
+            // Protect active system sockets, display servers, and runtime locks
+            if name.starts_with(".x11")
+                || name.starts_with(".ice")
+                || name.starts_with(".font")
+                || name.starts_with(".test")
+                || name.starts_with("systemd-private")
+                || name.starts_with("snap.")
+                || name.starts_with("flatpak.")
+            {
+                continue;
+            }
+
             if let Ok(meta) = entry.metadata() {
-                cleaned_bytes += meta.len() as usize;
-                if meta.is_file() {
-                    let _ = fs::remove_file(path);
+                cleaned_bytes = cleaned_bytes.saturating_add(meta.len());
+                if meta.is_file() || meta.file_type().is_symlink() {
+                    let _ = fs::remove_file(&path);
                 } else if meta.is_dir() {
-                    let _ = fs::remove_dir_all(path);
+                    let _ = fs::remove_dir_all(&path);
                 }
             }
         }
     }
     let _ = tx.send(Msg::Log(format!("💾 Cleared ~{} KB of temporary files.", cleaned_bytes / 1024)));
+    true
+}
+
+fn clean_user_cache_dirs(tx: &Sender<Msg>) -> bool {
+    let mut cleaned_bytes: u64 = 0;
+    if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+        let cache_base = std::path::PathBuf::from(home).join(".cache");
+        let _ = tx.send(Msg::Log(format!("🧹 Scanning user cache: {}", cache_base.display())));
+
+        // Target safe temporary, thumbnail, and package manager cache directories
+        let targets = [
+            cache_base.join("thumbnails"),
+            cache_base.join("tmp"),
+            cache_base.join("pip").join("http"),
+            cache_base.join("yarn"),
+            cache_base.join("pnpm"),
+            cache_base.join("fontconfig"),
+            cache_base.join("mesa_shader_cache"),
+            cache_base.join("gstreamer-1.0"),
+        ];
+
+        for target in &targets {
+            if target.is_dir() {
+                for entry in walkdir::WalkDir::new(target).into_iter().filter_map(|e| e.ok()) {
+                    let p = entry.path();
+                    if p.is_file() {
+                        if let Ok(meta) = fs::metadata(p) {
+                            cleaned_bytes = cleaned_bytes.saturating_add(meta.len());
+                            let _ = fs::remove_file(p);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let _ = tx.send(Msg::Log(format!("💾 Freed ~{} KB of user cache safely.", cleaned_bytes / 1024)));
     true
 }
 
@@ -177,6 +226,12 @@ const CLEAN_SPECS: &[CleanTaskSpec] = &[
         name: "Flatpak Unused Data",
         check_fn: has_flatpak,
         run_fn: |tx| run_cmd_stream("flatpak", &["uninstall", "--unused", "-y"], tx),
+        needs_sudo: false,
+    },
+    CleanTaskSpec {
+        name: "User Application Cache (Pure Rust)",
+        check_fn: always,
+        run_fn: clean_user_cache_dirs,
         needs_sudo: false,
     },
     CleanTaskSpec {
@@ -272,7 +327,10 @@ impl App {
     }
 
     fn scroll_log_up(&mut self, delta: usize) {
-        self.auto_scroll = false;
+        if self.auto_scroll {
+            self.log_scroll = self.log_lines.len();
+            self.auto_scroll = false;
+        }
         self.log_scroll = self.log_scroll.saturating_sub(delta);
     }
 
@@ -312,6 +370,14 @@ fn cmd_exists(name: &str) -> bool {
     crate::core::utils::cmd_exists(name)
 }
 
+struct TerminalCleanup;
+impl Drop for TerminalCleanup {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let _ = execute!(stdout(), LeaveAlternateScreen, DisableMouseCapture);
+    }
+}
+
 pub fn run() -> Result<(), Box<dyn Error>> {
     let available_specs: Vec<CleanTaskSpec> = CLEAN_SPECS
         .iter()
@@ -339,7 +405,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     }
 
     enable_raw_mode()?;
-    execute!(stdout(), EnterAlternateScreen)?;
+    let _cleanup = TerminalCleanup;
+    execute!(stdout(), EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
@@ -350,24 +417,26 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let specs_clone = available_specs.clone();
     let cancel_clone = cancel_flag.clone();
     std::thread::spawn(move || {
-        for (idx, spec) in specs_clone.iter().enumerate() {
-            if cancel_clone.load(Ordering::SeqCst) {
-                let _ = tx.send(Msg::Log("⚠️ Operation cancelled by user.".to_string()));
-                break;
-            }
+        let _ = std::panic::catch_unwind(|| {
+            for (idx, spec) in specs_clone.iter().enumerate() {
+                if cancel_clone.load(Ordering::SeqCst) {
+                    let _ = tx.send(Msg::Log("⚠️ Operation cancelled by user.".to_string()));
+                    break;
+                }
 
-            let _ = tx.send(Msg::ToolStarted(idx));
-            let _ = tx.send(Msg::Log(format!("▶ Cleaning {}...", spec.name)));
+                let _ = tx.send(Msg::ToolStarted(idx));
+                let _ = tx.send(Msg::Log(format!("▶ Cleaning {}...", spec.name)));
 
-            let success = (spec.run_fn)(&tx);
-            if success {
-                let _ = tx.send(Msg::Log(format!("✅ Finished cleaning {} successfully.", spec.name)));
-                let _ = tx.send(Msg::ToolFinished(idx, true, "Completed".to_string()));
-            } else {
-                let _ = tx.send(Msg::Log(format!("❌ Cleaning failed for {}.", spec.name)));
-                let _ = tx.send(Msg::ToolFinished(idx, false, "Failed".to_string()));
+                let success = (spec.run_fn)(&tx);
+                if success {
+                    let _ = tx.send(Msg::Log(format!("✅ Finished cleaning {} successfully.", spec.name)));
+                    let _ = tx.send(Msg::ToolFinished(idx, true, "Completed".to_string()));
+                } else {
+                    let _ = tx.send(Msg::Log(format!("❌ Cleaning failed for {}.", spec.name)));
+                    let _ = tx.send(Msg::ToolFinished(idx, false, "Failed".to_string()));
+                }
             }
-        }
+        });
         let _ = tx.send(Msg::AllDone);
     });
 
@@ -390,33 +459,38 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         }
 
         if event::poll(Duration::from_millis(60))? {
-            if let Event::Key(key) = event::read()? {
-                let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-                match key.code {
-                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter | KeyCode::Char(' ') => {
-                        if app.state == AppState::Done {
-                            break;
+            match event::read()? {
+                Event::Key(key) if key.kind == KeyEventKind::Press => {
+                    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                    match key.code {
+                        KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter | KeyCode::Char(' ') => {
+                            if app.state == AppState::Done {
+                                break;
+                            }
                         }
-                    }
-                    KeyCode::Char('c') if ctrl => {
-                        if app.state == AppState::Running {
-                            cancel_flag.store(true, Ordering::SeqCst);
-                            app.log_lines.push("⚠️ Cancelling execution...".to_string());
-                        } else {
-                            break;
+                        KeyCode::Char('c') if ctrl => {
+                            if app.state == AppState::Running {
+                                cancel_flag.store(true, Ordering::SeqCst);
+                                app.log_lines.push("⚠️ Cancelling execution...".to_string());
+                            } else {
+                                break;
+                            }
                         }
+                        KeyCode::Up | KeyCode::Char('k') => app.scroll_log_up(3),
+                        KeyCode::Down | KeyCode::Char('j') => app.scroll_log_down(3),
+                        _ => {}
                     }
-                    KeyCode::Up | KeyCode::Char('k') => app.scroll_log_up(3),
-                    KeyCode::Down | KeyCode::Char('j') => app.scroll_log_down(3),
-                    _ => {}
                 }
+                Event::Mouse(mouse_event) => match mouse_event.kind {
+                    MouseEventKind::ScrollUp => app.scroll_log_up(3),
+                    MouseEventKind::ScrollDown => app.scroll_log_down(3),
+                    _ => {}
+                },
+                _ => {}
             }
         }
     }
 
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
     Ok(())
 }
 
@@ -608,5 +682,33 @@ mod tests {
     #[test]
     fn test_cmd_exists_clean_fn() {
         assert!(cmd_exists("cargo") || cmd_exists("git") || cmd_exists("sh") || cmd_exists("cmd"));
+    }
+
+    #[test]
+    fn test_strip_ansi_codes() {
+        let raw = "\x1b[31mRed Text\x1b[0m";
+        assert_eq!(strip_ansi_codes(raw), "Red Text");
+    }
+
+    #[test]
+    fn test_spinner_frame() {
+        let f0 = spinner_frame(0);
+        let f1 = spinner_frame(1);
+        assert!(!f0.is_empty());
+        assert!(!f1.is_empty());
+    }
+
+    #[test]
+    fn test_clean_temp_dirs_does_not_panic() {
+        let (tx, _rx) = mpsc::channel();
+        let res = clean_temp_dirs(&tx);
+        assert!(res);
+    }
+
+    #[test]
+    fn test_clean_user_cache_dirs_does_not_panic() {
+        let (tx, _rx) = mpsc::channel();
+        let res = clean_user_cache_dirs(&tx);
+        assert!(res);
     }
 }

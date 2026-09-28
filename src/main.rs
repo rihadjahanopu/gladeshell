@@ -405,13 +405,17 @@ struct GenArgs {
 
 #[derive(clap::Args, Debug)]
 struct ExArgs {
-    /// Archive file to extract
+    /// Archive file to extract (optional: launch interactive TUI if omitted)
     #[arg(value_name = "FILE")]
-    file: std::path::PathBuf,
+    file: Option<std::path::PathBuf>,
 
     /// Destination directory (defaults to current directory)
     #[arg(short, long, value_name = "DIR")]
     output: Option<std::path::PathBuf>,
+
+    /// Launch interactive TUI archive manager mode
+    #[arg(short = 'i', long = "interactive")]
+    interactive: bool,
 }
 
 #[derive(clap::Args, Debug)]
@@ -906,7 +910,7 @@ fn cmd_gen(args: GenArgs) -> Result<(), Box<dyn std::error::Error>> {
 
 fn cmd_ex(args: ExArgs) -> Result<(), Box<dyn std::error::Error>> {
     use fancybash_core::tools::extractor;
-    extractor::run(&args.file, args.output.as_deref())
+    extractor::run(args.file.as_deref(), args.output.as_deref(), args.interactive)
 }
 
 // ── gwip ─────────────────────────────────────────────────────────────────────

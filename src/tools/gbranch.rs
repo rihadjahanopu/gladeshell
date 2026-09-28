@@ -9,7 +9,7 @@
 // =============================================================================
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -88,6 +88,14 @@ impl App {
         }
     }
 
+    fn refresh_branches(&mut self) {
+        let (branches, current) = fetch_branches_and_head();
+        self.branches = branches;
+        self.current_branch = current;
+        self.refilter();
+        self.fetch_log();
+    }
+
     fn refilter(&mut self) {
         let q = self.query.to_lowercase();
         self.filtered = self
@@ -98,7 +106,11 @@ impl App {
             .map(|(i, _)| i)
             .collect();
         let sel = self.branch_state.selected().unwrap_or(0);
-        self.branch_state.select(if self.filtered.is_empty() { None } else { Some(sel.min(self.filtered.len() - 1)) });
+        self.branch_state.select(if self.filtered.is_empty() {
+            None
+        } else {
+            Some(sel.min(self.filtered.len().saturating_sub(1)))
+        });
     }
 
     fn selected_branch(&self) -> Option<&str> {
@@ -126,7 +138,8 @@ impl App {
     fn move_branch_up(&mut self) {
         if self.filtered.is_empty() { return; }
         let i = self.branch_state.selected().unwrap_or(0);
-        self.branch_state.select(Some(if i == 0 { self.filtered.len() - 1 } else { i - 1 }));
+        let max_idx = self.filtered.len().saturating_sub(1);
+        self.branch_state.select(Some(if i == 0 { max_idx } else { (i - 1).min(max_idx) }));
         self.fetch_log();
     }
 
@@ -139,7 +152,7 @@ impl App {
 
     fn move_action_up(&mut self) {
         let i = self.action_state.selected().unwrap_or(0);
-        self.action_state.select(Some(if i == 0 { ACTIONS.len() - 1 } else { i - 1 }));
+        self.action_state.select(Some(if i == 0 { ACTIONS.len().saturating_sub(1) } else { i - 1 }));
     }
 
     fn move_action_down(&mut self) {
@@ -153,9 +166,17 @@ impl App {
 
     fn scroll_log_down(&mut self, delta: u16) {
         let max_lines = self.log_preview.len() as u16;
-        if self.log_scroll + delta < max_lines {
-            self.log_scroll += delta;
+        if self.log_scroll.saturating_add(delta) < max_lines {
+            self.log_scroll = self.log_scroll.saturating_add(delta);
         }
+    }
+}
+
+struct TerminalCleanup;
+impl Drop for TerminalCleanup {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
     }
 }
 
@@ -165,34 +186,20 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Err("Not inside a git repository!".into());
     }
 
-    let output = Command::new("git")
-        .args(["branch", "-a", "--format", "%(refname:short)"])
-        .output()?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let branches: Vec<String> = stdout
-        .lines()
-        .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect();
+    let (branches, current) = fetch_branches_and_head();
 
     if branches.is_empty() {
         println!("🌿 No git branches found.");
         return Ok(());
     }
 
-    let current_out = Command::new("git")
-        .args(["branch", "--show-current"])
-        .output()
-        .unwrap_or_else(|_| std::process::Output { status: std::process::ExitStatus::default(), stdout: vec![], stderr: vec![] });
-    let current = String::from_utf8_lossy(&current_out.stdout).trim().to_string();
-
     let mut app = App::new(branches, current);
     app.fetch_log();
 
     enable_raw_mode()?;
+    let _cleanup = TerminalCleanup;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -201,110 +208,141 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         terminal.draw(|f| draw_gbranch(f, &mut app))?;
 
-        if let Event::Key(key) = event::read()? {
-            app.status_msg = None;
+        if event::poll(std::time::Duration::from_millis(100))? {
+            match event::read()? {
+                Event::Key(key) => {
+                    if key.kind == crossterm::event::KeyEventKind::Release {
+                        continue;
+                    }
+                    app.status_msg = None;
 
-            match &app.mode.clone() {
-                Mode::BranchList => match (key.modifiers, key.code) {
-                    (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
-                        should_quit = true;
-                    }
-                    (_, KeyCode::PageUp) | (KeyModifiers::SHIFT, KeyCode::Up) | (KeyModifiers::CONTROL, KeyCode::Char('u')) | (KeyModifiers::CONTROL, KeyCode::Char('k')) => {
-                        app.scroll_log_up(3);
-                    }
-                    (_, KeyCode::PageDown) | (KeyModifiers::SHIFT, KeyCode::Down) | (KeyModifiers::CONTROL, KeyCode::Char('d')) | (KeyModifiers::CONTROL, KeyCode::Char('j')) => {
-                        app.scroll_log_down(3);
-                    }
-                    (_, KeyCode::Up) => app.move_branch_up(),
-                    (_, KeyCode::Down) => app.move_branch_down(),
-                    (_, KeyCode::Enter) => {
-                        app.mode = Mode::ActionMenu;
-                    }
-                    (_, KeyCode::Backspace) => {
-                        app.query.pop();
-                        app.refilter();
-                        app.fetch_log();
-                    }
-                    (_, KeyCode::Char(c)) => {
-                        app.query.push(c);
-                        app.refilter();
-                        app.fetch_log();
-                    }
-                    _ => {}
-                },
-
-                Mode::ActionMenu => match (key.modifiers, key.code) {
-                    (_, KeyCode::Esc) => app.mode = Mode::BranchList,
-                    (_, KeyCode::Up) => app.move_action_up(),
-                    (_, KeyCode::Down) => app.move_action_down(),
-                    (_, KeyCode::Enter) => {
-                        let branch = app.selected_branch().unwrap_or("").to_string();
-                        let action_idx = app.action_state.selected().unwrap_or(0);
-                        match action_idx {
-                            0 => { // Checkout
-                                let status = Command::new("git").args(["checkout", &branch]).status();
-                                match status {
-                                    Ok(s) if s.success() => app.status_msg = Some((format!("✅ Switched to '{}'", branch), false)),
-                                    _ => app.status_msg = Some((format!("❌ Failed to checkout '{}'", branch), true)),
+                    match &app.mode.clone() {
+                        Mode::BranchList => match (key.modifiers, key.code) {
+                            (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
+                                should_quit = true;
+                            }
+                            (_, KeyCode::PageUp) | (KeyModifiers::SHIFT, KeyCode::Up) | (KeyModifiers::CONTROL, KeyCode::Char('u')) | (KeyModifiers::CONTROL, KeyCode::Char('k')) => {
+                                app.scroll_log_up(3);
+                            }
+                            (_, KeyCode::PageDown) | (KeyModifiers::SHIFT, KeyCode::Down) | (KeyModifiers::CONTROL, KeyCode::Char('d')) | (KeyModifiers::CONTROL, KeyCode::Char('j')) => {
+                                app.scroll_log_down(3);
+                            }
+                            (_, KeyCode::Up) => app.move_branch_up(),
+                            (_, KeyCode::Down) => app.move_branch_down(),
+                            (_, KeyCode::Enter) => {
+                                if !app.filtered.is_empty() {
+                                    app.mode = Mode::ActionMenu;
                                 }
-                                app.mode = Mode::BranchList;
                             }
-                            1 => { // Delete
-                                app.mode = Mode::Confirm(format!("Delete branch '{}'? [Y/n]", branch));
+                            (_, KeyCode::Char('r')) if app.query.is_empty() => {
+                                app.refresh_branches();
+                                app.status_msg = Some(("🔄 Refreshed branches".into(), false));
                             }
-                            2 => { // Pull Latest
-                                let _ = Command::new("git").args(["checkout", &branch]).status();
-                                let status = Command::new("git").arg("pull").status();
-                                match status {
-                                    Ok(s) if s.success() => app.status_msg = Some((format!("✅ '{}' is up to date", branch), false)),
-                                    _ => app.status_msg = Some(("❌ Pull failed".into(), true)),
-                                }
-                                app.mode = Mode::BranchList;
+                            (_, KeyCode::Backspace) => {
+                                app.query.pop();
+                                app.refilter();
+                                app.fetch_log();
                             }
-                            3 => { // New branch from here
-                                app.new_branch_name.clear();
-                                app.mode = Mode::NewBranch;
+                            (_, KeyCode::Char(c)) => {
+                                app.query.push(c);
+                                app.refilter();
+                                app.fetch_log();
                             }
                             _ => {}
-                        }
-                    }
-                    _ => {}
-                },
+                        },
 
-                Mode::NewBranch => match (key.modifiers, key.code) {
-                    (_, KeyCode::Esc) => app.mode = Mode::ActionMenu,
-                    (_, KeyCode::Enter) => {
-                        let name = app.new_branch_name.trim().to_string();
-                        if name.is_empty() {
-                            app.status_msg = Some(("❌ Branch name cannot be empty".into(), true));
-                        } else {
-                            let status = Command::new("git").args(["checkout", "-b", &name]).status();
-                            match status {
-                                Ok(s) if s.success() => app.status_msg = Some((format!("✅ Created and switched to '{}'", name), false)),
-                                _ => app.status_msg = Some((format!("❌ Failed to create '{}'", name), true)),
+                        Mode::ActionMenu => match (key.modifiers, key.code) {
+                            (_, KeyCode::Esc) => app.mode = Mode::BranchList,
+                            (_, KeyCode::Up) => app.move_action_up(),
+                            (_, KeyCode::Down) => app.move_action_down(),
+                            (_, KeyCode::Enter) => {
+                                let branch = app.selected_branch().unwrap_or("").to_string();
+                                let action_idx = app.action_state.selected().unwrap_or(0);
+                                match action_idx {
+                                    0 => { // Checkout
+                                        if checkout_branch(&branch) {
+                                            app.status_msg = Some((format!("✅ Switched to '{}'", branch), false));
+                                            app.refresh_branches();
+                                        } else {
+                                            app.status_msg = Some((format!("❌ Failed to checkout '{}'", branch), true));
+                                        }
+                                        app.mode = Mode::BranchList;
+                                    }
+                                    1 => { // Delete
+                                        app.mode = Mode::Confirm(format!("Delete branch '{}'? [Y/n]", branch));
+                                    }
+                                    2 => { // Pull Latest
+                                        let _ = checkout_branch(&branch);
+                                        let status = Command::new("git").arg("pull").status();
+                                        match status {
+                                            Ok(s) if s.success() => {
+                                                app.status_msg = Some((format!("✅ '{}' is up to date", branch), false));
+                                                app.refresh_branches();
+                                            }
+                                            _ => app.status_msg = Some(("❌ Pull failed".into(), true)),
+                                        }
+                                        app.mode = Mode::BranchList;
+                                    }
+                                    3 => { // New branch from here
+                                        app.new_branch_name.clear();
+                                        app.mode = Mode::NewBranch;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        },
+
+                        Mode::NewBranch => match (key.modifiers, key.code) {
+                            (_, KeyCode::Esc) => app.mode = Mode::ActionMenu,
+                            (_, KeyCode::Enter) => {
+                                let name = app.new_branch_name.trim().replace(' ', "-");
+                                if name.is_empty() {
+                                    app.status_msg = Some(("❌ Branch name cannot be empty".into(), true));
+                                } else if create_and_checkout_branch(&name) {
+                                    app.status_msg = Some((format!("✅ Created and switched to '{}'", name), false));
+                                    app.refresh_branches();
+                                } else {
+                                    app.status_msg = Some((format!("❌ Failed to create '{}'", name), true));
+                                }
+                                app.mode = Mode::BranchList;
+                            }
+                            (_, KeyCode::Backspace) => { app.new_branch_name.pop(); }
+                            (_, KeyCode::Char(c)) => { app.new_branch_name.push(c); }
+                            _ => {}
+                        },
+
+                        Mode::Confirm(_msg) => {
+                            let branch = app.selected_branch().unwrap_or("").to_string();
+                            match key.code {
+                                KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
+                                    if delete_branch(&branch) {
+                                        app.status_msg = Some((format!("🗑️ Deleted branch '{}'", branch), false));
+                                        app.refresh_branches();
+                                    } else {
+                                        app.status_msg = Some((format!("❌ Failed to delete '{}'", branch), true));
+                                    }
+                                    app.mode = Mode::BranchList;
+                                }
+                                _ => { app.mode = Mode::BranchList; }
                             }
                         }
-                        app.mode = Mode::BranchList;
-                    }
-                    (_, KeyCode::Backspace) => { app.new_branch_name.pop(); }
-                    (_, KeyCode::Char(c)) => { app.new_branch_name.push(c); }
-                    _ => {}
-                },
-
-                Mode::Confirm(_msg) => {
-                    let branch = app.selected_branch().unwrap_or("").to_string();
-                    match key.code {
-                        KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
-                            let status = Command::new("git").args(["branch", "-D", &branch]).status();
-                            match status {
-                                Ok(s) if s.success() => app.status_msg = Some((format!("🗑️ Deleted branch '{}'", branch), false)),
-                                _ => app.status_msg = Some((format!("❌ Failed to delete '{}'", branch), true)),
-                            }
-                            app.mode = Mode::BranchList;
-                        }
-                        _ => { app.mode = Mode::BranchList; }
                     }
                 }
+                Event::Mouse(mouse) => match mouse.kind {
+                    MouseEventKind::ScrollDown => match app.mode {
+                        Mode::BranchList => app.move_branch_down(),
+                        Mode::ActionMenu => app.move_action_down(),
+                        _ => {}
+                    },
+                    MouseEventKind::ScrollUp => match app.mode {
+                        Mode::BranchList => app.move_branch_up(),
+                        Mode::ActionMenu => app.move_action_up(),
+                        _ => {}
+                    },
+                    _ => {}
+                },
+                _ => {}
             }
         }
 
@@ -312,7 +350,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     Ok(())
 }
 
@@ -527,10 +565,69 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
 }
 
 fn is_git_repo() -> bool {
+    #[cfg(feature = "gix")]
+    if gix::discover(".").is_ok() {
+        return true;
+    }
+
     Command::new("git")
         .args(["rev-parse", "--is-inside-work-tree"])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+fn fetch_branches_and_head() -> (Vec<String>, String) {
+    let output = Command::new("git")
+        .args(["branch", "-a", "--format", "%(refname:short)"])
+        .output();
+
+    let branches = if let Ok(o) = output {
+        let mut list: Vec<String> = String::from_utf8_lossy(&o.stdout)
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty() && !l.ends_with("/HEAD") && l != "HEAD")
+            .collect();
+        list.dedup();
+        list
+    } else {
+        vec![]
+    };
+
+    let current_out = Command::new("git")
+        .args(["branch", "--show-current"])
+        .output();
+    let current = if let Ok(co) = current_out {
+        String::from_utf8_lossy(&co.stdout).trim().to_string()
+    } else {
+        String::new()
+    };
+
+    (branches, current)
+}
+
+fn checkout_branch(branch: &str) -> bool {
+    let target = branch.strip_prefix("remotes/").unwrap_or(branch);
+    Command::new("git")
+        .args(["checkout", target])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn delete_branch(branch: &str) -> bool {
+    let target = branch.strip_prefix("remotes/").unwrap_or(branch);
+    Command::new("git")
+        .args(["branch", "-D", target])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn create_and_checkout_branch(branch: &str) -> bool {
+    Command::new("git")
+        .args(["checkout", "-b", branch])
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
@@ -543,5 +640,54 @@ mod tests {
     #[test]
     fn test_is_git_repo_fn() {
         let _ = is_git_repo();
+    }
+
+    #[test]
+    fn test_app_init_and_refilter() {
+        let branches = vec!["main".into(), "feature/auth".into(), "fix/bug".into()];
+        let mut app = App::new(branches, "main".into());
+        assert_eq!(app.selected_branch(), Some("main"));
+
+        app.query = "feat".into();
+        app.refilter();
+        assert_eq!(app.filtered.len(), 1);
+        assert_eq!(app.selected_branch(), Some("feature/auth"));
+
+        app.query = "nonexistent".into();
+        app.refilter();
+        assert_eq!(app.filtered.len(), 0);
+        assert_eq!(app.selected_branch(), None);
+
+        // Move actions when empty
+        app.move_branch_up();
+        app.move_branch_down();
+    }
+
+    #[test]
+    fn test_app_navigation_and_actions() {
+        let branches = vec!["main".into(), "dev".into()];
+        let mut app = App::new(branches, "main".into());
+        app.move_branch_down();
+        assert_eq!(app.selected_branch(), Some("dev"));
+        app.move_branch_up();
+        assert_eq!(app.selected_branch(), Some("main"));
+
+        app.move_action_down();
+        assert_eq!(app.action_state.selected(), Some(1));
+        app.move_action_up();
+        assert_eq!(app.action_state.selected(), Some(0));
+    }
+
+    #[test]
+    fn test_scroll_log_bounds() {
+        let branches = vec!["main".into()];
+        let mut app = App::new(branches, "main".into());
+        app.log_preview = vec!["commit 1".into(), "commit 2".into()];
+        app.scroll_log_down(1);
+        assert_eq!(app.log_scroll, 1);
+        app.scroll_log_down(10);
+        assert_eq!(app.log_scroll, 1); // Not exceeded
+        app.scroll_log_up(5);
+        assert_eq!(app.log_scroll, 0);
     }
 }

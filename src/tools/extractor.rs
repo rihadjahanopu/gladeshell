@@ -12,10 +12,12 @@ use std::fmt;
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::process::Command;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Arc;
-use std::time::Instant;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use crossterm::{
     event::{
@@ -54,8 +56,8 @@ const C_RED: Color         = Color::Rgb(255, 90, 90);        // Soft red
 const C_CYAN: Color        = Color::Rgb(80, 220, 210);       // Electric cyan
 const C_WHITE: Color       = Color::Rgb(255, 255, 255);      // Pure white
 
-/// High-throughput disk I/O buffer size (256 KB)
-const IO_BUFFER_SIZE: usize = 256 * 1024;
+/// High-throughput disk I/O buffer size (2 MB)
+const IO_BUFFER_SIZE: usize = 2 * 1024 * 1024;
 
 /// Animated spinner frames for background loading feedback
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -170,12 +172,22 @@ pub fn sanitize_extract_path(
     let target_path = out_dir.join(&clean_path);
 
     let canonical_out = fs::canonicalize(out_dir).unwrap_or_else(|_| out_dir.to_path_buf());
-    if let Ok(canonical_target) = fs::canonicalize(&target_path) {
-        if !canonical_target.starts_with(&canonical_out) {
-            return Err(ExtractionError::PathTraversal(
-                entry_path.to_string_lossy().to_string(),
-            ));
+    let check_path = if let Ok(c) = fs::canonicalize(&target_path) {
+        c
+    } else if let Some(parent) = target_path.parent() {
+        if let Ok(c_parent) = fs::canonicalize(parent) {
+            c_parent.join(target_path.file_name().unwrap_or_default())
+        } else {
+            target_path.clone()
         }
+    } else {
+        target_path.clone()
+    };
+
+    if !check_path.starts_with(&canonical_out) {
+        return Err(ExtractionError::PathTraversal(
+            entry_path.to_string_lossy().to_string(),
+        ));
     }
 
     Ok(target_path)
@@ -192,10 +204,12 @@ pub fn run(
 ) -> Result<(), Box<dyn std::error::Error>> {
     if force_interactive || archive.is_none() {
         run_tui(archive, output)
-    } else {
-        let count = extract_archive(archive.unwrap(), output)?;
+    } else if let Some(arch) = archive {
+        let count = extract_archive(arch, output)?;
         println!("✨ Successfully extracted {} file(s)!", count);
         Ok(())
+    } else {
+        run_tui(archive, output)
     }
 }
 
@@ -242,6 +256,11 @@ pub fn extract_archive_with_progress(
     } else {
         fs::metadata(archive).map(|m| m.len()).unwrap_or(0)
     };
+
+    // 0. Hybrid Auto-Fallback: Try Native System Binary for 100% Speed -> Pure Rust Engine Fallback
+    if let Ok(Some(extracted_count)) = try_native_system_extract(archive, out_dir, Some(&progress_tx), total_files_hint, total_bytes) {
+        return Ok(extracted_count);
+    }
 
     // 1. .zip (Parallel Multi-Core Random Access via Rayon)
     if lower_name.ends_with(".zip") {
@@ -301,6 +320,300 @@ pub fn extract_archive_with_progress(
     }
 
     Err(ExtractionError::UnsupportedFormat(file_name.to_string()))
+}
+
+fn find_binary_path(cmd: &str) -> Option<String> {
+    if Path::new(cmd).is_absolute() && Path::new(cmd).exists() {
+        return Some(cmd.to_string());
+    }
+    for dir in &["/bin", "/usr/bin", "/usr/local/bin", "/snap/bin"] {
+        let p = Path::new(dir).join(cmd);
+        if p.exists() {
+            return Some(p.to_string_lossy().to_string());
+        }
+    }
+    let check_cmd = if cfg!(target_os = "windows") { "where" } else { "which" };
+    if let Ok(out) = Command::new(check_cmd).arg(cmd).output() {
+        if out.status.success() {
+            let path_str = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !path_str.is_empty() && Path::new(&path_str).exists() {
+                return Some(path_str);
+            }
+        }
+    }
+    None
+}
+
+#[allow(dead_code)]
+fn command_exists(cmd: &str) -> bool {
+    find_binary_path(cmd).is_some()
+}
+
+fn try_native_system_extract(
+    archive: &Path,
+    out_dir: &Path,
+    progress_tx: Option<&Sender<ExtractionProgressMsg>>,
+    total_files_hint: usize,
+    total_bytes: u64,
+) -> Result<Option<usize>, ExtractionError> {
+    let lower_name = archive.file_name().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+    let abs_archive = if archive.is_absolute() {
+        archive.to_path_buf()
+    } else if let Some(parent) = archive.parent() {
+        let parent_abs = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
+        if let Some(file_name) = archive.file_name() {
+            parent_abs.join(file_name)
+        } else {
+            archive.to_path_buf()
+        }
+    } else if let Ok(cwd) = std::env::current_dir() {
+        cwd.join(archive)
+    } else {
+        archive.to_path_buf()
+    };
+
+    let abs_out = if out_dir.is_absolute() {
+        out_dir.to_path_buf()
+    } else if let Ok(out_canonical) = out_dir.canonicalize() {
+        out_canonical
+    } else if let Ok(cwd) = std::env::current_dir() {
+        cwd.join(out_dir)
+    } else {
+        out_dir.to_path_buf()
+    };
+
+    let thread_count = rayon::current_num_threads().max(2);
+    let mmt_arg = format!("-mmt={}", thread_count);
+
+    let (binary, args) = if lower_name.ends_with(".zip") {
+        if let Some(bin) = find_binary_path("unzip") {
+            (
+                bin,
+                vec![
+                    "-q".to_string(),
+                    "-o".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-d".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ],
+            )
+        } else if let Some(bin) = find_binary_path("7z").or_else(|| find_binary_path("7za")).or_else(|| find_binary_path("7zz")) {
+            (
+                bin,
+                vec![
+                    "x".to_string(),
+                    "-y".to_string(),
+                    mmt_arg.clone(),
+                    "-bso0".to_string(),
+                    "-bsp0".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    format!("-o{}", abs_out.display()),
+                ],
+            )
+        } else {
+            return Ok(None);
+        }
+    } else if lower_name.ends_with(".7z") {
+        if let Some(bin) = find_binary_path("7z").or_else(|| find_binary_path("7za")).or_else(|| find_binary_path("7zz")) {
+            (
+                bin,
+                vec![
+                    "x".to_string(),
+                    "-y".to_string(),
+                    mmt_arg.clone(),
+                    "-bso0".to_string(),
+                    "-bsp0".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    format!("-o{}", abs_out.display()),
+                ],
+            )
+        } else {
+            return Ok(None);
+        }
+    } else if lower_name.ends_with(".tar.gz") || lower_name.ends_with(".tgz") {
+        if let Some(bin) = find_binary_path("tar") {
+            let a = if find_binary_path("pigz").is_some() || find_binary_path("unpigz").is_some() {
+                let unz = find_binary_path("unpigz").unwrap_or_else(|| "pigz -d".to_string());
+                vec![
+                    "-I".to_string(),
+                    unz,
+                    "-xf".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-C".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ]
+            } else {
+                vec![
+                    "-xzf".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-C".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ]
+            };
+            (bin, a)
+        } else {
+            return Ok(None);
+        }
+    } else if lower_name.ends_with(".tar.xz") || lower_name.ends_with(".txz") {
+        if let Some(bin) = find_binary_path("tar") {
+            let a = if find_binary_path("pixz").is_some() {
+                vec![
+                    "-I".to_string(),
+                    "pixz -d".to_string(),
+                    "-xf".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-C".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ]
+            } else {
+                vec![
+                    "-xJf".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-C".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ]
+            };
+            (bin, a)
+        } else {
+            return Ok(None);
+        }
+    } else if lower_name.ends_with(".tar.bz2") || lower_name.ends_with(".tbz2") {
+        if let Some(bin) = find_binary_path("tar") {
+            let a = if find_binary_path("pbzip2").is_some() {
+                vec![
+                    "-I".to_string(),
+                    "pbzip2 -d".to_string(),
+                    "-xf".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-C".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ]
+            } else {
+                vec![
+                    "-xjf".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-C".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ]
+            };
+            (bin, a)
+        } else {
+            return Ok(None);
+        }
+    } else if lower_name.ends_with(".tar") {
+        if let Some(bin) = find_binary_path("tar") {
+            (
+                bin,
+                vec![
+                    "-xf".to_string(),
+                    abs_archive.to_string_lossy().to_string(),
+                    "-C".to_string(),
+                    abs_out.to_string_lossy().to_string(),
+                ],
+            )
+        } else {
+            return Ok(None);
+        }
+    } else {
+        return Ok(None);
+    };
+
+    fn calculate_dir_bytes(dir: &Path) -> u64 {
+        let mut total = 0;
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    total += entry.metadata().map(|m| m.len()).unwrap_or(0);
+                } else if path.is_dir() {
+                    total += calculate_dir_bytes(&path);
+                }
+            }
+        }
+        total
+    }
+
+    let stop_signal = Arc::new(AtomicBool::new(false));
+    let stop_clone = stop_signal.clone();
+    let tx_ticker = progress_tx.cloned();
+    let out_dir_buf = abs_out.clone();
+    let total_b = total_bytes;
+    let total_f = total_files_hint;
+    let binary_display = Path::new(&binary).file_name().unwrap_or_default().to_string_lossy().to_string();
+    let bin_disp_clone = binary_display.clone();
+
+    let ticker_handle = tx_ticker.as_ref().map(|tx| {
+        let tx = tx.clone();
+        thread::spawn(move || {
+            let mut last_max_extracted: u64 = 0;
+            while !stop_clone.load(Ordering::Relaxed) {
+                thread::sleep(Duration::from_millis(150));
+                let raw_size = calculate_dir_bytes(&out_dir_buf);
+                
+                last_max_extracted = last_max_extracted.max(raw_size);
+                let current_bytes = last_max_extracted;
+
+                let est_bytes = if total_b > 0 {
+                    current_bytes.min(total_b.saturating_sub(1024 * 1024).max(1))
+                } else {
+                    current_bytes
+                };
+                let est_ratio = if total_b > 0 { est_bytes as f64 / total_b as f64 } else { 0.0 };
+                let est_files = ((est_ratio * total_f as f64) as usize).max(1).min(total_f.saturating_sub(1).max(1));
+
+                let _ = tx.send(ExtractionProgressMsg::Progress {
+                    files_extracted: est_files,
+                    total_files: total_f,
+                    bytes_extracted: est_bytes,
+                    total_bytes: total_b,
+                    current_filename: format!("⚡ Extracting via Native '{}' Engine ({} threads)... ({} extracted)", bin_disp_clone, thread_count, format_bytes(est_bytes)),
+                });
+            }
+        })
+    });
+
+    let mut cmd = Command::new(&binary);
+    cmd.args(&args);
+    cmd.env("XZ_OPT", format!("-T{}", thread_count));
+
+    let status_res = cmd.status();
+
+    stop_signal.store(true, Ordering::Relaxed);
+    if let Some(handle) = ticker_handle {
+        let _ = handle.join();
+    }
+
+    let status = match status_res {
+        Ok(s) => s,
+        Err(_) => return Ok(None),
+    };
+
+    let has_extracted = fs::read_dir(out_dir)
+        .or_else(|_| fs::read_dir(&abs_out))
+        .map(|mut e| e.next().is_some())
+        .unwrap_or(false);
+
+    let is_success = (status.success() || status.code() == Some(1)) && has_extracted;
+
+    if is_success {
+        let count = fs::read_dir(out_dir)
+            .or_else(|_| fs::read_dir(&abs_out))
+            .map(|e| e.count())
+            .unwrap_or(1)
+            .max(1);
+        if let Some(tx) = progress_tx {
+            let _ = tx.send(ExtractionProgressMsg::Progress {
+                files_extracted: count,
+                total_files: total_files_hint.max(count),
+                bytes_extracted: total_bytes,
+                total_bytes,
+                current_filename: format!("✨ Extracted via Native '{}' Engine", binary_display),
+            });
+        }
+        Ok(Some(count))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Rayon Multi-Core Concurrent ZIP Extractor with 256 KB buffered writes.
@@ -453,6 +766,102 @@ fn extract_7z(
     total_files_hint: usize,
     total_bytes: u64,
 ) -> Result<usize, ExtractionError> {
+    let file = File::open(archive)?;
+    let file_len = file.metadata()?.len();
+
+    // 1. Multi-threaded Rayon parallel extraction for non-solid / multi-entry 7z archives
+    if let Ok(reader) = sevenz_rust::SevenZReader::new(file, file_len, sevenz_rust::Password::empty()) {
+        let entries: Vec<(String, u64, bool)> = reader
+            .archive()
+            .files
+            .iter()
+            .map(|e| (e.name.clone(), e.size, e.is_directory))
+            .collect();
+
+        if entries.len() > 1 {
+            for (name, _, is_dir) in &entries {
+                if *is_dir {
+                    if let Ok(p) = sanitize_extract_path(out_dir, Path::new(name)) {
+                        let _ = fs::create_dir_all(p);
+                    }
+                }
+            }
+
+            let file_entries: Vec<(String, u64)> = entries
+                .into_iter()
+                .filter(|(_, _, is_dir)| !*is_dir)
+                .map(|(n, s, _)| (n, s))
+                .collect();
+
+            if !file_entries.is_empty() {
+                let count_counter = Arc::new(AtomicUsize::new(0));
+                let bytes_counter = Arc::new(AtomicU64::new(0));
+                let tx_clone = progress_tx.cloned();
+
+                file_entries.par_iter().for_each(|(entry_name, entry_size)| {
+                    let target_path = match sanitize_extract_path(out_dir, Path::new(entry_name)) {
+                        Ok(p) => p,
+                        Err(_) => return,
+                    };
+
+                    if let Some(parent) = target_path.parent() {
+                        let _ = fs::create_dir_all(parent);
+                    }
+
+                    if let Ok(f_handle) = File::open(archive) {
+                        if let Ok(mut thread_reader) = sevenz_rust::SevenZReader::new(f_handle, file_len, sevenz_rust::Password::empty()) {
+                            let mut buf = vec![0u8; IO_BUFFER_SIZE];
+                            if let Ok(out_file) = File::create(&target_path) {
+                                let mut writer = BufWriter::with_capacity(IO_BUFFER_SIZE, out_file);
+                                let mut written = 0u64;
+
+                                let _ = thread_reader.for_each_entries(|entry, r| {
+                                    if entry.name() == entry_name {
+                                        loop {
+                                            match r.read(&mut buf) {
+                                                Ok(0) => break,
+                                                Ok(n) => {
+                                                    if writer.write_all(&buf[..n]).is_err() {
+                                                        break;
+                                                    }
+                                                    written += n as u64;
+                                                }
+                                                Err(_) => break,
+                                            }
+                                        }
+                                        Ok(false)
+                                    } else {
+                                        Ok(true)
+                                    }
+                                });
+
+                                let _ = writer.flush();
+                                let cur_count = count_counter.fetch_add(1, Ordering::Relaxed) + 1;
+                                let cur_bytes = bytes_counter.fetch_add(written.max(*entry_size), Ordering::Relaxed) + written;
+
+                                if let Some(ref tx) = tx_clone {
+                                    let _ = tx.send(ExtractionProgressMsg::Progress {
+                                        files_extracted: cur_count,
+                                        total_files: total_files_hint.max(file_entries.len()),
+                                        bytes_extracted: cur_bytes,
+                                        total_bytes,
+                                        current_filename: entry_name.clone(),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                });
+
+                let extracted_count = count_counter.load(Ordering::Relaxed);
+                if extracted_count > 0 {
+                    return Ok(extracted_count);
+                }
+            }
+        }
+    }
+
+    // 2. Fallback for single stream / solid archive
     let mut count = 0;
     let tx_clone = progress_tx.cloned();
     let bytes_extracted = Arc::new(AtomicU64::new(0));
@@ -1615,11 +2024,31 @@ fn format_bytes(bytes: u64) -> String {
     }
 }
 
+struct TerminalCleanup;
+impl TerminalCleanup {
+    pub fn init() -> Self {
+        let default_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let _ = disable_raw_mode();
+            let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
+            default_hook(info);
+        }));
+        TerminalCleanup
+    }
+}
+impl Drop for TerminalCleanup {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
+    }
+}
+
 pub fn run_tui(
     initial_archive: Option<&Path>,
     initial_output: Option<&Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
+    let _cleanup = TerminalCleanup::init();
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
@@ -2648,7 +3077,8 @@ mod tests {
 
     #[test]
     fn test_extract_7z_flat_path_structure() {
-        let temp_dir = std::env::temp_dir().join("fancybash_test_7z_flat");
+        let base_tmp = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("target").join("test_tmp");
+        let temp_dir = base_tmp.join(format!("unittest_7z_flat_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
 

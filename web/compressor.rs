@@ -169,8 +169,8 @@ pub enum CompressionLevel {
 impl CompressionLevel {
     pub fn name(&self) -> &'static str {
         match self {
-            CompressionLevel::Fast => "Fast (Level 1 - Default)",
-            CompressionLevel::Balanced => "Balanced (Level 6)",
+            CompressionLevel::Fast => "Fast (Level 1 - Max Speed)",
+            CompressionLevel::Balanced => "Balanced (Level 6 - Default)",
             CompressionLevel::Ultra => "Ultra (Level 9 - Max Compression)",
         }
     }
@@ -270,7 +270,7 @@ impl CompressApp {
             target_path: canonical,
             output_name,
             format: ArchiveFormat::Zip,
-            level: CompressionLevel::Fast,
+            level: CompressionLevel::Balanced,
             ignore_node_modules: true,
             ignore_git: true,
             active_field: ActiveField::FormatSelector,
@@ -1713,7 +1713,7 @@ mod tests {
         let app = CompressApp::new(Path::new("my_folder"), Some("custom_archive")).unwrap();
         let out_p = app.get_output_path();
         assert!(out_p.to_string_lossy().contains("custom_archive.zip"));
-        assert_eq!(app.level, CompressionLevel::Fast);
+        assert_eq!(app.level, CompressionLevel::Balanced);
     }
 
     #[test]

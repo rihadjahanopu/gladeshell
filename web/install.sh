@@ -13,10 +13,7 @@ if [[ "${OS:-}" = "Windows_NT" ]] && [[ "$(uname -s 2>/dev/null)" != MINGW64* ]]
     fi
 fi
 
-URL="https://raw.githubusercontent.com/rihadjahanopu/fancybash/refs/heads/main/config.sh"
-FALLBACK_URL="https://fancybash.netlify.app/public/config.sh"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "$PWD")"
-LOCAL_CONFIG="$SCRIPT_DIR/config.sh"
 
 # ─── Terminal & Color Capability Probing ─────
 detect_colors() {

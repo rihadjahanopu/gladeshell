@@ -1,6 +1,6 @@
 # 🤝 Contributing to fancybash
 
-> **Welcome to the `fancybash` developer community!**  
+> **Welcome to the `fancybash` developer community!**
 > Whether you are a seasoned open-source contributor or submitting your very first Pull Request (PR), this guide will take you step-by-step through the entire contribution lifecycle.
 
 <div align="center">
@@ -74,16 +74,16 @@ git remote add upstream https://github.com/rihadjahanopu/fancybash.git
 
 ### Step 1.5: Activate Git Hooks (Required)
 
-This project ships a pre-commit hook inside `.githooks/` that **automatically syncs** core installer and config files into the `web/` deploy directory before every commit. Without it, your commits may leave `web/public/` out of date.
+This project ships pre-commit and pre-push hooks inside `.githooks/` that **automatically sync** installer files (`install.sh` & `install.ps1`) into `web/` and verify Rust code quality before every commit.
 
 Run the setup script **once** after cloning (pick your shell):
 
-| Shell | Command |
-| :--- | :--- |
-| **Bash** | `bash setup.sh` |
-| **Zsh** | `zsh setup.zsh` |
-| **Fish** | `fish setup.fish` |
-| **PowerShell** | `.\setup.ps1` |
+| Shell          | Command           |
+| :------------- | :---------------- |
+| **Bash**       | `bash setup.sh`   |
+| **Zsh**        | `zsh setup.zsh`   |
+| **Fish**       | `fish setup.fish` |
+| **PowerShell** | `.\setup.ps1`     |
 
 Each script automatically runs `git config core.hooksPath .githooks` and marks all hook files as executable.
 
@@ -97,11 +97,11 @@ chmod +x .githooks/*
 
 </details>
 
-> **What the hook does on every `git commit`:**
-> - Copies `i.sh` & `u.sh` → `web/`
-> - Copies `install.*`, `config.*`, `uninstall.*`, `i.ps1` → `web/public/`
-> - Copies `zed/install-settings.sh` → `web/public/zed/`
-> - Removes stale `.zwc` compiled Zsh cache files from `web/public/`
+> **What the pre-commit hook does on every `git commit`:**
+>
+> - Runs security & hygiene guard (checks for merge conflict markers and uncommitted secrets)
+> - Auto-syncs `install.sh` & `install.ps1` → `web/`
+> - Verifies Rust formatting (`cargo fmt`), lints (`cargo clippy`), and compilation (`cargo check`)
 
 You only need to run this **once** per local clone. It does **not** affect any global git settings.
 
@@ -111,20 +111,22 @@ You only need to run this **once** per local clone. It does **not** affect any g
 
 Before modifying code, take 2 minutes to inspect these two core technical manuals:
 
-* 📄 **[ARCHITECTURE.txt](ARCHITECTURE.txt)** — Explains repository layout, line banners, and section structure.
-* 📄 **[DSA.md](DSA.md)** — Explains performance constraints ($O(1)$ prompt rule, subshell daemons, dynamic dependency injections).
+- 📄 **[ARCHITECTURE.txt](ARCHITECTURE.txt)** — Explains repository layout, line banners, and section structure.
+- 📄 **[DSA.md](DSA.md)** — Explains performance constraints ($O(1)$ prompt rule, subshell daemons, dynamic dependency injections).
 
 #### Repository Layout Overview:
+
 ```
 fancybash/
-├── config.sh              ★ Core Bash environment (aliases, telemetry prompt, TUI modules)
-├── config.zsh             ★ Zsh counterpart with Zsh-specific plugins
-├── config.ps1             ★ PowerShell 7+ variant
-├── install.sh             ★ Non-destructive installer script
-├── web/                   ★ Static Netlify site (deploy root — index.html, docs.html, etc.)
-├── zed/                   ★ Zed IDE installer scripts
-├── .githooks/             ★ Project git hooks (activate with: git config core.hooksPath .githooks)
-└── .github/workflows/    ★ Automated GitHub Actions CI/CD pipelines
+├── src/                   ★ Pure Rust core engine, interactive TUI tools, & CLI subcommands
+├── Cargo.toml             ★ Rust package configuration & dependency specifications
+├── aliases.toml           ★ Core alias definitions & custom shell overrides
+├── benches/               ★ Performance benchmarks (Criterion / Criterion-rs)
+├── install.sh             ★ Non-destructive Unix/Linux/macOS installer script
+├── install.ps1            ★ Non-destructive Windows PowerShell installer script
+├── web/                   ★ Static web portal (deploy root — index.html, install.sh, install.ps1)
+├── .githooks/             ★ Project git hooks (pre-commit & pre-push verification)
+└── .github/workflows/    ★ Automated multi-platform GitHub Actions CI/CD pipelines
 ```
 
 ---
@@ -151,6 +153,7 @@ git checkout -b fix/prompt-temp-sensor-alpine
 Modify `config.sh` (and `config.zsh` if applicable). Follow these mandatory rules:
 
 #### 1. Scope Variables using `local`
+
 Always declare function variables using `local` to avoid polluting global shell state:
 
 ```bash
@@ -168,6 +171,7 @@ my_function() {
 ```
 
 #### 2. Check Tool Availability before Executing
+
 Never assume a tool is installed. Fail silently or use `_fb_ensure_dep`:
 
 ```bash
@@ -184,6 +188,7 @@ node_version() {
 ```
 
 #### 3. Quote All Variable Expansion
+
 Prevent word splitting and wildcard expansion bugs by quoting variables:
 
 ```bash
@@ -197,6 +202,7 @@ echo $user_path
 ```
 
 #### 4. Strict $O(1)$ Prompt Guard Rule
+
 > [!IMPORTANT]
 > **NEVER** place blocking network requests, synchronous HTTP `curl` calls, or unbounded disk searches (`find /`) inside functions called by the prompt (`PS1`). Prompt evaluation must finish in $< 2\text{ms}$.
 
@@ -205,6 +211,7 @@ echo $user_path
 ### Step 5: Test Locally & Validate Idempotency
 
 #### A. Reload & Test in Your Local Terminal
+
 ```bash
 # Source modified config in your current shell session
 source config.sh
@@ -214,14 +221,18 @@ my_new_alias
 ```
 
 #### B. Run Static Linting with ShellCheck
+
 Ensure your script passes static analysis without syntax errors:
+
 ```bash
 shellcheck -s bash config.sh
 shellcheck -s bash install.sh
 ```
 
 #### C. Clean Docker Container Test (Recommended)
+
 Test how your change performs in a completely clean environment:
+
 ```bash
 docker run --rm -it ubuntu:latest bash -c "
   apt update -qq && apt install -y curl git &&
@@ -241,6 +252,7 @@ git commit -m "feat(docker): add dwatch function for container file monitoring"
 ```
 
 #### Commit Structure:
+
 ```
 type(scope): concise subject in imperative present tense (max 72 chars)
 
@@ -252,6 +264,7 @@ type(scope): concise subject in imperative present tense (max 72 chars)
 ### Step 7: Push & Open a Pull Request (PR)
 
 1. Push your branch to your GitHub fork:
+
 ```bash
 git push -u origin feat/add-docker-logs-alias
 ```
@@ -264,13 +277,13 @@ git push -u origin feat/add-docker-logs-alias
 
 ## 3. Code Standards & Naming Conventions
 
-| Component Category | Naming Pattern | Example | Description |
-| :--- | :--- | :--- | :--- |
-| **Short Navigation Aliases** | 2–4 lower-case letters | `gs`, `gcm`, `nrd` | Fast productivity shortcuts |
-| **Telemetry & Prompt Helpers** | `verb_noun` | `parse_git_branch`, `cpu_temp` | Silent functions used in `PS1` |
-| **Docker Aliases / Functions** | `d` prefix | `dps`, `drm`, `dman` | Container management helpers |
-| **Internal Engine Helpers** | `_fb_` prefix | `_fb_ensure_dep`, `_fb_sed_i` | Private project functions |
-| **Interactive TUI Tools** | Short single word | `uup`, `uu`, `todo`, `ui` | Interactive user dashboards |
+| Component Category             | Naming Pattern         | Example                        | Description                    |
+| :----------------------------- | :--------------------- | :----------------------------- | :----------------------------- |
+| **Short Navigation Aliases**   | 2–4 lower-case letters | `gs`, `gcm`, `nrd`             | Fast productivity shortcuts    |
+| **Telemetry & Prompt Helpers** | `verb_noun`            | `parse_git_branch`, `cpu_temp` | Silent functions used in `PS1` |
+| **Docker Aliases / Functions** | `d` prefix             | `dps`, `drm`, `dman`           | Container management helpers   |
+| **Internal Engine Helpers**    | `_fb_` prefix          | `_fb_ensure_dep`, `_fb_sed_i`  | Private project functions      |
+| **Interactive TUI Tools**      | Short single word      | `uup`, `uu`, `todo`, `ui`      | Interactive user dashboards    |
 
 ---
 
@@ -295,14 +308,14 @@ zsh -c "source config.zsh && rand_color"
 
 ## 5. Conventional Commit Reference Matrix
 
-| Type | When to Use | Example Commit Message |
-| :--- | :--- | :--- |
-| `feat` | Adding a new alias, function, or prompt metric | `feat(git): add gwip shortcut for WIP commits` |
-| `fix` | Resolving a bug or shell error | `fix(prompt): resolve syntax error on Alpine Linux` |
-| `docs` | Documentation updates (README, Wiki, comments) | `docs(readme): update Docker command cheatsheet` |
-| `style` | Code formatting, spacing, typo fixes | `style(config): normalize section header banners` |
-| `refactor` | Code restructure without behavior change | `refactor(helpers): optimize meminfo parsing algorithm` |
-| `chore` | CI/CD, workflows, build script maintenance | `chore(ci): update shellcheck GitHub Actions version` |
+| Type       | When to Use                                    | Example Commit Message                                  |
+| :--------- | :--------------------------------------------- | :------------------------------------------------------ |
+| `feat`     | Adding a new alias, function, or prompt metric | `feat(git): add gwip shortcut for WIP commits`          |
+| `fix`      | Resolving a bug or shell error                 | `fix(prompt): resolve syntax error on Alpine Linux`     |
+| `docs`     | Documentation updates (README, Wiki, comments) | `docs(readme): update Docker command cheatsheet`        |
+| `style`    | Code formatting, spacing, typo fixes           | `style(config): normalize section header banners`       |
+| `refactor` | Code restructure without behavior change       | `refactor(helpers): optimize meminfo parsing algorithm` |
+| `chore`    | CI/CD, workflows, build script maintenance     | `chore(ci): update shellcheck GitHub Actions version`   |
 
 ---
 
@@ -319,23 +332,24 @@ Before submitting your PR, check off this self-review list:
 
 ## 7. Useful Resources & Links
 
-* 🆘 **[SUPPORT.md](SUPPORT.md)** — Getting help, troubleshooting common issues, and reporting bugs.
-* 🗺️ **[ROADMAP.md](ROADMAP.md)** — Project vision, upcoming release goals, and feature proposals.
-* 👥 **[AUTHORS.md](AUTHORS.md)** — Core team, lead maintainers, and creator profile.
-* 🤝 **[CONTRIBUTORS.md](CONTRIBUTORS.md)** — Wall of contributors and community recognition.
-* 🌟 **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — Community guidelines and pledges.
-* 🔒 **[SECURITY.md](SECURITY.md)** — Security disclosure policies.
+- 🆘 **[SUPPORT.md](SUPPORT.md)** — Getting help, troubleshooting common issues, and reporting bugs.
+- 🗺️ **[ROADMAP.md](ROADMAP.md)** — Project vision, upcoming release goals, and feature proposals.
+- 👥 **[AUTHORS.md](AUTHORS.md)** — Core team, lead maintainers, and creator profile.
+- 🤝 **[CONTRIBUTORS.md](CONTRIBUTORS.md)** — Wall of contributors and community recognition.
+- 🌟 **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — Community guidelines and pledges.
+- 🔒 **[SECURITY.md](SECURITY.md)** — Security disclosure policies.
 
 If you get stuck or have questions at any point:
-* Open a discussion in [GitHub Discussions](https://github.com/rihadjahanopu/fancybash/discussions).
-* Ask in an open [GitHub Issue](https://github.com/rihadjahanopu/fancybash/issues).
-* Tag `@rihadjahanopu` in your PR for mentorship and code review!
+
+- Open a discussion in [GitHub Discussions](https://github.com/rihadjahanopu/fancybash/discussions).
+- Ask in an open [GitHub Issue](https://github.com/rihadjahanopu/fancybash/issues).
+- Tag `@rihadjahanopu` in your PR for mentorship and code review!
 
 <br>
 
 <div align="center">
 
-**Thank you for making `fancybash` awesome! Happy Coding! 🚀**  
-*Made with ❤️ for developers worldwide · Released under the MIT License*
+**Thank you for making `fancybash` awesome! Happy Coding! 🚀**
+_Made with ❤️ for developers worldwide · Released under the MIT License_
 
 </div>

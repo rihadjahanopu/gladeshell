@@ -1,6 +1,6 @@
 ---
 name: 📖 Documentation Issue
-about: Report missing, incorrect, or unclear documentation
+about: Report missing, incorrect, or unclear documentation in fancybash
 title: 'docs: '
 labels: documentation
 assignees: rihadjahanopu
@@ -8,20 +8,20 @@ assignees: rihadjahanopu
 
 ## 📖 Documentation Issue
 
-<!-- Which file has the issue? README.md / ARCHITECTURE.txt / CONTRIBUTING.md / web/ -->
+<!-- Which documentation file has the issue? (e.g. README.md, ARCHITECTURE.txt, CONTRIBUTING.md, Rust doc comments, or web/ site) -->
 
-**File:** 
+**File / Module:**
 
-**Section:** 
+**Section:**
 
-## ❌ What's Wrong
+## ❌ What's Wrong or Outdated
 
 <!-- Describe what is missing, incorrect, or confusing. -->
 
-## ✅ What It Should Say
+## ✅ Proposed Correction / Improvement
 
-<!-- Suggest the correct information or how to improve it. -->
+<!-- Suggest the correct wording, code example, or architecture diagram fix. -->
 
 ## 💡 Additional Context
 
-<!-- Any other notes. -->
+<!-- Any additional notes or screenshots. -->

@@ -754,7 +754,7 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
 
         write_str(buf, &mut off, "\n");
 
-        // Line 3: ❯❯❯ 
+        // Line 3: ❯❯❯
         if ctx.last_exit == 0 {
             write_ansi(buf, &mut off, "\x1b[1;32m", s);
         } else {
@@ -1288,7 +1288,7 @@ mod tests {
     fn test_empirical_performance_benchmark() {
         use std::time::Instant;
         let mut ctx = PromptContext::default();
-        let cwd_str = "/persistent/home/rihad/Developer/dev/fancybash-rs";
+        let cwd_str = "/persistent/home/rihad/Developer/dev/fancybash";
         ctx.cwd[..cwd_str.len()].copy_from_slice(cwd_str.as_bytes());
         ctx.cwd_len = cwd_str.len();
         ctx.user_len = 5;
@@ -1320,4 +1320,3 @@ mod tests {
         assert!(avg_micros < 1000.0, "Prompt render must be < 1 ms");
     }
 }
-

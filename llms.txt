@@ -1,6 +1,6 @@
-# fancybash — The Ultimate Shell Environment for Modern Developers
+# fancybash — Hyper-Optimized Pure Rust Terminal Suite & CLI Toolkit
 
-> Production-ready, zero-bloat, opinionated shell configuration framework for Bash, Zsh, Fish, and PowerShell.
+> Production-ready, zero-dependency, hyper-optimized pure Rust binary toolkit providing interactive TUI tools, developer utilities, and shell enhancements.
 
 ## Core Resources
 
@@ -13,17 +13,17 @@
 ## Quick Installation
 
 ```bash
-# Universal installer (Auto-detects OS and shell):
-curl -fsSL https://fancybash.netlify.app/i.sh | bash
+# One-command installer (Auto-detects OS and architecture):
+curl -fsSL https://fancybash.netlify.app/install.sh | bash
 ```
 
 ## Highlights
 
-- ⚡ Fast & Zero Bloat (Loads instantly without heavy plugin overhead)
-- 🛡️ 100% Non-destructive (Automatic timestamped backups of user dotfiles)
-- 🎨 55 Built-in Prompt Themes (`fancy <theme>`)
-- 🟢 Node.js & Bun First-Class Support (`bi`, `brd`, `brb`, `brs`)
-- 📦 Universal Package Manager & App Updater (`uu`, `uup`)
-- 🎬 FFmedia Multimedia Suite & Interactive GUM/FZF Utilities (`ffmedia`, `todo`, `notes`, `vault`, `ex`)
-- 🔐 Hardened Multi-Vault Security Suite (`vault`, `secvault`, `fvault` - AES-256 memory guard & panic decoy)
-- 🐳 Docker & PostgreSQL Developer Toolkit (`dps`, `dlogs`, `dclean`, `pgstart`, `pgstop`)
+- ⚡ Hyper-Optimized Pure Rust Architecture (Zero external binary or subshell dependencies)
+- 🛡️ 100% Memory Safe with `#![deny(unsafe_code)]` constraints
+- 🎨 55 Built-in Interactive Prompt Themes (`fancybash theme`)
+- 📦 Parallel Fast Archive Compressor & Extractor (`compressor`, `extractor`)
+- 🎬 FFmedia 24-in-1 Multimedia Suite (`ffmedia`)
+- 🔐 Encrypted Vault & Decoy Security Suite (`vault`)
+- 🛠️ Interactive TUI Utilities built with Ratatui (`todo`, `notes`, `filetree`, `process_manager`)
+- 🐳 Universal Package & Tool Manager (`pkg_converter`, `system_clean`, `updater`)

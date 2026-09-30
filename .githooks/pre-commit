@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║           fancybash — Bulletproof Auto-Sync Pre-Commit Hook                ║
+# ║           fancybash — Comprehensive Rust & Sync Pre-Commit Hook           ║
 # ║                                                                            ║
 # ║  What it does:                                                             ║
-# ║    1. i.sh, u.sh            → web/                                        ║
-# ║    2. install.*, config.*,  → web/public/                                 ║
-# ║       uninstall.*, i.ps1                                                  ║
-# ║    3. zed/install-settings.sh → web/public/zed/                           ║
-# ║    4. Cleans stale .zwc files & loose files from web/ root                ║
+# ║    1. Security & Hygiene: Conflict markers, private keys, large files (>10M)║
+# ║    2. Web Sync: Syncs install.sh & install.ps1 → web/                      ║
+# ║    3. Rust Quality: Formats (rustfmt), lints (clippy), checks (cargo check) ║
 # ║                                                                            ║
-# ║  Skip hook:   FANCYBASH_SKIP_SYNC=1 git commit                            ║
-# ║  Dry run:     FANCYBASH_DRY_RUN=1  git commit                             ║
+# ║  Skip controls:                                                            ║
+# ║    FANCYBASH_SKIP_SYNC=1 git commit  (Skip installer file auto-sync)       ║
+# ║    SKIP_RUST_CHECKS=1 git commit    (Skip cargo fmt/clippy/check)          ║
+# ║    FANCYBASH_DRY_RUN=1 git commit     (Dry run mode — no file updates)       ║
+# ║    git commit --no-verify             (Bypass all git hooks)                ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 set -euo pipefail
@@ -28,7 +29,7 @@ else
   RED='' GREEN='' YELLOW='' CYAN='' BOLD='' DIM='' RESET=''
 fi
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── Log Helpers ──────────────────────────────────────────────────────────────
 info()    { echo -e "${CYAN}  →${RESET} $*"; }
 success() { echo -e "${GREEN}  ✔${RESET} $*"; }
 warn()    { echo -e "${YELLOW}  ⚠${RESET} $*"; }
@@ -36,9 +37,9 @@ skip()    { echo -e "${DIM}  ⊘${RESET} ${DIM}$*${RESET}"; }
 error()   { echo -e "${RED}  ✖${RESET} ${BOLD}$*${RESET}" >&2; }
 header()  { echo -e "\n${BOLD}${CYAN}$*${RESET}"; }
 
-# ─── Bypass Flags ────────────────────────────────────────────────────────────
-if [[ "${FANCYBASH_SKIP_SYNC:-0}" == "1" ]]; then
-  warn "FANCYBASH_SKIP_SYNC=1 detected — skipping auto-sync hook entirely."
+# ─── Global Bypass Flags ──────────────────────────────────────────────────────
+if [[ "${FANCYBASH_SKIP_ALL:-0}" == "1" || "${SKIP_HOOKS:-0}" == "1" ]]; then
+  warn "Global hook skip flag detected — skipping pre-commit hook entirely."
   exit 0
 fi
 
@@ -48,21 +49,20 @@ if [[ "${FANCYBASH_DRY_RUN:-0}" == "1" ]]; then
   warn "FANCYBASH_DRY_RUN=1 — no files will be written or staged."
 fi
 
-# ─── Resolve repo root ────────────────────────────────────────────────────────
+# ─── Resolve Repo Root ────────────────────────────────────────────────────────
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && git rev-parse --show-toplevel 2>/dev/null)" || {
   error "Could not determine git repo root. Is this a git repository?"
   exit 1
 }
 cd "$REPO_ROOT"
 
-# ─── Rollback Registry ───────────────────────────────────────────────────────
-# Tracks files copied so we can remove them if something goes wrong mid-run
+# ─── Rollback Registry ────────────────────────────────────────────────────────
 declare -a COPIED_FILES=()
 
 cleanup_on_failure() {
   local exit_code=$?
   if (( exit_code != 0 )) && (( ${#COPIED_FILES[@]} > 0 )); then
-    warn "Hook failed (exit $exit_code). Rolling back partial copies..."
+    warn "Hook failed (exit $exit_code). Rolling back partial file syncs..."
     for f in "${COPIED_FILES[@]}"; do
       rm -f "$f" && skip "Removed: $f"
     done
@@ -70,166 +70,214 @@ cleanup_on_failure() {
 }
 trap cleanup_on_failure EXIT
 
-# ─── Staged File Detection ────────────────────────────────────────────────────
-# Get all staged file paths (added/modified/renamed)
+# ─── Staged File Inspection ───────────────────────────────────────────────────
 STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)"
 
+if [[ -z "$STAGED_FILES" ]]; then
+  skip "No files staged for commit."
+  exit 0
+fi
+
 is_staged() {
-  # Returns 0 (true) if the given path is staged
   local file="$1"
   echo "$STAGED_FILES" | grep -qF "$file"
 }
 
-any_staged_matching() {
-  # Returns 0 (true) if any staged file matches the given glob pattern
-  local pattern="$1"
-  echo "$STAGED_FILES" | grep -qE "$pattern"
-}
+# ─── STEP 1: Security & Repository Hygiene Guard ──────────────────────────────
+header "◆ STEP 1: Security & Repository Hygiene Guard"
 
-# ─── Safe Copy with Verification ─────────────────────────────────────────────
-safe_copy() {
-  local src="$1"
-  local dst="$2"
-  local label="${3:-$src}"
+HYGIENE_ISSUES=0
 
-  if [[ ! -f "$src" ]]; then
-    skip "Missing source, skipping:  $src"
-    return 0
-  fi
-
-  if $DRY_RUN; then
-    info "[DRY-RUN] Would copy: $src → $dst"
-    return 0
-  fi
-
-  mkdir -p "$(dirname "$dst")"
-
-  # Copy and verify integrity via byte count comparison
-  local src_size dst_size
-  src_size=$(wc -c < "$src")
-  cp -f "$src" "$dst"
-  dst_size=$(wc -c < "$dst")
-
-  if [[ "$src_size" != "$dst_size" ]]; then
-    error "Copy verification failed for '$label' (src: ${src_size}B, dst: ${dst_size}B)"
-    return 1
-  fi
-
-  COPIED_FILES+=("$dst")
-  git add "$dst" 2>/dev/null || true
-  success "Synced:  ${DIM}$src${RESET} → ${DIM}$dst${RESET}"
-}
-
-# ─── Determine Which Source Files Are Relevant ────────────────────────────────
-WEB_ROOT_FILES=("i.sh" "u.sh")
-
-PUBLIC_FILES=(
-  "install.sh"
-  "install.zsh"
-  "install.fish"
-  "install.ps1"
-  "install.bat"
-  "config.sh"
-  "config.zsh"
-  "config.fish"
-  "config.ps1"
-  "i.ps1"
-  "uninstall.sh"
-  "uninstall.zsh"
-  "uninstall.fish"
-  "uninstall.ps1"
-)
-
-ZED_FILES=("zed/install-settings.sh")
-
-# Check if any sync-relevant file is staged
-SYNC_NEEDED=false
-for f in "${WEB_ROOT_FILES[@]}" "${PUBLIC_FILES[@]}" "${ZED_FILES[@]}"; do
-  if is_staged "$f"; then
-    SYNC_NEEDED=true
-    break
+# 1a. Merge Conflict Markers Check
+CONFLICT_FILES=""
+for file in $STAGED_FILES; do
+  if [[ -f "$file" ]] && grep -I -q -E '^(<<<<<<< |=======\r?$|>>>>>>> )' "$file" 2>/dev/null; then
+    CONFLICT_FILES="${CONFLICT_FILES}\n    - $file"
   fi
 done
 
-# ─── Header ──────────────────────────────────────────────────────────────────
-header "◆ fancybash pre-commit: Auto-Sync"
-
-if ! $SYNC_NEEDED; then
-  skip "No sync-relevant files staged — skipping sync (commit proceeds normally)."
-  echo ""
-  exit 0
+if [[ -n "$CONFLICT_FILES" ]]; then
+  error "Unresolved merge conflict markers detected in staged files:${CONFLICT_FILES}"
+  HYGIENE_ISSUES=$((HYGIENE_ISSUES + 1))
+else
+  success "No unresolved merge conflict markers."
 fi
 
-# ─── 1. Web Root Entrypoints ──────────────────────────────────────────────────
-web_root_synced=0
-for f in "${WEB_ROOT_FILES[@]}"; do
-  if is_staged "$f" || [[ ! -f "web/$f" ]]; then
-    safe_copy "$f" "web/$f" && (( web_root_synced++ )) || true
-  else
-    skip "Unchanged (not staged): $f"
+# 1b. Sensitive Files Guard (.env, private keys, credentials)
+SENSITIVE_FILES=""
+for file in $STAGED_FILES; do
+  case "$file" in
+    *.pem|*.key|id_rsa*|id_ed25519*|*.pfx|*.p12|.env.production|.env.local)
+      SENSITIVE_FILES="${SENSITIVE_FILES}\n    - $file"
+      ;;
+  esac
+done
+
+if [[ -n "$SENSITIVE_FILES" ]]; then
+  error "Potential secret/private credential files staged for commit:${SENSITIVE_FILES}"
+  error "Remove these files using 'git reset HEAD <file>' before committing."
+  HYGIENE_ISSUES=$((HYGIENE_ISSUES + 1))
+else
+  success "No sensitive key/credential files staged."
+fi
+
+# 1c. Oversized File Warning (>10MB)
+MAX_FILE_BYTES=10485760 # 10MB
+OVERSIZED_FILES=""
+for file in $STAGED_FILES; do
+  if [[ -f "$file" ]]; then
+    size=$(wc -c < "$file" 2>/dev/null || echo 0)
+    if (( size > MAX_FILE_BYTES )); then
+      human_size=$(awk "BEGIN {printf \"%.2f MB\", $size/1048576}")
+      OVERSIZED_FILES="${OVERSIZED_FILES}\n    - $file ($human_size)"
+    fi
   fi
 done
 
-# ─── 2. Public Installer / Config Files ───────────────────────────────────────
-public_synced=0
-for f in "${PUBLIC_FILES[@]}"; do
-  if is_staged "$f" || [[ ! -f "web/public/$f" ]]; then
-    safe_copy "$f" "web/public/$f" && (( public_synced++ )) || true
-  else
-    skip "Unchanged (not staged): $f"
-  fi
-done
+if [[ -n "$OVERSIZED_FILES" ]]; then
+  warn "Large files detected (>10MB):${OVERSIZED_FILES}"
+  warn "Consider using Git LFS or excluding large binary assets from version control."
+fi
 
-# ─── 3. Zed Scripts ───────────────────────────────────────────────────────────
-zed_synced=0
-for f in "${ZED_FILES[@]}"; do
-  dst="web/public/${f#zed/}"
-  dst="web/public/zed/$(basename "$f")"
-  if is_staged "$f" || [[ ! -f "$dst" ]]; then
-    safe_copy "$f" "$dst" && (( zed_synced++ )) || true
-  else
-    skip "Unchanged (not staged): $f"
-  fi
-done
+if (( HYGIENE_ISSUES > 0 )); then
+  error "Hygiene check failed with $HYGIENE_ISSUES issue(s). Aborting commit."
+  exit 1
+fi
 
-# ─── 4. Cleanup: Stale / Forbidden Files ─────────────────────────────────────
-removed_count=0
+# ─── STEP 2: Installer & Web File Auto-Sync ───────────────────────────────────
+if [[ "${FANCYBASH_SKIP_SYNC:-0}" == "1" ]]; then
+  warn "FANCYBASH_SKIP_SYNC=1 detected — skipping installer file auto-sync."
+else
+  header "◆ STEP 2: Installer File Auto-Sync (install.sh & install.ps1 → web/)"
 
-# Remove loose installer/config files accidentally placed in web/ root
-stale_web_root=(web/config.* web/install.* web/i.ps1 web/uninstall.*)
-for pattern in "${stale_web_root[@]}"; do
-  for f in $pattern; do
-    if [[ -f "$f" ]]; then
-      if ! $DRY_RUN; then
-        git rm --cached -f "$f" 2>/dev/null || true
-        rm -f "$f"
-      fi
-      warn "Removed stale file from web/ root: ${DIM}$f${RESET}"
-      (( removed_count++ ))
+  safe_copy() {
+    local src="$1"
+    local dst="$2"
+
+    if [[ ! -f "$src" ]]; then
+      skip "Missing source, skipping:  $src"
+      return 0
+    fi
+
+    if $DRY_RUN; then
+      info "[DRY-RUN] Would copy: $src → $dst"
+      return 0
+    fi
+
+    mkdir -p "$(dirname "$dst")"
+
+    local src_size dst_size
+    src_size=$(wc -c < "$src")
+    cp -f "$src" "$dst"
+    dst_size=$(wc -c < "$dst")
+
+    if [[ "$src_size" != "$dst_size" ]]; then
+      error "Copy verification failed for '$src' (src: ${src_size}B, dst: ${dst_size}B)"
+      return 1
+    fi
+
+    COPIED_FILES+=("$dst")
+    git add "$dst" 2>/dev/null || true
+    success "Synced:  ${DIM}$src${RESET} → ${DIM}$dst${RESET}"
+  }
+
+  INSTALLER_FILES=("install.sh" "install.ps1")
+  SYNC_NEEDED=false
+
+  for f in "${INSTALLER_FILES[@]}"; do
+    if is_staged "$f" || [[ ! -f "web/$f" ]]; then
+      SYNC_NEEDED=true
+      break
     fi
   done
-done
 
-# Remove .zwc (Zsh compiled cache) — binary, machine-specific, not for deployment
-zwc_count=0
-while IFS= read -r -d '' zwc_file; do
-  if ! $DRY_RUN; then
-    git rm --cached -f "$zwc_file" 2>/dev/null || true
-    rm -f "$zwc_file"
+  if ! $SYNC_NEEDED; then
+    skip "No installer files (install.sh / install.ps1) modified."
+  else
+    for f in "${INSTALLER_FILES[@]}"; do
+      if is_staged "$f" || [[ ! -f "web/$f" ]]; then
+        safe_copy "$f" "web/$f"
+      fi
+    done
   fi
-  warn "Removed .zwc cache: ${DIM}$zwc_file${RESET}"
-  (( zwc_count++ ))
-done < <(find . -name "*.zwc" -not -path "./.git/*" -print0 2>/dev/null)
 
-# ─── Summary ─────────────────────────────────────────────────────────────────
-total=$(( web_root_synced + public_synced + zed_synced ))
+  # Purge any stale .zwc cache files if present anywhere
+  while IFS= read -r -d '' zwc_file; do
+    if ! $DRY_RUN; then
+      git rm --cached -f "$zwc_file" 2>/dev/null || true
+      rm -f "$zwc_file"
+    fi
+    warn "Purged .zwc cache file: ${DIM}$zwc_file${RESET}"
+  done < <(find . -name "*.zwc" -not -path "./.git/*" -print0 2>/dev/null)
+fi
+
+# ─── STEP 3: Rust Quality & Integrity Verification ───────────────────────────
+if [[ "${SKIP_RUST_CHECKS:-0}" == "1" ]]; then
+  warn "SKIP_RUST_CHECKS=1 detected — skipping Rust code quality checks."
+else
+  STAGED_RUST="$(echo "$STAGED_FILES" | grep -E '\.rs$|Cargo\.toml$|Cargo\.lock$' || true)"
+
+  if [[ -z "$STAGED_RUST" ]]; then
+    header "◆ STEP 3: Rust Code Quality Checks"
+    skip "No Rust source files staged — skipping Rust checks."
+  else
+    header "◆ STEP 3: Rust Code Quality & Compilation Verification"
+    info "Staged Rust components detected. Running quality verification..."
+
+    # 3a. Format Check (rustfmt)
+    if cargo fmt --version &>/dev/null; then
+      info "Checking code formatting with 'cargo fmt --check'..."
+      if cargo fmt --check; then
+        success "Rust formatting verified (cargo fmt)."
+      else
+        error "Code formatting issues found! Run 'cargo fmt' to format your code before committing."
+        error "To bypass formatting check temporarily, run: SKIP_RUST_CHECKS=1 git commit"
+        exit 1
+      fi
+    else
+      warn "'cargo-fmt' is not installed. (Tip: run 'rustup component add rustfmt')"
+    fi
+
+    # 3b. Clippy Linter Check (clippy)
+    if cargo clippy --version &>/dev/null; then
+      info "Running linter with 'cargo clippy --workspace --all-targets -- -D warnings'..."
+      if cargo clippy --workspace --all-targets -- -D warnings; then
+        success "Clippy lint check passed (0 warnings)."
+      else
+        error "Clippy detected lint errors/warnings! Please fix them before committing."
+        error "To bypass clippy check temporarily, run: SKIP_RUST_CHECKS=1 git commit"
+        exit 1
+      fi
+    else
+      warn "'cargo-clippy' is not installed. (Tip: run 'rustup component add clippy')"
+    fi
+
+    # 3c. Fast Compilation Check (cargo check)
+    info "Verifying syntax & compilation with 'cargo check --workspace --all-targets'..."
+    if cargo check --workspace --all-targets; then
+      success "Workspace compilation check passed (cargo check)."
+    else
+      error "Cargo compilation failed! Please fix compiler errors before committing."
+      exit 1
+    fi
+
+    # 3d. Optional Security Audit (cargo-audit)
+    if command -v cargo-audit &>/dev/null; then
+      info "Running security audit with 'cargo audit'..."
+      if cargo audit --deny warnings 2>/dev/null; then
+        success "Dependency security audit passed."
+      else
+        warn "Cargo audit reported advisory alerts in dependencies."
+      fi
+    fi
+  fi
+fi
+
+# ─── Summary ──────────────────────────────────────────────────────────────────
 echo ""
-echo -e "${BOLD}  Summary:${RESET}"
-echo -e "  ${GREEN}✔${RESET} ${total} file(s) synced  ${DIM}(web root: ${web_root_synced}, public: ${public_synced}, zed: ${zed_synced})${RESET}"
-(( removed_count > 0 )) && echo -e "  ${YELLOW}⚠${RESET}  ${removed_count} stale file(s) removed from web/ root"
-(( zwc_count > 0 ))    && echo -e "  ${YELLOW}⚠${RESET}  ${zwc_count} .zwc cache file(s) purged"
-$DRY_RUN               && echo -e "  ${YELLOW}⚠${RESET}  Dry-run mode — no actual changes made"
+success "${BOLD}Pre-commit checks complete! Proceeding with commit.${RESET}"
 echo ""
 
-# Disable the rollback trap on clean exit
+# Disable trap on clean exit
 trap - EXIT
+exit 0

@@ -380,7 +380,7 @@ function Install-RustBinary {
     $isArm64 = ($realArch -eq "ARM64")
     $hasAvx2 = Test-Avx2Supported
 
-    $repos = @("rihadjahanopu/fancybash-rs", "rihadjahanopu/fancybash")
+    $repos = @("rihadjahanopu/fancybash", "rihadjahanopu/fancybash")
     $assets = if ($isArm64) {
         @("fancybash-windows-arm64.exe", "fancybash-aarch64-pc-windows-msvc.exe", "fancybash-windows-amd64.exe", "fancybash.exe")
     } elseif (-not $hasAvx2 -or $ForceBaseline) {
@@ -388,7 +388,7 @@ function Install-RustBinary {
     } else {
         @("fancybash-windows-amd64.exe", "fancybash-x86_64-pc-windows-msvc.exe", "fancybash.exe")
     }
-    
+
     $targetExe = Join-Path $binDir "fancybash.exe"
 
     try {
@@ -461,7 +461,7 @@ function Install-RustBinary {
 
     if (Get-Command cargo -ErrorAction SilentlyContinue) {
         Write-Host "  ${YLW}⚡ Installing via cargo from GitHub...${NC}"
-        cargo install --git https://github.com/rihadjahanopu/fancybash-rs --quiet 2>$null
+        cargo install --git https://github.com/rihadjahanopu/fancybash --quiet 2>$null
         if (Get-Command fancybash -ErrorAction SilentlyContinue) {
             Write-Host "  ${GRN}✔ Installed fancybash via cargo install!${NC}"
             return $true

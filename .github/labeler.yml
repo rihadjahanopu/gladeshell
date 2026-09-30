@@ -1,93 +1,49 @@
 # Auto-label rules for fancybash pull requests
 # Docs: https://github.com/actions/labeler
 
-# ── Rust Source ────────────────────────────────────────────────
+# ── Rust Core Engine ───────────────────────────────────────────
 rust:
   - changed-files:
       - any-glob-to-any-file:
-          - "src/**/*.rs"
-          - "Cargo.toml"
-          - "Cargo.lock"
-          - "aliases.toml"
+          - 'src/**/*.rs'
+          - 'benches/**/*.rs'
+          - 'Cargo.toml'
+          - 'Cargo.lock'
+          - 'aliases.toml'
 
-# ── Shell Configs ──────────────────────────────────────────────
-bash:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "config.sh"
-          - "install.sh"
-          - "uninstall.sh"
-          - "u.sh"
-          - "i.sh"
-
-zsh:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "config.zsh"
-          - "install.zsh"
-          - "uninstall.zsh"
-
-fish:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "config.fish"
-          - "install.fish"
-          - "uninstall.fish"
-
-powershell:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "config.ps1"
-          - "install.ps1"
-          - "uninstall.ps1"
-          - "i.ps1"
-
-windows:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "install.bat"
-          - "*.ps1"
-          - "i.ps1"
-
+# ── Shell & PowerShell Installers ─────────────────────────────
 installer:
   - changed-files:
       - any-glob-to-any-file:
-          - "install.*"
-          - "i.sh"
-          - "i.ps1"
-          - "install.bat"
+          - 'install.sh'
+          - 'install.ps1'
 
-uninstaller:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "uninstall.*"
-          - "u.sh"
-
-# ── Website ────────────────────────────────────────────────────
+# ── Website / Documentation Site ──────────────────────────────
 website:
   - changed-files:
       - any-glob-to-any-file:
-          - "web/**"
+          - 'web/**'
 
-# ── Documentation ──────────────────────────────────────────────
+# ── Documentation & Architecture Specs ─────────────────────────
 documentation:
   - changed-files:
       - any-glob-to-any-file:
-          - "*.md"
-          - "*.txt"
-          - "wiki.md"
+          - '*.md'
+          - '*.txt'
+          - 'wiki.md'
+          - 'ARCHITECTURE.txt'
 
-# ── IDE / Editor ───────────────────────────────────────────────
-editor-config:
+# ── Performance Benchmarks ────────────────────────────────────
+benchmarks:
   - changed-files:
       - any-glob-to-any-file:
-          - ".vscode/**"
-          - "zed/**"
-          - ".prettierrc"
-          - ".prettierignore"
+          - 'benches/**'
+          - 'benchmark.md'
 
-# ── CI / Automation ────────────────────────────────────────────
+# ── CI / CD & Git Hooks ────────────────────────────────────────
 ci:
   - changed-files:
       - any-glob-to-any-file:
-          - ".github/**"
+          - '.github/**'
+          - '.githooks/**'
+          - 'Makefile'

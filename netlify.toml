@@ -1,21 +1,32 @@
 [build]
-  command = "mkdir -p dist && cp web/index.html dist/index.html && cp i.sh dist/i.sh && cp i.sh dist/install.sh"
-  publish = "dist"
-
-[[headers]]
-  for = "/i.sh"
-  [headers.values]
-    Content-Type = "text/plain; charset=utf-8"
-    Cache-Control = "no-cache"
+  publish = "web"
 
 [[headers]]
   for = "/install.sh"
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/install.ps1"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[redirects]]
+  from = "/i.sh"
+  to = "/install.sh"
+  status = 301
+  force = true
 
 [[redirects]]
   from = "/install"
-  to = "/i.sh"
+  to = "/install.sh"
   status = 200
+  force = true
+
+[[redirects]]
+  from = "/i.ps1"
+  to = "/install.ps1"
+  status = 301
   force = true

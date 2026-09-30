@@ -1,4 +1,4 @@
-name: Labeler
+name: PR Auto Labeler
 
 on:
   pull_request_target:
@@ -10,6 +10,7 @@ concurrency:
 
 jobs:
   label:
+    name: Apply Labels via Labeler
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -17,7 +18,8 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/labeler@v5
+      - name: Apply labels based on changed files
+        uses: actions/labeler@v5
         continue-on-error: true
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,54 +1,73 @@
 # =============================================================================
-#  fancybash-rs — .gitignore
+#  fancybash — .gitignore
 # =============================================================================
 
-# ── Rust / Cargo ──────────────────────────────────────────────────────────────
+# ── Rust / Cargo Target & Build Output ────────────────────────────────────────
 /target/
-Cargo.lock
+**/*.rs.bk
+*.profraw
+*.profdata
+cargo-timing*.html
 
-# ── Compiled binaries & artifacts ─────────────────────────────────────────────
+# Note: Cargo.lock is intentionally tracked for application binary builds
+# to guarantee 100% reproducible cross-platform releases.
+
+# ── Binary Executables & Release Archives ─────────────────────────────────────
+fancybash-linux-*
+fancybash-darwin-*
+fancybash-windows-*
+fancybash-*.tar.gz
+fancybash-*.zip
+fancybash-*.exe
+fancybash
+fancybash.exe
+SHA256SUMS*.txt
 *.exe
 *.pdb
 *.d
 *.rlib
 *.rmeta
 
-# ── IDE & Editor ──────────────────────────────────────────────────────────────
-
+# ── IDE & Editor Temporary Files ──────────────────────────────────────────────
 .idea/
 *.swp
 *.swo
 *~
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-# ── OS ────────────────────────────────────────────────────────────────────────
+# ── Operating System Junk Files ───────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ── Logs & temp ───────────────────────────────────────────────────────────────
+# ── Logs & Temporary Files ────────────────────────────────────────────────────
 *.log
 *.tmp
 *.bak
 *.orig
-
-# ── Shell build artifacts ─────────────────────────────────────────────────────
+.cache/
+dist/
 *.zwc
 
-# ── Web dist artifacts ────────────────────────────────────────────────────────
-web/public/
-dist/
-.cache/
-
-# ── Environment secrets ───────────────────────────────────────────────────────
+# ── Security & Environment Secrets ────────────────────────────────────────────
 .env
 .env.local
+.env.production
 .env.*
 !.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
 
-# ── Test / coverage ───────────────────────────────────────────────────────────
+# ── Test & Coverage Reports ───────────────────────────────────────────────────
 coverage/
 lcov.info
 
-# ── Vault / encrypted data ────────────────────────────────────────────────────
+# ── Vault & Encrypted Data ────────────────────────────────────────────────────
 *.enc
 *.vault

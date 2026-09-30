@@ -55,7 +55,7 @@ fn make_ctx(
 
 fn bench_render_default(c: &mut Criterion) {
     let ctx = make_ctx(
-        "/home/rihad/Developer/dev/fancybash-rs",
+        "/home/rihad/Developer/dev/fancybash",
         "rihad",
         "arch",
         "main",
@@ -74,7 +74,7 @@ fn bench_render_default(c: &mut Criterion) {
 
 fn bench_render_dirty(c: &mut Criterion) {
     let ctx = make_ctx(
-        "/home/rihad/Developer/dev/fancybash-rs",
+        "/home/rihad/Developer/dev/fancybash",
         "rihad",
         "arch",
         "feat/modular-refactor",

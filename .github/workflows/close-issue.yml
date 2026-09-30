@@ -1,4 +1,4 @@
-name: Close Issue on Slash Command
+name: Auto Close Issue on Slash Command
 
 on:
   issue_comment:
@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   close-issue:
-    name: Close Issue
+    name: Close Issue via Bot Command
     if: |
       !github.event.issue.pull_request &&
       (contains(github.event.comment.body, '/close') || contains(github.event.comment.body, '/resolved')) &&
@@ -26,4 +26,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          gh issue close "$ISSUE_NUMBER" --comment "🔒 Closed automatically by authorized bot command (`/close` / `/resolved`)."
+          gh issue close "$ISSUE_NUMBER" --comment "🔒 Closed automatically by authorized slash command (`/close` / `/resolved`). Thank you for contributing to **fancybash**! ⚡"

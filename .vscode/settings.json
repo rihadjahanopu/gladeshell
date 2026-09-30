@@ -16,42 +16,49 @@
   // Line endings
   "files.eol": "\n",
 
-  // Language-specific overrides
-  "[html]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  // Rust Language Configuration
+  "[rust]": {
+    "editor.tabSize": 4,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true,
+    "editor.wordWrap": "off"
   },
-  "[css]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+
+  // Rust-Analyzer Deep Integration
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.extraArgs": ["--all-targets", "--", "-D", "warnings"],
+  "rust-analyzer.cargo.allTargets": true,
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.imports.granularity.group": "module",
+  "rust-analyzer.inlayHints.parameterHints.enable": true,
+  "rust-analyzer.inlayHints.typeHints.enable": true,
+  "rust-analyzer.inlayHints.chainingHints.enable": true,
+
+  // TOML Configuration (Cargo.toml, aliases.toml)
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.tabSize": 2
   },
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
+
+  // Shell script settings
   "[shellscript]": {
     "editor.defaultFormatter": "foxundermoon.shell-format",
     "editor.formatOnSave": true
   },
-
-  // Shell script settings
   "shellformat.flag": "-i 2 -bn",
 
   // File associations
   "files.associations": {
+    "*.rs": "rust",
+    "Cargo.toml": "toml",
+    "Cargo.lock": "toml",
+    "aliases.toml": "toml",
     "*.sh": "shellscript",
-    "*.zsh": "shellscript",
     "*.ps1": "powershell"
   },
 
-  // Ruler at print width
-  "editor.rulers": [100],
-
-  // Misc
-  "editor.wordWrap": "off",
+  // Ruler & UI
+  "editor.rulers": [100, 120],
   "breadcrumbs.enabled": true,
-  "editor.minimap.enabled": true
+  "editor.minimap.enabled": false
 }

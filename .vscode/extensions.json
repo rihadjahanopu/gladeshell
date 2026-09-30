@@ -1,19 +1,20 @@
 {
   "recommendations": [
-    // Formatting
-    "esbenp.prettier-vscode",
+    // Rust Official Tooling
+    "rust-lang.rust-analyzer",
+    "vadimcn.vscode-lldb",
+    "tamasfe.even-better-toml",
+    "serayuzgur.crates",
 
-    // Shell scripts
+    // Code Formatting & Linters
+    "esbenp.prettier-vscode",
     "foxundermoon.shell-format",
     "timonwong.shellcheck",
 
-    // PowerShell
-    "ms-vscode.powershell",
-
-    // General productivity
+    // General Developer Productivity
     "editorconfig.editorconfig",
-    "streetsidesoftware.code-spell-checker",
     "usernamehw.errorlens",
-    "eamodio.gitlens"
+    "eamodio.gitlens",
+    "streetsidesoftware.code-spell-checker"
   ]
 }

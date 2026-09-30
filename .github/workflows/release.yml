@@ -1,4 +1,4 @@
-name: Release Binaries
+name: Release Cross-Platform Binaries
 
 on:
   push:
@@ -9,28 +9,39 @@ on:
 permissions:
   contents: write
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   build-release:
-    name: Build (${{ matrix.target }})
+    name: Build Release (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            asset_name: fancybash-linux-amd64
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
+            asset_name: fancybash-linux-musl
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
+            asset_name: fancybash-linux-arm64
           - target: x86_64-apple-darwin
             os: macos-latest
+            asset_name: fancybash-darwin-amd64
           - target: aarch64-apple-darwin
             os: macos-latest
+            asset_name: fancybash-darwin-arm64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
+            asset_name: fancybash-windows-amd64.exe
           - target: aarch64-pc-windows-msvc
             os: windows-latest
+            asset_name: fancybash-windows-arm64.exe
 
     steps:
       - name: Checkout repository
@@ -41,20 +52,20 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Rust Cache
+      - name: Swatinem Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
 
-      - name: Install musl tools (Linux musl)
+      - name: Install musl dependencies (Linux MUSL)
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install Cross for Linux AArch64
+      - name: Install Cross tool (Linux AArch64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Build binary (Release)
+      - name: Build release binary
         shell: bash
         run: |
           if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
@@ -63,71 +74,42 @@ jobs:
             cargo build --release --target ${{ matrix.target }}
           fi
 
-      - name: Package release archive & raw binary
+      - name: Package binary & release archive
         shell: bash
         run: |
           STAGE_DIR="fancybash-${{ matrix.target }}"
           mkdir -p "$STAGE_DIR"
-          
+
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             BIN_PATH="target/${{ matrix.target }}/release/fancybash.exe"
             [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/fancybash.exe"
-            cp "$BIN_PATH" "$STAGE_DIR/"
-            cp "$BIN_PATH" "fancybash-${{ matrix.target }}.exe"
-            
-            if [ "${{ matrix.target }}" = "aarch64-pc-windows-msvc" ]; then
-              cp "$BIN_PATH" "fancybash-windows-arm64.exe"
-              sha256sum "fancybash-windows-arm64.exe" > "fancybash-windows-arm64.exe.sha256" 2>/dev/null || true
-            else
-              cp "$BIN_PATH" "fancybash-windows-amd64.exe"
-              cp "$BIN_PATH" "fancybash.exe"
-              sha256sum "fancybash-windows-amd64.exe" > "fancybash-windows-amd64.exe.sha256" 2>/dev/null || true
-            fi
 
+            cp "$BIN_PATH" "$STAGE_DIR/"
+            cp "$BIN_PATH" "${{ matrix.asset_name }}"
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
             7z a "${STAGE_DIR}.zip" "./${STAGE_DIR}/*"
+            sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
           else
             BIN_PATH="target/${{ matrix.target }}/release/fancybash"
             [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/fancybash"
+
             cp "$BIN_PATH" "$STAGE_DIR/"
-            cp "$BIN_PATH" "fancybash-${{ matrix.target }}"
-
-            case "${{ matrix.target }}" in
-              x86_64-unknown-linux-gnu)
-                cp "$BIN_PATH" "fancybash-linux-amd64"
-                cp "$BIN_PATH" "fancybash-linux-amd64-baseline"
-                ;;
-              x86_64-unknown-linux-musl)
-                cp "$BIN_PATH" "fancybash-linux-musl"
-                cp "$BIN_PATH" "fancybash-linux-amd64-musl"
-                ;;
-              aarch64-unknown-linux-gnu)
-                cp "$BIN_PATH" "fancybash-linux-arm64"
-                ;;
-              x86_64-apple-darwin)
-                cp "$BIN_PATH" "fancybash-darwin-amd64"
-                cp "$BIN_PATH" "fancybash-darwin-amd64-baseline"
-                ;;
-              aarch64-apple-darwin)
-                cp "$BIN_PATH" "fancybash-darwin-arm64"
-                ;;
-            esac
-
+            cp "$BIN_PATH" "${{ matrix.asset_name }}"
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
             tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" fancybash README.md LICENSE 2>/dev/null || tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" fancybash
-            sha256sum "fancybash-${{ matrix.target }}" > "fancybash-${{ matrix.target }}.sha256" 2>/dev/null || true
+            sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
           fi
 
       - name: Generate Combined SHA256SUMS Manifest
         shell: bash
         run: |
-          sha256sum fancybash* 2>/dev/null > SHA256SUMS.txt || true
+          sha256sum fancybash-* 2>/dev/null > SHA256SUMS-${{ matrix.target }}.txt || true
 
-      - name: Upload Release Assets
+      - name: Publish Release Artifacts
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           generate_release_notes: true
           files: |
             fancybash-*
-            SHA256SUMS.txt
+            SHA256SUMS-*.txt

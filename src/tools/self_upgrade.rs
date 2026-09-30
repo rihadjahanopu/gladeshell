@@ -17,7 +17,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let is_windows = cfg!(target_os = "windows");
     let script_ext = if is_windows { "install.ps1" } else { "install.sh" };
 
-    let gh_rs_url = format!("https://raw.githubusercontent.com/rihadjahanopu/fancybash-rs/main/{}", script_ext);
+    let gh_rs_url = format!("https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/{}", script_ext);
     let gh_url = format!("https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/{}", script_ext);
     let cdn_url = format!("https://fancybash.netlify.app/{}", script_ext);
 
@@ -96,7 +96,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Process installer lines in Pure Rust to apply configuration updates
     let upgrade_res = apply_pure_rust_upgrade(&script_path);
-    
+
     // Cleanup temporary script file
     let _ = fs::remove_file(&script_path);
 

@@ -2,11 +2,11 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 2.x     | ✅ Active support  |
-| 1.x     | ⚠️ Critical fixes only |
-| < 1.0   | ❌ Not supported   |
+| Version | Supported             | Engine                    |
+| ------- | --------------------- | ------------------------- |
+| 2.x     | ✅ Active support     | Pure Rust Core Engine     |
+| 1.x     | ⚠️ Legacy maintenance | Shell Script Architecture |
+| < 1.0   | ❌ Not supported      | Retired                   |
 
 ---
 
@@ -24,7 +24,7 @@ If you discover a security issue in fancybash, please report it responsibly:
 
 ### Alternative — Direct Email
 
-Send details to: **rihadjahanopu@gmail.com**  
+Send details to: **rihadjahanopu@gmail.com**
 Subject: `[fancybash SECURITY] Brief description`
 
 ---
@@ -36,19 +36,19 @@ Please provide as much of the following as possible:
 - **Description** of the vulnerability
 - **Steps to reproduce** the issue
 - **Potential impact** (what an attacker could do)
-- **Your environment** (OS, shell version, fancybash version)
+- **Your environment** (OS, Rust toolchain version, fancybash version)
 - **Suggested fix** (optional but appreciated)
 
 ---
 
 ## ⏱️ Response Timeline
 
-| Step | Timeline |
-|------|----------|
-| Acknowledgement of report | Within **48 hours** |
-| Initial assessment | Within **5 business days** |
-| Fix development | Depends on severity |
-| Public disclosure | After fix is released |
+| Step                      | Timeline                   |
+| ------------------------- | -------------------------- |
+| Acknowledgement of report | Within **48 hours**        |
+| Initial assessment        | Within **5 business days** |
+| Fix development           | Depends on severity        |
+| Public disclosure         | After fix is released      |
 
 ---
 
@@ -56,37 +56,35 @@ Please provide as much of the following as possible:
 
 ### In Scope
 
-- **Installer scripts** (`install.sh`, `install.zsh`, `install.ps1`) — e.g., unsafe download handling, improper backup logic
-- **config.sh / config.zsh** — e.g., functions that execute unsafe input, command injection risks
-- **Web files** (`web/`) — e.g., XSS in the static site
-- **GitHub Actions workflows** — e.g., supply chain risks, token misuse
+- **Rust Core Engine** (`src/`) — memory safety, bounds checking, input sanitization in TUI modules
+- **Installer & Setup Scripts** (`install.sh`, `install.ps1`) — safe binary downloading, SHA-256 verification
+- **Web files** (`web/`) — static portal security
+- **GitHub Actions & Supply Chain** (`.github/`, dependencies in `Cargo.lock`)
 
 ### Out of Scope
 
-- Vulnerabilities in third-party tools that fancybash calls (e.g., `fzf`, `curl`, `git`)
-- Issues that require physical access to the machine
-- Social engineering attacks
+- Vulnerabilities in external terminal emulators calling fancybash
+- Issues requiring root physical access to the host machine
 - Theoretical vulnerabilities without a practical exploit path
 
 ---
 
-## 🛡️ Security Design Notes
+## 🛡️ Security & Memory Safety Guarantees
 
-fancybash is designed with security in mind:
+fancybash is designed with strict security standards:
 
-- **Installer never blindly executes** — validates the downloaded file is a shell script, not an HTML error page
-- **Always backs up** before modifying `.bashrc` / `.zshrc`
-- **Boundary markers** make it easy to audit exactly what was added
-- **No network calls** from within `config.sh` at shell startup — all aliases are local
-- **No `eval`** on user-supplied strings in any function
-- **`set -euo pipefail`** is used in installer scripts (not config — would break interactive shell)
+- **100% Memory Safe**: Built in safe Rust with `#![deny(unsafe_code)]` constraints across tools.
+- **SHA-256 Checksum Verification**: Installers verify binary checksums before execution.
+- **No Background Network Telemetry**: Zero background telemetry calls during shell startup.
+- **Input Sanitization**: Terminal escapes and shell inputs are sanitized to prevent command injections.
 
 ---
 
 ## 🏆 Recognition
 
 Security researchers who responsibly disclose valid vulnerabilities will be:
-- Credited in the release notes (if they wish)
-- Mentioned in the `CHANGELOG.md` under the fix
+
+- Credited in release notes and `CHANGELOG.md`
+- Added to `AUTHORS.md` contributor list
 
 Thank you for helping keep fancybash safe! 🙏

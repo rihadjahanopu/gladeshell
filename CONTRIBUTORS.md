@@ -1,6 +1,6 @@
 # 🤝 Project Contributors
 
-We extend our sincere gratitude to everyone who has contributed to **fancybash**! Every contribution — whether it's a new feature, bug fix, documentation improvement, typo fix, or issue report — helps make `fancybash` better for software developers worldwide.
+We extend our sincere gratitude to everyone who has contributed to **fancybash**! Every contribution — whether it's a new Rust TUI tool, performance optimization, bug fix, documentation improvement, typo fix, or issue report — helps make `fancybash` better for software developers worldwide.
 
 <div align="center">
 
@@ -24,23 +24,26 @@ You can view the full, dynamic list of code and documentation contributors on Gi
 
 Contributions to `fancybash` fall into several key areas:
 
-### 💻 Code & Shell Scripting
-* Core Bash (`config.sh`), Zsh (`config.zsh`), Fish (`config.fish`), and PowerShell (`config.ps1`) modules.
-* Interactive TUI utilities (`todo`, `notes`, `ffmedia`, `uup`, `dman`).
-* Cross-platform non-destructive installers (`install.sh`, `install.zsh`, `install.fish`, `install.ps1`).
+### 💻 Rust Core Engine & TUI Development
+
+- Pure Rust core engine (`src/`), subcommands, and parallel I/O algorithms.
+- Interactive Ratatui TUI utilities (`compressor`, `extractor`, `todo`, `notes`, `ffmedia`, `vault`, `process_manager`, `system_clean`).
+- Cross-platform non-destructive installers (`install.sh`, `install.ps1`).
 
 ### 📚 Documentation & Technical Manuals
-* Documentation authoring and localization (`README.md`, `wiki.md`, `ARCHITECTURE.txt`, `DSA.md`).
-* Guides for setup, fonts, terminal integrations, and shell configuration.
+
+- Documentation authoring and localization (`README.md`, `wiki.md`, `ARCHITECTURE.txt`, `CONTRIBUTING.md`).
+- Guides for setup, fonts, terminal integrations, and shell configuration.
 
 ### 🎨 Web & Design
-* Static website maintenance (`web/index.html`, `web/style.css`, `web/main.js`).
-* UI/UX enhancements, color palettes, and terminal preview assets.
+
+- Static website portal (`web/index.html`, `web/install.sh`, `web/install.ps1`).
+- UI/UX enhancements, Ratatui theme palettes, and terminal preview assets.
 
 ### 🧪 Testing & Bug Reporting
-* Testing across diverse Linux distributions (Ubuntu, Fedora, Arch, Alpine, Debian).
-* Cross-platform verification (macOS Terminal/iTerm2, Windows WSL2/PowerShell 7).
-* Reporting bugs, edge cases, and shell compatibility issues in GitHub Issues.
+
+- Cross-platform verification (Linux glibc/musl, macOS Intel/M-Series, Windows PowerShell 7).
+- Reporting bugs, memory issues, or panics with `RUST_BACKTRACE=1`.
 
 ---
 
@@ -58,14 +61,6 @@ We welcome contributions from everyone! If you would like to contribute:
 ## 💖 Special Thanks
 
 Special thanks to:
-* **The Open Source Community**: For creating tools like `gum`, `fzf`, `bat`, `glow`, `ffmpeg`, and `shellcheck` that make building interactive terminal engines possible.
-* **All Starters & Forkers**: Everyone who has starred, shared, or recommended `fancybash` to fellow developers.
 
-<br>
-
-<div align="center">
-
-**Want to add your name to the project?**  
-Submit your first Pull Request today! 🚀
-
-</div>
+- **The Rust Open Source Community**: For building crates like `ratatui`, `crossterm`, `rayon`, `zip`, `flate2`, and `gix` that make building hyper-optimized terminal engines possible.
+- **All Starters & Forkers**: Everyone who has starred, shared, or recommended `fancybash` to fellow developers.

@@ -1,45 +1,40 @@
 ---
-name: ✨ Feature Request
-about: Suggest a new alias, function, or improvement
+name: ✨ Feature Request / Tool Suggestion
+about: Suggest a new Rust TUI tool, CLI module, or performance improvement
 title: 'feat: '
 labels: enhancement
 assignees: rihadjahanopu
 ---
 
-## ✨ Feature Description
+## ✨ Feature / Tool Description
 
-<!-- A clear and concise description of what you want to add. -->
+<!-- A clear and concise description of the new Rust CLI tool or TUI module you would like added to fancybash. -->
 
 ## 🎯 Problem It Solves
 
-<!-- What workflow or pain point does this address? -->
-<!-- Example: "I always have to type 'docker compose up -d' which is tedious..." -->
+<!-- What workflow pain point or terminal bottleneck does this address? -->
+<!-- Example: "Current archive compressor doesn't support custom 7z compression levels..." -->
 
-## 💡 Proposed Solution
+## 💡 Proposed Rust Architecture & Solution
 
-<!-- Describe the alias/function/feature you'd like. -->
-<!-- If you have shell code, paste it here: -->
+<!-- Describe the proposed command interface, Ratatui TUI design, or sub-tool flags. -->
 
-```bash
-# Example implementation (optional)
-alias myalias='some long command'
-
-myfunction() {
-  # ...
-}
+```rust
+// Proposed tool structure / command syntax (optional)
+fancybash toolname --flag
 ```
 
-## 🔄 Alternatives Considered
+## ⚡ Performance Expectations
 
-<!-- What other approaches did you think about? -->
+<!-- Expected throughput (MB/s), memory ceiling (<15MB), or execution latency. -->
 
-## 📦 Which shell should this be in?
+## 📋 Target Module
 
-- [ ] Bash (`config.sh`)
-- [ ] Zsh (`config.zsh`)
-- [ ] PowerShell (`config.ps1`)
-- [ ] All of the above
+- [ ] 🛠️ **New Rust Tool** (`src/tools/`)
+- [ ] ⚡ **Core Engine Optimization** (`src/core/`)
+- [ ] 🖥️ **TUI Interface Improvement** (`ratatui` UI layout)
+- [ ] 📦 **Installer / Package Scripts** (`install.sh` / `install.ps1`)
 
-## 📋 Additional Context
+## 💬 Additional Context
 
-<!-- Any other information, links, or references. -->
+<!-- Any other reference links, existing Rust crates, or design ideas. -->

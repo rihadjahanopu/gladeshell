@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "cargo",
+      "command": "build",
+      "problemMatcher": ["$rustc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "label": "cargo build"
+    },
+    {
+      "type": "cargo",
+      "command": "test",
+      "problemMatcher": ["$rustc"],
+      "group": "test",
+      "label": "cargo test"
+    },
+    {
+      "type": "cargo",
+      "command": "clippy",
+      "args": ["--workspace", "--all-targets", "--", "-D", "warnings"],
+      "problemMatcher": ["$rustc"],
+      "label": "cargo clippy"
+    },
+    {
+      "type": "cargo",
+      "command": "fmt",
+      "args": ["--all", "--", "--check"],
+      "problemMatcher": ["$rustc"],
+      "label": "cargo fmt check"
+    }
+  ]
+}

@@ -1,22 +1,16 @@
-name: ShellCheck
+name: ShellCheck Installer Validation
 
 on:
   push:
-    branches: ['**']
+    branches: ['main', 'dev']
     paths:
       - "**.sh"
-      - "**.zsh"
-      - "**.fish"
-      - "**.ps1"
-      - "**.bat"
+      - ".github/workflows/shellcheck.yml"
   pull_request:
-    branches: ['**']
+    branches: ['main']
     paths:
       - "**.sh"
-      - "**.zsh"
-      - "**.fish"
-      - "**.ps1"
-      - "**.bat"
+      - ".github/workflows/shellcheck.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,9 +18,9 @@ concurrency:
 
 jobs:
   shellcheck:
-    name: Lint Shell Scripts
+    name: Lint Installer Shell Scripts
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
       contents: read
 
@@ -34,29 +28,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install ShellCheck
+      - name: Run ShellCheck on Bash installer scripts
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq shellcheck
-
-      - name: Run ShellCheck on Bash scripts
-        run: |
-          echo "🔍 Dynamically discovering and checking Bash scripts..."
+          echo "🔍 Checking install.sh and web/install.sh..."
           mapfile -t BASH_FILES < <(git ls-files '*.sh')
           if [ ${#BASH_FILES[@]} -gt 0 ]; then
             shellcheck --severity=warning "${BASH_FILES[@]}"
-            echo "✅ ${#BASH_FILES[@]} Bash script(s) passed ShellCheck"
+            echo "✅ All ${#BASH_FILES[@]} Bash installer script(s) passed ShellCheck cleanly."
           else
             echo "ℹ️ No .sh files found to check."
-          fi
-
-      - name: Run ShellCheck on Zsh scripts
-        run: |
-          echo "🔍 Dynamically discovering and checking Zsh scripts..."
-          mapfile -t ZSH_FILES < <(git ls-files '*.zsh')
-          if [ ${#ZSH_FILES[@]} -gt 0 ]; then
-            shellcheck --shell=bash --severity=warning "${ZSH_FILES[@]}"
-            echo "✅ ${#ZSH_FILES[@]} Zsh script(s) passed ShellCheck"
-          else
-            echo "ℹ️ No .zsh files found to check."
           fi

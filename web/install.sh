@@ -5,10 +5,10 @@ set -euo pipefail
 # ─── Windows NT Auto-Bridge ─────────────────────
 if [[ "${OS:-}" = "Windows_NT" ]] && [[ "$(uname -s 2>/dev/null)" != MINGW64* ]] && [[ "$(uname -s 2>/dev/null)" != MSYS* ]]; then
     if command -v powershell.exe >/dev/null 2>&1; then
-        powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash-rs/main/install.ps1 | iex"
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/install.ps1 | iex"
         exit $?
     elif command -v powershell >/dev/null 2>&1; then
-        powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash-rs/main/install.ps1 | iex"
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/install.ps1 | iex"
         exit $?
     fi
 fi
@@ -528,7 +528,7 @@ setup_rust_binary() {
         dl_tmp="$(mktemp -d 2>/dev/null || mktemp -d -t 'fancybash')"
         local bin_tmp="$dl_tmp/fancybash"
 
-        local repos=("rihadjahanopu/fancybash-rs" "rihadjahanopu/fancybash")
+        local repos=("rihadjahanopu/fancybash" "rihadjahanopu/fancybash")
         local assets=(
             "fancybash-${os_type}-${arch_type}"
             "fancybash-${arch_type}-${os_type}"
@@ -609,7 +609,7 @@ setup_rust_binary() {
 
     if command -v cargo >/dev/null 2>&1; then
         printf "  ${YELLOW}⚡ Installing via cargo from GitHub...${NC}\n"
-        cargo install --git https://github.com/rihadjahanopu/fancybash-rs --quiet 2>/dev/null || true
+        cargo install --git https://github.com/rihadjahanopu/fancybash --quiet 2>/dev/null || true
         if command -v fancybash >/dev/null 2>&1; then
             printf "  ${GREEN}✔${NC} Installed fancybash via cargo install!\n"
             return 0

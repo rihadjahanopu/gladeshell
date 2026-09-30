@@ -1,7 +1,22 @@
 version: 2
 
 updates:
-  # Keep GitHub Actions up to date
+  # 1. Cargo Rust dependency updates
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+    reviewers:
+      - "rihadjahanopu"
+    open-pull-requests-limit: 10
+
+  # 2. GitHub Actions workflow dependency updates
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

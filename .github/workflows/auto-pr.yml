@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   auto-create-pr:
-    name: Create Pull Request
+    name: Create Automated Pull Request
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -30,7 +30,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Ensure execution is on a valid branch ref
           if [[ "$GITHUB_REF" != refs/heads/* ]]; then
             echo "ℹ️ Ref '$GITHUB_REF' is not a head branch. Skipping."
             exit 0
@@ -42,33 +41,30 @@ jobs:
             exit 0
           fi
 
-          # Verify that main branch exists locally for comparison
           git fetch origin main:main --quiet || true
 
-          # Check if there are any commits on this branch ahead of main
           AHEAD_COUNT=$(git rev-list --count main..HEAD 2>/dev/null || echo "1")
           if [ "$AHEAD_COUNT" -eq 0 ]; then
             echo "ℹ️ Branch '$BRANCH_NAME' has no new commits ahead of 'main'. Skipping PR creation."
             exit 0
           fi
 
-          # Check if an OPEN Pull Request already exists for this branch
           EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --base main --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
           if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
             echo "ℹ️ Open Pull Request #$EXISTING_PR already exists for branch '$BRANCH_NAME'. Skipping."
             exit 0
           fi
 
-          # Get latest commit message subject for PR title
           PR_TITLE=$(git log -1 --pretty=format:"%s" 2>/dev/null || echo "Merge $BRANCH_NAME into main")
           if [ -z "$PR_TITLE" ]; then
             PR_TITLE="Merge $BRANCH_NAME into main"
           fi
 
-          # Determine initial label based on branch prefix
           PREFIX="${BRANCH_NAME%%/*}"
           case "$PREFIX" in
-            dev)      LABEL="enhancement" ;;
+            rust)     LABEL="rust" ;;
+            tool)     LABEL="rust" ;;
+            bench)    LABEL="benchmarks" ;;
             feat)     LABEL="enhancement" ;;
             fix)      LABEL="bug" ;;
             docs)     LABEL="documentation" ;;
@@ -79,14 +75,12 @@ jobs:
             *)        LABEL="" ;;
           esac
 
-          # Prepare body argument using template if available
           if [ -f ".github/PULL_REQUEST_TEMPLATE.md" ]; then
             BODY_ARG=("--body-file" ".github/PULL_REQUEST_TEMPLATE.md")
           else
-            BODY_ARG=("--body" "Automated PR created from $BRANCH_NAME")
+            BODY_ARG=("--body" "Automated PR created from $BRANCH_NAME for **fancybash**.")
           fi
 
-          # Prepare label argument if non-empty
           LABEL_ARG=()
           if [ -n "$LABEL" ]; then
             LABEL_ARG=("--label" "$LABEL")

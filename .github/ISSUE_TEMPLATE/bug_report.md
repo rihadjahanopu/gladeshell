@@ -1,6 +1,6 @@
 ---
 name: 🐛 Bug Report
-about: Something is broken or not working as expected
+about: Report a bug, crash, panic, or unexpected behavior in fancybash
 title: 'fix: '
 labels: bug
 assignees: rihadjahanopu
@@ -8,42 +8,40 @@ assignees: rihadjahanopu
 
 ## 🐛 Describe the Bug
 
-<!-- A clear and concise description of what the bug is. -->
+<!-- A clear description of what failed or panicked in fancybash. -->
 
 ## 📋 Steps to Reproduce
 
 ```bash
-# Paste the exact command(s) that cause the bug
-1.
+# Exact command(s) that trigger the issue:
+1. fancybash <command>
 2.
-3.
 ```
 
 ## ✅ Expected Behavior
 
-<!-- What should happen? -->
+<!-- What should have happened? -->
 
-## ❌ Actual Behavior
+## ❌ Actual Behavior / Panic Stacktrace
 
-<!-- What actually happens? Paste any error messages here. -->
-
-```
-paste error output here
+```text
+<!-- Paste error logs, panic trace (RUST_BACKTRACE=1), or error output here -->
 ```
 
-## 🖥️ Environment
+## 🖥️ System Environment
 
-| Field | Value |
-|-------|-------|
-| OS | e.g. Ubuntu 24.04 |
-| Shell | e.g. Bash 5.2 / Zsh 5.9 |
-| fancybash version | e.g. 2.0.0 |
-| Terminal | e.g. GNOME Terminal, Alacritty |
+| System Field      | Value                                                        |
+| ----------------- | ------------------------------------------------------------ |
+| OS & Version      | e.g. Ubuntu 24.04 LTS / macOS Sequoia / Windows 11           |
+| CPU Architecture  | e.g. x86_64 / aarch64 (ARM64)                                |
+| fancybash Version | Output of `fancybash --version`                              |
+| Rust Toolchain    | Output of `rustc --version`                                  |
+| Terminal Emulator | e.g. Alacritty / WezTerm / iTerm2 / Kitty / Windows Terminal |
 
-## 📸 Screenshots / Recording
+## 📸 Screenshots / Video Recording
 
-<!-- If applicable, add screenshots or a terminal recording. -->
+<!-- If applicable, add screenshots or terminal recordings. -->
 
 ## 💡 Additional Context
 
-<!-- Any other context about the problem. -->
+<!-- Any additional details regarding subshells, file locks, or terminal raw mode state. -->

@@ -1,4 +1,4 @@
-name: Greetings
+name: Contributor Greetings
 
 on:
   issues:
@@ -23,25 +23,24 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-message: |
-            👋 Hey there, thanks for opening your first issue!
+            👋 **Welcome to fancybash!** Thank you for opening your first issue!
 
-            ⚡ **fancybash** is built by developers, for developers — and your feedback matters.
+            ⚡ **fancybash** is a hyper-optimized pure Rust CLI toolkit built for ultra-fast terminal workflows.
 
-            To help us resolve this quickly, please make sure you've included:
-            - Your OS and shell (Bash / Zsh / Fish / PowerShell)
-            - Steps to reproduce the issue
-            - The output of `echo $SHELL` and `bash --version`
-
-            We'll get back to you as soon as possible. In the meantime, check out the [README](../blob/main/README.md) and [wiki](../blob/main/wiki.md) for common solutions.
+            To help us triage and resolve your issue quickly, please ensure you've provided:
+            - **Operating System & Architecture**: (e.g. Ubuntu 24.04 x86_64, macOS M3 arm64, Windows 11)
+            - **Fancybash Version**: Output of `fancybash --version`
+            - **Cargo & Rust Toolchain**: Output of `rustc --version`
+            - **Steps to reproduce & panic backtrace** (if applicable)
 
             Made with ❤️ in Bangladesh 🇧🇩
           pr-message: |
-            🎉 Thanks for your first pull request to **fancybash**!
+            🎉 **Thank you for your first Pull Request to fancybash!**
 
-            Before we review, please make sure:
-            - [ ] Your changes are tested in a clean shell environment
-            - [ ] Shell scripts are lint-clean (`shellcheck your-script.sh`)
-            - [ ] You've followed the style in [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md)
-            - [ ] Commit messages follow the `feat:` / `fix:` / `docs:` convention
+            Before review, please verify:
+            - [ ] `cargo check --workspace --all-targets` compiles without errors
+            - [ ] `cargo clippy --workspace --all-targets -- -D warnings` has 0 warnings
+            - [ ] `cargo test --workspace` passes all unit tests
+            - [ ] You have updated `CHANGELOG.md` under `[Unreleased]` for user-facing changes
 
-            A maintainer will review your PR soon. Thank you for contributing! ⚡
+            A maintainer will review your pull request shortly! ⚡

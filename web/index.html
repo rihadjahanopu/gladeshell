@@ -199,7 +199,9 @@
           <a href="#prompt">Prompt</a>
           <a href="#benchmark" style="color: var(--clr-cyan); font-weight: 700">⚡ Benchmark</a>
           <a href="linux-setup.html">Linux Apps</a>
-          <a href="contribute.html" style="color: var(--clr-purple); font-weight: 700">Contribute 🤝</a>
+          <a href="contribute.html" style="color: var(--clr-purple); font-weight: 700"
+            >Contribute 🤝</a
+          >
           <a
             href="https://github.com/rihadjahanopu/fancybash"
             target="_blank"
@@ -409,41 +411,110 @@
               </div>
             </article>
 
-            <article class="feature-card feature-card--wide" id="feat-vault" style="background: linear-gradient(135deg, rgba(30, 27, 75, 0.65) 0%, rgba(15, 23, 42, 0.85) 100%); border: 1px solid rgba(243, 139, 168, 0.35); box-shadow: 0 8px 32px 0 rgba(243, 139, 168, 0.12); margin-top: 1.5rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
-                <div class="feature-icon" style="margin-bottom: 0;">🔐</div>
-                <span style="background: rgba(243, 139, 168, 0.15); color: #f38ba8; border: 1px solid rgba(243, 139, 168, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+            <article
+              class="feature-card feature-card--wide"
+              id="feat-vault"
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(30, 27, 75, 0.65) 0%,
+                  rgba(15, 23, 42, 0.85) 100%
+                );
+                border: 1px solid rgba(243, 139, 168, 0.35);
+                box-shadow: 0 8px 32px 0 rgba(243, 139, 168, 0.12);
+                margin-top: 1.5rem;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 12px;
+                  margin-bottom: 12px;
+                  flex-wrap: wrap;
+                "
+              >
+                <div class="feature-icon" style="margin-bottom: 0">🔐</div>
+                <span
+                  style="
+                    background: rgba(243, 139, 168, 0.15);
+                    color: #f38ba8;
+                    border: 1px solid rgba(243, 139, 168, 0.4);
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 0.78rem;
+                    font-weight: 700;
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                  "
+                >
                   🛡️ Military-Grade Security Suite
                 </span>
               </div>
-              <h3 style="font-size: 1.35rem; color: #f38ba8;">Hardened Multi-Vault Manager</h3>
-              <p style="color: var(--clr-text-sub); margin-bottom: 16px; font-size: 0.95rem; line-height: 1.6;">
-                <code>vault</code> — Universal AES-256 PBKDF2 directory vault with memory-guarded RAM mounts (<code>/dev/shm</code>), password-protected vault deletion, panic decoy passwords, anti-brute-force delays, Telegram security alerts, and background auto-relock timers. Zero data-loss guarantee.
+              <h3 style="font-size: 1.35rem; color: #f38ba8">Hardened Multi-Vault Manager</h3>
+              <p
+                style="
+                  color: var(--clr-text-sub);
+                  margin-bottom: 16px;
+                  font-size: 0.95rem;
+                  line-height: 1.6;
+                "
+              >
+                <code>vault</code> — Universal AES-256 PBKDF2 directory vault with memory-guarded
+                RAM mounts (<code>/dev/shm</code>), password-protected vault deletion, panic decoy
+                passwords, anti-brute-force delays, Telegram security alerts, and background
+                auto-relock timers. Zero data-loss guarantee.
               </p>
-              <div class="feature-prompt-demo" style="background: rgba(10, 14, 26, 0.95); border: 1px solid rgba(243, 139, 168, 0.25); border-radius: 10px; padding: 14px 18px; font-family: 'JetBrains Mono', monospace; font-size: 0.84rem; line-height: 1.7; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);">
-                <div style="color: #cba6f7; font-weight: 600;">
-                  <span style="color: #f38ba8;">❯</span> vault lock ~/MyConfidentialProject
+              <div
+                class="feature-prompt-demo"
+                style="
+                  background: rgba(10, 14, 26, 0.95);
+                  border: 1px solid rgba(243, 139, 168, 0.25);
+                  border-radius: 10px;
+                  padding: 14px 18px;
+                  font-family: 'JetBrains Mono', monospace;
+                  font-size: 0.84rem;
+                  line-height: 1.7;
+                  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+                "
+              >
+                <div style="color: #cba6f7; font-weight: 600">
+                  <span style="color: #f38ba8">❯</span> vault lock ~/MyConfidentialProject
                 </div>
-                <div style="color: #a6e3a1; margin-left: 12px; font-weight: 500;">
+                <div style="color: #a6e3a1; margin-left: 12px; font-weight: 500">
                   [✓] Archiving &amp; Encrypting AES-256 (500,000 PBKDF2 iterations)...
                 </div>
-                <div style="color: #89b4fa; margin-left: 12px;">
-                  [✓] Original directory securely wiped &amp; encrypted to <span style="color: #f9e2af;">~/.secret_vaults/MyConfidentialProject.enc</span>
+                <div style="color: #89b4fa; margin-left: 12px">
+                  [✓] Original directory securely wiped &amp; encrypted to
+                  <span style="color: #f9e2af">~/.secret_vaults/MyConfidentialProject.enc</span>
                 </div>
-                <div style="color: #cba6f7; font-weight: 600; margin-top: 8px;">
-                  <span style="color: #f38ba8;">❯</span> vault unlock MyConfidentialProject
+                <div style="color: #cba6f7; font-weight: 600; margin-top: 8px">
+                  <span style="color: #f38ba8">❯</span> vault unlock MyConfidentialProject
                 </div>
-                <div style="color: #a6e3a1; margin-left: 12px;">
-                  [✓] Unlocked successfully! Mounted in volatile RAM (<span style="color: #fab387;">/dev/shm</span>)
+                <div style="color: #a6e3a1; margin-left: 12px">
+                  [✓] Unlocked successfully! Mounted in volatile RAM (<span style="color: #fab387"
+                    >/dev/shm</span
+                  >)
                 </div>
-                <div style="color: #cba6f7; font-weight: 600; margin-top: 8px;">
-                  <span style="color: #f38ba8;">❯</span> vault delete MyOldVault
+                <div style="color: #cba6f7; font-weight: 600; margin-top: 8px">
+                  <span style="color: #f38ba8">❯</span> vault delete MyOldVault
                 </div>
-                <div style="color: #f38ba8; margin-left: 12px;">
-                  [🔒] Password verified &bull; Securely shredded &amp; deleted <span style="color: #f9e2af;">~/.secret_vaults/MyOldVault.enc</span>
+                <div style="color: #f38ba8; margin-left: 12px">
+                  [🔒] Password verified &bull; Securely shredded &amp; deleted
+                  <span style="color: #f9e2af">~/.secret_vaults/MyOldVault.enc</span>
                 </div>
-                <div style="color: #94e2d5; margin-left: 12px; font-style: italic; font-size: 0.78rem; margin-top: 4px;">
-                  ⚡ Auto-relock background timer active &bull; Aliases: <code>secvault</code>, <code>fvault</code>, <code>fancy_vault</code>
+                <div
+                  style="
+                    color: #94e2d5;
+                    margin-left: 12px;
+                    font-style: italic;
+                    font-size: 0.78rem;
+                    margin-top: 4px;
+                  "
+                >
+                  ⚡ Auto-relock background timer active &bull; Aliases: <code>secvault</code>,
+                  <code>fvault</code>, <code>fancy_vault</code>
                 </div>
               </div>
             </article>
@@ -543,79 +614,29 @@
             <h2 id="install-heading" class="section-title">
               Quick <span class="gradient-text">Install</span>
             </h2>
-            <p class="section-desc">
-              One command auto-detects your OS and active shell. Requires only <code>curl</code> and
-              <code>bash</code>.
-            </p>
+            <p class="section-desc">Select your OS to view the official installer command.</p>
           </div>
 
-          <div
-            class="code-block featured-install"
-            style="
-              margin-bottom: 1.5rem;
-              border: 1px solid rgba(203, 166, 247, 0.4);
-              border-radius: 12px;
-              overflow: hidden;
-            "
-          >
-            <div class="code-header" style="background: rgba(203, 166, 247, 0.1)">
-              <span class="code-lang" style="color: #cba6f7; font-weight: 600"
-                >⚡ Universal Auto-Detect (Linux &amp; macOS)</span
-              >
-              <button
-                class="copy-btn"
-                aria-label="Copy universal install command"
-                data-copy="curl -fsSL https://fancybash.netlify.app/i.sh | bash"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre><code>curl -fsSL https://fancybash.netlify.app/i.sh | bash</code></pre>
-          </div>
-
-          <div class="install-tabs" role="tablist" aria-label="Shell selection">
+          <div class="install-tabs" role="tablist" aria-label="OS selection">
             <button
               class="tab-btn active"
               role="tab"
               aria-selected="true"
-              aria-controls="tab-bash"
-              id="tab-btn-bash"
-              data-tab="bash"
+              aria-controls="tab-nix"
+              id="tab-btn-nix"
+              data-tab="nix"
             >
-              <span>🐧</span> Bash
+              <span>🐧🍏</span> Linux / macOS
             </button>
             <button
               class="tab-btn"
               role="tab"
               aria-selected="false"
-              aria-controls="tab-zsh"
-              id="tab-btn-zsh"
-              data-tab="zsh"
+              aria-controls="tab-win"
+              id="tab-btn-win"
+              data-tab="win"
             >
-              <span>🦄</span> Zsh
-            </button>
-            <button
-              class="tab-btn"
-              role="tab"
-              aria-selected="false"
-              aria-controls="tab-ps"
-              id="tab-btn-ps"
-              data-tab="ps"
-              data-disabled="true"
-            >
-              <span>🪟</span> PowerShell
+              <span>🪟</span> Windows
             </button>
           </div>
 
@@ -623,16 +644,25 @@
             <div
               class="tab-panel active"
               role="tabpanel"
-              id="tab-bash"
-              aria-labelledby="tab-btn-bash"
+              id="tab-nix"
+              aria-labelledby="tab-btn-nix"
             >
-              <div class="code-block" id="code-bash">
-                <div class="code-header">
-                  <span class="code-lang">bash</span>
+              <div
+                class="code-block featured-install"
+                style="
+                  border: 1px solid rgba(203, 166, 247, 0.4);
+                  border-radius: 12px;
+                  overflow: hidden;
+                "
+              >
+                <div class="code-header" style="background: rgba(203, 166, 247, 0.1)">
+                  <span class="code-lang" style="color: #cba6f7; font-weight: 600"
+                    >⚡ Universal Auto-Detect (Linux &amp; macOS)</span
+                  >
                   <button
                     class="copy-btn"
-                    aria-label="Copy bash install command"
-                    data-copy="bash <(curl -fsSL https://fancybash.netlify.app/public/install.sh)"
+                    aria-label="Copy universal Linux/macOS install command"
+                    data-copy="curl -fsSL https://fancybash.netlify.app/i.sh | bash"
                   >
                     <svg
                       width="16"
@@ -649,65 +679,33 @@
                     Copy
                   </button>
                 </div>
-                <pre><code>bash &lt;(curl -fsSL https://fancybash.netlify.app/public/install.sh)</code></pre>
+                <pre><code>curl -fsSL https://fancybash.netlify.app/i.sh | bash</code></pre>
               </div>
             </div>
+
             <div
               class="tab-panel"
               role="tabpanel"
-              id="tab-zsh"
-              aria-labelledby="tab-btn-zsh"
+              id="tab-win"
+              aria-labelledby="tab-btn-win"
               hidden
             >
-              <div class="code-block" id="code-zsh">
-                <div class="code-header">
-                  <span class="code-lang">zsh</span>
-                  <button
-                    class="copy-btn"
-                    aria-label="Copy zsh install command"
-                    data-copy="zsh <(curl -fsSL https://fancybash.netlify.app/public/install.zsh)"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      aria-hidden="true"
-                    >
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    Copy
-                  </button>
-                </div>
-                <pre><code>zsh &lt;(curl -fsSL https://fancybash.netlify.app/public/install.zsh)</code></pre>
-              </div>
-            </div>
-            <div class="tab-panel" role="tabpanel" id="tab-ps" aria-labelledby="tab-btn-ps" hidden>
-              <!-- Universal smart installer (i.ps1) — featured -->
-              <p
+              <div
+                class="code-block featured-install"
                 style="
-                  margin: 0 0 0.5rem;
-                  padding: 0.55rem 0.9rem;
-                  background: rgba(137, 180, 250, 0.08);
-                  border-left: 3px solid var(--accent, #89b4fa);
-                  border-radius: 6px;
-                  font-size: 0.83rem;
-                  color: var(--text-muted);
+                  border: 1px solid rgba(137, 180, 250, 0.4);
+                  border-radius: 12px;
+                  overflow: hidden;
                 "
               >
-                🤖 <strong>Universal smart installer</strong> — auto-detects whether you're in
-                PowerShell or CMD and handles both correctly.
-              </p>
-              <div class="code-block" id="code-ps">
-                <div class="code-header">
-                  <span class="code-lang">powershell</span>
+                <div class="code-header" style="background: rgba(137, 180, 250, 0.1)">
+                  <span class="code-lang" style="color: #89b4fa; font-weight: 600"
+                    >🪟 Universal Auto-Detect (Windows)</span
+                  >
                   <button
                     class="copy-btn"
-                    aria-label="Copy universal PowerShell install command"
-                    data-copy="irm https://fancybash.netlify.app/public/i.ps1 | iex"
+                    aria-label="Copy universal Windows install command"
+                    data-copy='powershell -c "iwr -useb https://fancybash.netlify.app/i.ps1 | iex"'
                   >
                     <svg
                       width="16"
@@ -724,98 +722,223 @@
                     Copy
                   </button>
                 </div>
-                <pre><code>irm https://fancybash.netlify.app/public/i.ps1 | iex</code></pre>
+                <pre><code>powershell -c &quot;iwr -useb https://fancybash.netlify.app/i.ps1 | iex&quot;</code></pre>
               </div>
-
-              <!-- Context-specific fallback commands -->
-              <details style="margin-top: 0.9rem">
-                <summary
-                  style="
-                    cursor: pointer;
-                    font-size: 0.83rem;
-                    color: var(--text-muted);
-                    user-select: none;
-                  "
-                >
-                  ▸ Or use a context-specific command
-                </summary>
-                <div style="margin-top: 0.75rem">
-                  <p
-                    style="
-                      margin: 0 0 0.35rem;
-                      font-size: 0.79rem;
-                      font-weight: 600;
-                      color: var(--text-muted);
-                    "
-                  >
-                    ⌨️ From <strong>CMD</strong> / <strong>Win+R Run dialog</strong>:
-                  </p>
-                  <div class="code-block" style="margin-bottom: 0.8rem">
-                    <div class="code-header">
-                      <span class="code-lang">cmd</span>
-                      <button
-                        class="copy-btn"
-                        aria-label="Copy PowerShell install command from CMD"
-                        data-copy='powershell -c "irm https://fancybash.netlify.app/public/i.ps1 | iex"'
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    <pre><code>powershell -c &quot;irm https://fancybash.netlify.app/public/i.ps1 | iex&quot;</code></pre>
-                  </div>
-                </div>
-              </details>
-
-              <p style="margin-top: 0.6rem; font-size: 0.82rem; color: var(--text-muted, #888)">
-                💡 No file download needed — paste &amp; run. Works on PS&nbsp;5.1+ and PS&nbsp;7+.
-              </p>
             </div>
-          <!-- Fancy Upgrade / Update Section -->
+          </div>
+          <!-- fancybash upgrade & Uninstall Action Cards Grid -->
           <div
-            class="upgrade-card-block"
-            id="upgrade-section"
+            class="action-cards-grid"
             style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+              gap: 1.5rem;
               margin-top: 2rem;
               margin-bottom: 2rem;
-              padding: 1.5rem;
-              background: rgba(166, 227, 161, 0.04);
-              border: 1px solid rgba(166, 227, 161, 0.3);
-              border-radius: 16px;
-              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-              backdrop-filter: blur(10px);
             "
           >
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
-              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #a6e3a1; display: flex; align-items: center; gap: 0.5rem;">
-                <span>🚀</span> Upgrade / Update FancyBash
-              </h3>
-              <span style="font-size: 0.8rem; background: rgba(166, 227, 161, 0.15); color: #a6e3a1; padding: 0.25rem 0.65rem; border-radius: 20px; font-weight: 600;">
-                Instant Sync
-              </span>
-            </div>
-            <p style="margin: 0 0 1rem; font-size: 0.88rem; color: var(--clr-text-muted, #94a3b8); line-height: 1.5;">
-              Already using fancybash? Run this command directly inside your terminal to upgrade to the latest version:
-            </p>
-
-            <!-- Command: fancy upgrade -->
-            <div class="code-block" style="margin: 0; border: 1px solid rgba(166, 227, 161, 0.3); border-radius: 10px;">
-              <div class="code-header" style="background: rgba(166, 227, 161, 0.08); padding: 0.5rem 0.85rem;">
-                <span class="code-lang" style="color: #a6e3a1; font-weight: 600; font-size: 0.82rem;">
-                  🖥️ Inside Terminal (Upgrade Command)
-                </span>
-                <button
-                  class="copy-btn"
-                  aria-label="Copy fancy upgrade command"
-                  data-copy="fancy upgrade"
+            <!-- fancybash upgrade / Update Card -->
+            <div
+              class="upgrade-card-block"
+              id="upgrade-section"
+              style="
+                padding: 1.5rem;
+                background: rgba(166, 227, 161, 0.04);
+                border: 1px solid rgba(166, 227, 161, 0.3);
+                border-radius: 16px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                backdrop-filter: blur(10px);
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  flex-wrap: wrap;
+                  gap: 0.75rem;
+                  margin-bottom: 1rem;
+                "
+              >
+                <h3
+                  style="
+                    margin: 0;
+                    font-size: 1.15rem;
+                    font-weight: 700;
+                    color: #a6e3a1;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                  "
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                  Copy
-                </button>
+                  <span>🚀</span> Upgrade / Update FancyBash
+                </h3>
+                <span
+                  style="
+                    font-size: 0.8rem;
+                    background: rgba(166, 227, 161, 0.15);
+                    color: #a6e3a1;
+                    padding: 0.25rem 0.65rem;
+                    border-radius: 20px;
+                    font-weight: 600;
+                  "
+                >
+                  Instant Sync
+                </span>
               </div>
-              <pre style="padding: 0.85rem;"><code style="color: #a6e3a1; font-weight: 600; font-size: 1.05rem;">fancy upgrade</code></pre>
+              <p
+                style="
+                  margin: 0 0 1rem;
+                  font-size: 0.88rem;
+                  color: var(--clr-text-muted, #94a3b8);
+                  line-height: 1.5;
+                "
+              >
+                Already using fancybash? Run this command directly inside your terminal to upgrade
+                to the latest version:
+              </p>
+
+              <!-- Command: fancybash upgrade -->
+              <div
+                class="code-block"
+                style="margin: 0; border: 1px solid rgba(166, 227, 161, 0.3); border-radius: 10px"
+              >
+                <div
+                  class="code-header"
+                  style="background: rgba(166, 227, 161, 0.08); padding: 0.5rem 0.85rem"
+                >
+                  <span
+                    class="code-lang"
+                    style="color: #a6e3a1; font-weight: 600; font-size: 0.82rem"
+                  >
+                    🖥️ Inside Terminal (Upgrade Command)
+                  </span>
+                  <button
+                    class="copy-btn"
+                    aria-label="Copy fancybash upgrade command"
+                    data-copy="fancybash upgrade"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy
+                  </button>
+                </div>
+                <pre
+                  style="padding: 0.85rem"
+                ><code style="color: #a6e3a1; font-weight: 600; font-size: 1.05rem;">fancybash upgrade</code></pre>
+              </div>
+            </div>
+
+            <!-- Fancy Uninstall Card -->
+            <div
+              class="uninstall-card-block"
+              id="uninstall-card"
+              style="
+                padding: 1.5rem;
+                background: rgba(243, 139, 168, 0.04);
+                border: 1px solid rgba(243, 139, 168, 0.3);
+                border-radius: 16px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                backdrop-filter: blur(10px);
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  flex-wrap: wrap;
+                  gap: 0.75rem;
+                  margin-bottom: 1rem;
+                "
+              >
+                <h3
+                  style="
+                    margin: 0;
+                    font-size: 1.15rem;
+                    font-weight: 700;
+                    color: #f38ba8;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                  "
+                >
+                  <span>🗑️</span> Uninstall FancyBash
+                </h3>
+                <span
+                  style="
+                    font-size: 0.8rem;
+                    background: rgba(243, 139, 168, 0.15);
+                    color: #f38ba8;
+                    padding: 0.25rem 0.65rem;
+                    border-radius: 20px;
+                    font-weight: 600;
+                  "
+                >
+                  Clean Restore
+                </span>
+              </div>
+              <p
+                style="
+                  margin: 0 0 1rem;
+                  font-size: 0.88rem;
+                  color: var(--clr-text-muted, #94a3b8);
+                  line-height: 1.5;
+                "
+              >
+                Need to remove fancybash? Run this command directly inside your terminal to cleanly
+                restore:
+              </p>
+
+              <!-- Command: fancybash uninstall -->
+              <div
+                class="code-block"
+                style="margin: 0; border: 1px solid rgba(243, 139, 168, 0.3); border-radius: 10px"
+              >
+                <div
+                  class="code-header"
+                  style="background: rgba(243, 139, 168, 0.08); padding: 0.5rem 0.85rem"
+                >
+                  <span
+                    class="code-lang"
+                    style="color: #f38ba8; font-weight: 600; font-size: 0.82rem"
+                  >
+                    🖥️ Inside Terminal (Uninstall Command)
+                  </span>
+                  <button
+                    class="copy-btn"
+                    aria-label="Copy fancybash uninstall command"
+                    data-copy="fancybash uninstall"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy
+                  </button>
+                </div>
+                <pre
+                  style="padding: 0.85rem"
+                ><code style="color: #f38ba8; font-weight: 600; font-size: 1.05rem;">fancybash uninstall</code></pre>
+              </div>
             </div>
           </div>
 
@@ -3347,6 +3470,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                     <td>Run bulk compression/conversion/metadata wiping on a folder</td>
                     <td>Batch automation</td>
                   </tr>
+                </tbody>
               </table>
             </div>
           </div>
@@ -3386,21 +3510,30 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                   <tr>
                     <td><code>vault</code></td>
                     <td>Open interactive GUM / FZF multi-vault security dashboard</td>
-                    <td>Aliases: <code>secvault</code>, <code>fvault</code>, <code>fancy_vault</code></td>
+                    <td>
+                      Aliases: <code>secvault</code>, <code>fvault</code>, <code>fancy_vault</code>
+                    </td>
                   </tr>
                   <tr>
                     <td><code>vault lock [path]</code></td>
-                    <td>Encrypt &amp; lock directory with AES-256 PBKDF2 (500k iter) &amp; secure wipe</td>
+                    <td>
+                      Encrypt &amp; lock directory with AES-256 PBKDF2 (500k iter) &amp; secure wipe
+                    </td>
                     <td>Auto-prompts if path omitted</td>
                   </tr>
                   <tr>
                     <td><code>vault unlock [name]</code></td>
-                    <td>Decrypt &amp; mount secret directory in volatile memory RAM (<code>/dev/shm</code>)</td>
+                    <td>
+                      Decrypt &amp; mount secret directory in volatile memory RAM
+                      (<code>/dev/shm</code>)
+                    </td>
                     <td>Interactive FZF vault picker</td>
                   </tr>
                   <tr>
                     <td><code>vault list</code></td>
-                    <td>List all encrypted vaults stored in <code>~/.secret_vaults/</code> with size</td>
+                    <td>
+                      List all encrypted vaults stored in <code>~/.secret_vaults/</code> with size
+                    </td>
                     <td>Encrypted store inspector</td>
                   </tr>
                   <tr>
@@ -3415,7 +3548,9 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                   </tr>
                   <tr>
                     <td><code>[Panic Password]</code></td>
-                    <td>Enter pre-configured panic password during unlock to instantly wipe data</td>
+                    <td>
+                      Enter pre-configured panic password during unlock to instantly wipe data
+                    </td>
                     <td>Triggers fake notes &amp; alert</td>
                   </tr>
                 </tbody>
@@ -4217,10 +4352,22 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
       </section>
 
       <!-- Contributor Teaser Section -->
-      <section id="contribute" class="section contribute-section" aria-labelledby="contribute-heading">
+      <section
+        id="contribute"
+        class="section contribute-section"
+        aria-labelledby="contribute-heading"
+      >
         <div class="section-inner text-center">
-          <div class="badge badge-purple" style="margin: 0 auto 1rem;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <div class="badge badge-purple" style="margin: 0 auto 1rem">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
               <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -4231,11 +4378,24 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
           <h2 id="contribute-heading" class="section-title">
             Want to <span class="text-gradient">Contribute</span>?
           </h2>
-          <p class="section-subtitle" style="max-width: 640px; margin-bottom: 1rem; ">
-            Set up your local environment in 3 simple steps for Bash, Zsh, Fish, or PowerShell and open your first Pull Request.
+          <p class="section-subtitle" style="max-width: 640px; margin-bottom: 1rem">
+            Set up your local environment in 3 simple steps for Bash, Zsh, Fish, or PowerShell and
+            open your first Pull Request.
           </p>
-          <a href="contribute.html" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <a
+            href="contribute.html"
+            class="btn btn-primary"
+            style="display: inline-flex; align-items: center; gap: 8px"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
               <circle cx="18" cy="18" r="3"></circle>
               <circle cx="6" cy="6" r="3"></circle>
               <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
@@ -4246,7 +4406,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
         </div>
       </section>
 
-            <!-- CTA -->
+      <!-- CTA -->
       <section class="cta-section" aria-labelledby="cta-heading">
         <div class="section-inner">
           <div class="cta-card">

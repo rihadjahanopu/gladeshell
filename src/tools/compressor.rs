@@ -1536,7 +1536,7 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
 
     // 1. Header Banner
     let header_line = Line::from(vec![
-        Span::styled(" 🚀 FANCYBASH PARALLEL COMPRESSOR ", Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD)),
+        Span::styled(" 🚀 GLADESHELL PARALLEL COMPRESSOR ", Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD)),
         Span::raw("  "),
         Span::styled(format!("📂 {}", app.target_path.display()), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
     ]);

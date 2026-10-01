@@ -14,18 +14,18 @@
 
 **Please do NOT open a public GitHub Issue for security vulnerabilities.**
 
-If you discover a security issue in fancybash, please report it responsibly:
+If you discover a security issue in gladeshell, please report it responsibly:
 
 ### Preferred Method — GitHub Private Advisory
 
-1. Go to the [Security tab](https://github.com/rihadjahanopu/fancybash/security/advisories/new)
+1. Go to the [Security tab](https://github.com/rihadjahanopu/gladeshell/security/advisories/new)
 2. Click **"Report a vulnerability"**
 3. Fill in the details
 
 ### Alternative — Direct Email
 
 Send details to: **rihadjahanopu@gmail.com**
-Subject: `[fancybash SECURITY] Brief description`
+Subject: `[gladeshell SECURITY] Brief description`
 
 ---
 
@@ -36,7 +36,7 @@ Please provide as much of the following as possible:
 - **Description** of the vulnerability
 - **Steps to reproduce** the issue
 - **Potential impact** (what an attacker could do)
-- **Your environment** (OS, Rust toolchain version, fancybash version)
+- **Your environment** (OS, Rust toolchain version, gladeshell version)
 - **Suggested fix** (optional but appreciated)
 
 ---
@@ -63,7 +63,7 @@ Please provide as much of the following as possible:
 
 ### Out of Scope
 
-- Vulnerabilities in external terminal emulators calling fancybash
+- Vulnerabilities in external terminal emulators calling gladeshell
 - Issues requiring root physical access to the host machine
 - Theoretical vulnerabilities without a practical exploit path
 
@@ -71,7 +71,7 @@ Please provide as much of the following as possible:
 
 ## 🛡️ Security & Memory Safety Guarantees
 
-fancybash is designed with strict security standards:
+gladeshell is designed with strict security standards:
 
 - **100% Memory Safe**: Built in safe Rust with `#![deny(unsafe_code)]` constraints across tools.
 - **SHA-256 Checksum Verification**: Installers verify binary checksums before execution.
@@ -87,4 +87,4 @@ Security researchers who responsibly disclose valid vulnerabilities will be:
 - Credited in release notes and `CHANGELOG.md`
 - Added to `AUTHORS.md` contributor list
 
-Thank you for helping keep fancybash safe! 🙏
+Thank you for helping keep gladeshell safe! 🙏

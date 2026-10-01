@@ -1,24 +1,24 @@
 [package]
-name = "fancybash"
+name = "gladeshell"
 version = "1.1.0"
 edition = "2021"
 authors = ["Rihad Jahan Opu <rihadjahanopu@example.com>"]
 description = "Ultra-high-performance modular shell environment and prompt kit"
 license = "MIT"
-repository = "https://github.com/rihadjahanopu/fancybash"
+repository = "https://github.com/rihadjahanopu/gladeshell"
 readme = "README.md"
 keywords = ["shell", "prompt", "zsh", "bash", "fish"]
 categories = ["command-line-utilities"]
 
 # ── Crate Targets ────────────────────────────────────────────────────────────
-# 1. Native binary  →  `fancybash` CLI (init, uup, uu, gen, ex, sysmon, ftop, …)
+# 1. Native binary  →  `gladeshell` CLI (init, uup, uu, gen, ex, sysmon, ftop, …)
 [[bin]]
-name = "fancybash"
+name = "gladeshell"
 path = "src/main.rs"
 
 # 3. C-ABI dynamic library  →  loaded in-process by the shell (zero-fork prompt)
 [lib]
-name = "fancybash_core"
+name = "gladeshell_core"
 crate-type = ["cdylib", "rlib"]   # rlib keeps unit-tests functional
 path = "src/lib.rs"
 

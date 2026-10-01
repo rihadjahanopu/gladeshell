@@ -375,8 +375,8 @@ mod tests {
 
     #[test]
     fn test_add_history_entry_live_sync() {
-        add_history_entry("fancybash_test_live_command --sync");
-        let suggestion = suggest("fancybash_test_live_");
-        assert_eq!(suggestion, Some("fancybash_test_live_command --sync".to_string()));
+        add_history_entry("gladeshell_test_live_command --sync");
+        let suggestion = suggest("gladeshell_test_live_");
+        assert_eq!(suggestion, Some("gladeshell_test_live_command --sync".to_string()));
     }
 }

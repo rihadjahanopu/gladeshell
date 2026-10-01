@@ -57,7 +57,7 @@ pub fn get_system_executables() -> &'static HashSet<String> {
     })
 }
 
-/// Dynamically collect all candidate commands from fancybash alias categories and system $PATH
+/// Dynamically collect all candidate commands from gladeshell alias categories and system $PATH
 pub fn get_all_candidates() -> &'static HashSet<String> {
     DYNAMIC_CANDIDATES_CACHE.get_or_init(|| {
         let mut set = HashSet::new();

@@ -23,25 +23,25 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            asset_name: fancybash-linux-amd64
+            asset_name: gladeshell-linux-amd64
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            asset_name: fancybash-linux-musl
+            asset_name: gladeshell-linux-musl
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            asset_name: fancybash-linux-arm64
+            asset_name: gladeshell-linux-arm64
           - target: x86_64-apple-darwin
             os: macos-latest
-            asset_name: fancybash-darwin-amd64
+            asset_name: gladeshell-darwin-amd64
           - target: aarch64-apple-darwin
             os: macos-latest
-            asset_name: fancybash-darwin-arm64
+            asset_name: gladeshell-darwin-arm64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            asset_name: fancybash-windows-amd64.exe
+            asset_name: gladeshell-windows-amd64.exe
           - target: aarch64-pc-windows-msvc
             os: windows-latest
-            asset_name: fancybash-windows-arm64.exe
+            asset_name: gladeshell-windows-arm64.exe
 
     steps:
       - name: Checkout repository
@@ -77,12 +77,12 @@ jobs:
       - name: Package binary & release archive
         shell: bash
         run: |
-          STAGE_DIR="fancybash-${{ matrix.target }}"
+          STAGE_DIR="gladeshell-${{ matrix.target }}"
           mkdir -p "$STAGE_DIR"
 
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            BIN_PATH="target/${{ matrix.target }}/release/fancybash.exe"
-            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/fancybash.exe"
+            BIN_PATH="target/${{ matrix.target }}/release/gladeshell.exe"
+            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/gladeshell.exe"
 
             cp "$BIN_PATH" "$STAGE_DIR/"
             cp "$BIN_PATH" "${{ matrix.asset_name }}"
@@ -90,20 +90,20 @@ jobs:
             7z a "${STAGE_DIR}.zip" "./${STAGE_DIR}/*"
             sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
           else
-            BIN_PATH="target/${{ matrix.target }}/release/fancybash"
-            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/fancybash"
+            BIN_PATH="target/${{ matrix.target }}/release/gladeshell"
+            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/gladeshell"
 
             cp "$BIN_PATH" "$STAGE_DIR/"
             cp "$BIN_PATH" "${{ matrix.asset_name }}"
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
-            tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" fancybash README.md LICENSE 2>/dev/null || tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" fancybash
+            tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" gladeshell README.md LICENSE 2>/dev/null || tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" gladeshell
             sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
           fi
 
       - name: Generate Combined SHA256SUMS Manifest
         shell: bash
         run: |
-          sha256sum fancybash-* 2>/dev/null > SHA256SUMS-${{ matrix.target }}.txt || true
+          sha256sum gladeshell-* 2>/dev/null > SHA256SUMS-${{ matrix.target }}.txt || true
 
       - name: Publish Release Artifacts
         uses: softprops/action-gh-release@v2
@@ -111,5 +111,5 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            fancybash-*
+            gladeshell-*
             SHA256SUMS-*.txt

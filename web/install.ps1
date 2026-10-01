@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # ==============================================================================
-#   F A N C Y B A S H  •  Smart Production Windows Engine Installer (install.ps1)
+#   G L A D E S H E L L  •  Smart Production Windows Engine Installer (install.ps1)
 #   Author: Rihad Jahan Opu
 #   Supports: Windows PowerShell 5.1+, PowerShell Core 7+, Git Bash
 # ==============================================================================
@@ -31,7 +31,7 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 $MinBuild = 17763
 $WinVer = [System.Environment]::OSVersion.Version
 if ($WinVer.Major -ge 10 -and $WinVer.Build -lt $MinBuild) {
-    Write-Warning "Fancybash recommends Windows 10 Build 17763 (1809) or newer.`nInstallation will continue."
+    Write-Warning "Gladeshell recommends Windows 10 Build 17763 (1809) or newer.`nInstallation will continue."
 }
 
 # --- GUARD 3: TLS 1.2 Force for GitHub Downloads -----------------------------
@@ -59,7 +59,7 @@ if ($_scriptPath -and ($currentPolicy -eq 'Restricted' -or $currentPolicy -eq 'A
 $ErrorActionPreference = "Continue"
 
 # --- Argument Normalization ---------------------------------------------------
-$AUTO_YES = $Yes.IsPresent -or $Unattended.IsPresent -or ($env:FANCYBASH_AUTO_YES -eq "1") -or ($env:NONINTERACTIVE -eq "1") -or ($env:CI -eq "true")
+$AUTO_YES = $Yes.IsPresent -or $Unattended.IsPresent -or ($env:GLADESHELL_AUTO_YES -eq "1") -or ($env:NONINTERACTIVE -eq "1") -or ($env:CI -eq "true")
 $MODE = "install"
 if ($Doctor.IsPresent -or $Check.IsPresent) { $MODE = "doctor" }
 if ($Rollback.IsPresent -or $Undo.IsPresent) { $MODE = "rollback" }
@@ -74,8 +74,8 @@ foreach ($arg in $args) {
     }
 }
 
-$START = "# >>> fancy-powershell >>>"
-$END   = "# <<< fancy-powershell <<<"
+$START = "# >>> glade-powershell >>>"
+$END   = "# <<< glade-powershell <<<"
 
 # --- Colors & Formatting ------------------------------------------------------
 $ESC  = [char]27
@@ -139,9 +139,9 @@ function Register-WindowsInstallation {
     param([string]$InstallDir, [string]$ExePath)
     if ($NoRegisterInstallation) { return }
     try {
-        $RegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Fancybash"
+        $RegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Gladeshell"
         $null = New-Item -Path $RegistryKey -Force
-        New-ItemProperty -Path $RegistryKey -Name "DisplayName" -Value "Fancybash Rust Engine" -PropertyType String -Force | Out-Null
+        New-ItemProperty -Path $RegistryKey -Name "DisplayName" -Value "Gladeshell Rust Engine" -PropertyType String -Force | Out-Null
         New-ItemProperty -Path $RegistryKey -Name "InstallLocation" -Value $InstallDir -PropertyType String -Force | Out-Null
         New-ItemProperty -Path $RegistryKey -Name "DisplayIcon" -Value $ExePath -PropertyType String -Force | Out-Null
         New-ItemProperty -Path $RegistryKey -Name "Publisher" -Value "Rihad Jahan Opu" -PropertyType String -Force | Out-Null
@@ -160,7 +160,7 @@ function Show-Header {
     Write-Host "${BLU}          ██║     ██║  ██║██║ ╚████║╚██████╗   ██║   ██████=╝██║  ██║███████║██║  ██║${NC}"
     Write-Host "${BLU}          ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝${NC}"
     Write-Host ""
-    Write-Host "   ✨ ${BOLD}${CYN}F A N C Y B A S H${NC}  •  ${BOLD}Smart Production Windows & PowerShell Cross-Engine${NC}"
+    Write-Host "   ✨ ${BOLD}${CYN}G L A D E S H E L L${NC}  •  ${BOLD}Smart Production Windows & PowerShell Cross-Engine${NC}"
     Write-Host ""
 }
 
@@ -199,7 +199,7 @@ function Write-AtomicFile {
     param([string]$Path, [string]$Content)
     $dir = Split-Path $Path -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    $tempFile = Join-Path $dir (".fancybash_tmp_" + [System.IO.Path]::GetRandomFileName())
+    $tempFile = Join-Path $dir (".gladeshell_tmp_" + [System.IO.Path]::GetRandomFileName())
     if (Test-Path $Path) {
         Copy-Item $Path $tempFile -Force
     } else {
@@ -214,7 +214,7 @@ function Write-AtomicFile {
 # ══════════════════════════════════════════════════════════════════════════════
 function Invoke-Doctor {
     Show-Header
-    Write-Host "  🩺 ${BOLD}${CYN}FANCYBASH SYSTEM DOCTOR (WINDOWS)${NC}"
+    Write-Host "  🩺 ${BOLD}${CYN}GLADESHELL SYSTEM DOCTOR (WINDOWS)${NC}"
     Write-Host "  --------------------------------------------------`n"
 
     Write-Host "  🐚 PowerShell Version: ${CYN}v$($PSVersionTable.PSVersion)${NC}"
@@ -223,20 +223,20 @@ function Invoke-Doctor {
 
     $binDir = Join-Path $HOME ".local\bin"
     $env:PATH = "$binDir;$env:PATH"
-    if (Get-Command fancybash -ErrorAction SilentlyContinue) {
-        $cmd = Get-Command fancybash
-        $ver = try { & fancybash --version } catch { "unknown" }
+    if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
+        $cmd = Get-Command gladeshell
+        $ver = try { & gladeshell --version } catch { "unknown" }
         Write-Host "  ⚡ Binary:            ${GRN}[OK]${NC} $($cmd.Source) (${CYN}$ver${NC})"
     } else {
-        Write-Host "  ⚡ Binary:            ${RED}[MISSING]${NC} fancybash binary not found in PATH"
+        Write-Host "  ⚡ Binary:            ${RED}[MISSING]${NC} gladeshell binary not found in PATH"
     }
 
     if (Test-Path $PROFILE) {
         $content = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
-        if ($content -and $content.Contains("fancybash init")) {
+        if ($content -and $content.Contains("gladeshell init")) {
             Write-Host "  📄 Profile Hook:       ${GRN}[OK]${NC} $PROFILE"
         } else {
-            Write-Host "  📄 Profile Hook:       ${YLW}[MISSING]${NC} No fancybash hook in $PROFILE"
+            Write-Host "  📄 Profile Hook:       ${YLW}[MISSING]${NC} No gladeshell hook in $PROFILE"
         }
     } else {
         Write-Host "  📄 Profile Hook:       ${YLW}[MISSING]${NC} Profile file does not exist ($PROFILE)"
@@ -252,7 +252,7 @@ function Invoke-Doctor {
 # ══════════════════════════════════════════════════════════════════════════════
 function Invoke-Rollback {
     Show-Header
-    Write-Host "  🔄 ${BOLD}${YLW}FANCYBASH ROLLBACK & RESTORE${NC}"
+    Write-Host "  🔄 ${BOLD}${YLW}GLADESHELL ROLLBACK & RESTORE${NC}"
     Write-Host "  --------------------------------------------------`n"
 
     if (Test-Path $PROFILE) {
@@ -261,7 +261,7 @@ function Invoke-Rollback {
             $regex = "(?s)\r?\n?" + [regex]::Escape($START) + ".*?" + [regex]::Escape($END)
             $profileContent = [regex]::Replace($profileContent, $regex, "")
             $profileContent | Out-File $PROFILE -Encoding utf8 -Force
-            Write-Host "  ${GRN}✔ Removed fancybash configuration block from $PROFILE${NC}"
+            Write-Host "  ${GRN}✔ Removed gladeshell configuration block from $PROFILE${NC}"
         fi
     }
 
@@ -348,7 +348,7 @@ if (Test-Path $PROFILE) {
 try {
     $profileContent = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
     if ($profileContent -and $profileContent.Contains($START)) {
-        Write-Host "  ${YLW}⚠️  Cleaning existing fancybash block...${NC}"
+        Write-Host "  ${YLW}⚠️  Cleaning existing gladeshell block...${NC}"
         $regex = "(?s)\r?\n?" + [regex]::Escape($START) + ".*?" + [regex]::Escape($END)
         while ($profileContent -and $profileContent.Contains($START)) {
             $profileContent = [regex]::Replace($profileContent, $regex, "")
@@ -362,16 +362,16 @@ try {
 Show-ProgressBar -Current 4 -Total 5 -StepName "Installing Rust Engine Binary"
 
 function Install-RustBinary {
-    Write-Host "  ${CYAN}➜${NC} Installing fancybash Rust engine binary..."
+    Write-Host "  ${CYAN}➜${NC} Installing gladeshell Rust engine binary..."
     $binDir = Join-Path $HOME ".local\bin"
     if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir -Force | Out-Null }
     $env:PATH = "$binDir;$env:PATH"
 
     $scriptDir = $PSScriptRoot
-    if ($scriptDir -and (Test-Path (Join-Path $scriptDir "target\release\fancybash.exe"))) {
-        Copy-Item (Join-Path $scriptDir "target\release\fancybash.exe") (Join-Path $binDir "fancybash.exe") -Force
-        Write-Host "  ${GRN}✔ Installed local release binary to $binDir\fancybash.exe${NC}"
-        Register-WindowsInstallation -InstallDir $binDir -ExePath (Join-Path $binDir "fancybash.exe")
+    if ($scriptDir -and (Test-Path (Join-Path $scriptDir "target\release\gladeshell.exe"))) {
+        Copy-Item (Join-Path $scriptDir "target\release\gladeshell.exe") (Join-Path $binDir "gladeshell.exe") -Force
+        Write-Host "  ${GRN}✔ Installed local release binary to $binDir\gladeshell.exe${NC}"
+        Register-WindowsInstallation -InstallDir $binDir -ExePath (Join-Path $binDir "gladeshell.exe")
         if (-not $NoPathUpdate) { Write-UserEnvPath -BinPath $binDir }
         return $true
     }
@@ -380,19 +380,19 @@ function Install-RustBinary {
     $isArm64 = ($realArch -eq "ARM64")
     $hasAvx2 = Test-Avx2Supported
 
-    $repos = @("rihadjahanopu/fancybash", "rihadjahanopu/fancybash")
+    $repos = @("rihadjahanopu/gladeshell", "rihadjahanopu/gladeshell")
     $assets = if ($isArm64) {
-        @("fancybash-windows-arm64.exe", "fancybash-aarch64-pc-windows-msvc.exe", "fancybash-windows-amd64.exe", "fancybash.exe")
+        @("gladeshell-windows-arm64.exe", "gladeshell-aarch64-pc-windows-msvc.exe", "gladeshell-windows-amd64.exe", "gladeshell.exe")
     } elseif (-not $hasAvx2 -or $ForceBaseline) {
-        @("fancybash-windows-amd64-baseline.exe", "fancybash-x86_64-pc-windows-msvc-baseline.exe", "fancybash-windows-amd64.exe", "fancybash.exe")
+        @("gladeshell-windows-amd64-baseline.exe", "gladeshell-x86_64-pc-windows-msvc-baseline.exe", "gladeshell-windows-amd64.exe", "gladeshell.exe")
     } else {
-        @("fancybash-windows-amd64.exe", "fancybash-x86_64-pc-windows-msvc.exe", "fancybash.exe")
+        @("gladeshell-windows-amd64.exe", "gladeshell-x86_64-pc-windows-msvc.exe", "gladeshell.exe")
     }
 
-    $targetExe = Join-Path $binDir "fancybash.exe"
+    $targetExe = Join-Path $binDir "gladeshell.exe"
 
     try {
-        $openProc = Get-Process -Name fancybash -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $targetExe }
+        $openProc = Get-Process -Name gladeshell -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $targetExe }
         if ($openProc) {
             Stop-Process -InputObject $openProc -Force -ErrorAction SilentlyContinue
         }
@@ -441,29 +441,29 @@ function Install-RustBinary {
     }
 
     if ($scriptDir -and (Test-Path (Join-Path $scriptDir "Cargo.toml")) -and (Get-Command cargo -ErrorAction SilentlyContinue)) {
-        Write-Host "  ${YLW}⚡ Building fancybash Rust engine (release mode)...${NC}"
+        Write-Host "  ${YLW}⚡ Building gladeshell Rust engine (release mode)...${NC}"
         Push-Location $scriptDir
         cargo build --release
         Pop-Location
-        if (Test-Path (Join-Path $scriptDir "target\release\fancybash.exe")) {
-            Copy-Item (Join-Path $scriptDir "target\release\fancybash.exe") (Join-Path $binDir "fancybash.exe") -Force
-            Write-Host "  ${GRN}✔ Built & installed binary to $binDir\fancybash.exe${NC}"
+        if (Test-Path (Join-Path $scriptDir "target\release\gladeshell.exe")) {
+            Copy-Item (Join-Path $scriptDir "target\release\gladeshell.exe") (Join-Path $binDir "gladeshell.exe") -Force
+            Write-Host "  ${GRN}✔ Built & installed binary to $binDir\gladeshell.exe${NC}"
             Register-WindowsInstallation -InstallDir $binDir -ExePath $targetExe
             if (-not $NoPathUpdate) { Write-UserEnvPath -BinPath $binDir }
             return $true
         }
     }
 
-    if (Get-Command fancybash -ErrorAction SilentlyContinue) {
-        Write-Host "  ${GRN}✔ fancybash binary active: $((Get-Command fancybash).Source)${NC}"
+    if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
+        Write-Host "  ${GRN}✔ gladeshell binary active: $((Get-Command gladeshell).Source)${NC}"
         return $true
     }
 
     if (Get-Command cargo -ErrorAction SilentlyContinue) {
         Write-Host "  ${YLW}⚡ Installing via cargo from GitHub...${NC}"
-        cargo install --git https://github.com/rihadjahanopu/fancybash --quiet 2>$null
-        if (Get-Command fancybash -ErrorAction SilentlyContinue) {
-            Write-Host "  ${GRN}✔ Installed fancybash via cargo install!${NC}"
+        cargo install --git https://github.com/rihadjahanopu/gladeshell --quiet 2>$null
+        if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
+            Write-Host "  ${GRN}✔ Installed gladeshell via cargo install!${NC}"
             return $true
         }
     }
@@ -477,17 +477,17 @@ Install-RustBinary | Out-Null
 # --- STEP 5: Atomic Write & Auto-Reload ---------------------------------------
 Show-ProgressBar -Current 5 -Total 5 -StepName "Writing Profile & Auto-Reload"
 
-$initScript = if (Get-Command fancybash -ErrorAction SilentlyContinue) {
-    & fancybash init pwsh 2>$null
+$initScript = if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
+    & gladeshell init pwsh 2>$null
 } else {
-    "if (Get-Command fancybash -ErrorAction SilentlyContinue) { Invoke-Expression (& fancybash init pwsh) }"
+    "if (Get-Command gladeshell -ErrorAction SilentlyContinue) { Invoke-Expression (& gladeshell init pwsh) }"
 }
 
 $newBlock = @"
 
 $START
-# Installed by FancyBash: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-# fancybash Rust Native Engine Initialization
+# Installed by GladeShell: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+# gladeshell Rust Native Engine Initialization
 if (-not (`$env:PATH -split ';' -contains '$HOME\.local\bin')) {
     `$env:PATH = "$HOME\.local\bin;`$env:PATH"
 }

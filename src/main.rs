@@ -5,32 +5,32 @@
 // ============================================================================
 
 // =============================================================================
-//  fancybash — Native CLI Binary (`fancybash`)
+//  gladeshell — Native CLI Binary (`gladeshell`)
 //
 //  Sub-commands (Phase 1 skeleton; Phase 4 expands each):
-//    fancybash ut                  → interactive PC arsenal tool installer
-//    fancybash upgrade             → self-upgrade fancybash to latest version
-//    fancybash init <shell>        → emit shell-specific bootstrap code
-//    fancybash version             → print version
-//    fancybash theme [list|<name>] → (stub) theme switcher
-//    fancybash gen [length]        → cryptographically-secure secret generator
-//    fancybash ex <archive>        → universal archive extractor
-//    fancybash uup                 → mega system updater
-//    fancybash uu                  → interactive app uninstaller
-//    fancybash makecpp <name>      → C++ project boilerplate generator
+//    gladeshell ut                  → interactive PC arsenal tool installer
+//    gladeshell upgrade             → self-upgrade gladeshell to latest version
+//    gladeshell init <shell>        → emit shell-specific bootstrap code
+//    gladeshell version             → print version
+//    gladeshell theme [list|<name>] → (stub) theme switcher
+//    gladeshell gen [length]        → cryptographically-secure secret generator
+//    gladeshell ex <archive>        → universal archive extractor
+//    gladeshell uup                 → mega system updater
+//    gladeshell uu                  → interactive app uninstaller
+//    gladeshell makecpp <name>      → C++ project boilerplate generator
 // =============================================================================
 
 use clap::{Parser, Subcommand};
 
 // Re-use lib logic from the same crate (rlib target)
-use fancybash_core::init;
+use gladeshell_core::init;
 
 // ── Top-level CLI parser ─────────────────────────────────────────────────────
 
-/// ⚡ fancybash — ultra-high-performance modular shell environment
+/// ⚡ gladeshell — ultra-high-performance modular shell environment
 #[derive(Parser, Debug)]
 #[command(
-    name = "fancybash",
+    name = "gladeshell",
     version,
     author,
     about = "Zero-fork prompt engine & cross-shell dev environment kit",
@@ -47,17 +47,17 @@ enum Commands {
     /// Emit shell-specific bootstrap code to stdout
     ///
     /// Usage (add to shell rc file):
-    ///   eval "$(fancybash init zsh)"
-    ///   eval "$(fancybash init bash)"
-    ///   fancybash init fish | source
-    ///   fancybash init pwsh | Invoke-Expression
+    ///   eval "$(gladeshell init zsh)"
+    ///   eval "$(gladeshell init bash)"
+    ///   gladeshell init fish | source
+    ///   gladeshell init pwsh | Invoke-Expression
     Init(InitArgs),
 
-    /// Print the fancybash version
+    /// Print the gladeshell version
     Version,
 
     /// Theme management (list available themes or set active theme)
-    #[command(alias = "fancy", alias = "fancy_theme")]
+    #[command(alias = "glade", alias = "glade_theme")]
     Theme(ThemeArgs),
 
     /// Generate a cryptographically-secure secret key
@@ -91,18 +91,18 @@ enum Commands {
     /// Non-interactive system package & maintenance updater (APT, Pacman, DNF, Brew, Flatpak, Snap)
     Update,
 
-    /// Self-upgrade fancybash to the latest version (curl install script)
+    /// Self-upgrade gladeshell to the latest version (curl install script)
     #[command(alias = "self-upgrade", alias = "self-update")]
     Upgrade,
 
-    /// Self-uninstall fancybash and restore original shell configuration
+    /// Self-uninstall gladeshell and restore original shell configuration
     Uninstall,
 
     /// Generate a C++ project boilerplate
     Makecpp(MakecppArgs),
 
     /// Interactive 24-in-1 FFmpeg multimedia suite (compress, trim, concat, convert, ...)
-    #[command(alias = "ffstudio", alias = "fftool", alias = "fancy_ffmpeg")]
+    #[command(alias = "ffstudio", alias = "fftool", alias = "glade_ffmpeg")]
     Ffmedia(FfmediaArgs),
 
     /// Interactive 3-tier task manager (todo add, todo done, todo list, todo clear)
@@ -130,11 +130,11 @@ enum Commands {
 
     /// High-performance native ripgrep search engine (grep / rg)
     #[command(alias = "rg")]
-    Grep(fancybash_core::tools::fast_grep::GrepArgs),
+    Grep(gladeshell_core::tools::fast_grep::GrepArgs),
 
     /// High-performance native fast file finder (ff / file-find)
     #[command(alias = "file-find", alias = "find-file")]
-    Ff(fancybash_core::tools::file_find::FfArgs),
+    Ff(gladeshell_core::tools::file_find::FfArgs),
 
     /// Kill process running on a specific port (kp <port>)
     Kp(KpArgs),
@@ -179,7 +179,7 @@ enum Commands {
     /// Non-interactive System Maintenance Cache Cleaner (clean)
     Clean,
 
-    /// FANCYBASH TUI System & Process Monitor (ftop / sysmon / monitor)
+    /// GLADESHELL TUI System & Process Monitor (ftop / sysmon / monitor)
     #[command(alias = "ftop", alias = "monitor")]
     Sysmon,
 
@@ -253,11 +253,11 @@ enum Commands {
         name: String,
     },
 
-    /// Bulletproof Zed IDE settings installer (fancybash edition)
+    /// Bulletproof Zed IDE settings installer (gladeshell edition)
     #[command(name = "zed-setup", alias = "zed", alias = "zed_setup")]
     Zed,
 
-    /// Bulletproof VS Code settings + extensions installer (fancybash edition)
+    /// Bulletproof VS Code settings + extensions installer (gladeshell edition)
     #[command(name = "code-setup", alias = "vscode", alias = "code_setup")]
     Code,
 
@@ -273,7 +273,7 @@ enum Commands {
 
     /// Hidden command: Ensure a system dependency is installed (used from shell init)
     #[command(name = "ensure-dep", hide = true)]
-    EnsureDep(fancybash_core::tools::dep_installer::DepArgs),
+    EnsureDep(gladeshell_core::tools::dep_installer::DepArgs),
 
     /// Native Rust Auto-LS directory change summary
     #[command(name = "auto-ls")]
@@ -290,7 +290,7 @@ enum Commands {
         command: String,
     },
 
-    /// Auto-inject `eval "$(fancybash init <shell>)"` into your shell RC file
+    /// Auto-inject `eval "$(gladeshell init <shell>)"` into your shell RC file
     ///
     /// Detects your current shell and writes the eval line into ~/.zshrc,
     /// ~/.bashrc, or ~/.config/fish/config.fish automatically.
@@ -591,25 +591,25 @@ fn main() {
                 }
                 return;
             } else if subcmd == "version" || subcmd == "-V" || subcmd == "--version" {
-                println!("fancybash {}", env!("CARGO_PKG_VERSION"));
+                println!("gladeshell {}", env!("CARGO_PKG_VERSION"));
                 return;
             } else if subcmd == "suggest" {
                 let buffer = raw_args.get(2).map(|s| s.as_str()).unwrap_or("");
-                if let Some(suggestion) = fancybash_core::plugins::autosuggest::suggest(buffer) {
+                if let Some(suggestion) = gladeshell_core::plugins::autosuggest::suggest(buffer) {
                     print!("{}", suggestion);
                 }
                 return;
             } else if subcmd == "highlight" {
                 let buffer = raw_args.get(2).map(|s| s.as_str()).unwrap_or("");
-                println!("{}", fancybash_core::plugins::highlight::highlight(buffer));
+                println!("{}", gladeshell_core::plugins::highlight::highlight(buffer));
                 return;
             } else if subcmd == "complete" {
                 let buffer = raw_args.get(2).map(|s| s.as_str()).unwrap_or("");
-                println!("{}", fancybash_core::plugins::autocomplete::complete(buffer));
+                println!("{}", gladeshell_core::plugins::autocomplete::complete(buffer));
                 return;
             } else if subcmd == "auto-ls" {
                 let path = raw_args.get(2).map(|s| s.as_str());
-                fancybash_core::tools::auto_ls::run_path(path);
+                gladeshell_core::tools::auto_ls::run_path(path);
                 return;
             }
         }
@@ -626,10 +626,10 @@ fn main() {
             if err.kind() == clap::error::ErrorKind::DisplayHelp || err.kind() == clap::error::ErrorKind::DisplayVersion {
                 err.exit();
             }
-            // Check if user ran `fancybash <unknown_cmd>`
+            // Check if user ran `gladeshell <unknown_cmd>`
             if raw_args.len() > 1 && !raw_args[1].starts_with('-') {
                 let unknown_subcmd = &raw_args[1];
-                let pretty_msg = fancybash_core::core::typo_engine::render_pretty_suggestion(unknown_subcmd);
+                let pretty_msg = gladeshell_core::core::typo_engine::render_pretty_suggestion(unknown_subcmd);
                 eprint!("{}", pretty_msg);
                 std::process::exit(1);
             } else {
@@ -642,7 +642,7 @@ fn main() {
         Some(cmd) => match cmd {
             Commands::Init(args) => cmd_init(args),
             Commands::Version => {
-                println!("fancybash {}", env!("CARGO_PKG_VERSION"));
+                println!("gladeshell {}", env!("CARGO_PKG_VERSION"));
                 Ok(())
             }
             Commands::Theme(args) => cmd_theme(args),
@@ -653,57 +653,57 @@ fn main() {
             Commands::Uup => cmd_uup(),
             Commands::Uu  => cmd_uu(),
             Commands::Ut  => cmd_ut(),
-            Commands::Update => fancybash_core::tools::system_update::run(),
-            Commands::Upgrade => fancybash_core::tools::self_upgrade::run(),
-            Commands::Uninstall => fancybash_core::tools::self_uninstall::run(),
+            Commands::Update => gladeshell_core::tools::system_update::run(),
+            Commands::Upgrade => gladeshell_core::tools::self_upgrade::run(),
+            Commands::Uninstall => gladeshell_core::tools::self_uninstall::run(),
             Commands::Makecpp(args) => cmd_makecpp(args),
             Commands::Ffmedia(args) => cmd_ffmedia(args),
             Commands::Todo(args) => cmd_todo(args),
             Commands::Notes(args) => cmd_notes(args),
             Commands::Vault(args) => cmd_vault(args),
-            Commands::Dman => fancybash_core::tools::dman::run(None),
-            Commands::Gbranch => fancybash_core::tools::gbranch::run(),
-            Commands::Fkill => fancybash_core::tools::fkill::run_fkill(),
-            Commands::Fh => fancybash_core::tools::history_search::run(),
-            Commands::Grep(args) => fancybash_core::tools::fast_grep::run(args),
-            Commands::Ff(args) => fancybash_core::tools::file_find::run(args),
-            Commands::Kp(args) => fancybash_core::tools::fkill::run_kp(args.port.as_deref()),
-            Commands::Project => fancybash_core::tools::project_setup::run_project(),
-            Commands::Ii => fancybash_core::tools::project_setup::run_ii(),
-            Commands::Next => fancybash_core::tools::project_setup::run_next(),
-            Commands::Vite => fancybash_core::tools::project_setup::run_vite(),
-            Commands::Ui => fancybash_core::tools::project_setup::run_ui(),
-            Commands::Css => fancybash_core::tools::project_setup::run_css(),
-            Commands::Html => fancybash_core::tools::project_setup::run_html(),
-            Commands::Keep => fancybash_core::tools::keep::run(),
-            Commands::Run => fancybash_core::tools::bun_runner::run(),
-            Commands::V { target } => fancybash_core::tools::video_player::run(target.as_deref()),
-            Commands::Uc => fancybash_core::tools::universal_clean::run(),
-            Commands::Clean => fancybash_core::tools::system_clean::run(),
-            Commands::Sysmon => fancybash_core::tools::ftop::run(),
-            Commands::Rt => fancybash_core::tools::runtime_installer::run(),
-            Commands::Rn { target } => fancybash_core::tools::file_renamer::run(target.as_deref()),
-            Commands::Pg { file, install } => fancybash_core::tools::pkg_converter::run(&file, install),
-            Commands::Drive { num } => fancybash_core::tools::drive_jumper::run(num.as_deref()),
-            Commands::Cf => fancybash_core::tools::fuzzy_cd::run(),
-            Commands::T { files } => fancybash_core::tools::touch_tool::run(&files),
-            Commands::Mkd { name } => fancybash_core::tools::mkd::run(&name).map(|_| ()),
-            Commands::Rmd { name } => fancybash_core::tools::rmd::run(&name),
-            Commands::Rmf { name, force } => fancybash_core::tools::rmf::run(&name, force),
-            Commands::Bak { name } => fancybash_core::tools::bak::run(&name),
-            Commands::Trash { name } => fancybash_core::tools::trash::run(&name),
-            Commands::Zed => fancybash_core::tools::zed_setup::run(),
-            Commands::Code => fancybash_core::tools::code_setup::run(),
+            Commands::Dman => gladeshell_core::tools::dman::run(None),
+            Commands::Gbranch => gladeshell_core::tools::gbranch::run(),
+            Commands::Fkill => gladeshell_core::tools::fkill::run_fkill(),
+            Commands::Fh => gladeshell_core::tools::history_search::run(),
+            Commands::Grep(args) => gladeshell_core::tools::fast_grep::run(args),
+            Commands::Ff(args) => gladeshell_core::tools::file_find::run(args),
+            Commands::Kp(args) => gladeshell_core::tools::fkill::run_kp(args.port.as_deref()),
+            Commands::Project => gladeshell_core::tools::project_setup::run_project(),
+            Commands::Ii => gladeshell_core::tools::project_setup::run_ii(),
+            Commands::Next => gladeshell_core::tools::project_setup::run_next(),
+            Commands::Vite => gladeshell_core::tools::project_setup::run_vite(),
+            Commands::Ui => gladeshell_core::tools::project_setup::run_ui(),
+            Commands::Css => gladeshell_core::tools::project_setup::run_css(),
+            Commands::Html => gladeshell_core::tools::project_setup::run_html(),
+            Commands::Keep => gladeshell_core::tools::keep::run(),
+            Commands::Run => gladeshell_core::tools::bun_runner::run(),
+            Commands::V { target } => gladeshell_core::tools::video_player::run(target.as_deref()),
+            Commands::Uc => gladeshell_core::tools::universal_clean::run(),
+            Commands::Clean => gladeshell_core::tools::system_clean::run(),
+            Commands::Sysmon => gladeshell_core::tools::ftop::run(),
+            Commands::Rt => gladeshell_core::tools::runtime_installer::run(),
+            Commands::Rn { target } => gladeshell_core::tools::file_renamer::run(target.as_deref()),
+            Commands::Pg { file, install } => gladeshell_core::tools::pkg_converter::run(&file, install),
+            Commands::Drive { num } => gladeshell_core::tools::drive_jumper::run(num.as_deref()),
+            Commands::Cf => gladeshell_core::tools::fuzzy_cd::run(),
+            Commands::T { files } => gladeshell_core::tools::touch_tool::run(&files),
+            Commands::Mkd { name } => gladeshell_core::tools::mkd::run(&name).map(|_| ()),
+            Commands::Rmd { name } => gladeshell_core::tools::rmd::run(&name),
+            Commands::Rmf { name, force } => gladeshell_core::tools::rmf::run(&name, force),
+            Commands::Bak { name } => gladeshell_core::tools::bak::run(&name),
+            Commands::Trash { name } => gladeshell_core::tools::trash::run(&name),
+            Commands::Zed => gladeshell_core::tools::zed_setup::run(),
+            Commands::Code => gladeshell_core::tools::code_setup::run(),
             Commands::Serve => cmd_serve(),
             Commands::Prompt(args) => cmd_prompt(args),
             Commands::InternalCleanRc => cmd_internal_clean_rc(),
-            Commands::EnsureDep(args) => fancybash_core::tools::dep_installer::run(&args),
+            Commands::EnsureDep(args) => gladeshell_core::tools::dep_installer::run(&args),
             Commands::AutoLs { path } => {
-                fancybash_core::tools::auto_ls::run_path(path.as_deref());
+                gladeshell_core::tools::auto_ls::run_path(path.as_deref());
                 Ok(())
             }
             Commands::Correct { command } => {
-                let msg = fancybash_core::core::typo_engine::render_pretty_suggestion(&command);
+                let msg = gladeshell_core::core::typo_engine::render_pretty_suggestion(&command);
                 println!("{}", msg);
                 Ok(())
             }
@@ -711,9 +711,9 @@ fn main() {
             Commands::PcInfo(args) => cmd_pc_info(args.clone()),
         },
         None => {
-            // When invoked as `fancy`, `theme`, or plain `fancybash` with no
+            // When invoked as `glade`, `theme`, or plain `gladeshell` with no
             // subcommand → open the interactive theme picker TUI.
-            // Help menu is still available via `fancybash keep`.
+            // Help menu is still available via `gladeshell keep`.
             cmd_theme(ThemeArgs { name: None, element: None, color: None, val: None })
         }
     };
@@ -732,7 +732,7 @@ fn main() {
 
 fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
     let code = init::generate(&args.shell)?;
-    // ⚠️  stdout is captured by `eval "$(fancybash init <shell>)"` — only shell
+    // ⚠️  stdout is captured by `eval "$(gladeshell init <shell>)"` — only shell
     //    code goes here. All user-visible messages must go to stderr.
     print!("{code}");
 
@@ -747,7 +747,7 @@ fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
     match init::cleaner::ensure_init_in_rc(&args.shell) {
         Ok(true) if !rc_file.is_empty() => {
             eprintln!(
-                "\x1b[1;32m✅ Added `fancybash init {}` to {rc_file}\x1b[0m",
+                "\x1b[1;32m✅ Added `gladeshell init {}` to {rc_file}\x1b[0m",
                 args.shell
             );
             eprintln!(
@@ -772,7 +772,7 @@ fn cmd_internal_clean_rc() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn cmd_pc_info(args: PcInfoArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::pc_info;
+    use gladeshell_core::tools::pc_info;
 
     if args.json {
         let report = pc_info::collect_system_report();
@@ -801,7 +801,7 @@ fn cmd_pc_info(args: PcInfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 // ── setup ─────────────────────────────────────────────────────────────────────
 
 fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("\x1b[1;36m🔧 fancybash setup — checking all installed shells...\x1b[0m");
+    eprintln!("\x1b[1;36m🔧 gladeshell setup — checking all installed shells...\x1b[0m");
 
     let _ = init::cleaner::ensure_auto_heal_hooks();
 
@@ -811,7 +811,7 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("\x1b[1;33m✔  All installed shells are already configured — nothing to do.\x1b[0m");
     } else {
         for sh in &configured {
-            eprintln!("\x1b[1;32m✅ Successfully injected fancybash into shell: {sh}\x1b[0m");
+            eprintln!("\x1b[1;32m✅ Successfully injected gladeshell into shell: {sh}\x1b[0m");
         }
         eprintln!("\x1b[1;36m💡 Restart your terminal or source your shell config to activate.\x1b[0m");
     }
@@ -822,16 +822,16 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
 // ── theme ─────────────────────────────────────────────────────────────────────
 
 fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::core::prompt::{
+    use gladeshell_core::core::prompt::{
         active_theme_id, get_effective_theme, load_theme_overrides,
         reset_theme_color_overrides, save_theme_color_override, set_active_theme, THEMES,
     };
 
     match args.name.as_deref() {
-        // ── fancybash theme list  →  styled table ─────────────────────────────
+        // ── gladeshell theme list  →  styled table ─────────────────────────────
         Some("list") => {
             let active = active_theme_id();
-            println!("\n\x1b[1;35m🎨 Fancybash Themes ({} total)\x1b[0m\n", THEMES.len());
+            println!("\n\x1b[1;35m🎨 Gladeshell Themes ({} total)\x1b[0m\n", THEMES.len());
             println!("  \x1b[2m{:<4} {:<3} {:<20} {}\x1b[0m", "IDX", "  ", "NAME", "PROMPT");
             println!("  \x1b[2m{}\x1b[0m", "─".repeat(48));
             for (i, t) in THEMES.iter().enumerate() {
@@ -845,17 +845,17 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
             println!();
         }
 
-        // ── fancybash theme set-color <theme> <element> <color> ───────────────
+        // ── gladeshell theme set-color <theme> <element> <color> ───────────────
         Some("set-color") => {
-            let theme_name = args.element.as_deref().ok_or("Usage: fancybash theme set-color <theme_name> <element> <color>")?;
-            let element = args.color.as_deref().ok_or("Usage: fancybash theme set-color <theme_name> <element> <color>")?;
-            let color_val = args.val.as_deref().ok_or("Usage: fancybash theme set-color <theme_name> <element> <color>")?;
+            let theme_name = args.element.as_deref().ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
+            let element = args.color.as_deref().ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
+            let color_val = args.val.as_deref().ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
 
             save_theme_color_override(theme_name, element, color_val)?;
             println!("\x1b[1;32m✅ Color override saved!\x1b[0m Theme: \x1b[1;36m{}\x1b[0m, Element: \x1b[1;33m{}\x1b[0m -> \x1b[1;35m{}\x1b[0m", theme_name, element, color_val);
         }
 
-        // ── fancybash theme reset-color [theme] ──────────────────────────────
+        // ── gladeshell theme reset-color [theme] ──────────────────────────────
         Some("reset-color") => {
             let target_theme = args.element.as_deref();
             reset_theme_color_overrides(target_theme)?;
@@ -866,11 +866,11 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // ── fancybash theme list-colors [theme] ──────────────────────────────
+        // ── gladeshell theme list-colors [theme] ──────────────────────────────
         Some("list-colors") => {
             let overrides = load_theme_overrides();
             if overrides.is_empty() {
-                println!("\x1b[1;33mℹ️ No theme text color overrides configured in ~/.config/fancybash/theme_overrides.toml\x1b[0m");
+                println!("\x1b[1;33mℹ️ No theme text color overrides configured in ~/.config/gladeshell/theme_overrides.toml\x1b[0m");
             } else {
                 println!("\n\x1b[1;35m🎨 Configured Theme Color Overrides:\x1b[0m\n");
                 for (t_name, o) in &overrides {
@@ -887,7 +887,7 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // ── fancybash theme <name>  →  set directly ───────────────────────────
+        // ── gladeshell theme <name>  →  set directly ───────────────────────────
         Some(name) => {
             let idx = set_active_theme(name)?;
             let t = get_effective_theme(idx);
@@ -895,11 +895,11 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
             println!("\x1b[2m💡 Run 'source ~/.zshrc' to apply in this session.\x1b[0m");
         }
 
-        // ── fancybash theme  →  launch interactive TUI picker ─────────────────
+        // ── gladeshell theme  →  launch interactive TUI picker ─────────────────
         None => {
             #[cfg(feature = "tools")]
             {
-                fancybash_core::tools::theme_picker::run_theme_picker()?;
+                gladeshell_core::tools::theme_picker::run_theme_picker()?;
             }
             #[cfg(not(feature = "tools"))]
             {
@@ -913,7 +913,7 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
 // ── gen ──────────────────────────────────────────────────────────────────────
 
 fn cmd_gen(args: GenArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::core::secret_gen;
+    use gladeshell_core::core::secret_gen;
     let bytes = secret_gen::generate(args.length)?;
     if args.raw {
         use std::io::Write;
@@ -929,42 +929,42 @@ fn cmd_gen(args: GenArgs) -> Result<(), Box<dyn std::error::Error>> {
 // ── ex ───────────────────────────────────────────────────────────────────────
 
 fn cmd_ex(args: ExArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::extractor;
+    use gladeshell_core::tools::extractor;
     extractor::run(args.file.as_deref(), args.output.as_deref(), args.interactive)
 }
 
 // ── cmp ───────────────────────────────────────────────────────────────────────
 
 fn cmd_cmp(args: CmpArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::compressor;
+    use gladeshell_core::tools::compressor;
     compressor::run(args.target.as_deref(), args.output.as_deref(), args.format.as_deref())
 }
 
 // ── gwip ─────────────────────────────────────────────────────────────────────
 
 fn cmd_gwip(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::git_wip;
+    use gladeshell_core::tools::git_wip;
     git_wip::run(&args)
 }
 
 // ── uup ──────────────────────────────────────────────────────────────────────
 
 fn cmd_uup() -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::updater;
+    use gladeshell_core::tools::updater;
     updater::run()
 }
 
 // ── uu ───────────────────────────────────────────────────────────────────────
 
 fn cmd_uu() -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::uninstaller;
+    use gladeshell_core::tools::uninstaller;
     uninstaller::run()
 }
 
 // ── ut ───────────────────────────────────────────────────────────────────────
 
 fn cmd_ut() -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::pc_optimizer;
+    use gladeshell_core::tools::pc_optimizer;
     pc_optimizer::run()
 }
 
@@ -975,48 +975,48 @@ fn cmd_ut() -> Result<(), Box<dyn std::error::Error>> {
 // ── makecpp ──────────────────────────────────────────────────────────────────
 
 fn cmd_makecpp(args: MakecppArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::cpp_gen;
+    use gladeshell_core::tools::cpp_gen;
     cpp_gen::run(&args.name, &args.std)
 }
 
 // ── ffmedia ──────────────────────────────────────────────────────────────────
 
 fn cmd_ffmedia(args: FfmediaArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::ffmedia;
+    use gladeshell_core::tools::ffmedia;
     ffmedia::run(args.action.as_deref())
 }
 
 // ── todo ─────────────────────────────────────────────────────────────────────
 
 fn cmd_todo(args: TodoArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::todo;
+    use gladeshell_core::tools::todo;
     todo::run(args.action.as_deref(), &args.args)
 }
 
 // ── notes ────────────────────────────────────────────────────────────────────
 
 fn cmd_notes(args: NotesArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::notes;
+    use gladeshell_core::tools::notes;
     notes::run(args.action.as_deref(), &args.args)
 }
 
 // ── vault ────────────────────────────────────────────────────────────────────
 
 fn cmd_vault(args: VaultArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::tools::vault;
+    use gladeshell_core::tools::vault;
     vault::run(args.action.as_deref(), &args.args)
 }
 
 // ── serve ────────────────────────────────────────────────────────────────────
 
 fn cmd_serve() -> Result<(), Box<dyn std::error::Error>> {
-    fancybash_core::daemon::run_server()
+    gladeshell_core::daemon::run_server()
 }
 
 // ── prompt ───────────────────────────────────────────────────────────────────
 
 fn cmd_prompt(args: PromptArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use fancybash_core::daemon::client;
+    use gladeshell_core::daemon::client;
 
     let user = if args.user.is_empty() {
         std::env::var("USER").unwrap_or_else(|_| "user".into())
@@ -1039,7 +1039,7 @@ fn cmd_prompt(args: PromptArgs) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let theme_id = if args.theme_id == 0 {
-        fancybash_core::core::prompt::active_theme_id()
+        gladeshell_core::core::prompt::active_theme_id()
     } else {
         args.theme_id
     };

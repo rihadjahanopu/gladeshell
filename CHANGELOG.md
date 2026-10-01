@@ -1,6 +1,6 @@
 # 📋 Changelog
 
-All notable changes to **fancybash** are documented here.
+All notable changes to **gladeshell** are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -9,7 +9,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### ✨ Added & Improved
 
-- **Pure Rust Engine Architecture (`fancybash`)**:
+- **Pure Rust Engine Architecture (`gladeshell`)**:
   - Rebuilt the entire core CLI toolkit in 100% pure Rust with `#![deny(unsafe_code)]` memory safety guarantees.
   - Replaced legacy subshell scripts with zero-latency sub-millisecond execution engine.
 - **Parallel Multi-Core Compressor (`compressor`)**:

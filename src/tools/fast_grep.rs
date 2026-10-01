@@ -5,7 +5,7 @@
 // ============================================================================
 
 // =============================================================================
-//  src/tools/fast_grep.rs — Native Parallel Ripgrep Search (`fancybash grep` / `fancybash rg`)
+//  src/tools/fast_grep.rs — Native Parallel Ripgrep Search (`gladeshell grep` / `gladeshell rg`)
 // =============================================================================
 //  Powered by ripgrep's `ignore`, `grep-regex`, `grep-searcher`, `grep-printer`.
 // =============================================================================
@@ -113,14 +113,14 @@ mod tests {
     #[test]
     fn test_fast_grep_valid_pattern() {
         let temp_dir = std::env::temp_dir();
-        let test_file_path = temp_dir.join("fancybash_fast_grep_test.txt");
+        let test_file_path = temp_dir.join("gladeshell_fast_grep_test.txt");
         {
             let mut file = File::create(&test_file_path).unwrap();
-            writeln!(file, "hello fancybash fast grep").unwrap();
+            writeln!(file, "hello gladeshell fast grep").unwrap();
         }
 
         let args = GrepArgs {
-            pattern: "fancybash".to_string(),
+            pattern: "gladeshell".to_string(),
             path: test_file_path.clone(),
             hidden: true,
             no_ignore: true,

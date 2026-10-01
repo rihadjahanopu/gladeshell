@@ -11,7 +11,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::hint::black_box;
-use fancybash_core::core::aliases::{AliasFile, Shell};
+use gladeshell_core::core::aliases::{AliasFile, Shell};
 
 // ── Minimal inline TOML (no disk I/O) ─────────────────────────────────────────
 

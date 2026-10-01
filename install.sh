@@ -5,10 +5,10 @@ set -euo pipefail
 # ─── Windows NT Auto-Bridge ─────────────────────
 if [[ "${OS:-}" = "Windows_NT" ]] && [[ "$(uname -s 2>/dev/null)" != MINGW64* ]] && [[ "$(uname -s 2>/dev/null)" != MSYS* ]]; then
     if command -v powershell.exe >/dev/null 2>&1; then
-        powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/install.ps1 | iex"
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/install.ps1 | iex"
         exit $?
     elif command -v powershell >/dev/null 2>&1; then
-        powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/install.ps1 | iex"
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/install.ps1 | iex"
         exit $?
     fi
 fi
@@ -64,7 +64,7 @@ for arg in "$@"; do
     esac
 done
 
-if [[ "${FANCYBASH_AUTO_YES:-}" == "1" || "${NONINTERACTIVE:-}" == "1" || "${CI:-}" == "true" ]]; then
+if [[ "${GLADESHELL_AUTO_YES:-}" == "1" || "${NONINTERACTIVE:-}" == "1" || "${CI:-}" == "true" ]]; then
     AUTO_YES=true
 fi
 
@@ -118,13 +118,13 @@ show_header() {
     echo -e "${BLUE}          ██║     ██║  ██║██║ ╚████║╚██████╗   ██║   ██████╔╝██║  ██║███████║██║  ██║${NC}"
     echo -e "${BLUE}          ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝${NC}"
     echo ""
-    echo -e "   ✨ ${BOLD}${CYAN}F A N C Y B A S H${NC}  •  ${BOLD}Smart Production Cross-Shell Engine (Bash, Zsh, Fish)${NC}"
+    echo -e "   ✨ ${BOLD}${CYAN}G L A D E S H E L L${NC}  •  ${BOLD}Smart Production Cross-Shell Engine (Bash, Zsh, Fish)${NC}"
     echo ""
 }
 
 # ─── Shell Resolution & System Probing ────
 detect_shell() {
-    local current_shell="${TARGET_SHELL:-${FANCYBASH_SHELL:-}}"
+    local current_shell="${TARGET_SHELL:-${GLADESHELL_SHELL:-}}"
     if [ -z "$current_shell" ]; then
         local _ppid_cmd
         _ppid_cmd=$(ps -p "$PPID" -o comm= 2>/dev/null | sed 's/^-//' | xargs basename 2>/dev/null)
@@ -387,9 +387,9 @@ remove_old_config() {
     fi
 
     local markers=(
-        "# >>> fancy-bashrc >>>|# <<< fancy-bashrc <<<"
-        "# >>> fancy-zshrc >>>|# <<< fancy-zshrc <<<"
-        "# >>> fancy-fish >>>|# <<< fancy-fish <<<"
+        "# >>> glade-bashrc >>>|# <<< glade-bashrc <<<"
+        "# >>> glade-zshrc >>>|# <<< glade-zshrc <<<"
+        "# >>> glade-fish >>>|# <<< glade-fish <<<"
     )
 
     local cleaned=false
@@ -446,7 +446,7 @@ _atomic_inject_rc() {
     dir="$(dirname "$file")"
     mkdir -p "$dir"
     local tmp
-    tmp="$(mktemp "${dir}/.fancybash_tmp.XXXXXX" 2>/dev/null || mktemp -t 'fancybash_tmp')"
+    tmp="$(mktemp "${dir}/.gladeshell_tmp.XXXXXX" 2>/dev/null || mktemp -t 'gladeshell_tmp')"
     cp "$file" "$tmp" 2>/dev/null || touch "$tmp"
     printf "%s\n" "$content" >> "$tmp"
     mv "$tmp" "$file"
@@ -458,29 +458,29 @@ _copy_binary_to_dirs() {
     local local_bin="$HOME/.local/bin"
     local cargo_bin="$HOME/.cargo/bin"
     mkdir -p "$local_bin"
-    cp "$src" "$local_bin/fancybash"
-    chmod +x "$local_bin/fancybash"
+    cp "$src" "$local_bin/gladeshell"
+    chmod +x "$local_bin/gladeshell"
     export PATH="$local_bin:$PATH"
     if command -v cargo >/dev/null 2>&1 || [ -d "$cargo_bin" ]; then
         mkdir -p "$cargo_bin"
-        cp "$src" "$cargo_bin/fancybash"
-        chmod +x "$cargo_bin/fancybash"
+        cp "$src" "$cargo_bin/gladeshell"
+        chmod +x "$cargo_bin/gladeshell"
         export PATH="$cargo_bin:$PATH"
-        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC} and ${PURPLE}%s/fancybash${NC}\n" "$(tildify "$local_bin")" "$(tildify "$cargo_bin")"
+        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/gladeshell${NC} and ${PURPLE}%s/gladeshell${NC}\n" "$(tildify "$local_bin")" "$(tildify "$cargo_bin")"
     else
-        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/fancybash${NC}\n" "$(tildify "$local_bin")"
+        printf "  ${GREEN}✔${NC} Installed to ${PURPLE}%s/gladeshell${NC}\n" "$(tildify "$local_bin")"
     fi
     local ver
-    ver=$("$local_bin/fancybash" --version 2>/dev/null || echo "unknown")
+    ver=$("$local_bin/gladeshell" --version 2>/dev/null || echo "unknown")
     printf "  ${CYAN}ℹ${NC} Version: ${BOLD}%s${NC}\n" "$ver"
 }
 
 setup_rust_binary() {
-    printf "  ${CYAN}➜${NC} Installing fancybash Rust engine binary...\n"
+    printf "  ${CYAN}➜${NC} Installing gladeshell Rust engine binary...\n"
 
-    if [ -f "$SCRIPT_DIR/target/release/fancybash" ]; then
+    if [ -f "$SCRIPT_DIR/target/release/gladeshell" ]; then
         printf "  ${CYAN}⚡ Found local release binary — installing...${NC}\n"
-        _copy_binary_to_dirs "$SCRIPT_DIR/target/release/fancybash"
+        _copy_binary_to_dirs "$SCRIPT_DIR/target/release/gladeshell"
         return 0
     fi
 
@@ -522,37 +522,37 @@ setup_rust_binary() {
 
     if [ "$os_type" != "unknown" ] && [ "$arch_type" != "unknown" ]; then
         local dl_tmp
-        dl_tmp="$(mktemp -d 2>/dev/null || mktemp -d -t 'fancybash')"
-        local bin_tmp="$dl_tmp/fancybash"
+        dl_tmp="$(mktemp -d 2>/dev/null || mktemp -d -t 'gladeshell')"
+        local bin_tmp="$dl_tmp/gladeshell"
 
-        local repos=("rihadjahanopu/fancybash" "rihadjahanopu/fancybash")
+        local repos=("rihadjahanopu/gladeshell" "rihadjahanopu/gladeshell")
         local assets=(
-            "fancybash-${os_type}-${arch_type}"
-            "fancybash-${arch_type}-${os_type}"
-            "fancybash-x86_64-unknown-linux-gnu"
-            "fancybash-aarch64-unknown-linux-gnu"
-            "fancybash-x86_64-apple-darwin"
-            "fancybash-aarch64-apple-darwin"
+            "gladeshell-${os_type}-${arch_type}"
+            "gladeshell-${arch_type}-${os_type}"
+            "gladeshell-x86_64-unknown-linux-gnu"
+            "gladeshell-aarch64-unknown-linux-gnu"
+            "gladeshell-x86_64-apple-darwin"
+            "gladeshell-aarch64-apple-darwin"
         )
 
         if [ "$is_musl" = true ]; then
             assets=(
-                "fancybash-x86_64-unknown-linux-musl"
-                "fancybash-aarch64-unknown-linux-musl"
-                "fancybash-${os_type}-${arch_type}-musl"
+                "gladeshell-x86_64-unknown-linux-musl"
+                "gladeshell-aarch64-unknown-linux-musl"
+                "gladeshell-${os_type}-${arch_type}-musl"
                 "${assets[@]}"
             )
         fi
 
         if [ "$has_avx2" = false ]; then
             assets=(
-                "fancybash-${os_type}-${arch_type}-baseline"
-                "fancybash-x86_64-unknown-linux-gnu-baseline"
+                "gladeshell-${os_type}-${arch_type}-baseline"
+                "gladeshell-x86_64-unknown-linux-gnu-baseline"
                 "${assets[@]}"
             )
         fi
 
-        assets+=("fancybash")
+        assets+=("gladeshell")
 
         printf "  ${CYAN}⚡ Attempting GitHub Release pre-built binary download...${NC}\n"
         for repo in "${repos[@]}"; do
@@ -587,33 +587,33 @@ setup_rust_binary() {
     fi
 
     if [ -f "$SCRIPT_DIR/Cargo.toml" ] && command -v cargo >/dev/null 2>&1; then
-        printf "  ${YELLOW}⚡ Building fancybash from source (release mode)...${NC}\n"
+        printf "  ${YELLOW}⚡ Building gladeshell from source (release mode)...${NC}\n"
         if (cd "$SCRIPT_DIR" && cargo build --release 2>&1); then
-            if [ -f "$SCRIPT_DIR/target/release/fancybash" ]; then
-                _copy_binary_to_dirs "$SCRIPT_DIR/target/release/fancybash"
+            if [ -f "$SCRIPT_DIR/target/release/gladeshell" ]; then
+                _copy_binary_to_dirs "$SCRIPT_DIR/target/release/gladeshell"
                 return 0
             fi
         fi
         printf "  ${RED}✗ cargo build failed.${NC}\n"
     fi
 
-    if command -v fancybash >/dev/null 2>&1; then
+    if command -v gladeshell >/dev/null 2>&1; then
         local ver
-        ver=$(fancybash --version 2>/dev/null || echo "unknown")
-        printf "  ${GREEN}✔${NC} fancybash already installed: $(command -v fancybash) (${CYAN}%s${NC})\n" "$ver"
+        ver=$(gladeshell --version 2>/dev/null || echo "unknown")
+        printf "  ${GREEN}✔${NC} gladeshell already installed: $(command -v gladeshell) (${CYAN}%s${NC})\n" "$ver"
         return 0
     fi
 
     if command -v cargo >/dev/null 2>&1; then
         printf "  ${YELLOW}⚡ Installing via cargo from GitHub...${NC}\n"
-        cargo install --git https://github.com/rihadjahanopu/fancybash --quiet 2>/dev/null || true
-        if command -v fancybash >/dev/null 2>&1; then
-            printf "  ${GREEN}✔${NC} Installed fancybash via cargo install!\n"
+        cargo install --git https://github.com/rihadjahanopu/gladeshell --quiet 2>/dev/null || true
+        if command -v gladeshell >/dev/null 2>&1; then
+            printf "  ${GREEN}✔${NC} Installed gladeshell via cargo install!\n"
             return 0
         fi
     fi
 
-    printf "  ${YELLOW}⚠ Could not install fancybash binary. Please install Cargo or download binary manually.${NC}\n"
+    printf "  ${YELLOW}⚠ Could not install gladeshell binary. Please install Cargo or download binary manually.${NC}\n"
 }
 
 # ─── Fetch & Append Config ─────────────────
@@ -622,66 +622,66 @@ _inject_single_shell() {
     local target_rc
     target_rc=$(get_target_rc "$current_shell")
 
-    printf "  ${CYAN}➜${NC} Configuring fancybash for ${BOLD}%s${NC} (${GRAY}%s${NC})...\n" "$current_shell" "$(tildify "$target_rc")"
+    printf "  ${CYAN}➜${NC} Configuring gladeshell for ${BOLD}%s${NC} (${GRAY}%s${NC})...\n" "$current_shell" "$(tildify "$target_rc")"
 
-    if command -v fancybash >/dev/null 2>&1; then
-        FANCYBASH_SHELL="$current_shell" fancybash setup
+    if command -v gladeshell >/dev/null 2>&1; then
+        GLADESHELL_SHELL="$current_shell" gladeshell setup
     else
-        local MARKER='fancybash init'
+        local MARKER='gladeshell init'
         local block=""
         if [ "$current_shell" = "fish" ]; then
             if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
                 block=$(cat << 'EOF'
 
-# >>> fancy-fish >>>
+# >>> glade-fish >>>
 set -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH
-if type -q fancybash
-    fancybash init fish | source
+if type -q gladeshell
+    gladeshell init fish | source
 end
-# <<< fancy-fish <<<
+# <<< glade-fish <<<
 EOF
                 )
                 _atomic_inject_rc "$target_rc" "$block"
-                printf "  ${GREEN}✔${NC} Injected fancybash init into %s\n" "$(tildify "$target_rc")"
+                printf "  ${GREEN}✔${NC} Injected gladeshell init into %s\n" "$(tildify "$target_rc")"
             else
-                printf "  ${GREEN}✔${NC} fancybash already configured in %s\n" "$(tildify "$target_rc")"
+                printf "  ${GREEN}✔${NC} gladeshell already configured in %s\n" "$(tildify "$target_rc")"
             fi
         elif [ "$current_shell" = "zsh" ]; then
             if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
                 block=$(cat << 'EOF'
 
-# >>> fancy-zshrc >>>
+# >>> glade-zshrc >>>
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
-if (( ${+commands[fancybash]} )); then
-    eval "$(fancybash init zsh)"
+if (( ${+commands[gladeshell]} )); then
+    eval "$(gladeshell init zsh)"
 fi
-# <<< fancy-zshrc <<<
+# <<< glade-zshrc <<<
 EOF
                 )
                 _atomic_inject_rc "$target_rc" "$block"
-                printf "  ${GREEN}✔${NC} Injected fancybash init into %s\n" "$(tildify "$target_rc")"
+                printf "  ${GREEN}✔${NC} Injected gladeshell init into %s\n" "$(tildify "$target_rc")"
             else
-                printf "  ${GREEN}✔${NC} fancybash already configured in %s\n" "$(tildify "$target_rc")"
+                printf "  ${GREEN}✔${NC} gladeshell already configured in %s\n" "$(tildify "$target_rc")"
             fi
         else
             if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
                 block=$(cat << EOF
 
-# >>> fancy-bashrc >>>
+# >>> glade-bashrc >>>
 # Installed: $(date '+%Y-%m-%d %H:%M:%S')
-# fancybash Rust Native Engine - auto-loaded every shell session
+# gladeshell Rust Native Engine - auto-loaded every shell session
 export PATH="\$HOME/.cargo/bin:\$HOME/.local/bin:\$PATH"
 
-if command -v fancybash >/dev/null 2>&1; then
-    eval "\$(fancybash init bash)"
+if command -v gladeshell >/dev/null 2>&1; then
+    eval "\$(gladeshell init bash)"
 fi
-# <<< fancy-bashrc <<<
+# <<< glade-bashrc <<<
 EOF
                 )
                 _atomic_inject_rc "$target_rc" "$block"
-                printf "  ${GREEN}✔${NC} Injected fancybash init into %s\n" "$(tildify "$target_rc")"
+                printf "  ${GREEN}✔${NC} Injected gladeshell init into %s\n" "$(tildify "$target_rc")"
             else
-                printf "  ${GREEN}✔${NC} fancybash already configured in %s\n" "$(tildify "$target_rc")"
+                printf "  ${GREEN}✔${NC} gladeshell already configured in %s\n" "$(tildify "$target_rc")"
             fi
         fi
     fi
@@ -704,7 +704,7 @@ install_config() {
 # ─── Doctor / Diagnostics Mode ─────────────
 run_doctor() {
     show_header
-    printf "  🩺 ${BOLD}${CYAN}FANCYBASH SYSTEM DOCTOR${NC}\n"
+    printf "  🩺 ${BOLD}${CYAN}GLADESHELL SYSTEM DOCTOR${NC}\n"
     printf "  ──────────────────────────────────────────────────\n\n"
 
     local current_shell
@@ -716,13 +716,13 @@ run_doctor() {
     printf "  🌐 Installed Shells:  ${CYAN}%s${NC}\n" "$all_shells"
 
     export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
-    if command -v fancybash >/dev/null 2>&1; then
+    if command -v gladeshell >/dev/null 2>&1; then
         local bin_path ver
-        bin_path=$(command -v fancybash)
-        ver=$(fancybash --version 2>/dev/null || echo "unknown")
+        bin_path=$(command -v gladeshell)
+        ver=$(gladeshell --version 2>/dev/null || echo "unknown")
         printf "  ⚡ Binary:            ${GREEN}[OK]${NC} %s (${CYAN}%s${NC})\n" "$bin_path" "$ver"
     else
-        printf "  ⚡ Binary:            ${RED}[MISSING]${NC} fancybash binary not found in PATH\n"
+        printf "  ⚡ Binary:            ${RED}[MISSING]${NC} gladeshell binary not found in PATH\n"
     fi
 
     if command -v fc-list &>/dev/null; then
@@ -739,10 +739,10 @@ run_doctor() {
         local rc
         rc=$(get_target_rc "$sh")
         if [ -f "$rc" ]; then
-            if grep -qF "fancybash init" "$rc" 2>/dev/null; then
+            if grep -qF "gladeshell init" "$rc" 2>/dev/null; then
                 printf "  📄 Hook (%s):       ${GREEN}[OK]${NC} %s\n" "$sh" "$(tildify "$rc")"
             else
-                printf "  📄 Hook (%s):       ${YELLOW}[MISSING]${NC} No fancybash hook in %s\n" "$sh" "$(tildify "$rc")"
+                printf "  📄 Hook (%s):       ${YELLOW}[MISSING]${NC} No gladeshell hook in %s\n" "$sh" "$(tildify "$rc")"
             fi
         fi
     done
@@ -755,7 +755,7 @@ run_doctor() {
 # ─── Rollback / Restoration Mode ───────────
 run_rollback() {
     show_header
-    printf "  🔄 ${BOLD}${YELLOW}FANCYBASH ROLLBACK & RESTORE${NC}\n"
+    printf "  🔄 ${BOLD}${YELLOW}GLADESHELL ROLLBACK & RESTORE${NC}\n"
     printf "  ──────────────────────────────────────────────────\n\n"
 
     remove_old_config

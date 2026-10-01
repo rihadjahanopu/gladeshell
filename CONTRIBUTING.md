@@ -1,12 +1,12 @@
-# 🤝 Contributing to fancybash
+# 🤝 Contributing to gladeshell
 
-> **Welcome to the `fancybash` developer community!**
+> **Welcome to the `gladeshell` developer community!**
 > Whether you are a seasoned open-source contributor or submitting your very first Pull Request (PR), this guide will take you step-by-step through the entire contribution lifecycle.
 
 <div align="center">
 
-[![GitHub Issues](https://img.shields.io/github/issues/rihadjahanopu/fancybash?style=for-the-badge&color=a855f7&logo=github)](https://github.com/rihadjahanopu/fancybash/issues)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-22c55e?style=for-the-badge&logo=git&logoColor=white)](https://github.com/rihadjahanopu/fancybash/pulls)
+[![GitHub Issues](https://img.shields.io/github/issues/rihadjahanopu/gladeshell?style=for-the-badge&color=a855f7&logo=github)](https://github.com/rihadjahanopu/gladeshell/issues)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-22c55e?style=for-the-badge&logo=git&logoColor=white)](https://github.com/rihadjahanopu/gladeshell/pulls)
 [![License MIT](https://img.shields.io/badge/License-MIT-0ea5e9?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 
 </div>
@@ -35,7 +35,7 @@
 
 ## 1. First-Time Contributor Roadmap
 
-Here is the exact lifecycle of a contribution in `fancybash` from start to finish:
+Here is the exact lifecycle of a contribution in `gladeshell` from start to finish:
 
 ```mermaid
 flowchart TD
@@ -56,18 +56,18 @@ flowchart TD
 
 ### Step 1: Fork & Clone the Repository
 
-1. Click the **Fork** button at the top right of the [`rihadjahanopu/fancybash`](https://github.com/rihadjahanopu/fancybash) repository.
+1. Click the **Fork** button at the top right of the [`rihadjahanopu/gladeshell`](https://github.com/rihadjahanopu/gladeshell) repository.
 2. Clone your fork to your local system:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/fancybash.git
-cd fancybash
+git clone https://github.com/YOUR_USERNAME/gladeshell.git
+cd gladeshell
 ```
 
 3. Add the upstream original repository to keep your fork updated:
 
 ```bash
-git remote add upstream https://github.com/rihadjahanopu/fancybash.git
+git remote add upstream https://github.com/rihadjahanopu/gladeshell.git
 ```
 
 ---
@@ -117,7 +117,7 @@ Before modifying code, take 2 minutes to inspect these two core technical manual
 #### Repository Layout Overview:
 
 ```
-fancybash/
+gladeshell/
 ├── src/                   ★ Pure Rust core engine, interactive TUI tools, & CLI subcommands
 ├── Cargo.toml             ★ Rust package configuration & dependency specifications
 ├── aliases.toml           ★ Core alias definitions & custom shell overrides
@@ -236,7 +236,7 @@ Test how your change performs in a completely clean environment:
 ```bash
 docker run --rm -it ubuntu:latest bash -c "
   apt update -qq && apt install -y curl git &&
-  bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/fancybash/main/install.sh)
+  bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/gladeshell/main/install.sh)
 "
 ```
 
@@ -269,7 +269,7 @@ type(scope): concise subject in imperative present tense (max 72 chars)
 git push -u origin feat/add-docker-logs-alias
 ```
 
-2. Navigate to [`rihadjahanopu/fancybash`](https://github.com/rihadjahanopu/fancybash) on GitHub.
+2. Navigate to [`rihadjahanopu/gladeshell`](https://github.com/rihadjahanopu/gladeshell) on GitHub.
 3. Click **Compare & Pull Request**.
 4. Fill in the PR template with details of what was changed and why.
 
@@ -341,15 +341,15 @@ Before submitting your PR, check off this self-review list:
 
 If you get stuck or have questions at any point:
 
-- Open a discussion in [GitHub Discussions](https://github.com/rihadjahanopu/fancybash/discussions).
-- Ask in an open [GitHub Issue](https://github.com/rihadjahanopu/fancybash/issues).
+- Open a discussion in [GitHub Discussions](https://github.com/rihadjahanopu/gladeshell/discussions).
+- Ask in an open [GitHub Issue](https://github.com/rihadjahanopu/gladeshell/issues).
 - Tag `@rihadjahanopu` in your PR for mentorship and code review!
 
 <br>
 
 <div align="center">
 
-**Thank you for making `fancybash` awesome! Happy Coding! 🚀**
+**Thank you for making `gladeshell` awesome! Happy Coding! 🚀**
 _Made with ❤️ for developers worldwide · Released under the MIT License_
 
 </div>

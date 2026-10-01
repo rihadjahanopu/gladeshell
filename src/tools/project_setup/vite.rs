@@ -13,7 +13,7 @@ use std::process::Command;
 use super::tailwind::run_css;
 use super::utils::{cmd_ok, prompt_confirm, prompt_select, resolve_cmd};
 
-/// `fancybash vite` — Interactive Vite Project Generator with optional Tailwind v4.
+/// `gladeshell vite` — Interactive Vite Project Generator with optional Tailwind v4.
 pub fn run_vite() -> Result<(), Box<dyn Error>> {
     let pm     = prompt_select("⚡ Setup Vite with:", &["1) Bun", "2) NPM"])?;
     let add_tw = prompt_confirm("Add Tailwind CSS v4?", true)?;

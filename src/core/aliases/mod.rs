@@ -275,7 +275,7 @@ value = "git push"
         let af = AliasFile::builtin();
         let out = af.render(Shell::Fish);
         assert!(out.contains("alias .. 'cd ..'"));
-        assert!(out.contains("alias rel 'pkill -f fancybash-daemon 2>/dev/null; sh -c \\'rm -f /tmp/fancybash_*.sock 2>/dev/null\\'; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\"'"));
+        assert!(out.contains("alias rel 'pkill -f gladeshell-daemon 2>/dev/null; sh -c \\'rm -f /tmp/gladeshell_*.sock 2>/dev/null\\'; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\"'"));
     }
 
     #[test]

@@ -4,11 +4,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug fancybash (CLI)",
+      "name": "Debug gladeshell (CLI)",
       "cargo": {
-        "args": ["build", "--bin=fancybash", "--package=fancybash"],
+        "args": ["build", "--bin=gladeshell", "--package=gladeshell"],
         "filter": {
-          "name": "fancybash",
+          "name": "gladeshell",
           "kind": "bin"
         }
       },
@@ -18,11 +18,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug fancybash unit tests",
+      "name": "Debug gladeshell unit tests",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=fancybash", "--package=fancybash"],
+        "args": ["test", "--no-run", "--bin=gladeshell", "--package=gladeshell"],
         "filter": {
-          "name": "fancybash",
+          "name": "gladeshell",
           "kind": "bin"
         }
       },

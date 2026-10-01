@@ -4,7 +4,7 @@
 // HANDS-OFF GUARANTEE: NO MANUAL EDITS REQUIRED
 // ============================================================================
 // src/tools/code_setup.rs — VS Code Settings & Extensions Bulletproof Installer
-//                           (fancybash Edition)
+//                           (gladeshell Edition)
 // ============================================================================
 
 use std::env;
@@ -1271,7 +1271,7 @@ fn install_extensions() -> (usize, Vec<String>) {
 
     let Some(bin) = bin else {
         println!("\n  {}⚠ `code` not found in PATH — skipping extensions.{}", YELLOW, NC);
-        println!("  {}  Re-run after installing VS Code: fancybash code-setup{}", GRAY, NC);
+        println!("  {}  Re-run after installing VS Code: gladeshell code-setup{}", GRAY, NC);
         return (0, vec![]);
     };
 
@@ -1409,7 +1409,7 @@ mod tests {
 
     #[test]
     fn test_install_settings_roundtrip() {
-        let tmp = env::temp_dir().join("fancybash_test_code_setup");
+        let tmp = env::temp_dir().join("gladeshell_test_code_setup");
         let _ = fs::remove_dir_all(&tmp);
 
         assert!(install_settings(&tmp));

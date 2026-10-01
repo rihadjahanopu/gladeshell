@@ -5,7 +5,7 @@
 // ============================================================================
 
 // =============================================================================
-//  src/tools/zed_setup.rs — Zed IDE Settings Bulletproof Installer (fancybash Edition)
+//  src/tools/zed_setup.rs — Zed IDE Settings Bulletproof Installer (gladeshell Edition)
 // =============================================================================
 
 use std::env;
@@ -482,7 +482,7 @@ fn show_header() {
     );
     println!();
     println!(
-        "   ✨ {}{}F A N C Y B A S H{}  •  {}Zed IDE Settings Bulletproof Installer{}",
+        "   ✨ {}{}G L A D E S H E L L{}  •  {}Zed IDE Settings Bulletproof Installer{}",
         BOLD, CYAN, NC, BOLD, NC
     );
     println!();
@@ -795,7 +795,7 @@ mod tests {
 
     #[test]
     fn test_install_settings() {
-        let temp_dir = env::temp_dir().join("fancybash_test_zed_setup");
+        let temp_dir = env::temp_dir().join("gladeshell_test_zed_setup");
         let _ = fs::remove_dir_all(&temp_dir);
 
         // First install

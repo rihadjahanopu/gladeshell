@@ -1,17 +1,17 @@
-# 📖 fancybash Official Technical Wiki
+# 📖 gladeshell Official Technical Wiki
 
 <div align="center">
 
 ```
-          ███████╗ █████╗ ███╗   ██╗ ██████╗██╗   ██╗██████╗  █████╗ ███████╗██╗  ██╗
-          ██╔════╝██╔══██╗████╗  ██║██╔════╝╚██╗ ██╔╝██╔══██╗██╔══██╗██╔════╝██║  ██║
-          █████╗  ███████║██╔██╗ ██║██║      ╚████╔╝ ██████╔╝███████║███████╗███████║
-          ██╔══╝  ██╔══██║██║╚██╗██║██║       ╚██╔╝  ██╔══██╗██╔══██║╚════██║██╔══██║
-          ██║     ██║  ██║██║ ╚████║╚██████╗   ██║   ██████╔╝██║  ██║███████║██║  ██║
-          ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+ ██████╗ ██╗      █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗     ██╗    
+██╔════╝ ██║     ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║     ██║    
+██║  ███╗██║     ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║     ██║    
+██║   ██║██║     ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║     ██║    
+╚██████╔╝███████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗███████╗███████╗
+ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
 ```
 
-### ⚡ Comprehensive Developer & Technical Guide for fancybash
+### ⚡ Comprehensive Developer & Technical Guide for gladeshell
 
 _Pure Rust Architecture • Hyper-Optimized CLI Engine • Interactive Ratatui TUIs • Complete Command API_
 
@@ -21,7 +21,7 @@ _Pure Rust Architecture • Hyper-Optimized CLI Engine • Interactive Ratatui T
 [![Rust Engine](https://img.shields.io/badge/Engine-Pure%20Rust%20100%25-22c55e?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-0ea5e9?style=for-the-badge&logo=linux&logoColor=white)](#)
 [![Version](https://img.shields.io/badge/Version-1.1.0-ec4899?style=for-the-badge)](#)
-[![Website](https://img.shields.io/badge/Website-fancybash.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://fancybash.netlify.app)
+[![Website](https://img.shields.io/badge/Website-gladeshell.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://gladeshell.netlify.app)
 
 </div>
 
@@ -66,9 +66,9 @@ _Pure Rust Architecture • Hyper-Optimized CLI Engine • Interactive Ratatui T
 
 ## 1. Wiki Overview & Vision
 
-**fancybash** is a production-ready, zero-dependency, hyper-optimized pure Rust binary CLI suite engineered specifically for modern full-stack web developers, DevOps engineers, and system administrators.
+**gladeshell** is a production-ready, zero-dependency, hyper-optimized pure Rust binary CLI suite engineered specifically for modern full-stack web developers, DevOps engineers, and system administrators.
 
-Built in safe Rust with `#![deny(unsafe_code)]` constraints, **fancybash** eliminates external subshell execution delays, delivering instantaneous prompt rendering and multi-threaded parallel performance across Linux, macOS, and Windows.
+Built in safe Rust with `#![deny(unsafe_code)]` constraints, **gladeshell** eliminates external subshell execution delays, delivering instantaneous prompt rendering and multi-threaded parallel performance across Linux, macOS, and Windows.
 
 > [!NOTE]
 > **Core Technical Promise**: Pure Rust compilation. Zero background subshell latency. Non-destructive shell integration via atomic backup.
@@ -79,7 +79,7 @@ Built in safe Rust with `#![deny(unsafe_code)]` constraints, **fancybash** elimi
 
 ### 2.1 High-Level Architecture
 
-The fancybash engine consists of four primary decoupled layers:
+The gladeshell engine consists of four primary decoupled layers:
 
 ```mermaid
 flowchart TD
@@ -88,8 +88,8 @@ flowchart TD
     end
 
     subgraph Binary Entrypoint & CLI Subcommands
-        MAIN[fancybash Binary Entrypoint]
-        SETUP[fancybash setup / uninstall]
+        MAIN[gladeshell Binary Entrypoint]
+        SETUP[gladeshell setup / uninstall]
     end
 
     subgraph Core Engine Modules
@@ -120,7 +120,7 @@ flowchart TD
 
 ### 2.2 Memory Safety & Bound Guarantees
 
-fancybash enforces strict memory safety guarantees:
+gladeshell enforces strict memory safety guarantees:
 
 - **Zero Unsafe Code**: Compiles with `#![deny(unsafe_code)]` across core modules.
 - **Bounded Buffers**: Dynamic UI containers calculate exact bounds without hardcoded offsets.
@@ -135,7 +135,7 @@ fancybash enforces strict memory safety guarantees:
 Automated installer script auto-detects OS (Linux/macOS/Windows) and CPU architecture (`x86_64` / `aarch64` ARM64):
 
 ```bash
-curl -fsSL https://fancybash.netlify.app/install.sh | bash
+curl -fsSL https://gladeshell.netlify.app/install.sh | bash
 ```
 
 ### 3.2 Cargo Build from Source
@@ -143,18 +143,18 @@ curl -fsSL https://fancybash.netlify.app/install.sh | bash
 For Rust developers building directly from source:
 
 ```bash
-git clone https://github.com/rihadjahanopu/fancybash.git
-cd fancybash
+git clone https://github.com/rihadjahanopu/gladeshell.git
+cd gladeshell
 cargo build --release
 make install
 ```
 
 ### 3.3 Clean Uninstallation Protocol
 
-`fancybash` provides 100% non-destructive uninstallation:
+`gladeshell` provides 100% non-destructive uninstallation:
 
 ```bash
-fancybash uninstall
+gladeshell uninstall
 # OR via installer script
 ./install.sh --uninstall
 ```
@@ -165,7 +165,7 @@ fancybash uninstall
 
 ### 4.1 Two-Line Layout Structure
 
-The fancybash prompt renders real-time telemetry with sub-millisecond latency:
+The gladeshell prompt renders real-time telemetry with sub-millisecond latency:
 
 ```text
 🌐 web-project 📂 42M [🌿 main ❗] 🌡️ 48°C 💽 120G free ⚖️ 0.45 ⏱️ 3s
@@ -178,7 +178,7 @@ The fancybash prompt renders real-time telemetry with sub-millisecond latency:
 Select from 55 interactive Ratatui prompt themes (Catppuccin, Nord, Cyberpunk, Tokyo Night, Dracula, Rose Pine) with live terminal preview:
 
 ```bash
-fancybash theme
+gladeshell theme
 ```
 
 ---
@@ -187,7 +187,7 @@ fancybash theme
 
 ### 5.1 Multi-Threaded Parallel Compressor (`compressor`)
 
-`fancybash compressor` runs hyper-optimized parallel multi-core compression:
+`gladeshell compressor` runs hyper-optimized parallel multi-core compression:
 
 - **Default Level**: Level 1 (Fast - Max Speed)
 - **Supported Formats**: ZIP, 7z, TAR.GZ, TAR.XZ, TAR.BZ2, TAR
@@ -195,7 +195,7 @@ fancybash theme
 
 ### 5.2 High-Speed Extractor (`extractor`)
 
-`fancybash extractor <file>` auto-detects archive signatures and unpacks archives at maximum I/O speed.
+`gladeshell extractor <file>` auto-detects archive signatures and unpacks archives at maximum I/O speed.
 
 ### 5.3 FFmedia 24-in-1 Multimedia Suite (`ffmedia`)
 
@@ -242,6 +242,6 @@ make test       # Execute unit test suite
 
 **Maintained with ❤️ by Rihad Jahan Opu**
 
-[Website](https://fancybash.netlify.app) • [GitHub Repository](https://github.com/rihadjahanopu/fancybash) • [Report Issue](https://github.com/rihadjahanopu/fancybash/issues)
+[Website](https://gladeshell.netlify.app) • [GitHub Repository](https://github.com/rihadjahanopu/gladeshell) • [Report Issue](https://github.com/rihadjahanopu/gladeshell/issues)
 
 </div>

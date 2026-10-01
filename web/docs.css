@@ -1,5 +1,5 @@
 /* ============================================================
-   FANCYBASH — Professional Advanced Documentation Styles
+   GLADESHELL — Professional Advanced Documentation Styles
    ============================================================ */
 
 :root {
@@ -1302,7 +1302,7 @@ td code {
     display: none !important; /* Hide header links on mobile — moved to sidebar */
   }
 
-  /* Hide fancybash text + badge on mobile — show only ⚡ logo icon */
+  /* Hide gladeshell text + badge on mobile — show only ⚡ logo icon */
   .docs-logo span:not(.docs-logo-icon) {
     display: none !important;
   }

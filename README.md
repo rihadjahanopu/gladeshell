@@ -3,12 +3,12 @@
 <br>
 
 ```
-          ███████╗ █████╗ ███╗   ██╗ ██████╗██╗   ██╗██████╗  █████╗ ███████╗██╗  ██╗
-          ██╔════╝██╔══██╗████╗  ██║██╔════╝╚██╗ ██╔╝██╔══██╗██╔══██╗██╔════╝██║  ██║
-          █████╗  ███████║██╔██╗ ██║██║      ╚████╔╝ ██████╔╝███████║███████╗███████║
-          ██╔══╝  ██╔══██║██║╚██╗██║██║       ╚██╔╝  ██╔══██╗██╔══██║╚════██║██╔══██║
-          ██║     ██║  ██║██║ ╚████║╚██████╗   ██║   ██████╔╝██║  ██║███████║██║  ██║
-          ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+ ██████╗ ██╗      █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗     ██╗    
+██╔════╝ ██║     ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║     ██║    
+██║  ███╗██║     ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║     ██║    
+██║   ██║██║     ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║     ██║    
+╚██████╔╝███████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗███████╗███████╗
+ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
 ```
 
 ### ⚡ The Ultimate Pure Rust Shell & Developer Suite for Modern Terminal Users
@@ -20,19 +20,19 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 [![MIT License](https://img.shields.io/badge/License-MIT-a855f7?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/Rust-2024%20%7C%201.85%2B-orange?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-0ea5e9?style=for-the-badge&logo=linux&logoColor=white)](#)
-[![Stars](https://img.shields.io/github/stars/rihadjahanopu/fancybash?style=for-the-badge&logo=github&color=f59e0b&logoColor=white)](https://github.com/rihadjahanopu/fancybash)
+[![Stars](https://img.shields.io/github/stars/rihadjahanopu/gladeshell?style=for-the-badge&logo=github&color=f59e0b&logoColor=white)](https://github.com/rihadjahanopu/gladeshell)
 [![Version](https://img.shields.io/badge/Version-1.1.0-ec4899?style=for-the-badge)](#)
-[![Website](https://img.shields.io/badge/Website-fancybash.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://fancybash.netlify.app)
+[![Website](https://img.shields.io/badge/Website-gladeshell.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://gladeshell.netlify.app)
 
 <br>
 
-<img src="https://i.postimg.cc/pXB6h98T/terminal2.png" alt="fancybash terminal preview 1" width="85%">
+<img src="https://i.postimg.cc/pXB6h98T/terminal2.png" alt="gladeshell terminal preview 1" width="85%">
 <br><br>
-<img src="https://i.postimg.cc/tCzMZ1P1/terminal1.png" alt="fancybash terminal preview 2" width="85%">
+<img src="https://i.postimg.cc/tCzMZ1P1/terminal1.png" alt="gladeshell terminal preview 2" width="85%">
 
 <br>
 
-**🌐 Live Website: [fancybash.netlify.app](https://fancybash.netlify.app)**
+**🌐 Live Website: [gladeshell.netlify.app](https://gladeshell.netlify.app)**
 
 </div>
 
@@ -40,7 +40,7 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 
 ## 📌 Table of Contents
 
-- [✨ What is fancybash?](#-what-is-fancybash)
+- [✨ What is gladeshell?](#-what-is-gladeshell)
 - [🌟 Feature Highlights](#-feature-highlights)
 - [🚀 Quick Install](#-quick-install)
 - [🗑️ Uninstall](#️-uninstall)
@@ -72,9 +72,9 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 
 ---
 
-## ✨ What is fancybash?
+## ✨ What is gladeshell?
 
-**fancybash** (also known as `fancybash`) is a high-performance, single-binary shell environment and developer suite written completely in **Pure Rust (2024 edition)**.
+**gladeshell** (also known as `gladeshell`) is a high-performance, single-binary shell environment and developer suite written completely in **Pure Rust (2024 edition)**.
 
 It replaces slow shell scripts and heavy framework overhead with a single compiled binary, providing ultra-fast prompt rendering, cross-shell compatibility (Bash, Zsh, Fish, PowerShell), a fast multi-core compression engine (Level 1 Fast), a 24-in-1 FFmpeg multimedia suite, hardened AES-256 security vault, and full Ratatui TUI utilities.
 
@@ -95,7 +95,7 @@ One binary. One install. Absolute speed.
 | 🎬 **24-in-1 FFmedia Suite**   | Comprehensive FFmpeg multimedia processor (compression, trimming, visualizer, GIFs, screen recording) |
 | 🔐 **AES-256 PBKDF2 Vault**    | Memory-guarded directory vault with panic password decoy mode and auto-shredding                      |
 | 🎨 **55 Prompt Themes**        | Swap between Catppuccin, Tokyo Night, Dracula, Matrix, Starship, Rose Pine, and 49 more in 1 command  |
-| 🔄 **Cross-Shell Integration** | Built-in shell integration generator for Bash, Zsh, Fish, and PowerShell (`fancybash shell-init`)     |
+| 🔄 **Cross-Shell Integration** | Built-in shell integration generator for Bash, Zsh, Fish, and PowerShell (`gladeshell shell-init`)     |
 | 📦 **Universal Uninstaller**   | `uu` — interactive fuzzy application remover across apt/snap/flatpak/AppImage                         |
 | 🔁 **Mega Updater**            | `uup` — updates system packages, runtimes, and flatpaks in one command                                |
 
@@ -110,13 +110,13 @@ Auto-detects your operating system (Linux, macOS, Windows) and active shell envi
 **Linux / macOS (Bash / Zsh / Fish):**
 
 ```bash
-curl -fsSL https://fancybash.netlify.app/install.sh | bash
+curl -fsSL https://gladeshell.netlify.app/install.sh | bash
 ```
 
 **Windows (PowerShell / CMD / Run):**
 
 ```cmd
-powershell -c "irm https://fancybash.netlify.app/install.ps1 | iex"
+powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"
 ```
 
 ### Install via Cargo
@@ -130,41 +130,41 @@ cargo install --path .
 ### Build from Source
 
 ```bash
-git clone https://github.com/rihadjahanopu/fancybash.git
-cd fancybash
+git clone https://github.com/rihadjahanopu/gladeshell.git
+cd gladeshell
 cargo build --release
-./target/release/fancybash --version
+./target/release/gladeshell --version
 ```
 
 ---
 
 ## 🗑️ Uninstall
 
-Cleanly removes fancybash binary and shell integration blocks without touching your personal configuration:
+Cleanly removes gladeshell binary and shell integration blocks without touching your personal configuration:
 
 **Linux / macOS:**
 
 ```bash
-curl -fsSL https://fancybash.netlify.app/install.sh | bash -s -- --uninstall
+curl -fsSL https://gladeshell.netlify.app/install.sh | bash -s -- --uninstall
 ```
 
 Or via binary:
 
 ```bash
-fancybash uninstall
+gladeshell uninstall
 ```
 
 **Windows (PowerShell / CMD / Run):**
 
 ```cmd
-powershell -c "irm https://fancybash.netlify.app/install.ps1 | iex -Uninstall"
+powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex -Uninstall"
 ```
 
 ---
 
 ## ⚙️ Font Setup (for Emoji & Icons)
 
-fancybash uses color emoji and programming ligatures in the prompt for best visual density:
+gladeshell uses color emoji and programming ligatures in the prompt for best visual density:
 
 ### 1 — Install Fonts
 
@@ -198,7 +198,7 @@ fc-cache -fv
 
 ## 📟 Smart Prompt System
 
-fancybash renders a responsive, contextual prompt powered by Rust:
+gladeshell renders a responsive, contextual prompt powered by Rust:
 
 ```
 🚀 myproject [🌿 main ❗]               ← Folder icon + colored folder + git status
@@ -217,37 +217,37 @@ fancybash renders a responsive, contextual prompt powered by Rust:
 
 ## 🎨 Prompt Themes
 
-fancybash includes **55 built-in themes** inspired by popular terminal prompts.
+gladeshell includes **55 built-in themes** inspired by popular terminal prompts.
 
 ### 🖼️ Preview All 55 Themes
 
 ```bash
-fancybash theme preview
+gladeshell theme preview
 # or shorthand:
-fancy preview
+glade preview
 ```
 
 ### ⚡ Switch Themes
 
 ```bash
 # Interactive TUI picker:
-fancy
+glade
 
 # Direct selection:
-fancy catppuccin
-fancy tokyonight
-fancy dracula
-fancy starship
-fancy matrix
-fancy rosepine
+glade catppuccin
+glade tokyonight
+glade dracula
+glade starship
+glade matrix
+glade rosepine
 ```
 
 ### 📋 All 55 Themes
 
 | #   | Theme               | Style                                 | Inspiration            |
 | --- | ------------------- | ------------------------------------- | ---------------------- |
-| 01  | `minimal`           | 🌈 Emoji + color · 1-line             | Fancybash default      |
-| 02  | `full`              | 📊 3-line with all metrics            | Fancybash full info    |
+| 01  | `minimal`           | 🌈 Emoji + color · 1-line             | Gladeshell default      |
+| 02  | `full`              | 📊 3-line with all metrics            | Gladeshell full info    |
 | 03  | `robbyrussell`      | ➜ Green arrow · 1-line                | Oh My Zsh default      |
 | 04  | `p10k`              | ╭─ 2-line rich · user@host            | Powerlevel10k          |
 | 05  | `agnoster`          | ▓ Powerline segments                  | Oh My Zsh Agnoster     |
@@ -306,7 +306,7 @@ fancy rosepine
 
 ## 🛠️ Command Reference
 
-Run `fancybash --help` to view all CLI tool modules.
+Run `gladeshell --help` to view all CLI tool modules.
 
 ---
 
@@ -390,14 +390,14 @@ Run `fancybash --help` to view all CLI tool modules.
 
 ### 🗜️ Fast Multi-Core Compressor & Extractor
 
-`fancybash` includes a high-throughput parallel multi-core compression engine:
+`gladeshell` includes a high-throughput parallel multi-core compression engine:
 
 ```bash
 # Compress folder using Level 1 Fast parallel mode:
-fancybash compressor /path/to/source output.tar.zst
+gladeshell compressor /path/to/source output.tar.zst
 
 # Extract archive:
-fancybash extractor archive.tar.zst /path/to/destination
+gladeshell extractor archive.tar.zst /path/to/destination
 ```
 
 **Compression Level:** **Level 1 (Fast)** — configured for ultra-fast archive generation utilizing all CPU threads.
@@ -406,7 +406,7 @@ fancybash extractor archive.tar.zst /path/to/destination
 
 ### 🎬 FFmedia All-in-One Multimedia Suite
 
-Launch via `fancybash ffmedia` or `ffmedia`:
+Launch via `gladeshell ffmedia` or `ffmedia`:
 
 | Command / Option        | Description                                                 |
 | ----------------------- | ----------------------------------------------------------- |
@@ -422,16 +422,16 @@ Launch via `fancybash ffmedia` or `ffmedia`:
 
 ### 🔐 Hardened Multi-Vault Security Suite
 
-Launch via `fancybash vault` or `vault`:
+Launch via `gladeshell vault` or `vault`:
 
 ```bash
 # Interactive vault manager:
-fancybash vault
+gladeshell vault
 
 # Direct commands:
-fancybash vault lock /path/to/folder
-fancybash vault unlock /path/to/vault
-fancybash vault list
+gladeshell vault lock /path/to/folder
+gladeshell vault unlock /path/to/vault
+gladeshell vault list
 ```
 
 **Key Security Features:**
@@ -445,14 +445,14 @@ fancybash vault list
 
 ### 🖥️ Native Ratatui TUI Modules
 
-`fancybash` features native terminal user interfaces powered by Ratatui:
+`gladeshell` features native terminal user interfaces powered by Ratatui:
 
 ```bash
-fancybash todo             # Interactive Task Manager TUI
-fancybash notes            # Interactive Markdown Notes TUI
-fancybash filetree         # Interactive Filetree & Directory Explorer TUI
-fancybash process_manager  # Interactive Process Killer & Resource TUI
-fancybash system_clean     # Interactive System Disk Cleanup TUI
+gladeshell todo             # Interactive Task Manager TUI
+gladeshell notes            # Interactive Markdown Notes TUI
+gladeshell filetree         # Interactive Filetree & Directory Explorer TUI
+gladeshell process_manager  # Interactive Process Killer & Resource TUI
+gladeshell system_clean     # Interactive System Disk Cleanup TUI
 ```
 
 ---
@@ -493,7 +493,7 @@ fancybash system_clean     # Interactive System Disk Cleanup TUI
 ## 🏗️ Project Structure
 
 ```
-fancybash/
+gladeshell/
 ├── src/                    # Pure Rust core application codebase
 │   ├── main.rs             # CLI entrypoint & subcommand router
 │   ├── cli.rs              # Clap CLI definitions & flag parsing
@@ -596,14 +596,14 @@ The `pre-commit` hook automatically checks:
 
 ## 🐧 Linux App Ecosystem
 
-fancybash includes a curated guide to desktop applications for Linux developers:
+gladeshell includes a curated guide to desktop applications for Linux developers:
 
 - **Creative:** Inkscape, Kdenlive, OBS Studio, HandBrake, Upscayl.
 - **IDEs:** VS Code, Zed, Antigravity.
 - **Browsers:** Google Chrome, Brave.
 - **Utilities:** Flatseal, Fzf, Zram.
 
-Explore the searchable interactive web database on [fancybash.netlify.app/linux-setup.html](https://fancybash.netlify.app/linux-setup.html).
+Explore the searchable interactive web database on [gladeshell.netlify.app/linux-setup.html](https://gladeshell.netlify.app/linux-setup.html).
 
 ---
 
@@ -629,13 +629,13 @@ MIT © [Rihad Jahan Opu](https://github.com/rihadjahanopu)
 
 <div align="center">
 
-**If fancybash saves you time daily, give it a ⭐ — it helps others find it!**
+**If gladeshell saves you time daily, give it a ⭐ — it helps others find it!**
 
 <br>
 
 Made with ❤️ in Bangladesh
 
-[![Website](https://img.shields.io/badge/Website-fancybash.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://fancybash.netlify.app)
+[![Website](https://img.shields.io/badge/Website-gladeshell.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://gladeshell.netlify.app)
 [![GitHub](https://img.shields.io/badge/GitHub-rihadjahanopu-181717?style=for-the-badge&logo=github)](https://github.com/rihadjahanopu)
 
 © 2026 Rihad Jahan Opu. All rights reserved.

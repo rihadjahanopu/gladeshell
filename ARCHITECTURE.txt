@@ -9,8 +9,8 @@
 
   PROJECT ARCHITECTURE DOCUMENT — PURE RUST ENGINE EDITION
   Version: 1.1.0  |  Author: Rihad Jahan Opu  |  License: MIT
-  GitHub: https://github.com/rihadjahanopu/fancybash
-  Website: https://fancybash.netlify.app
+  GitHub: https://github.com/rihadjahanopu/gladeshell
+  Website: https://gladeshell.netlify.app
 ================================================================================
 
 
@@ -40,7 +40,7 @@ TABLE OF CONTENTS
 1. PROJECT OVERVIEW
 ================================================================================
 
-fancybash is a PURE RUST, ZERO-EXTERNAL-SUBSHELL-DEPENDENCY binary toolkit
+gladeshell is a PURE RUST, ZERO-EXTERNAL-SUBSHELL-DEPENDENCY binary toolkit
 and terminal environment for modern software developers. It enhances default
 shell terminals (Bash, Zsh, Fish, PowerShell 7+) with sub-millisecond prompt
 rendering, parallel multi-core compression, 55 TUI themes, and interactive tools.
@@ -91,7 +91,7 @@ rendering, parallel multi-core compression, 55 TUI themes, and interactive tools
                                        ▼
                         ┌──────────────────────────────┐
                         │  PURE RUST ENGINE (src/)      │
-                        │  fancybash binary CLI         │
+                        │  gladeshell binary CLI         │
                         │                               │
                         │  ┌────────────────────────┐  │
                         │  │ 🎨 55-Theme Switcher   │  │
@@ -123,7 +123,7 @@ rendering, parallel multi-core compression, 55 TUI themes, and interactive tools
 4. REPOSITORY STRUCTURE (ANNOTATED)
 ================================================================================
 
-fancybash/
+gladeshell/
 │
 ├── src/                   ★ PURE RUST CORE ENGINE & TUI SUITE
 │   ├── main.rs            ← Binary entrypoint & sub-command dispatcher
@@ -183,7 +183,7 @@ Built in 100% safe Rust with Ratatui TUI components and Rayon parallel thread po
 5b. INSTALLER LAYER  (install.sh / install.ps1)
 ────────────────────────────────────────────────────────────────────────────────
 
-  • Idempotent boundary marker injection (`# >>> fancy-bashrc >>>`).
+  • Idempotent boundary marker injection (`# >>> glade-bashrc >>>`).
   • SHA-256 checksum verification for downloaded release binaries.
   • Automatic timestamped backup creation before dotfile modifications.
 

@@ -10,7 +10,7 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::hint::black_box;
-use fancybash_core::core::prompt::{render, PromptContext, THEMES};
+use gladeshell_core::core::prompt::{render, PromptContext, THEMES};
 
 // ── Helper: build a filled PromptContext from plain &str values ───────────────
 
@@ -55,7 +55,7 @@ fn make_ctx(
 
 fn bench_render_default(c: &mut Criterion) {
     let ctx = make_ctx(
-        "/home/rihad/Developer/dev/fancybash",
+        "/home/rihad/Developer/dev/gladeshell",
         "rihad",
         "arch",
         "main",
@@ -74,7 +74,7 @@ fn bench_render_default(c: &mut Criterion) {
 
 fn bench_render_dirty(c: &mut Criterion) {
     let ctx = make_ctx(
-        "/home/rihad/Developer/dev/fancybash",
+        "/home/rihad/Developer/dev/gladeshell",
         "rihad",
         "arch",
         "feat/modular-refactor",

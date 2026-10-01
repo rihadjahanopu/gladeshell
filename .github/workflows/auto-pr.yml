@@ -78,7 +78,7 @@ jobs:
           if [ -f ".github/PULL_REQUEST_TEMPLATE.md" ]; then
             BODY_ARG=("--body-file" ".github/PULL_REQUEST_TEMPLATE.md")
           else
-            BODY_ARG=("--body" "Automated PR created from $BRANCH_NAME for **fancybash**.")
+            BODY_ARG=("--body" "Automated PR created from $BRANCH_NAME for **gladeshell**.")
           fi
 
           LABEL_ARG=()

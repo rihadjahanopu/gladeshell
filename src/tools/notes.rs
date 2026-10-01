@@ -5,7 +5,7 @@
 // ============================================================================
 
 // =============================================================================
-//  src/tools/notes.rs — FANCYBASH Notes Manager (Modern fkill-style TUI)
+//  src/tools/notes.rs — GLADESHELL Notes Manager (Modern fkill-style TUI)
 // =============================================================================
 
 use std::error::Error;
@@ -973,7 +973,7 @@ impl NotesApp {
             vec![
                 Span::styled("📝  ", Style::default().fg(C_ACCENT)),
                 Span::styled("NOTES", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-                Span::styled(" — Fancybash Note Manager", Style::default().fg(C_TEXT)),
+                Span::styled(" — Gladeshell Note Manager", Style::default().fg(C_TEXT)),
                 Span::styled(
                     format!("  ({note_count} notes)"),
                     Style::default().fg(C_DIM),
@@ -1098,7 +1098,7 @@ impl NotesApp {
             };
 
             vec![
-                Span::styled(" 📝 FANCYBASH NOTES  ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD)),
+                Span::styled(" 📝 GLADESHELL NOTES  ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD)),
                 Span::raw("  "),
                 mode_pill,
                 Span::raw("  "),
@@ -1689,7 +1689,7 @@ fn seed_sample_notes_if_empty(root_dir: &PathBuf) {
     let files: &[(&PathBuf, &str, &str)] = &[
         (&general, "meet.txt",  "Team sync meeting notes:\n- Review Q3 roadmap\n- Finalize CLI TUI themes\n- Assign PR reviews"),
         (&general, "logo.txt",  "Brand identity assets:\n- SVG color spec: #00D2B4 (teal), #FF50A0 (pink)\n- Font: JetBrains Mono"),
-        (&general, "Rihad.txt", "Personal developer profile:\n- Shell: zsh + fancybash\n- Editor: Neovim\n- Focus: Rust, TUI tools"),
+        (&general, "Rihad.txt", "Personal developer profile:\n- Shell: zsh + gladeshell\n- Editor: Neovim\n- Focus: Rust, TUI tools"),
         (&work,    "main.txt",  "Work branch deployment checklist:\n1. Run cargo test --all\n2. Bump CHANGELOG.md\n3. Tag release vX.Y.Z\n4. Push to origin"),
     ];
     for (dir, name, content) in files {
@@ -1762,7 +1762,7 @@ fn run_tui(app: &mut NotesApp) -> io::Result<()> {
 
 // ── Public entry point ────────────────────────────────────────────────────────
 
-/// Runs the interactive notes manager (`fancybash notes`).
+/// Runs the interactive notes manager (`gladeshell notes`).
 pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn Error>> {
     let root_dir = notes_dir_path();
     fs::create_dir_all(&root_dir)?;

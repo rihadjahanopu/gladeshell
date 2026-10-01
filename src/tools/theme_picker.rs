@@ -318,7 +318,7 @@ impl ThemePickerApp {
         let banner = Paragraph::new(Line::from(vec![
             Span::styled("🎨  ", Style::default().fg(C_ACCENT)),
             Span::styled("THEME PICKER", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-            Span::styled(" — Fancybash", Style::default().fg(C_TEXT)),
+            Span::styled(" — Gladeshell", Style::default().fg(C_TEXT)),
             Span::styled(format!("  ({n} themes)"), Style::default().fg(C_DIM)),
             Span::styled("  │  Active: ", Style::default().fg(C_DIM)),
             Span::styled(active_name, Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD)),
@@ -541,8 +541,8 @@ impl ThemePickerApp {
             ..Default::default()
         };
 
-        // Fill cwd = ~/projects/fancybash
-        let cwd_str = b"~/projects/fancybash";
+        // Fill cwd = ~/projects/gladeshell
+        let cwd_str = b"~/projects/gladeshell";
         ctx.cwd[..cwd_str.len()].copy_from_slice(cwd_str);
         ctx.cwd_len = cwd_str.len();
 
@@ -657,7 +657,7 @@ impl ThemePickerApp {
         let banner = Paragraph::new(Line::from(vec![
             Span::styled("🎨  ", Style::default().fg(C_ACCENT)),
             Span::styled("THEME COLOR CUSTOMIZER", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-            Span::styled(" — Fancybash", Style::default().fg(C_TEXT)),
+            Span::styled(" — Gladeshell", Style::default().fg(C_TEXT)),
             Span::styled("  │  Editing Theme: ", Style::default().fg(C_DIM)),
             Span::styled(theme.name, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
             Span::styled(format!(" {}", theme.emoji), Style::default().fg(C_YELLOW)),
@@ -760,7 +760,7 @@ impl ThemePickerApp {
             last_exit: 0,
             ..Default::default()
         };
-        let cwd_str = b"~/projects/fancybash";
+        let cwd_str = b"~/projects/gladeshell";
         ctx.cwd[..cwd_str.len()].copy_from_slice(cwd_str);
         ctx.cwd_len = cwd_str.len();
 

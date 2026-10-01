@@ -25,7 +25,7 @@ Please check the verification steps completed prior to submitting:
 - [ ] `cargo fmt --all -- --check` passes cleanly
 - [ ] `cargo clippy --workspace --all-targets -- -D warnings` passes with 0 warnings
 - [ ] `cargo test --workspace` passes all unit and integration tests
-- [ ] Tested binary locally on target platform (`./target/release/fancybash`)
+- [ ] Tested binary locally on target platform (`./target/release/gladeshell`)
 
 ---
 

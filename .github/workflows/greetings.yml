@@ -23,19 +23,19 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-message: |
-            👋 **Welcome to fancybash!** Thank you for opening your first issue!
+            👋 **Welcome to gladeshell!** Thank you for opening your first issue!
 
-            ⚡ **fancybash** is a hyper-optimized pure Rust CLI toolkit built for ultra-fast terminal workflows.
+            ⚡ **gladeshell** is a hyper-optimized pure Rust CLI toolkit built for ultra-fast terminal workflows.
 
             To help us triage and resolve your issue quickly, please ensure you've provided:
             - **Operating System & Architecture**: (e.g. Ubuntu 24.04 x86_64, macOS M3 arm64, Windows 11)
-            - **Fancybash Version**: Output of `fancybash --version`
+            - **Gladeshell Version**: Output of `gladeshell --version`
             - **Cargo & Rust Toolchain**: Output of `rustc --version`
             - **Steps to reproduce & panic backtrace** (if applicable)
 
             Made with ❤️ in Bangladesh 🇧🇩
           pr-message: |
-            🎉 **Thank you for your first Pull Request to fancybash!**
+            🎉 **Thank you for your first Pull Request to gladeshell!**
 
             Before review, please verify:
             - [ ] `cargo check --workspace --all-targets` compiles without errors

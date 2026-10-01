@@ -1,6 +1,6 @@
 ---
 name: 📖 Documentation Issue
-about: Report missing, incorrect, or unclear documentation in fancybash
+about: Report missing, incorrect, or unclear documentation in gladeshell
 title: 'docs: '
 labels: documentation
 assignees: rihadjahanopu

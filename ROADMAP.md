@@ -1,6 +1,6 @@
-# 🗺️ fancybash Project Roadmap
+# 🗺️ gladeshell Project Roadmap
 
-Welcome to the **fancybash** project roadmap! This document outlines our product vision, architectural principles, past release milestones, and planned future enhancements.
+Welcome to the **gladeshell** project roadmap! This document outlines our product vision, architectural principles, past release milestones, and planned future enhancements.
 
 > [!NOTE]
 > This roadmap represents our current strategic direction. Feature priorities may evolve based on community feedback, user proposals, and contributions.
@@ -9,7 +9,7 @@ Welcome to the **fancybash** project roadmap! This document outlines our product
 
 [![Version](https://img.shields.io/badge/Current%20Version-1.1.0-ec4899?style=for-the-badge)](#)
 [![Roadmap Status](https://img.shields.io/badge/Roadmap-Active-22c55e?style=for-the-badge&logo=target&logoColor=white)](#)
-[![Discussions](https://img.shields.io/badge/Feature%20Requests-Discussions-22d3ee?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rihadjahanopu/fancybash/discussions)
+[![Discussions](https://img.shields.io/badge/Feature%20Requests-Discussions-22d3ee?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rihadjahanopu/gladeshell/discussions)
 
 </div>
 
@@ -30,11 +30,11 @@ Welcome to the **fancybash** project roadmap! This document outlines our product
 
 ## 1. Core Vision & Design Philosophy
 
-`fancybash` aims to be the ultimate, zero-latency Rust CLI suite for modern developers. All roadmap features must strictly adhere to four foundational pillars:
+`gladeshell` aims to be the ultimate, zero-latency Rust CLI suite for modern developers. All roadmap features must strictly adhere to four foundational pillars:
 
 ```mermaid
 flowchart LR
-    A[⚡ Pure Rust Zero-Latency] --> E[fancybash Engine]
+    A[⚡ Pure Rust Zero-Latency] --> E[gladeshell Engine]
     B[🛡️ 100% Memory Safe] --> E
     C[🔄 Cross-Platform Parity] --> E
     D[🛠️ Rich Ratatui TUIs] --> E
@@ -55,9 +55,9 @@ flowchart LR
 
 ### v2.0.0 — Pure Rust Core Engine & Ratatui TUI Era
 
-- ✅ Rebuilt entire core in pure Rust (`fancybash`).
+- ✅ Rebuilt entire core in pure Rust (`gladeshell`).
 - ✅ Integrated Ratatui TUI framework for terminal interactive tools.
-- ✅ Added 55-theme interactive prompt switcher (`fancybash theme`).
+- ✅ Added 55-theme interactive prompt switcher (`gladeshell theme`).
 - ✅ Implemented `vault` (AES-256 decoy guard), `todo`, `notes`, `filetree`, `process_manager`.
 
 ### v2.2.0 — Parallel Compressor & Multi-Tool Suite
@@ -82,10 +82,10 @@ flowchart LR
 
 - **🔌 Dynamic Plugin Submodules**: Load optional Rust tool plugins dynamically.
 - **☁️ Encrypted Cloud Dotfile Sync**: Securely sync user prompt themes and alias configurations across machines using SSH/Gist.
-- **⏱️ Micro-Benchmarking Suite (`fancybench`)**: Automated Criterion bench suite measuring sub-microsecond prompt telemetry.
+- **⏱️ Micro-Benchmarking Suite (`gladebench`)**: Automated Criterion bench suite measuring sub-microsecond prompt telemetry.
 
 ---
 
 ## 5. How to Propose or Vote on Features
 
-We encourage community participation! Visit [GitHub Discussions](https://github.com/rihadjahanopu/fancybash/discussions) to suggest ideas or report feature requests.
+We encourage community participation! Visit [GitHub Discussions](https://github.com/rihadjahanopu/gladeshell/discussions) to suggest ideas or report feature requests.

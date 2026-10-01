@@ -1089,51 +1089,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fancybash"
-version = "1.1.0"
-dependencies = [
- "aes-gcm",
- "arboard",
- "battery",
- "bzip2",
- "clap",
- "criterion",
- "crossterm",
- "flate2",
- "gix",
- "grep-printer",
- "grep-regex",
- "grep-searcher",
- "ignore",
- "inquire",
- "libc",
- "open",
- "pbkdf2 0.13.0",
- "rand 0.10.3",
- "rand_chacha",
- "ratatui",
- "rayon",
- "rpassword",
- "serde",
- "serde_json",
- "serde_yml",
- "sevenz-rust",
- "sha2 0.11.0",
- "sysinfo",
- "tar",
- "termcolor",
- "toml",
- "unicode-width",
- "ureq",
- "walkdir",
- "windows-sys 0.61.2",
- "wmi",
- "xz2",
- "zeroize",
- "zip",
-]
-
-[[package]]
 name = "faster-hex"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2212,6 +2167,51 @@ checksum = "44a1a9c82ec5b712082566cbef8f5782472a0d3973132911e5a83380a5298fe2"
 dependencies = [
  "gix-error",
  "zlib-rs",
+]
+
+[[package]]
+name = "gladeshell"
+version = "1.1.0"
+dependencies = [
+ "aes-gcm",
+ "arboard",
+ "battery",
+ "bzip2",
+ "clap",
+ "criterion",
+ "crossterm",
+ "flate2",
+ "gix",
+ "grep-printer",
+ "grep-regex",
+ "grep-searcher",
+ "ignore",
+ "inquire",
+ "libc",
+ "open",
+ "pbkdf2 0.13.0",
+ "rand 0.10.3",
+ "rand_chacha",
+ "ratatui",
+ "rayon",
+ "rpassword",
+ "serde",
+ "serde_json",
+ "serde_yml",
+ "sevenz-rust",
+ "sha2 0.11.0",
+ "sysinfo",
+ "tar",
+ "termcolor",
+ "toml",
+ "unicode-width",
+ "ureq",
+ "walkdir",
+ "windows-sys 0.61.2",
+ "wmi",
+ "xz2",
+ "zeroize",
+ "zip",
 ]
 
 [[package]]

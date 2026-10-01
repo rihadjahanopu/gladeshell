@@ -12,7 +12,7 @@ use std::error::Error;
 use std::process::Command;
 use super::utils::{prompt_select, resolve_cmd};
 
-/// `fancybash next` — Interactive Next.js Project Generator.
+/// `gladeshell next` — Interactive Next.js Project Generator.
 pub fn run_next() -> Result<(), Box<dyn Error>> {
     let pm = prompt_select("⚡ Setup Next.js with:", &["1) Bun", "2) NPM"])?;
 

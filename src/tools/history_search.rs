@@ -30,7 +30,7 @@ use ratatui::{
     Terminal,
 };
 
-/// Entry point for `fancybash fh` or `fancybash history`
+/// Entry point for `gladeshell fh` or `gladeshell history`
 pub fn run() -> Result<(), Box<dyn Error>> {
     let history_items = load_shell_history();
     if history_items.is_empty() {
@@ -284,7 +284,7 @@ impl HistoryApp {
         // Background block
         let outer_block = Block::default()
             .title(Span::styled(
-                " 🔍 fancybash Interactive History Search ",
+                " 🔍 gladeshell Interactive History Search ",
                 Style::default()
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD),

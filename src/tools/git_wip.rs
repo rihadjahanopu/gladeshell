@@ -310,7 +310,7 @@ fn draw_ui(f: &mut ratatui::Frame, app: &WipApp) {
     };
 
     let header = Paragraph::new(Line::from(vec![
-        Span::styled(" ⚡ FANCYBASH GWIP  ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD)),
+        Span::styled(" ⚡ GLADESHELL GWIP  ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD)),
         Span::raw("  "),
         step_pill,
         Span::raw("  "),
@@ -790,7 +790,7 @@ fn draw_push_result(f: &mut ratatui::Frame, outcome: &PushOutcome) {
                 ]),
                 Line::from(vec![
                     Span::raw("    3) "),
-                    Span::styled("fancybash gwip", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+                    Span::styled("gladeshell gwip", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
                 ]),
             ];
             if !lines.is_empty() {

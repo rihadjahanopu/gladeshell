@@ -11,7 +11,7 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::hint::black_box;
-use fancybash_core::core::secret_gen::generate;
+use gladeshell_core::core::secret_gen::generate;
 
 // ── Benchmarks ────────────────────────────────────────────────────────────────
 

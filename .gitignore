@@ -1,5 +1,5 @@
 # =============================================================================
-#  fancybash — .gitignore
+#  gladeshell — .gitignore
 # =============================================================================
 
 # ── Rust / Cargo Target & Build Output ────────────────────────────────────────
@@ -13,14 +13,14 @@ cargo-timing*.html
 # to guarantee 100% reproducible cross-platform releases.
 
 # ── Binary Executables & Release Archives ─────────────────────────────────────
-fancybash-linux-*
-fancybash-darwin-*
-fancybash-windows-*
-fancybash-*.tar.gz
-fancybash-*.zip
-fancybash-*.exe
-fancybash
-fancybash.exe
+gladeshell-linux-*
+gladeshell-darwin-*
+gladeshell-windows-*
+gladeshell-*.tar.gz
+gladeshell-*.zip
+gladeshell-*.exe
+gladeshell
+gladeshell.exe
 SHA256SUMS*.txt
 *.exe
 *.pdb

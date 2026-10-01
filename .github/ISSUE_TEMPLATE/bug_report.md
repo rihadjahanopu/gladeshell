@@ -1,6 +1,6 @@
 ---
 name: 🐛 Bug Report
-about: Report a bug, crash, panic, or unexpected behavior in fancybash
+about: Report a bug, crash, panic, or unexpected behavior in gladeshell
 title: 'fix: '
 labels: bug
 assignees: rihadjahanopu
@@ -8,13 +8,13 @@ assignees: rihadjahanopu
 
 ## 🐛 Describe the Bug
 
-<!-- A clear description of what failed or panicked in fancybash. -->
+<!-- A clear description of what failed or panicked in gladeshell. -->
 
 ## 📋 Steps to Reproduce
 
 ```bash
 # Exact command(s) that trigger the issue:
-1. fancybash <command>
+1. gladeshell <command>
 2.
 ```
 
@@ -34,7 +34,7 @@ assignees: rihadjahanopu
 | ----------------- | ------------------------------------------------------------ |
 | OS & Version      | e.g. Ubuntu 24.04 LTS / macOS Sequoia / Windows 11           |
 | CPU Architecture  | e.g. x86_64 / aarch64 (ARM64)                                |
-| fancybash Version | Output of `fancybash --version`                              |
+| gladeshell Version | Output of `gladeshell --version`                              |
 | Rust Toolchain    | Output of `rustc --version`                                  |
 | Terminal Emulator | e.g. Alacritty / WezTerm / iTerm2 / Kitty / Windows Terminal |
 

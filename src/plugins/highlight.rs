@@ -44,7 +44,7 @@ fn get_builtins() -> &'static HashSet<&'static str> {
             "setopt", "shift", "shopt", "source", "suspend", "test",
             "times", "trap", "true", "type", "typeset", "ulimit", "umask",
             "unalias", "unfunction", "unset", "unsetopt", "wait",
-            "zstyle", "zmodload", "zle", "autoload", "fancybash",
+            "zstyle", "zmodload", "zle", "autoload", "gladeshell",
             // Common CLI tools always treated as valid commands
             "bun", "cargo", "cat", "chmod", "chown", "clang", "cp",
             "curl", "cut", "diff", "docker", "env", "find", "g++", "gcc",

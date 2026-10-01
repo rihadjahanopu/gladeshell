@@ -488,7 +488,7 @@ mod tests {
 
     #[test]
     fn non_git_folder_returns_default() {
-        let temp_dir = std::env::temp_dir().join("fancybash_test_non_git");
+        let temp_dir = std::env::temp_dir().join("gladeshell_test_non_git");
         let _ = fs::create_dir_all(&temp_dir);
         let status = get_status(&temp_dir);
         assert!(!status.is_git_repo);
@@ -527,7 +527,7 @@ mod tests {
 
     #[test]
     fn unborn_branch_handled_safely() {
-        let temp_dir = std::env::temp_dir().join("fancybash_test_unborn");
+        let temp_dir = std::env::temp_dir().join("gladeshell_test_unborn");
         let _ = fs::create_dir_all(&temp_dir);
         let git_dir = temp_dir.join(".git");
         let _ = fs::create_dir_all(&git_dir);
@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn detached_head_returns_short_sha() {
-        let temp_dir = std::env::temp_dir().join("fancybash_test_detached");
+        let temp_dir = std::env::temp_dir().join("gladeshell_test_detached");
         let _ = fs::create_dir_all(&temp_dir);
         let git_dir = temp_dir.join(".git");
         let _ = fs::create_dir_all(&git_dir);
@@ -559,7 +559,7 @@ mod tests {
 
     #[test]
     fn interactive_state_detection_merging() {
-        let temp_dir = std::env::temp_dir().join("fancybash_test_merging");
+        let temp_dir = std::env::temp_dir().join("gladeshell_test_merging");
         let _ = fs::create_dir_all(&temp_dir);
         let git_dir = temp_dir.join(".git");
         let _ = fs::create_dir_all(&git_dir);

@@ -9,8 +9,8 @@
 
 //
 //  Phase 1: Defines the canonical set of environment variables and PATH
-//           entries that fancybash injects, as Rust structs.
-//  Phase 2: Will read overrides from ~/.config/fancybash/env.toml and merge.
+//           entries that gladeshell injects, as Rust structs.
+//  Phase 2: Will read overrides from ~/.config/gladeshell/env.toml and merge.
 // =============================================================================
 
 /// A single PATH entry with optional existence-check flag.
@@ -41,7 +41,7 @@ pub enum EnvValue {
 
 // ── Canonical PATH entries (in priority order, highest first) ─────────────────
 
-/// Returns the ordered list of PATH entries that fancybash prepends.
+/// Returns the ordered list of PATH entries that gladeshell prepends.
 ///
 /// The list is defined once in Rust and serialized to any shell's syntax by
 /// the `init/` generators.
@@ -60,7 +60,7 @@ pub fn canonical_path_entries() -> Vec<PathEntry> {
 
 // ── Canonical environment variables ──────────────────────────────────────────
 
-/// Returns the canonical set of env-vars that fancybash exports.
+/// Returns the canonical set of env-vars that gladeshell exports.
 pub fn canonical_env_vars() -> Vec<EnvVar> {
     vec![
         EnvVar {
@@ -89,7 +89,7 @@ pub fn canonical_env_vars() -> Vec<EnvVar> {
         },
         EnvVar {
             key: "FB_DIR",
-            value: EnvValue::HomeRelative(".fancybash"),
+            value: EnvValue::HomeRelative(".gladeshell"),
         },
     ]
 }

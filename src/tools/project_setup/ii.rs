@@ -14,7 +14,7 @@ use std::path::Path;
 use std::process::Command;
 use super::utils::{prompt_select, resolve_cmd};
 
-/// `fancybash ii` — Interactive Project Initializer (Bun/NPM/PNPM/Yarn + .gitignore).
+/// `gladeshell ii` — Interactive Project Initializer (Bun/NPM/PNPM/Yarn + .gitignore).
 pub fn run_ii() -> Result<(), Box<dyn Error>> {
     let pm = prompt_select(
         "🚀 Select Package Manager:",

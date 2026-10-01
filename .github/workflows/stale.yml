@@ -31,13 +31,13 @@ jobs:
 
             It will be automatically closed in **7 days** unless there's new activity.
 
-            If this issue is still relevant for **fancybash**, please leave a comment or update the issue.
+            If this issue is still relevant for **gladeshell**, please leave a comment or update the issue.
 
-            — fancybash bot 🤖
+            — gladeshell bot 🤖
           close-issue-message: |
             🔒 This issue has been closed due to **67 days of inactivity**.
 
-            If the problem still exists in **fancybash**, please open a new issue with updated details and RUST_BACKTRACE logs.
+            If the problem still exists in **gladeshell**, please open a new issue with updated details and RUST_BACKTRACE logs.
             Thank you for contributing! ⚡
 
           # ── Pull Requests ─────────────────────────────────────
@@ -54,12 +54,12 @@ jobs:
             - Ensure `cargo check` and `cargo test` pass cleanly
             - Leave a comment with your current status
 
-            — fancybash bot 🤖
+            — gladeshell bot 🤖
           close-pr-message: |
             🔒 This pull request has been closed due to **37 days of inactivity**.
 
             If you'd like to continue with this work, please reopen the PR or submit a new one.
-            Thank you for contributing to fancybash! ⚡
+            Thank you for contributing to gladeshell! ⚡
 
           # ── Exempt Labels ─────────────────────────────────────
           exempt-issue-labels: 'pinned,security,in-progress,help wanted'

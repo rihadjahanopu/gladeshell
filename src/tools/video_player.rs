@@ -275,7 +275,7 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
         terminal.draw(|f| {
             let outer_block = Block::default()
                 .title(Span::styled(
-                    format!(" 🎬 FANCYBASH VIDEO VAULT & PLAYER  |  Engine: {} ", player_name),
+                    format!(" 🎬 GLADESHELL VIDEO VAULT & PLAYER  |  Engine: {} ", player_name),
                     Style::default().fg(c_magenta).add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
@@ -395,7 +395,7 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
                     ]),
                     Line::raw(""),
                     Line::from(Span::styled("┌────────────────────────────────────┐", Style::default().fg(c_violet))),
-                    Line::from(Span::styled("│   🎬  FANCYBASH MEDIA PLAYER       │", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD))),
+                    Line::from(Span::styled("│   🎬  GLADESHELL MEDIA PLAYER       │", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD))),
                     Line::from(Span::styled("│                                    │", Style::default().fg(c_violet))),
                     Line::from(Span::styled("│     [▶] PRESS ENTER TO PLAY        │", Style::default().fg(c_green).add_modifier(Modifier::BOLD))),
                     Line::from(Span::styled("│         VIDEO IN BACKGROUND        │", Style::default().fg(c_yellow))),

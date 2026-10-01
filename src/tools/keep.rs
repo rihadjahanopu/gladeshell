@@ -315,7 +315,7 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
     // 1. Banner
     let header_spans = Line::from(vec![
         Span::styled("🚀 MASTER COMMAND CENTER — ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-        Span::styled("fancybash ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled("gladeshell ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
         Span::styled("v2.0 • Ultra-High-Performance Shell Kit", Style::default().fg(C_WHITE)),
     ]);
     let header = Paragraph::new(header_spans)

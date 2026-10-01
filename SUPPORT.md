@@ -1,12 +1,12 @@
 # 🆘 Support & Getting Help
 
-Thank you for using **fancybash**! We want your experience with fancybash to be as smooth, fast, and delightful as possible. If you encounter an issue, have a question, or need assistance, this document outlines all available support channels and troubleshooting steps.
+Thank you for using **gladeshell**! We want your experience with gladeshell to be as smooth, fast, and delightful as possible. If you encounter an issue, have a question, or need assistance, this document outlines all available support channels and troubleshooting steps.
 
 <div align="center">
 
-[![GitHub Issues](https://img.shields.io/github/issues/rihadjahanopu/fancybash?style=for-the-badge&color=a855f7&logo=github)](https://github.com/rihadjahanopu/fancybash/issues)
-[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-22c55e?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rihadjahanopu/fancybash/discussions)
-[![Website](https://img.shields.io/badge/Website-fancybash.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://fancybash.netlify.app)
+[![GitHub Issues](https://img.shields.io/github/issues/rihadjahanopu/gladeshell?style=for-the-badge&color=a855f7&logo=github)](https://github.com/rihadjahanopu/gladeshell/issues)
+[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-22c55e?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rihadjahanopu/gladeshell/discussions)
+[![Website](https://img.shields.io/badge/Website-gladeshell.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://gladeshell.netlify.app)
 [![License MIT](https://img.shields.io/badge/License-MIT-0ea5e9?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 
 </div>
@@ -34,7 +34,7 @@ Before creating a support ticket, try these quick resolution steps:
 
 ### Icons or Glyphs Are Broken / Displaying Question Marks
 
-`fancybash` uses Nerd Font symbols (e.g., Git branch icons, folder indicators, OS logos). If icons appear as `[?]` or missing rectangles:
+`gladeshell` uses Nerd Font symbols (e.g., Git branch icons, folder indicators, OS logos). If icons appear as `[?]` or missing rectangles:
 
 1. **Install a Nerd Font**: Download and install a Nerd Font such as [FiraCode Nerd Font](https://www.nerdfonts.com/font-downloads) or [JetBrainsMono Nerd Font](https://www.nerdfonts.com/).
 2. **Set Terminal Font**: Open your terminal application settings (VS Code, Zed, Alacritty, iTerm2, Windows Terminal, Kitty) and set your font family to your installed Nerd Font (e.g., `FiraCode Nerd Font` or `JetBrainsMono NF`).
@@ -43,7 +43,7 @@ Before creating a support ticket, try these quick resolution steps:
 
 ### Binary or Command Not Recognized After Installation
 
-If running `fancybash` results in `command not found`:
+If running `gladeshell` results in `command not found`:
 
 1. Ensure `~/.cargo/bin` or `~/.local/bin` is in your `$PATH`:
    ```bash
@@ -51,7 +51,7 @@ If running `fancybash` results in `command not found`:
    ```
 2. Run shell setup to inject interactive aliases:
    ```bash
-   fancybash setup
+   gladeshell setup
    ```
 3. Restart your terminal subshell session (`exec bash` or `exec zsh`).
 
@@ -71,17 +71,17 @@ If installing from source via Cargo:
    ```
 3. If using automated installer script:
    ```bash
-   curl -fsSL https://fancybash.netlify.app/install.sh | bash
+   curl -fsSL https://gladeshell.netlify.app/install.sh | bash
    ```
 
 ---
 
 ### Uninstalling or Restoring Previous Shell Configuration
 
-`fancybash` includes a non-destructive uninstaller:
+`gladeshell` includes a non-destructive uninstaller:
 
 ```bash
-fancybash uninstall
+gladeshell uninstall
 # OR via installer script
 ./install.sh --uninstall
 ```
@@ -90,7 +90,7 @@ fancybash uninstall
 
 ### Cross-Platform Compatibility (Linux, macOS, Windows)
 
-`fancybash` is a 100% pure Rust hyper-optimized binary supporting:
+`gladeshell` is a 100% pure Rust hyper-optimized binary supporting:
 
 - **Linux**: glibc & static MUSL architectures (`x86_64`, `aarch64`)
 - **macOS**: Intel (`x86_64`) & Apple Silicon M-Series (`aarch64`)
@@ -112,8 +112,8 @@ fancybash uninstall
 
 ## 3. Where to Get Help
 
-- **[GitHub Discussions](https://github.com/rihadjahanopu/fancybash/discussions)** — General questions, shell configuration advice, workflow tips.
-- **[GitHub Issues](https://github.com/rihadjahanopu/fancybash/issues)** — Bug reports with `RUST_BACKTRACE=1` and feature requests.
+- **[GitHub Discussions](https://github.com/rihadjahanopu/gladeshell/discussions)** — General questions, shell configuration advice, workflow tips.
+- **[GitHub Issues](https://github.com/rihadjahanopu/gladeshell/issues)** — Bug reports with `RUST_BACKTRACE=1` and feature requests.
 
 ---
 
@@ -122,7 +122,7 @@ fancybash uninstall
 Please include the following in your report:
 
 1. **OS & Architecture**: (e.g. Ubuntu 24.04 x86_64, macOS Sonoma arm64, Windows 11)
-2. **Version**: Output of `fancybash --version` and `rustc --version`
+2. **Version**: Output of `gladeshell --version` and `rustc --version`
 3. **Backtrace**: Set `RUST_BACKTRACE=1` when reproducing panics
 4. **Terminal Emulator**: (Alacritty, VS Code, WezTerm, Windows Terminal, Kitty)
 

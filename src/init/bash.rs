@@ -9,7 +9,7 @@
 
 //
 //  Generates valid Bash 4.x+ syntax powered by Native Rust resolution. Eval'd via:
-//    eval "$(fancybash init bash)"
+//    eval "$(gladeshell init bash)"
 //
 //  Hook strategy:
 //    • PROMPT_COMMAND — fires before each prompt render (replaces precmd).
@@ -48,7 +48,7 @@ __fb_prompt() {
     _fb_auto_ls
     # Use printf x trick so $() doesn't strip trailing newlines that carry ❯❯❯
     local _fb_raw
-    _fb_raw=$(fancybash prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)
+    _fb_raw=$(gladeshell prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)
     PS1="${_fb_raw%x}"
 }
 
@@ -69,13 +69,13 @@ fi
 
 # ── Typo Engine & Command Not Found Handler ──
 command_not_found_handle() {
-    fancybash correct "$1"
+    gladeshell correct "$1"
     return 127
 }
 "#);
 
     out.push_str(&shared::render_auto_ls_hook(Shell::Bash));
     out.push_str(&shared::render_cf_wrapper(Shell::Bash));
-    out.push_str("\n# fancybash bash init complete\n");
+    out.push_str("\n# gladeshell bash init complete\n");
     out
 }

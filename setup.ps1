@@ -1,5 +1,5 @@
 # =============================================================================
-# setup.ps1 — fancybash contributor setup script (PowerShell)
+# setup.ps1 — gladeshell contributor setup script (PowerShell)
 # Run this once after cloning the repo:  .\setup.ps1
 # =============================================================================
 
@@ -23,7 +23,7 @@ try {
 
 Write-Host ""
 Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "   fancybash — contributor setup          " -ForegroundColor Cyan
+Write-Host "   gladeshell — contributor setup          " -ForegroundColor Cyan
 Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
 Write-Host ""
 

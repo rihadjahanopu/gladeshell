@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# setup.sh — fancybash contributor setup script (Bash)
+# setup.sh — gladeshell contributor setup script (Bash)
 # Run this once after cloning the repo:  bash setup.sh
 # =============================================================================
 
@@ -29,7 +29,7 @@ if ! git rev-parse --git-dir &>/dev/null; then
 fi
 
 printf "\n${CYAN}══════════════════════════════════════════${RESET}\n"
-printf "${CYAN}   fancybash — contributor setup          ${RESET}\n"
+printf "${CYAN}   gladeshell — contributor setup          ${RESET}\n"
 printf "${CYAN}══════════════════════════════════════════${RESET}\n\n"
 
 # ── 1. Git hooks ─────────────────────────────────────────────────────────────

@@ -127,6 +127,6 @@ pub fn render_fallback(
     let mut buf = vec![0u8; 4096];
     match prompt::render(&ctx, &mut buf) {
         Ok(written) => String::from_utf8_lossy(&buf[..written]).to_string(),
-        Err(_) => String::from("fancybash> "),
+        Err(_) => String::from("gladeshell> "),
     }
 }

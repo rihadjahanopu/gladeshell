@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # =============================================================================
-# setup.zsh — fancybash contributor setup script (Zsh)
+# setup.zsh — gladeshell contributor setup script (Zsh)
 # Run this once after cloning the repo:  zsh setup.zsh
 # =============================================================================
 
@@ -29,7 +29,7 @@ if ! git rev-parse --git-dir &>/dev/null; then
 fi
 
 print "\n${CYAN}══════════════════════════════════════════${RESET}"
-print "${CYAN}   fancybash — contributor setup          ${RESET}"
+print "${CYAN}   gladeshell — contributor setup          ${RESET}"
 print "${CYAN}══════════════════════════════════════════${RESET}\n"
 
 # ── 1. Git hooks ─────────────────────────────────────────────────────────────

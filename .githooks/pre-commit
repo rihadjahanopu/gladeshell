@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║           fancybash — Comprehensive Rust & Sync Pre-Commit Hook           ║
+# ║           gladeshell — Comprehensive Rust & Sync Pre-Commit Hook           ║
 # ║                                                                            ║
 # ║  What it does:                                                             ║
 # ║    1. Security & Hygiene: Conflict markers, private keys, large files (>10M)║
@@ -8,9 +8,9 @@
 # ║    3. Rust Quality: Formats (rustfmt), lints (clippy), checks (cargo check) ║
 # ║                                                                            ║
 # ║  Skip controls:                                                            ║
-# ║    FANCYBASH_SKIP_SYNC=1 git commit  (Skip installer file auto-sync)       ║
+# ║    GLADESHELL_SKIP_SYNC=1 git commit  (Skip installer file auto-sync)       ║
 # ║    SKIP_RUST_CHECKS=1 git commit    (Skip cargo fmt/clippy/check)          ║
-# ║    FANCYBASH_DRY_RUN=1 git commit     (Dry run mode — no file updates)       ║
+# ║    GLADESHELL_DRY_RUN=1 git commit     (Dry run mode — no file updates)       ║
 # ║    git commit --no-verify             (Bypass all git hooks)                ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
@@ -38,15 +38,15 @@ error()   { echo -e "${RED}  ✖${RESET} ${BOLD}$*${RESET}" >&2; }
 header()  { echo -e "\n${BOLD}${CYAN}$*${RESET}"; }
 
 # ─── Global Bypass Flags ──────────────────────────────────────────────────────
-if [[ "${FANCYBASH_SKIP_ALL:-0}" == "1" || "${SKIP_HOOKS:-0}" == "1" ]]; then
+if [[ "${GLADESHELL_SKIP_ALL:-0}" == "1" || "${SKIP_HOOKS:-0}" == "1" ]]; then
   warn "Global hook skip flag detected — skipping pre-commit hook entirely."
   exit 0
 fi
 
 DRY_RUN=false
-if [[ "${FANCYBASH_DRY_RUN:-0}" == "1" ]]; then
+if [[ "${GLADESHELL_DRY_RUN:-0}" == "1" ]]; then
   DRY_RUN=true
-  warn "FANCYBASH_DRY_RUN=1 — no files will be written or staged."
+  warn "GLADESHELL_DRY_RUN=1 — no files will be written or staged."
 fi
 
 # ─── Resolve Repo Root ────────────────────────────────────────────────────────
@@ -145,8 +145,8 @@ if (( HYGIENE_ISSUES > 0 )); then
 fi
 
 # ─── STEP 2: Installer & Web File Auto-Sync ───────────────────────────────────
-if [[ "${FANCYBASH_SKIP_SYNC:-0}" == "1" ]]; then
-  warn "FANCYBASH_SKIP_SYNC=1 detected — skipping installer file auto-sync."
+if [[ "${GLADESHELL_SKIP_SYNC:-0}" == "1" ]]; then
+  warn "GLADESHELL_SKIP_SYNC=1 detected — skipping installer file auto-sync."
 else
   header "◆ STEP 2: Installer File Auto-Sync (install.sh & install.ps1 → web/)"
 

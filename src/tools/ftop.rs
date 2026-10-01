@@ -5,7 +5,7 @@
 // ============================================================================
 
 // =============================================================================
-//  src/tools/system_monitor.rs — FANCYBASH TUI System & Process Monitor (`sysmon`)
+//  src/tools/system_monitor.rs — GLADESHELL TUI System & Process Monitor (`sysmon`)
 // =============================================================================
 
 use crossterm::{
@@ -242,11 +242,11 @@ fn draw_header(f: &mut Frame, _app: &App, area: Rect) {
 
     let header_text = Line::from(vec![
         Span::styled(">_ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
-        Span::styled("FANCYBASH ", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+        Span::styled("GLADESHELL ", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
         Span::styled("v1.2 ", Style::default().fg(C_DIM)),
         Span::raw("                   "),
         Span::styled("Hostname: ", Style::default().fg(C_DIM)),
-        Span::styled(System::host_name().unwrap_or_else(|| "FANCY-DEV-SRV".into()), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+        Span::styled(System::host_name().unwrap_or_else(|| "GLADE-DEV-SRV".into()), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
         Span::raw("   "),
         Span::styled("Uptime: ", Style::default().fg(C_DIM)),
         Span::styled(format!("{days} days, {hours:02}:{mins:02}:{secs:02}"), Style::default().fg(C_TEXT)),

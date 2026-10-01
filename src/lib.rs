@@ -5,12 +5,12 @@
 // ============================================================================
 
 // =============================================================================
-//  fancybash_core — C-ABI Dynamic Library Entry Point
+//  gladeshell_core — C-ABI Dynamic Library Entry Point
 //  Loaded in-process by the shell (zero-fork prompt rendering).
 //
 //  Shell loading mechanisms:
 //    Zsh   → `zmodload` (after Phase 2 zsh module wrapper is added)
-//    Bash  → `enable -f ./libfancybash_core.so fb_prompt`
+//    Bash  → `enable -f ./libgladeshell_core.so fb_prompt`
 //    Fish  → native IPC socket / `source` with C-extension bridge
 //    Pwsh  → `[System.Runtime.InteropServices.NativeLibrary]::Load(...)` + P/Invoke
 //
@@ -44,7 +44,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 //  Initialisation / teardown  (called once by the shell hook)
 // =============================================================================
 
-/// Initialise the fancybash library. Call once after dlopen / zmodload.
+/// Initialise the gladeshell library. Call once after dlopen / zmodload.
 ///
 /// # Safety
 /// Safe to call from any C / shell extension code.
@@ -54,7 +54,7 @@ pub extern "C" fn fb_init() -> c_int {
     0 // 0 == success (POSIX convention)
 }
 
-/// Tear down the fancybash library. Call before the shell exits.
+/// Tear down the gladeshell library. Call before the shell exits.
 ///
 /// # Safety
 /// Safe to call from any C / shell extension code.
@@ -67,7 +67,7 @@ pub extern "C" fn fb_cleanup() {
 //  Prompt rendering  (hot path — must complete in < 1 ms, 0 allocations)
 // =============================================================================
 
-/// Render the two-line fancybash prompt into `out_buf` (caller-allocated).
+/// Render the two-line gladeshell prompt into `out_buf` (caller-allocated).
 ///
 /// Parameters
 /// ----------
@@ -152,7 +152,7 @@ pub unsafe extern "C" fn fb_generate_init(shell: *const c_char) -> *mut c_char {
 
     let output = match init::generate(shell_str) {
         Ok(s) => s,
-        Err(e) => format!("# fancybash init error: {e}\n"),
+        Err(e) => format!("# gladeshell init error: {e}\n"),
     };
 
     match CString::new(output) {
@@ -207,25 +207,25 @@ mod tests {
     #[test]
     fn init_bash_is_valid_utf8() {
         let result = init::generate("bash").unwrap();
-        assert!(result.contains("fancybash"), "bash init must contain marker");
+        assert!(result.contains("gladeshell"), "bash init must contain marker");
     }
 
     #[test]
     fn init_zsh_is_valid_utf8() {
         let result = init::generate("zsh").unwrap();
-        assert!(result.contains("fancybash"), "zsh init must contain marker");
+        assert!(result.contains("gladeshell"), "zsh init must contain marker");
     }
 
     #[test]
     fn init_fish_is_valid_utf8() {
         let result = init::generate("fish").unwrap();
-        assert!(result.contains("fancybash"), "fish init must contain marker");
+        assert!(result.contains("gladeshell"), "fish init must contain marker");
     }
 
     #[test]
     fn init_pwsh_is_valid_utf8() {
         let result = init::generate("pwsh").unwrap();
-        assert!(result.contains("fancybash"), "pwsh init must contain marker");
+        assert!(result.contains("gladeshell"), "pwsh init must contain marker");
     }
 
     #[test]

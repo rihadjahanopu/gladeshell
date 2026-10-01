@@ -1,27 +1,27 @@
-# fancybash — Hyper-Optimized Pure Rust Terminal Suite & CLI Toolkit
+# gladeshell — Hyper-Optimized Pure Rust Terminal Suite & CLI Toolkit
 
 > Production-ready, zero-dependency, hyper-optimized pure Rust binary toolkit providing interactive TUI tools, developer utilities, and shell enhancements.
 
 ## Core Resources
 
-- [AI Agent Full Specification (AGENT.md)](https://fancybash.netlify.app/AGENT.md): Complete machine-readable documentation, feature list, command reference, and developer guide for AI Agents.
-- [Official Website](https://fancybash.netlify.app/): Interactive landing page with theme previews, features, and quick setup instructions.
-- [Official Documentation](https://fancybash.netlify.app/docs.html): Comprehensive user manual, keyboard shortcuts, installation troubleshooting, and command reference.
-- [Linux Setup Guide](https://fancybash.netlify.app/linux-setup.html): Curated developer software installer for Linux ecosystems.
-- [GitHub Repository](https://github.com/rihadjahanopu/fancybash): Source code, issue tracker, release notes, and contribution guidelines.
+- [AI Agent Full Specification (AGENT.md)](https://gladeshell.netlify.app/AGENT.md): Complete machine-readable documentation, feature list, command reference, and developer guide for AI Agents.
+- [Official Website](https://gladeshell.netlify.app/): Interactive landing page with theme previews, features, and quick setup instructions.
+- [Official Documentation](https://gladeshell.netlify.app/docs.html): Comprehensive user manual, keyboard shortcuts, installation troubleshooting, and command reference.
+- [Linux Setup Guide](https://gladeshell.netlify.app/linux-setup.html): Curated developer software installer for Linux ecosystems.
+- [GitHub Repository](https://github.com/rihadjahanopu/gladeshell): Source code, issue tracker, release notes, and contribution guidelines.
 
 ## Quick Installation
 
 ```bash
 # One-command installer (Auto-detects OS and architecture):
-curl -fsSL https://fancybash.netlify.app/install.sh | bash
+curl -fsSL https://gladeshell.netlify.app/install.sh | bash
 ```
 
 ## Highlights
 
 - ⚡ Hyper-Optimized Pure Rust Architecture (Zero external binary or subshell dependencies)
 - 🛡️ 100% Memory Safe with `#![deny(unsafe_code)]` constraints
-- 🎨 55 Built-in Interactive Prompt Themes (`fancybash theme`)
+- 🎨 55 Built-in Interactive Prompt Themes (`gladeshell theme`)
 - 📦 Parallel Fast Archive Compressor & Extractor (`compressor`, `extractor`)
 - 🎬 FFmedia 24-in-1 Multimedia Suite (`ffmedia`)
 - 🔐 Encrypted Vault & Decoy Security Suite (`vault`)

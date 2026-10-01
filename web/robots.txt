@@ -18,5 +18,5 @@ User-agent: PerplexityBot
 Allow: /
 
 # Sitemap & AI Specifications Location
-Sitemap: https://fancybash.netlify.app/sitemap.xml
+Sitemap: https://gladeshell.netlify.app/sitemap.xml
 

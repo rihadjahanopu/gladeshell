@@ -51,7 +51,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "Frontend / Web",
         icon: "⚡",
         description: "Generate Vite (React/Vue/TS/JS) project with optional Tailwind v4 setup",
-        cmd_hint: "fancybash vite / vite",
+        cmd_hint: "gladeshell vite / vite",
         features: &["Bun / NPM runner choice", "Tailwind CSS v4 auto-install", "TypeScript / JavaScript"],
     },
     ProjectToolItem {
@@ -60,7 +60,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "Fullstack / Framework",
         icon: "🚀",
         description: "Initialize official Next.js App Router project with Bun or NPM",
-        cmd_hint: "fancybash next / next",
+        cmd_hint: "gladeshell next / next",
         features: &["create-next-app@latest", "Bun / NPM runner", "App Router ready"],
     },
     ProjectToolItem {
@@ -69,7 +69,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "UI Components",
         icon: "🎨",
         description: "Setup Shadcn UI and auto-patch tsconfig.json and vite.config.ts with @/* path aliases",
-        cmd_hint: "fancybash ui / ui",
+        cmd_hint: "gladeshell ui / ui",
         features: &["Path alias auto-patching (@/*)", "Custom component installer", "Vite & Next.js auto-detect"],
     },
     ProjectToolItem {
@@ -78,7 +78,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "Styling & Utility",
         icon: "📦",
         description: "Install Tailwind CSS v4, @tailwindcss/vite, clsx, and inject @import into main CSS",
-        cmd_hint: "fancybash css / css",
+        cmd_hint: "gladeshell css / css",
         features: &["Tailwind CSS v4 engine", "@tailwindcss/vite plugin", "clsx + tailwind-merge"],
     },
     ProjectToolItem {
@@ -87,7 +87,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "Execution / Web",
         icon: "🌐",
         description: "Serve index.html with Bun dev server or open directly in system browser",
-        cmd_hint: "fancybash html / html",
+        cmd_hint: "gladeshell html / html",
         features: &["Bun HTML dev runner", "Browser auto-open fallback", "Zero configuration"],
     },
     ProjectToolItem {
@@ -96,7 +96,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "Project Scaffolding",
         icon: "🥐",
         description: "Quickly initialize package.json and create standard .gitignore file",
-        cmd_hint: "fancybash ii / ii",
+        cmd_hint: "gladeshell ii / ii",
         features: &["Bun / NPM / PNPM / Yarn", "Auto .gitignore creation", "Zero configuration"],
     },
     ProjectToolItem {
@@ -105,7 +105,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "C / C++ Native",
         icon: "⚙️",
         description: "Generate C++ project structure with src, include, CMakeLists.txt, build.sh, and .gitignore",
-        cmd_hint: "fancybash makecpp / makecpp",
+        cmd_hint: "gladeshell makecpp / makecpp",
         features: &["CMake & Makefile setup", "C++17 / C++20 standard", "Modular directory layout"],
     },
     ProjectToolItem {
@@ -114,7 +114,7 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "Execution Tool",
         icon: "🏃",
         description: "Interactively scan directory and execute JS/TS files instantly with Bun",
-        cmd_hint: "fancybash run / run",
+        cmd_hint: "gladeshell run / run",
         features: &["Interactive file selector", "Instant Bun runner", "TS & JS support"],
     },
     ProjectToolItem {
@@ -123,12 +123,12 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         category: "Package Utility",
         icon: "🔄",
         description: "Convert lockfiles and dependency commands between npm, bun, pnpm, and yarn",
-        cmd_hint: "fancybash pg / pg",
+        cmd_hint: "gladeshell pg / pg",
         features: &["Multi-package manager", "Lockfile converter", "Auto dependency detection"],
     },
 ];
 
-/// Interactive Project Tools TUI & Hub (`fancybash project` / `project`)
+/// Interactive Project Tools TUI & Hub (`gladeshell project` / `project`)
 pub fn run_project() -> Result<(), Box<dyn Error>> {
     let choice = run_project_tui()?;
     match choice.as_deref() {
@@ -198,7 +198,7 @@ fn run_project_tui() -> Result<Option<String>, Box<dyn Error>> {
 
             let header_text = vec![
                 Line::from(vec![
-                    Span::styled(" 🚀 FANCYBASH PROJECT HUB ", Style::default().fg(Color::Black).bg(Color::Rgb(0, 220, 240)).add_modifier(Modifier::BOLD)),
+                    Span::styled(" 🚀 GLADESHELL PROJECT HUB ", Style::default().fg(Color::Black).bg(Color::Rgb(0, 220, 240)).add_modifier(Modifier::BOLD)),
                     Span::raw("  "),
                     Span::styled("Interactive Web & Native Boilerplate Center", Style::default().fg(Color::Rgb(255, 200, 80)).add_modifier(Modifier::BOLD)),
                 ]),

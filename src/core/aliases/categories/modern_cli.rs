@@ -70,19 +70,19 @@ pub fn group() -> AliasGroup {
             },
             AliasEntry {
                 key: "fh".to_string(),
-                value: "eval \"$(fancybash fh)\"".to_string(),
+                value: "eval \"$(gladeshell fh)\"".to_string(),
                 description: "Native Ratatui interactive command history search and exec".to_string(),
                 only_shells: vec![],
             },
             AliasEntry {
                 key: "rg".to_string(),
-                value: "fancybash grep".to_string(),
+                value: "gladeshell grep".to_string(),
                 description: "Native high-performance ripgrep search engine".to_string(),
                 only_shells: vec![],
             },
             AliasEntry {
                 key: "grep".to_string(),
-                value: "fancybash grep".to_string(),
+                value: "gladeshell grep".to_string(),
                 description: "Native high-performance ripgrep search engine".to_string(),
                 only_shells: vec![],
             },

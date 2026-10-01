@@ -5,7 +5,7 @@
 // ============================================================================
 
 // =============================================================================
-//  src/tools/self_upgrade.rs — Pure Rust Self-upgrader for fancybash (`upgrade`)
+//  src/tools/self_upgrade.rs — Pure Rust Self-upgrader for gladeshell (`upgrade`)
 // =============================================================================
 
 use std::error::Error;
@@ -17,11 +17,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let is_windows = cfg!(target_os = "windows");
     let script_ext = if is_windows { "install.ps1" } else { "install.sh" };
 
-    let gh_rs_url = format!("https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/{}", script_ext);
-    let gh_url = format!("https://raw.githubusercontent.com/rihadjahanopu/fancybash/main/{}", script_ext);
-    let cdn_url = format!("https://fancybash.netlify.app/{}", script_ext);
+    let gh_rs_url = format!("https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}", script_ext);
+    let gh_url = format!("https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}", script_ext);
+    let cdn_url = format!("https://gladeshell.netlify.app/{}", script_ext);
 
-    println!("\x1b[1;35m⚡ Upgrading fancybash to latest version...\x1b[0m");
+    println!("\x1b[1;35m⚡ Upgrading gladeshell to latest version...\x1b[0m");
 
     let temp_dir = std::env::temp_dir();
     let script_path = temp_dir.join(script_ext);
@@ -32,7 +32,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         if let Ok(res) = ureq::get(url).call() {
             if let Ok(script_content) = res.into_body().read_to_string() {
                 if !script_content.is_empty() && fs::write(&script_path, &script_content).is_ok() {
-                    println!("\x1b[1;32m✨ fancybash upgrade payload ({}) fetched via Pure Rust HTTP!\x1b[0m", script_ext);
+                    println!("\x1b[1;32m✨ gladeshell upgrade payload ({}) fetched via Pure Rust HTTP!\x1b[0m", script_ext);
                     fetched = true;
                     break;
                 }
@@ -102,9 +102,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     upgrade_res?;
 
-    println!("\x1b[1;32m✨ fancybash upgraded successfully via Pure Rust engine!\x1b[0m");
+    println!("\x1b[1;32m✨ gladeshell upgraded successfully via Pure Rust engine!\x1b[0m");
     println!(
-        "\x1b[1;36m💡 Restart your shell or run: eval \"$(fancybash init <shell>)\"\x1b[0m"
+        "\x1b[1;36m💡 Restart your shell or run: eval \"$(gladeshell init <shell>)\"\x1b[0m"
     );
 
     Ok(())
@@ -122,20 +122,20 @@ fn apply_pure_rust_upgrade(script_path: &Path) -> Result<(), Box<dyn Error>> {
 
     if let Some(home) = home_path {
         let targets = vec![
-            (home.join(".bashrc"), "eval \"$(fancybash init bash)\"\n"),
-            (home.join(".zshrc"), "eval \"$(fancybash init zsh)\"\n"),
-            (home.join(".config/fish/config.fish"), "fancybash init fish | source\n"),
+            (home.join(".bashrc"), "eval \"$(gladeshell init bash)\"\n"),
+            (home.join(".zshrc"), "eval \"$(gladeshell init zsh)\"\n"),
+            (home.join(".config/fish/config.fish"), "gladeshell init fish | source\n"),
             (
                 home.join("Documents/PowerShell/Microsoft.PowerShell_profile.ps1"),
-                "Invoke-Expression (&fancybash init pwsh | Out-String)\n",
+                "Invoke-Expression (&gladeshell init pwsh | Out-String)\n",
             ),
             (
                 home.join("Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"),
-                "Invoke-Expression (&fancybash init pwsh | Out-String)\n",
+                "Invoke-Expression (&gladeshell init pwsh | Out-String)\n",
             ),
             (
                 home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
-                "Invoke-Expression (&fancybash init pwsh | Out-String)\n",
+                "Invoke-Expression (&gladeshell init pwsh | Out-String)\n",
             ),
         ];
 
@@ -149,7 +149,7 @@ fn apply_pure_rust_upgrade(script_path: &Path) -> Result<(), Box<dyn Error>> {
                     let _ = fs::create_dir_all(parent);
                 }
                 let content = fs::read_to_string(&rc).unwrap_or_default();
-                if !content.contains("fancybash init") {
+                if !content.contains("gladeshell init") {
                     let formatted = format!("\n{}\n", init_line.trim());
                     let _ = fs::write(&rc, format!("{}{}", content, formatted));
                 }
@@ -166,15 +166,15 @@ mod tests {
 
     #[test]
     fn test_self_upgrade_cdn_url_valid() {
-        const CDN_URL_SH: &str = "https://fancybash.netlify.app/install.sh";
-        const CDN_URL_PS1: &str = "https://fancybash.netlify.app/install.ps1";
+        const CDN_URL_SH: &str = "https://gladeshell.netlify.app/install.sh";
+        const CDN_URL_PS1: &str = "https://gladeshell.netlify.app/install.ps1";
         assert!(CDN_URL_SH.starts_with("https://"));
         assert!(CDN_URL_PS1.starts_with("https://"));
     }
 
     #[test]
     fn test_apply_pure_rust_upgrade_non_existent_file() {
-        let dummy = Path::new("/tmp/non_existent_fancybash_installer_test.sh");
+        let dummy = Path::new("/tmp/non_existent_gladeshell_installer_test.sh");
         let res = apply_pure_rust_upgrade(dummy);
         assert!(res.is_err());
     }

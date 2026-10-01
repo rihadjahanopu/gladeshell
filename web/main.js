@@ -1,5 +1,5 @@
 /* ============================================================
-   FANCYBASH — Main JavaScript
+   GLADESHELL — Main JavaScript
    ============================================================ */
 
 // ─── Navbar scroll effect ──────────────────────────────────
@@ -523,7 +523,7 @@ function initBenchmarkHome() {
 
     const shells = [
       {
-        name: 'FancyBash',
+        name: 'GladeShell',
         color: '#22d3ee',
         fill: 'rgba(34,211,238,0.15)',
         scores: [10, 10, 9.8, 8.5, 9, 9],

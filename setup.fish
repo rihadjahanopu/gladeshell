@@ -1,6 +1,6 @@
 #!/usr/bin/env fish
 # =============================================================================
-# setup.fish — fancybash contributor setup script (Fish)
+# setup.fish — gladeshell contributor setup script (Fish)
 # Run this once after cloning the repo:  fish setup.fish
 # =============================================================================
 
@@ -19,7 +19,7 @@ end
 set_color cyan
 echo ""
 echo "══════════════════════════════════════════"
-echo "   fancybash — contributor setup          "
+echo "   gladeshell — contributor setup          "
 echo "══════════════════════════════════════════"
 echo ""
 set_color normal

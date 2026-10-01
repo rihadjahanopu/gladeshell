@@ -9,7 +9,7 @@
 
 //
 //  Generates valid Fish 3.x+ syntax powered by Native Rust resolution. Source'd via:
-//    fancybash init fish | source
+//    gladeshell init fish | source
 //
 //  Hook strategy:
 //    • fish_prompt()        — renders the full two-line prompt via Native Rust engine.
@@ -36,7 +36,7 @@ pub fn generate() -> String {
 
     // ── Prompt function (Native Rust Engine) ──────────────────────────────────
     out.push_str(r#"
-# ── fancybash Fish Prompt (Native Rust Engine) ──────────────────────────────
+# ── gladeshell Fish Prompt (Native Rust Engine) ──────────────────────────────
 #
 # fish_prompt is called every time a new prompt is needed.
 # $status    = exit code of the last command (captured BEFORE any other calls)
@@ -57,7 +57,7 @@ function fish_prompt
     set -l _fb_host (hostname -s 2>/dev/null; or hostname 2>/dev/null; or echo host)
 
     # Render prompt via Native Rust engine — outputs raw ANSI (no escaping needed in Fish)
-    fancybash prompt \
+    gladeshell prompt \
         --shell fish \
         --cwd "$PWD" \
         --exit-code $_fb_exit \
@@ -72,26 +72,26 @@ function fish_right_prompt
     # Silent — duration is rendered in main prompt
 end
 
-# ── Fish greeting — replace default with fancybash welcome ─────────────────
+# ── Fish greeting — replace default with gladeshell welcome ─────────────────
 function fish_greeting
     # Silent — no greeting spam
 end
 
 # ── History settings ────────────────────────────────────────────────────────
-set -gx fish_history fancybash
+set -gx fish_history gladeshell
 set -g fish_history_path "$HOME/.local/share/fish/fish_history"
 
-# ── Key bindings: Ctrl+R → fancybash fh (fuzzy history search) ─────────────
-if type -q fancybash
-    bind \cr 'fancybash fh'
+# ── Key bindings: Ctrl+R → gladeshell fh (fuzzy history search) ─────────────
+if type -q gladeshell
+    bind \cr 'gladeshell fh'
 end
 
 # ── Typo Engine & Command Not Found Handler ──
 function fish_command_not_found
-    fancybash correct $argv[1]
+    gladeshell correct $argv[1]
 end
 "#);
 
-    out.push_str("\n# fancybash fish init complete\n");
+    out.push_str("\n# gladeshell fish init complete\n");
     out
 }

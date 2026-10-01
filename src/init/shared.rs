@@ -115,12 +115,12 @@ export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
             }
             out.push_str(r#"
 if [[ -o interactive ]]; then
-    fancybash internal-clean-rc >/dev/null 2>&1 &!
+    gladeshell internal-clean-rc >/dev/null 2>&1 &!
 fi
 
 _fb_lazy_load_nvm() {
     unset -f nvm node npm npx 2>/dev/null
-    fancybash internal-clean-rc >/dev/null 2>&1 &!
+    gladeshell internal-clean-rc >/dev/null 2>&1 &!
     if [ -s "$NVM_DIR/nvm.sh" ]; then
         \. "$NVM_DIR/nvm.sh"
     fi
@@ -220,9 +220,9 @@ if command -v eza &>/dev/null; then
     alias lt='eza --tree --icons --level=2'
     alias tree='eza --tree --icons'
 else
-    alias ls='fancybash auto-ls'
-    alias ll='fancybash auto-ls'
-    alias la='fancybash auto-ls'
+    alias ls='gladeshell auto-ls'
+    alias ll='gladeshell auto-ls'
+    alias la='gladeshell auto-ls'
 fi
 "#.to_string(),
         Shell::Fish => r#"
@@ -235,9 +235,9 @@ if command -v eza &>/dev/null
     alias lt 'eza --tree --icons --level=2'
     alias tree 'eza --tree --icons'
 else
-    alias ls 'fancybash auto-ls'
-    alias ll 'fancybash auto-ls'
-    alias la 'fancybash auto-ls'
+    alias ls 'gladeshell auto-ls'
+    alias ll 'gladeshell auto-ls'
+    alias la 'gladeshell auto-ls'
 end
 "#.to_string(),
         Shell::Pwsh => r#"
@@ -248,9 +248,9 @@ if (Get-Command eza -ErrorAction SilentlyContinue) {
     function global:la { eza -a --icons @args }
 } else {
     Remove-Item alias:ls -ErrorAction SilentlyContinue 2>$null
-    function global:ls { fancybash auto-ls @args }
-    function global:ll { fancybash auto-ls @args }
-    function global:la { fancybash auto-ls @args }
+    function global:ls { gladeshell auto-ls @args }
+    function global:ll { gladeshell auto-ls @args }
+    function global:la { gladeshell auto-ls @args }
 }
 "#.to_string(),
     }
@@ -266,26 +266,26 @@ unalias mkd rmd rmf bak trash 2>/dev/null || true
 
 mkd() {
     if [ -n "$1" ]; then
-        fancybash mkd "$1" && cd "$1" 2>/dev/null || true
+        gladeshell mkd "$1" && cd "$1" 2>/dev/null || true
     else
-        fancybash mkd ""
+        gladeshell mkd ""
     fi
 }
 
 rmd() {
-    fancybash rmd "$@"
+    gladeshell rmd "$@"
 }
 
 rmf() {
-    fancybash rmf "$@"
+    gladeshell rmf "$@"
 }
 
 bak() {
-    fancybash bak "$@"
+    gladeshell bak "$@"
 }
 
 trash() {
-    fancybash trash "$@"
+    gladeshell trash "$@"
 }
 "#.to_string(),
         Shell::Fish => r#"
@@ -293,26 +293,26 @@ trash() {
 functions -e mkd rmd rmf bak trash 2>/dev/null
 function mkd
     if test -n "$argv[1]"
-        fancybash mkd "$argv[1]"; and cd "$argv[1]" 2>/dev/null
+        gladeshell mkd "$argv[1]"; and cd "$argv[1]" 2>/dev/null
     else
-        fancybash mkd ""
+        gladeshell mkd ""
     end
 end
 
 function rmd
-    fancybash rmd $argv
+    gladeshell rmd $argv
 end
 
 function rmf
-    fancybash rmf $argv
+    gladeshell rmf $argv
 end
 
 function bak
-    fancybash bak $argv
+    gladeshell bak $argv
 end
 
 function trash
-    fancybash trash $argv
+    gladeshell trash $argv
 end
 "#.to_string(),
         Shell::Pwsh => r#"
@@ -320,27 +320,27 @@ end
 function global:mkd {
     param([string]$Path)
     if ($Path) {
-        fancybash mkd $Path
+        gladeshell mkd $Path
         Set-Location $Path 2>$null
     } else {
-        fancybash mkd ""
+        gladeshell mkd ""
     }
 }
 function global:rmd {
     param([string]$Path)
-    fancybash rmd $Path
+    gladeshell rmd $Path
 }
 function global:rmf {
     param([string]$Path)
-    fancybash rmf $Path
+    gladeshell rmf $Path
 }
 function global:bak {
     param([string]$Path)
-    fancybash bak $Path
+    gladeshell bak $Path
 }
 function global:trash {
     param([string]$Path)
-    fancybash trash $Path
+    gladeshell trash $Path
 }
 "#.to_string(),
     }
@@ -369,7 +369,7 @@ pub fn render_auto_ls_hook(shell: Shell) -> String {
 # ── Native Rust Auto-LS on directory change ──
 unalias accurate_auto_ls 2>/dev/null
 accurate_auto_ls() {
-    fancybash auto-ls 2>/dev/null
+    gladeshell auto-ls 2>/dev/null
 }
 add-zsh-hook chpwd accurate_auto_ls
 "#.to_string(),
@@ -379,7 +379,7 @@ _fb_last_pwd="$PWD"
 _fb_auto_ls() {
     if [[ "$PWD" != "$_fb_last_pwd" ]]; then
         _fb_last_pwd="$PWD"
-        fancybash auto-ls 2>/dev/null
+        gladeshell auto-ls 2>/dev/null
     fi
 }
 "#.to_string(),
@@ -387,14 +387,14 @@ _fb_auto_ls() {
 # ── Native Rust Auto-LS on directory change ──
 functions -e accurate_auto_ls 2>/dev/null
 function accurate_auto_ls --on-variable PWD
-    fancybash auto-ls 2>/dev/null
+    gladeshell auto-ls 2>/dev/null
 end
 "#.to_string(),
         Shell::Pwsh => r#"
 # ── Native Rust Auto-LS trigger ──
 if ($cwd -ne $global:_fb_last_pwd) {
     $global:_fb_last_pwd = $cwd
-    fancybash auto-ls 2>$null
+    gladeshell auto-ls 2>$null
 }
 "#.to_string(),
     }
@@ -464,7 +464,7 @@ _cf_open() {
 
 cf() {
     local result action target
-    result="$(fancybash cf "$@")"
+    result="$(gladeshell cf "$@")"
     [[ -z "$result" ]] && return
 
     action="${result%%:*}"
@@ -507,9 +507,9 @@ unfunction ff 2>/dev/null || true
 ff() {
     local result action target
     if [ $# -eq 0 ]; then
-        result="$(fancybash ff -i)"
+        result="$(gladeshell ff -i)"
     else
-        result="$(fancybash ff "$@")"
+        result="$(gladeshell ff "$@")"
     fi
     [[ -z "$result" ]] && return
 
@@ -581,7 +581,7 @@ function _cf_open
 end
 
 function cf
-    set -l result (fancybash cf $argv)
+    set -l result (gladeshell cf $argv)
     test -z "$result"; and return
 
     set -l parts (string split -m1 ":" -- $result)
@@ -630,7 +630,7 @@ end
 
 functions -e ff 2>/dev/null
 function ff
-    set -l result (test (count $argv) -eq 0; and fancybash ff -i; or fancybash ff $argv)
+    set -l result (test (count $argv) -eq 0; and gladeshell ff -i; or gladeshell ff $argv)
     test -z "$result"; and return
 
     set -l parts (string split -m1 ":" -- $result)
@@ -703,7 +703,7 @@ function _cf_open($file) {
 }
 
 function cf {
-    $result = fancybash cf @args
+    $result = gladeshell cf @args
     if (-not $result) { return }
     $parts = $result -split ':', 2
     if ($parts.Length -lt 2) {
@@ -742,7 +742,7 @@ function cf {
 
 Remove-Item alias:ff -ErrorAction SilentlyContinue 2>$null
 function ff {
-    $result = if ($args.Count -eq 0) { fancybash ff -i } else { fancybash ff @args }
+    $result = if ($args.Count -eq 0) { gladeshell ff -i } else { gladeshell ff @args }
     if (-not $result) { return }
     $parts = $result -split ':', 2
     if ($parts.Length -lt 2) {
@@ -810,10 +810,10 @@ mod tests {
 
     #[test]
     fn test_render_auto_ls_hook() {
-        assert!(render_auto_ls_hook(Shell::Zsh).contains("fancybash auto-ls"));
-        assert!(render_auto_ls_hook(Shell::Bash).contains("fancybash auto-ls"));
-        assert!(render_auto_ls_hook(Shell::Fish).contains("fancybash auto-ls"));
-        assert!(render_auto_ls_hook(Shell::Pwsh).contains("fancybash auto-ls"));
+        assert!(render_auto_ls_hook(Shell::Zsh).contains("gladeshell auto-ls"));
+        assert!(render_auto_ls_hook(Shell::Bash).contains("gladeshell auto-ls"));
+        assert!(render_auto_ls_hook(Shell::Fish).contains("gladeshell auto-ls"));
+        assert!(render_auto_ls_hook(Shell::Pwsh).contains("gladeshell auto-ls"));
     }
 
     #[test]

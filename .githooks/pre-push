@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║             fancybash — Bulletproof Pre-Push Test Suite Hook             ║
+# ║             gladeshell — Bulletproof Pre-Push Test Suite Hook             ║
 # ║                                                                            ║
 # ║  What it does:                                                             ║
 # ║    1. Verifies workspace compilation (cargo check --workspace --all-targets)║
@@ -34,7 +34,7 @@ error()   { echo -e "${RED}  ✖${RESET} ${BOLD}$*${RESET}" >&2; }
 header()  { echo -e "\n${BOLD}${CYAN}$*${RESET}"; }
 
 # ─── Bypass Flags ─────────────────────────────────────────────────────────────
-if [[ "${SKIP_PRE_PUSH:-0}" == "1" || "${FANCYBASH_SKIP_PRE_PUSH:-0}" == "1" ]]; then
+if [[ "${SKIP_PRE_PUSH:-0}" == "1" || "${GLADESHELL_SKIP_PRE_PUSH:-0}" == "1" ]]; then
   warn "SKIP_PRE_PUSH=1 detected — skipping pre-push test suite execution."
   exit 0
 fi
@@ -46,7 +46,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && git rev-parse --show-topl
 }
 cd "$REPO_ROOT"
 
-header "◆ fancybash pre-push: Workspace Verification & Test Suite"
+header "◆ gladeshell pre-push: Workspace Verification & Test Suite"
 
 # ─── 1. Full Workspace Compilation Check ──────────────────────────────────────
 info "1/2 Verifying all workspace targets compile (cargo check)..."

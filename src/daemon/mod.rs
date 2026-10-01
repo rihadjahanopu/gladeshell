@@ -1,5 +1,5 @@
 // ============================================================================
-//  src/daemon/mod.rs — Persistent background socket server for fancybash
+//  src/daemon/mod.rs — Persistent background socket server for gladeshell
 //
 //  Architecture:
 //    • Multi-threaded Unix IPC socket server (one socket per user)
@@ -38,7 +38,7 @@ const MAX_PAYLOAD_BYTES: usize = 16_384;
 
 /// Return the user-specific daemon socket path.
 ///
-/// Path format: `<tmpdir>/fancybash_<user_tag>.sock`
+/// Path format: `<tmpdir>/gladeshell_<user_tag>.sock`
 ///
 /// On Linux: uses UID from /proc/self/status for uniqueness.
 /// On macOS/BSD: falls back to $USER / $LOGNAME.
@@ -46,7 +46,7 @@ const MAX_PAYLOAD_BYTES: usize = 16_384;
 pub fn socket_path() -> PathBuf {
     let temp_dir = std::env::temp_dir();
     let user_tag = resolve_user_tag();
-    temp_dir.join(format!("fancybash_{user_tag}.sock"))
+    temp_dir.join(format!("gladeshell_{user_tag}.sock"))
 }
 
 /// Return the socket path as a UTF-8 string (for embedding in shell scripts).
@@ -92,7 +92,7 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
         let listener = UnixListener::bind(&path)?;
         // Use stderr — the daemon must never pollute stdout
-        eprintln!("fancybash daemon listening on {}", path.display());
+        eprintln!("gladeshell daemon listening on {}", path.display());
 
         let running = Arc::new(AtomicBool::new(true));
 
@@ -180,7 +180,7 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(_e) => {
                     // Log to stderr only; do not crash the server
-                    // Uncomment for debug: eprintln!("fancybash daemon: accept error: {_e}");
+                    // Uncomment for debug: eprintln!("gladeshell daemon: accept error: {_e}");
                 }
             }
         }
@@ -196,7 +196,7 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(unix))]
     {
         // Windows / Wasm: in-process fallback mode (daemon not functional)
-        eprintln!("fancybash daemon: Unix socket not available; running in no-op mode.");
+        eprintln!("gladeshell daemon: Unix socket not available; running in no-op mode.");
         Ok(())
     }
 }
@@ -374,7 +374,7 @@ fn handle_prompt_parts(parts: &[&str], buf: &mut Vec<u8>) {
     buf.resize(4096, 0);
     if prompt::render(&ctx, buf).is_err() {
         // Write a safe, bounded error message — never overflow the buffer
-        const ERR_MSG: &[u8] = b"fancybash: prompt render error\n";
+        const ERR_MSG: &[u8] = b"gladeshell: prompt render error\n";
         let safe_len = ERR_MSG.len().min(buf.len());
         buf[..safe_len].copy_from_slice(&ERR_MSG[..safe_len]);
     }
@@ -417,8 +417,8 @@ mod tests {
     }
 
     #[test]
-    fn test_socket_path_contains_fancybash() {
+    fn test_socket_path_contains_gladeshell() {
         let path = socket_path_str();
-        assert!(path.contains("fancybash"), "socket filename must contain 'fancybash'");
+        assert!(path.contains("gladeshell"), "socket filename must contain 'gladeshell'");
     }
 }

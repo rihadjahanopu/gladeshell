@@ -1,5 +1,5 @@
 /* ============================================================
-   FANCYBASH — Professional Advanced Documentation Scripts
+   GLADESHELL — Professional Advanced Documentation Scripts
    ============================================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -82,7 +82,7 @@ const AUTOCOMPLETE_DICTIONARY = [
   {
     id: 'overview',
     title: 'Overview & Philosophy',
-    sub: 'What is fancybash?',
+    sub: 'What is gladeshell?',
     type: 'section',
     icon: '📖',
   },
@@ -742,7 +742,7 @@ function initNavAutocomplete() {
    ============================================================ */
 function initThemePicker() {
   const dots = document.querySelectorAll('.theme-dot');
-  const savedTheme = localStorage.getItem('fancybash_docs_theme') || 'default';
+  const savedTheme = localStorage.getItem('gladeshell_docs_theme') || 'default';
 
   applyTheme(savedTheme);
 
@@ -750,7 +750,7 @@ function initThemePicker() {
     dot.addEventListener('click', () => {
       const theme = dot.getAttribute('data-t');
       applyTheme(theme);
-      localStorage.setItem('fancybash_docs_theme', theme);
+      localStorage.setItem('gladeshell_docs_theme', theme);
     });
   });
 
@@ -1148,25 +1148,25 @@ function initTerminalPlayground() {
       { text: '✓ Copied to clipboard buffer.', class: 'warning' },
     ],
     uup: [
-      { text: '🔄 Launching fancybash Mega-Updater (uup)...', class: 'cyan' },
+      { text: '🔄 Launching gladeshell Mega-Updater (uup)...', class: 'cyan' },
       { text: '[1/5] Updating APT package repositories & upgrades... Done.', class: 'success' },
       { text: '[2/5] Updating Snap packages... All snaps up to date.', class: 'success' },
       { text: '[3/5] Updating Flatpak runtimes... 2 packages updated.', class: 'success' },
       { text: '[4/5] Upgrading Bun & Node environment... Bun 1.1.20 ready.', class: 'success' },
       {
-        text: '[5/5] Checking fancybash git repository... Latest version active!',
+        text: '[5/5] Checking gladeshell git repository... Latest version active!',
         class: 'success',
       },
       { text: '✨ System update completed in 4.2s!', class: 'warning' },
     ],
     sysinfo: [
-      { text: '💻 fancybash System Summary:', class: 'cyan' },
+      { text: '💻 gladeshell System Summary:', class: 'cyan' },
       { text: 'OS: Ubuntu 24.04 LTS (x86_64)', class: '' },
       { text: 'Kernel: Linux 6.8.0-40-generic', class: '' },
       { text: 'CPU: AMD Ryzen 7 7840HS @ 3.80GHz (16 cores)', class: '' },
       { text: 'Memory: 7.8 GB / 32.0 GB (24% used)', class: '' },
       { text: 'Disk /: 45.2 GB free of 500 GB (12% used)', class: '' },
-      { text: 'Shell: fancybash v2.0 (Bash 5.2.21)', class: 'success' },
+      { text: 'Shell: gladeshell v2.0 (Bash 5.2.21)', class: 'success' },
     ],
     'ex demo.tar.gz': [
       { text: '🗜️ Detecting archive type: Gzip Compressed Tar', class: 'cyan' },
@@ -1215,11 +1215,11 @@ function initTerminalPlayground() {
   function runSimulation(cmd) {
     const line = document.createElement('div');
     line.className = 'term-line';
-    line.innerHTML = `<span class="term-prompt">🚀 fancybash ❯ </span><span class="term-input">${escapeHtml(cmd)}</span>`;
+    line.innerHTML = `<span class="term-prompt">🚀 gladeshell ❯ </span><span class="term-input">${escapeHtml(cmd)}</span>`;
     body.appendChild(line);
 
     const sim = COMMAND_SIMULATIONS[cmd] || [
-      { text: `Executing fancybash alias: ${cmd}...`, class: 'cyan' },
+      { text: `Executing gladeshell alias: ${cmd}...`, class: 'cyan' },
       { text: '✓ Command finished successfully.', class: 'success' },
     ];
 
@@ -1250,11 +1250,11 @@ function initInstallerBuilder() {
   if (!outputCmd) return;
 
   const INSTALL_COMMANDS = {
-    bash: 'curl -fsSL https://fancybash.netlify.app/public/install.sh | bash',
-    zsh: 'curl -fsSL https://fancybash.netlify.app/public/install.zsh | zsh',
-    fish: 'curl -fsSL https://fancybash.netlify.app/public/install.fish | fish',
+    bash: 'curl -fsSL https://gladeshell.netlify.app/public/install.sh | bash',
+    zsh: 'curl -fsSL https://gladeshell.netlify.app/public/install.zsh | zsh',
+    fish: 'curl -fsSL https://gladeshell.netlify.app/public/install.fish | fish',
     powershell:
-      'irm https://fancybash.netlify.app/public/i.ps1 | iex',
+      'irm https://gladeshell.netlify.app/public/i.ps1 | iex',
   };
 
   function updateBuilder() {
@@ -1270,12 +1270,12 @@ function initInstallerBuilder() {
 
     outputCmd.innerText = INSTALL_COMMANDS[selectedShell] || INSTALL_COMMANDS.bash;
 
-    let configText = `# fancybash custom configuration for ${selectedShell.toUpperCase()}\n`;
-    if (activeFeats.includes('cputemp')) configText += `export FANCY_SHOW_CPU_TEMP=true\n`;
-    if (activeFeats.includes('gitdirty')) configText += `export FANCY_SHOW_GIT_DIRTY=true\n`;
-    if (activeFeats.includes('bun')) configText += `export FANCY_ENABLE_BUN_ALIASES=true\n`;
-    if (activeFeats.includes('docker')) configText += `export FANCY_ENABLE_DOCKER_ALIASES=true\n`;
-    if (activeFeats.includes('timer')) configText += `export FANCY_SHOW_EXEC_TIMER=true\n`;
+    let configText = `# gladeshell custom configuration for ${selectedShell.toUpperCase()}\n`;
+    if (activeFeats.includes('cputemp')) configText += `export GLADE_SHOW_CPU_TEMP=true\n`;
+    if (activeFeats.includes('gitdirty')) configText += `export GLADE_SHOW_GIT_DIRTY=true\n`;
+    if (activeFeats.includes('bun')) configText += `export GLADE_ENABLE_BUN_ALIASES=true\n`;
+    if (activeFeats.includes('docker')) configText += `export GLADE_ENABLE_DOCKER_ALIASES=true\n`;
+    if (activeFeats.includes('timer')) configText += `export GLADE_SHOW_EXEC_TIMER=true\n`;
 
     outputCode.innerText = configText;
   }
@@ -1544,7 +1544,7 @@ function initBenchmark() {
 
     // Shell scores [0-10] per axis: Startup, Prompt, Memory, Features, Themes, POSIX
     const shells = [
-      { name: 'FancyBash', color: '#22d3ee',  fill: 'rgba(34,211,238,0.15)',  scores: [10, 10, 9.8, 8.5, 9, 9] },
+      { name: 'GladeShell', color: '#22d3ee',  fill: 'rgba(34,211,238,0.15)',  scores: [10, 10, 9.8, 8.5, 9, 9] },
       { name: 'Bash',      color: '#22c55e',  fill: 'rgba(34,197,94,0.10)',   scores: [9.7, 5, 9.9, 4, 1, 10] },
       { name: 'Fish',      color: '#0891b2',  fill: 'rgba(8,145,178,0.10)',   scores: [8.5, 7, 8.5, 7, 3, 0] },
       { name: 'PS7',       color: '#3b82f6',  fill: 'rgba(59,130,246,0.10)',  scores: [2, 4, 1, 7, 3, 0] },

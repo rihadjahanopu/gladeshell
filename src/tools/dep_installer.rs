@@ -12,7 +12,7 @@
 //  package manager if missing.
 //
 //  Usage (called from generated shell init code):
-//    fancybash ensure-dep <cmd> <apt_pkg> <pac_pkg> <dnf_pkg>
+//    gladeshell ensure-dep <cmd> <apt_pkg> <pac_pkg> <dnf_pkg>
 //
 //  Special aliases handled natively (no 3rd-party crates):
 //    fd    -> fdfind  (Debian/Ubuntu)

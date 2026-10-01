@@ -13,7 +13,7 @@ use std::path::Path;
 use std::process::Command;
 use super::utils::{cmd_ok, resolve_cmd};
 
-/// `fancybash html` — Serve or run `index.html` with Bun, or open in default browser.
+/// `gladeshell html` — Serve or run `index.html` with Bun, or open in default browser.
 pub fn run_html() -> Result<(), Box<dyn Error>> {
     let html_file = if Path::new("index.html").exists() {
         "index.html"

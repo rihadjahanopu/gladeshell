@@ -8,7 +8,7 @@ assignees: rihadjahanopu
 
 ## ✨ Feature / Tool Description
 
-<!-- A clear and concise description of the new Rust CLI tool or TUI module you would like added to fancybash. -->
+<!-- A clear and concise description of the new Rust CLI tool or TUI module you would like added to gladeshell. -->
 
 ## 🎯 Problem It Solves
 
@@ -21,7 +21,7 @@ assignees: rihadjahanopu
 
 ```rust
 // Proposed tool structure / command syntax (optional)
-fancybash toolname --flag
+gladeshell toolname --flag
 ```
 
 ## ⚡ Performance Expectations

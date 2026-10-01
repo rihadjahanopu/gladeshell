@@ -1541,7 +1541,7 @@ fn run_cli(action: &str, args: &[String], store_dir: &PathBuf) -> Result<(), Box
                 }
             }
         }
-        _ => println!("Usage: fancybash vault [create <name> | lock <name> | unlock <name> | delete <name> | config | list]"),
+        _ => println!("Usage: gladeshell vault [create <name> | lock <name> | unlock <name> | delete <name> | config | list]"),
     }
     Ok(())
 }

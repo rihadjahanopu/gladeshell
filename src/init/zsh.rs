@@ -6,9 +6,9 @@
 //  src/init/zsh.rs — Zsh bootstrap code generator
 //
 //  Generates valid Zsh 5.x+ syntax powered by Native Rust resolution. Eval'd via:
-//    eval "$(fancybash init zsh)"
+//    eval "$(gladeshell init zsh)"
 //  or added to .zshrc as:
-//    source <(fancybash init zsh)
+//    source <(gladeshell init zsh)
 //
 //  Hook strategy:
 //    • precmd()     — called before each prompt render (Native Rust prompt / socket daemon).
@@ -18,9 +18,9 @@
 //
 //  SAFETY NOTES:
 //    • Socket path is dynamically resolved at shell startup via
-//      `fancybash socket-path` — never hardcoded — ensuring macOS, Linux, and
+//      `gladeshell socket-path` — never hardcoded — ensuring macOS, Linux, and
 //      any custom TMPDIR are handled correctly.
-//    • All fancybash calls use `2>/dev/null` suppression; failures fall through
+//    • All gladeshell calls use `2>/dev/null` suppression; failures fall through
 //      to the safe builtin fallback (direct binary call).
 // =============================================================================
 
@@ -99,7 +99,7 @@ if [[ -o interactive ]]; then
 
     # ── 100% Native Rust ZSH Subsystem Hooks (Zero External Plugin Files) ──
     # SAFE DESIGN: Every widget wrapper calls `zle .<builtin>` FIRST, then
-    # optionally runs the highlight/suggest update. If fancybash fails, typing
+    # optionally runs the highlight/suggest update. If gladeshell fails, typing
     # continues to work normally — no silent breakage possible.
 
     _fb_zle_autosuggest_and_highlight() {
@@ -108,7 +108,7 @@ if [[ -o interactive ]]; then
         local trimmed="${BUFFER#"${BUFFER%%[^[:space:]]*}"}"
         if [[ -n "$trimmed" ]]; then
             local sug
-            sug=$(fancybash suggest "$BUFFER" 2>/dev/null) || sug=""
+            sug=$(gladeshell suggest "$BUFFER" 2>/dev/null) || sug=""
             # Only show ghost text when suggestion is STRICTLY longer than typed buffer
             if [[ -n "$sug" && "$sug" == "$BUFFER"* && "$sug" != "$BUFFER" ]]; then
                 POSTDISPLAY="${sug#$BUFFER}"
@@ -119,7 +119,7 @@ if [[ -o interactive ]]; then
         region_highlight=()
         if [[ -n "$BUFFER" ]]; then
             local hl_spec
-            hl_spec=$(fancybash highlight "$BUFFER" 2>/dev/null) || hl_spec=""
+            hl_spec=$(gladeshell highlight "$BUFFER" 2>/dev/null) || hl_spec=""
             if [[ -n "$hl_spec" ]]; then
                 local _hl
                 while IFS= read -r _hl; do
@@ -199,7 +199,7 @@ if [[ -o interactive ]]; then
 
     # ── Wrap edit/delete widgets ──────────────────────────────────────────────
     # CRITICAL: zle .<widget> is called FIRST (ensures real ZLE action runs),
-    # then highlight/suggest update follows. If fancybash fails, typing works.
+    # then highlight/suggest update follows. If gladeshell fails, typing works.
     _fb_bind_widget() {
         local w="$1"
         local fn="_fb_widget_${w//-/_}"
@@ -260,7 +260,7 @@ fi
 
     // ── Native Rust Prompt Engine & Command Duration Tracker ──────────────────
     // CRITICAL FIX: socket path is now resolved dynamically at shell startup
-    // via `fancybash socket-path` to handle macOS /var/folders/..., custom
+    // via `gladeshell socket-path` to handle macOS /var/folders/..., custom
     // TMPDIR, and any other OS-specific temp directory correctly.
     out.push_str(r#"
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
@@ -279,7 +279,7 @@ _fb_precmd() {
     # Resolve socket path dynamically — never hardcoded — so macOS, custom
     # TMPDIR, and Linux all work correctly without any configuration.
     local sock
-    sock=$(fancybash socket-path 2>/dev/null)
+    sock=$(gladeshell socket-path 2>/dev/null)
     sock="${sock:-}"
 
     local fd
@@ -297,7 +297,7 @@ _fb_precmd() {
         # Fallback: direct binary call.
         # printf-trick avoids $() stripping trailing newlines that carry ❯❯❯.
         local tmp
-        tmp=$(fancybash prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOST" 2>/dev/null; printf x)
+        tmp=$(gladeshell prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOST" 2>/dev/null; printf x)
         PROMPT="${tmp%x}"
     fi
 }
@@ -308,13 +308,13 @@ add-zsh-hook precmd  _fb_precmd
 
 # ── Typo Engine & Command Not Found Handler ──
 command_not_found_handler() {
-    fancybash correct "$1"
+    gladeshell correct "$1"
     return 127
 }
 "#);
     out.push_str(&shared::render_auto_ls_hook(Shell::Zsh));
     out.push_str(&shared::render_cf_wrapper(Shell::Zsh));
 
-    out.push_str("\n# fancybash zsh init complete\n");
+    out.push_str("\n# gladeshell zsh init complete\n");
     out
 }

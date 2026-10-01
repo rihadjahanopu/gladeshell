@@ -1,5 +1,5 @@
 # =============================================================================
-#  aliases.toml — Centralized static alias repository for fancybash
+#  aliases.toml — Centralized static alias repository for gladeshell
 #
 #  Schema:
 #    [[group]]
@@ -12,7 +12,7 @@
 #    description = "Optional human-readable description"
 #
 #  This file is the SINGLE SOURCE OF TRUTH for all shell aliases.
-#  Run `fancybash init <shell>` to regenerate shell-specific output.
+#  Run `gladeshell init <shell>` to regenerate shell-specific output.
 # =============================================================================
 
 # ── Navigation & Filesystem ──────────────────────────────────────────────────
@@ -208,19 +208,19 @@ only_shells = ["bash"]
 
 [[group.aliases]]
 key         = "rel"
-value       = "pkill -f fancybash-daemon 2>/dev/null; rm -f /tmp/fancybash_*.sock(N) 2>/dev/null; source ~/.zshrc; echo \"🔄 Zsh reloaded!\""
+value       = "pkill -f gladeshell-daemon 2>/dev/null; rm -f /tmp/gladeshell_*.sock(N) 2>/dev/null; source ~/.zshrc; echo \"🔄 Zsh reloaded!\""
 description = "Reload Zsh config"
 only_shells = ["zsh"]
 
 [[group.aliases]]
 key         = "rel"
-value       = "pkill -f fancybash-daemon 2>/dev/null; rm -f /tmp/fancybash_*.sock 2>/dev/null; source ~/.bashrc; echo \"🔄 Bash reloaded!\""
+value       = "pkill -f gladeshell-daemon 2>/dev/null; rm -f /tmp/gladeshell_*.sock 2>/dev/null; source ~/.bashrc; echo \"🔄 Bash reloaded!\""
 description = "Reload Bash config"
 only_shells = ["bash"]
 
 [[group.aliases]]
 key         = "rel"
-value       = "pkill -f fancybash-daemon 2>/dev/null; sh -c 'rm -f /tmp/fancybash_*.sock 2>/dev/null'; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\""
+value       = "pkill -f gladeshell-daemon 2>/dev/null; sh -c 'rm -f /tmp/gladeshell_*.sock 2>/dev/null'; source ~/.config/fish/config.fish; echo \"🔄 Fish reloaded!\""
 description = "Reload Fish config"
 only_shells = ["fish"]
 
@@ -321,12 +321,12 @@ description = "Clone repository"
 
 [[group.aliases]]
 key         = "gwip"
-value       = "fancybash gwip"
+value       = "gladeshell gwip"
 description = "Interactive Git stage, commit & push"
 
 [[group.aliases]]
 key         = "gcommit"
-value       = "fancybash gwip"
+value       = "gladeshell gwip"
 description = "Alias for gwip"
 
 # ── Node.js / npm ────────────────────────────────────────────────────────────
@@ -732,116 +732,116 @@ description = "Safe delete — moves files to system trash via GIO"
 
 [[group.aliases]]
 key         = "fh"
-value       = "eval \"$(fancybash fh)\""
+value       = "eval \"$(gladeshell fh)\""
 description = "Native Ratatui interactive command history search and exec"
 
 [[group.aliases]]
 key         = "rg"
-value       = "fancybash grep"
+value       = "gladeshell grep"
 description = "Native high-performance ripgrep search engine"
 
 [[group.aliases]]
 key         = "grep"
-value       = "fancybash grep"
+value       = "gladeshell grep"
 description = "Native high-performance ripgrep search engine"
 
-# ── fancybash Maintenance ────────────────────────────────────────────────────
+# ── gladeshell Maintenance ────────────────────────────────────────────────────
 [[group]]
-name = "fancybash Maintenance"
+name = "gladeshell Maintenance"
 
 [[group.aliases]]
 key         = "update"
-value       = "fancybash update"
+value       = "gladeshell update"
 description = "Non-interactive system package update (APT, Pacman, DNF, Brew, Flatpak, Snap)"
 
 [[group.aliases]]
 key         = "upgrade"
-value       = "fancybash upgrade"
-description = "Self-upgrade fancybash to latest version"
+value       = "gladeshell upgrade"
+description = "Self-upgrade gladeshell to latest version"
 
 [[group.aliases]]
 key         = "clean"
-value       = "fancybash clean"
+value       = "gladeshell clean"
 description = "Universal system cache and log cleanup"
 
 [[group.aliases]]
 key         = "ftop"
-value       = "fancybash ftop"
+value       = "gladeshell ftop"
 description = "Native Ratatui interactive TUI System & Process Monitor"
 
 [[group.aliases]]
-key         = "fancy"
-value       = "fancybash theme"
+key         = "glade"
+value       = "gladeshell theme"
 description = "Interactive TUI theme picker & switcher"
 
 [[group.aliases]]
 key         = "theme"
-value       = "fancybash theme"
+value       = "gladeshell theme"
 description = "Interactive TUI theme picker & switcher"
 
 [[group.aliases]]
 key         = "gen"
-value       = "fancybash gen"
+value       = "gladeshell gen"
 description = "Cryptographically-secure secret key generator"
 
 [[group.aliases]]
 key         = "sysmon"
-value       = "fancybash sysmon"
+value       = "gladeshell sysmon"
 description = "Interactive system performance monitor"
 
 [[group.aliases]]
 key         = "t"
-value       = "fancybash t"
+value       = "gladeshell t"
 description = "Smart file creation helper"
 
 [[group.aliases]]
 key         = "pc-info"
-value       = "fancybash pc-info"
+value       = "gladeshell pc-info"
 description = "Advanced system hardware diagnostics & live sensors profiler TUI"
 
 [[group.aliases]]
 key         = "pcinfo"
-value       = "fancybash pc-info"
+value       = "gladeshell pc-info"
 description = "Advanced system hardware diagnostics & live sensors profiler TUI"
 
 [[group.aliases]]
 key         = "zed-setup"
-value       = "fancybash zed-setup"
+value       = "gladeshell zed-setup"
 description = "Bulletproof Zed IDE settings installer"
 
 [[group.aliases]]
 key         = "zed_setup"
-value       = "fancybash zed-setup"
+value       = "gladeshell zed-setup"
 description = "Bulletproof Zed IDE settings installer"
 
 [[group.aliases]]
 key         = "code-setup"
-value       = "fancybash code-setup"
+value       = "gladeshell code-setup"
 description = "Bulletproof VS Code settings + extensions installer"
 
 [[group.aliases]]
 key         = "code_setup"
-value       = "fancybash code-setup"
+value       = "gladeshell code-setup"
 description = "Bulletproof VS Code settings + extensions installer"
 
 [[group.aliases]]
 key         = "vscode"
-value       = "fancybash code-setup"
+value       = "gladeshell code-setup"
 description = "Bulletproof VS Code settings + extensions installer"
 
 [[group.aliases]]
 key         = "cmp"
-value       = "fancybash cmp"
+value       = "gladeshell cmp"
 description = "High-performance parallel multithreaded archive compressor"
 
 [[group.aliases]]
 key         = "pack"
-value       = "fancybash cmp"
+value       = "gladeshell cmp"
 description = "High-performance parallel multithreaded archive compressor"
 
 [[group.aliases]]
 key         = "compress"
-value       = "fancybash cmp"
+value       = "gladeshell cmp"
 description = "High-performance parallel multithreaded archive compressor"
 
 

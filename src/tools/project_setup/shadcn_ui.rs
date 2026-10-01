@@ -14,7 +14,7 @@ use std::path::Path;
 use std::process::Command;
 use super::utils::{patch_tsconfig, patch_viteconfig, prompt_select, prompt_text, resolve_cmd};
 
-/// `fancybash ui` — Interactive Shadcn UI Setup.
+/// `gladeshell ui` — Interactive Shadcn UI Setup.
 pub fn run_ui() -> Result<(), Box<dyn Error>> {
     let project_type = if Path::new("tsconfig.app.json").exists() {
         println!("  Detected: Vite project");

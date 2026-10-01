@@ -50,7 +50,7 @@ fn a8_idx(c: u32) -> u8 { (c & 0xFF) as u8 }
 /// A single theme entry — all data is 'static, zero heap.
 #[derive(Debug, Clone, Copy)]
 pub struct Theme {
-    /// CLI name: `fancybash theme <name>` / saved in ~/.fancybash_theme
+    /// CLI name: `gladeshell theme <name>` / saved in ~/.gladeshell_theme
     pub name: &'static str,
     /// Decorative emoji shown at start of line 1 (empty string = none)
     pub emoji: &'static str,
@@ -335,12 +335,12 @@ fn write_theme_color(dst: &mut [u8], off: &mut usize, color: u32, shell: u8) -> 
 
 // ── Active Theme Persistence ──────────────────────────────────────────────────
 
-/// Returns path to active theme config file (~/.config/fancybash/theme).
+/// Returns path to active theme config file (~/.config/gladeshell/theme).
 pub fn theme_config_path() -> std::path::PathBuf {
     if let Ok(home) = std::env::var("HOME") {
-        std::path::PathBuf::from(home).join(".config").join("fancybash").join("theme")
+        std::path::PathBuf::from(home).join(".config").join("gladeshell").join("theme")
     } else {
-        std::path::PathBuf::from(".fancybash_theme")
+        std::path::PathBuf::from(".gladeshell_theme")
     }
 }
 
@@ -356,9 +356,9 @@ pub fn active_theme_id() -> usize {
             return i;
         }
     }
-    // Fallback: check legacy ~/.fancybash_theme (written by fancy_theme Zsh fn)
+    // Fallback: check legacy ~/.gladeshell_theme (written by glade_theme Zsh fn)
     if let Ok(home) = std::env::var("HOME") {
-        let legacy = std::path::PathBuf::from(home).join(".fancybash_theme");
+        let legacy = std::path::PathBuf::from(home).join(".gladeshell_theme");
         if let Ok(content) = std::fs::read_to_string(&legacy) {
             let trimmed = content.trim();
             if let Some((i, _)) = THEMES.iter().enumerate().find(|(_, t)| t.name.eq_ignore_ascii_case(trimmed)) {
@@ -369,8 +369,8 @@ pub fn active_theme_id() -> usize {
     0
 }
 
-/// Saves the selected theme name to ~/.config/fancybash/theme.
-/// Saves the selected theme name to ~/.config/fancybash/theme.
+/// Saves the selected theme name to ~/.config/gladeshell/theme.
+/// Saves the selected theme name to ~/.config/gladeshell/theme.
 pub fn set_active_theme(name: &str) -> Result<usize, String> {
     let name_trim = name.trim();
     if let Ok(num) = name_trim.parse::<usize>() {
@@ -412,15 +412,15 @@ pub struct ThemeColorOverrides {
     pub emoji_color: Option<String>,
 }
 
-/// Returns path to theme color overrides file (~/.config/fancybash/theme_overrides.toml).
+/// Returns path to theme color overrides file (~/.config/gladeshell/theme_overrides.toml).
 pub fn theme_overrides_config_path() -> std::path::PathBuf {
     if let Ok(home) = std::env::var("HOME") {
         std::path::PathBuf::from(home)
             .join(".config")
-            .join("fancybash")
+            .join("gladeshell")
             .join("theme_overrides.toml")
     } else {
-        std::path::PathBuf::from(".fancybash_theme_overrides.toml")
+        std::path::PathBuf::from(".gladeshell_theme_overrides.toml")
     }
 }
 
@@ -1288,7 +1288,7 @@ mod tests {
     fn test_empirical_performance_benchmark() {
         use std::time::Instant;
         let mut ctx = PromptContext::default();
-        let cwd_str = "/persistent/home/rihad/Developer/dev/fancybash";
+        let cwd_str = "/persistent/home/rihad/Developer/dev/gladeshell";
         ctx.cwd[..cwd_str.len()].copy_from_slice(cwd_str.as_bytes());
         ctx.cwd_len = cwd_str.len();
         ctx.user_len = 5;

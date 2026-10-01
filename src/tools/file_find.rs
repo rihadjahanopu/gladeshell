@@ -4,7 +4,7 @@
 // HANDS-OFF GUARANTEE: NO MANUAL EDITS REQUIRED
 // ============================================================================
 
-//! Native Parallel Fast File Finder (`ff` / `fancybash ff`)
+//! Native Parallel Fast File Finder (`ff` / `gladeshell ff`)
 //!
 //! Powered by `ignore` traversal engine and `rayon` parallel search.
 //! Ultra-fast file searching with real-time TUI, full-width file list, live search benchmark,
@@ -142,7 +142,7 @@ pub fn run(args: FfArgs) -> Result<(), Box<dyn Error>> {
 
     // Render CLI header
     println!(
-        "\x1b[1;32m⚡ Fancybash Fast Finder\x1b[0m — Found \x1b[1;36m{}\x1b[0m files in \x1b[1;35m{:.2?}\x1b[0m",
+        "\x1b[1;32m⚡ Gladeshell Fast Finder\x1b[0m — Found \x1b[1;36m{}\x1b[0m files in \x1b[1;35m{:.2?}\x1b[0m",
         items.len(),
         elapsed
     );

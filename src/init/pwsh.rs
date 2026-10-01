@@ -9,7 +9,7 @@
 
 //
 //  Generates valid PowerShell 7+ (pwsh) syntax powered by Native Rust resolution. Eval'd via:
-//    fancybash init pwsh | Invoke-Expression
+//    gladeshell init pwsh | Invoke-Expression
 //  or appended to $PROFILE.
 //
 //  Hook strategy:
@@ -43,7 +43,7 @@ if (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue) {
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 }
 
-# ── fancybash Prompt & Native Auto-LS ──
+# ── gladeshell Prompt & Native Auto-LS ──
 $global:_fb_last_pwd = $null
 function Prompt {
     $ErrorActionPreference = 'SilentlyContinue'
@@ -51,9 +51,9 @@ function Prompt {
     $cwd = (Get-Location).Path
     if ($cwd -ne $global:_fb_last_pwd) {
         $global:_fb_last_pwd = $cwd
-        fancybash auto-ls 2>$null
+        gladeshell auto-ls 2>$null
     }
-    fancybash prompt --cwd "$cwd" --exit-code "$lastExit" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
+    gladeshell prompt --cwd "$cwd" --exit-code "$lastExit" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
 }
 
 # ── History & Defaults ──
@@ -63,13 +63,13 @@ $PSDefaultParameterValues['*:Encoding'] = 'UTF8'
 # ── Typo Engine & Command Not Found Handler ──
 $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     param($commandName, $commandEventArgs)
-    try { fancybash correct $commandName 2>$null } catch {}
+    try { gladeshell correct $commandName 2>$null } catch {}
 }
 "#);
 
     out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));
 
-    out.push_str("\n# fancybash pwsh init complete\n");
+    out.push_str("\n# gladeshell pwsh init complete\n");
     out
 }
 
@@ -82,7 +82,7 @@ mod tests {
         let script = generate();
         assert!(script.contains("function Prompt"));
         assert!(script.contains("Set-PSReadLineOption"));
-        assert!(script.contains("fancybash pwsh init complete"));
+        assert!(script.contains("gladeshell pwsh init complete"));
     }
 }
 

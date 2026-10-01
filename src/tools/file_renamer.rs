@@ -733,7 +733,7 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
 
     // 1. Header Banner
     let header_line = Line::from(vec![
-        Span::styled(" 🧹 FANCYBASH BATCH FILE RENAMER ", Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD)),
+        Span::styled(" 🧹 GLADESHELL BATCH FILE RENAMER ", Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD)),
         Span::raw("  "),
         Span::styled(format!("📂 {}", app.dir_path.display()), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
         Span::styled(format!("  [Files: {}]", app.items.len()), Style::default().fg(C_DIM)),

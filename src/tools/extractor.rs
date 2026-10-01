@@ -2614,13 +2614,13 @@ fn render_header(f: &mut Frame, app: &ExtractorApp, area: Rect) {
             )
         } else {
             Span::styled(
-                " 📦 FANCYBASH ARCHIVE EXTRACTOR (RIPGREP ENGINE) ",
+                " 📦 GLADESHELL ARCHIVE EXTRACTOR (RIPGREP ENGINE) ",
                 Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD),
             )
         }
     } else {
         Span::styled(
-            " 📦 FANCYBASH ARCHIVE EXTRACTOR (RIPGREP ENGINE) ",
+            " 📦 GLADESHELL ARCHIVE EXTRACTOR (RIPGREP ENGINE) ",
             Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD),
         )
     };

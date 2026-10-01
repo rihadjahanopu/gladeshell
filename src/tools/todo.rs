@@ -342,7 +342,7 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
         let color = if is_err { C_RED } else { C_GREEN };
         Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
     } else {
-        Line::from(vec![Span::styled("FANCYBASH TODO", Style::default().fg(C_DIM))])
+        Line::from(vec![Span::styled("GLADESHELL TODO", Style::default().fg(C_DIM))])
     };
     let status_bar = Paragraph::new(status_text)
         .alignment(Alignment::Center)
@@ -392,7 +392,7 @@ fn run_cli(action: &str, args: &[String], todo_file: &PathBuf) -> Result<(), Box
             save_tasks(todo_file, &[])?;
             println!("🗑️ All tasks cleared!");
         }
-        _ => println!("Usage: fancybash todo [add <task> | list | done <num> | clear]"),
+        _ => println!("Usage: gladeshell todo [add <task> | list | done <num> | clear]"),
     }
     Ok(())
 }

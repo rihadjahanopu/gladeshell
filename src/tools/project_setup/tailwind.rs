@@ -14,7 +14,7 @@ use std::path::Path;
 use std::process::Command;
 use super::utils::{patch_tsconfig, patch_viteconfig, resolve_cmd};
 
-/// `fancybash css` — Tailwind CSS v4 Auto-Installer & Full Config Patcher.
+/// `gladeshell css` — Tailwind CSS v4 Auto-Installer & Full Config Patcher.
 pub fn run_css() -> Result<(), Box<dyn Error>> {
     if !Path::new("package.json").exists() {
         return Err("package.json not found!".into());

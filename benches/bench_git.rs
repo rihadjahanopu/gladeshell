@@ -18,7 +18,7 @@ fn bench_git2_full_scan(c: &mut Criterion) {
     c.bench_function("git/full_scan_cache_miss", |b| {
         b.iter(|| {
             // Force cache bypass by using get_status directly
-            let status = fancybash_core::git::get_status(black_box(&cwd));
+            let status = gladeshell_core::git::get_status(black_box(&cwd));
             let _ = status.is_git_repo;
             let _ = status.branch.len();
             let _ = status.dirty;
@@ -30,12 +30,12 @@ fn bench_git2_cache_hit(c: &mut Criterion) {
     let cwd = std::env::current_dir().unwrap();
 
     // Warm the cache first
-    let _ = fancybash_core::git::get_status(&cwd);
+    let _ = gladeshell_core::git::get_status(&cwd);
 
     c.bench_function("git/cache_hit_ttl", |b| {
         b.iter(|| {
             // All calls within 1.5s TTL → zero I/O, reads from HashMap
-            let status = fancybash_core::git::get_status(black_box(&cwd));
+            let status = gladeshell_core::git::get_status(black_box(&cwd));
             let _ = status.is_git_repo;
         });
     });
@@ -58,7 +58,7 @@ fn bench_git2_head_read(c: &mut Criterion) {
 }
 
 fn bench_gix_status_scan(c: &mut Criterion) {
-    // Pure gix status scan (no fancybash wrapper overhead) — replaces old libgit2 bench
+    // Pure gix status scan (no gladeshell wrapper overhead) — replaces old libgit2 bench
     let cwd = std::env::current_dir().unwrap();
 
     c.bench_function("git/gix_status_scan", |b| {

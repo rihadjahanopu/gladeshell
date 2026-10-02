@@ -1,15 +1,17 @@
-name: ShellCheck Installer Validation
+name: Script Linter & Installer Security Validation
 
 on:
   push:
     branches: ['main', 'dev']
     paths:
       - "**.sh"
+      - "**.ps1"
       - ".github/workflows/shellcheck.yml"
   pull_request:
     branches: ['main']
     paths:
       - "**.sh"
+      - "**.ps1"
       - ".github/workflows/shellcheck.yml"
 
 concurrency:
@@ -18,7 +20,7 @@ concurrency:
 
 jobs:
   shellcheck:
-    name: Lint Installer Shell Scripts
+    name: ShellCheck (Bash Installers)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -38,3 +40,30 @@ jobs:
           else
             echo "ℹ️ No .sh files found to check."
           fi
+
+  psscriptanalyzer:
+    name: PSScriptAnalyzer (PowerShell Installers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lint PowerShell scripts with PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+          $psFiles = Get-ChildItem -Recurse -Filter "*.ps1"
+          foreach ($file in $psFiles) {
+              Write-Host "🔍 Analyzing $($file.FullName)..."
+              $results = Invoke-ScriptAnalyzer -Path $file.FullName -Severity Error, Warning
+              if ($results) {
+                  $results | Format-Table -AutoSize
+                  throw "PSScriptAnalyzer found issues in $($file.Name)"
+              } else {
+                  Write-Host "✅ $($file.Name) passed PSScriptAnalyzer cleanly."
+              }
+          }

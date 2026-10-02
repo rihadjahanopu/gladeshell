@@ -1,90 +1,113 @@
 # 🔒 Security Policy
 
-## Supported Versions
+This document defines the security model, vulnerability disclosure procedures, and core security guarantees of **[gladeshell](https://github.com/rihadjahanopu/gladeshell)**.
 
-| Version | Supported             | Engine                    |
-| ------- | --------------------- | ------------------------- |
-| 2.x     | ✅ Active support     | Pure Rust Core Engine     |
-| 1.x     | ⚠️ Legacy maintenance | Shell Script Architecture |
-| < 1.0   | ❌ Not supported      | Retired                   |
+[![Security Policy](https://img.shields.io/badge/Security-Policy%20v1.1-a855f7?style=for-the-badge&logo=shield)](https://github.com/rihadjahanopu/gladeshell/security/policy)
+[![Memory Safety](https://img.shields.io/badge/Memory%20Safety-100%25%20Safe%20Rust-22c55e?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
+[![Zero Telemetry](https://img.shields.io/badge/Telemetry-Zero%20Network%20Calls-0ea5e9?style=for-the-badge)](https://github.com/rihadjahanopu/gladeshell)
+[![AES-256 Vault](https://img.shields.io/badge/Encryption-AES--256--GCM-f59e0b?style=for-the-badge)](https://github.com/rihadjahanopu/gladeshell)
+
+---
+
+## 📌 Supported Versions
+
+Only active production releases of `gladeshell` receive security patches and vulnerability updates.
+
+| Version | Status | Engine Architecture | Security Support |
+| :--- | :--- | :--- | :--- |
+| **1.1.x** | 🟢 **Active Release** | Pure Rust Core (`#![deny(unsafe_code)]`) | ✅ Full Security Patches & Audits |
+| **1.0.x** | 🟡 **Legacy** | Shell Script Engine | ⚠️ Security Critical Patches Only |
+| **< 1.0** | 🔴 **End of Life** | Experimental Drafts | ❌ No Security Maintenance |
+
+---
+
+## 🛡️ Core Security Architecture & Guarantees
+
+`gladeshell` is engineered from the ground up prioritizing memory safety, zero-trust local execution, and cryptographic hardening.
+
+### 1. 🦀 100% Safe Rust & Zero `unsafe` Code Policy
+- The entire application logic is written in safe Rust, enforcing strict compiler constraints.
+- Workspaces enforce `#![deny(unsafe_code)]` to eliminate buffer overflows, use-after-free, double-free, and data race vectors at compile time.
+
+### 2. 🔐 Cryptographic Vault Security (`src/tools/vault.rs`)
+- **Encryption Algorithm**: AES-256-GCM authenticated encryption with unique per-vault 96-bit random nonces (`rand_chacha`).
+- **Key Derivation Function (KDF)**: PBKDF2-HMAC-SHA256 with 100,000 rounds and random 128-bit salts to prevent rainbow table attacks.
+- **RAM Security & Zeroization**: Passwords, derived keys, and unencrypted buffers are wrapped using the `zeroize` crate to guarantee memory scrubbing upon drop.
+- **Decoy Panic Protection**: Includes decoy panic password triggers that simulate destruction without destroying real data.
+
+### 3. 🌐 Offline-First & Zero Background Telemetry
+- `gladeshell` operates 100% locally on your machine.
+- Zero background network calls, zero telemetry analytics, zero user tracking, and zero remote logging.
+
+### 4. 🔤 Terminal Input Sanitization & Control Escape Guards
+- Prompt inputs, command suggestions, and TUI viewports sanitize ANSI escape sequences (`\x1b`), preventing terminal emulator escape injection vulnerabilities (PTY escape injection).
+
+### 5. 📦 Supply Chain & Dependency Auditing
+- **Lockfile Pinning**: `Cargo.lock` is strictly tracked to guarantee reproducible builds.
+- **CI Dependency Audit**: Automated `cargo publish --dry-run` and dependency validation in GitHub Actions.
+- **Zero C-Dependencies**: Uses `gix` (gitoxide) for pure Rust git inspection without linking vulnerable C-libraries (`libgit2`).
 
 ---
 
 ## 🚨 Reporting a Vulnerability
 
-**Please do NOT open a public GitHub Issue for security vulnerabilities.**
+If you discover a security vulnerability in `gladeshell`, please report it responsibly **without opening a public GitHub Issue**.
 
-If you discover a security issue in gladeshell, please report it responsibly:
+### Preferred Method — GitHub Private Security Advisory (Recommended)
+1. Navigate to the **[Security Tab](https://github.com/rihadjahanopu/gladeshell/security/advisories/new)** on GitHub.
+2. Click **"Report a vulnerability"**.
+3. Fill out the report form with reproduction details.
 
-### Preferred Method — GitHub Private Advisory
-
-1. Go to the [Security tab](https://github.com/rihadjahanopu/gladeshell/security/advisories/new)
-2. Click **"Report a vulnerability"**
-3. Fill in the details
-
-### Alternative — Direct Email
-
-Send details to: **rihadjahanopu@gmail.com**
-Subject: `[gladeshell SECURITY] Brief description`
+### Alternative Method — Direct Security Email
+Send your vulnerability details directly to the lead maintainer:
+- **Email**: `rihadjahanopu@gmail.com`
+- **Subject**: `[SECURITY VULNERABILITY] gladeshell - <Brief Description>`
 
 ---
 
-## 📋 What to Include in Your Report
+## 📋 What to Include in Your Vulnerability Report
 
-Please provide as much of the following as possible:
+To help us assess and resolve the issue quickly, please include:
 
-- **Description** of the vulnerability
-- **Steps to reproduce** the issue
-- **Potential impact** (what an attacker could do)
-- **Your environment** (OS, Rust toolchain version, gladeshell version)
-- **Suggested fix** (optional but appreciated)
-
----
-
-## ⏱️ Response Timeline
-
-| Step                      | Timeline                   |
-| ------------------------- | -------------------------- |
-| Acknowledgement of report | Within **48 hours**        |
-| Initial assessment        | Within **5 business days** |
-| Fix development           | Depends on severity        |
-| Public disclosure         | After fix is released      |
+1. **Description**: Clear description of the vulnerability and attack vector.
+2. **Reproduction Steps**: Step-by-step instructions or Proof of Concept (PoC).
+3. **Impact**: Potential consequences if exploited (e.g. privilege escalation, local file disclosure).
+4. **Environment**: Operating System, Architecture (`x86_64` / `aarch64`), Rust version, and `gladeshell --version`.
+5. **Suggested Fix**: Optional recommendation or patch suggestion.
 
 ---
 
-## 🔍 Scope
+## ⏱️ Response & Disclosure Timeline
 
-### In Scope
-
-- **Rust Core Engine** (`src/`) — memory safety, bounds checking, input sanitization in TUI modules
-- **Installer & Setup Scripts** (`install.sh`, `install.ps1`) — safe binary downloading, SHA-256 verification
-- **Web files** (`web/`) — static portal security
-- **GitHub Actions & Supply Chain** (`.github/`, dependencies in `Cargo.lock`)
-
-### Out of Scope
-
-- Vulnerabilities in external terminal emulators calling gladeshell
-- Issues requiring root physical access to the host machine
-- Theoretical vulnerabilities without a practical exploit path
+| Phase | SLA Timeline | Description |
+| :--- | :--- | :--- |
+| **Acknowledgement** | Within **24–48 hours** | We acknowledge receipt of your security report. |
+| **Initial Assessment** | Within **3 business days** | Vulnerability severity and impact are triaged. |
+| **Patch Development** | Within **7–14 days** | A fix is created, tested across target matrixes, and reviewed. |
+| **Public Release & Advisory** | Immediate upon patch | Security update release published with advisory CVE / credits. |
 
 ---
 
-## 🛡️ Security & Memory Safety Guarantees
+## 🔍 Security Scope
 
-gladeshell is designed with strict security standards:
+### ✅ In Scope
+- **Rust Core Engine** (`src/`) — memory handling, CLI parsing, prompt engine, subcommands.
+- **Vault Cryptography** (`src/tools/vault.rs`) — AES-256 encryption, key derivation, zeroization.
+- **Universal Installers** (`install.sh`, `install.ps1`) — SHA-256 binary validation and idempotent shell injection.
+- **CI/CD Actions & Supply Chain** (`.github/workflows/`, Cargo dependencies).
 
-- **100% Memory Safe**: Built in safe Rust with `#![deny(unsafe_code)]` constraints across tools.
-- **SHA-256 Checksum Verification**: Installers verify binary checksums before execution.
-- **No Background Network Telemetry**: Zero background telemetry calls during shell startup.
-- **Input Sanitization**: Terminal escapes and shell inputs are sanitized to prevent command injections.
+### ❌ Out of Scope
+- Vulnerabilities in third-party terminal emulators (e.g. Alacritty, Kitty, Windows Terminal, Zed).
+- Exploits requiring root/physical access to an un-encrypted host machine.
+- Social engineering or phishing targeting maintainers.
 
 ---
 
-## 🏆 Recognition
+## 🏆 Researcher Recognition & Hall of Fame
 
-Security researchers who responsibly disclose valid vulnerabilities will be:
+We value responsible security disclosure. Researchers who responsibly report valid vulnerabilities will be:
 
-- Credited in release notes and `CHANGELOG.md`
-- Added to `AUTHORS.md` contributor list
+- Credited in the GitHub Security Advisory and `CHANGELOG.md`.
+- Featured in the `AUTHORS.md` and `CONTRIBUTORS.md` recognition walls.
 
-Thank you for helping keep gladeshell safe! 🙏
+Thank you for keeping `gladeshell` safe for developers worldwide! 🛡️

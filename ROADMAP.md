@@ -1,14 +1,14 @@
-# 🗺️ gladeshell Project Roadmap
+# 🗺️ gladeshell Product & Technical Roadmap
 
-Welcome to the **gladeshell** project roadmap! This document outlines our product vision, architectural principles, past release milestones, and planned future enhancements.
+Welcome to the official **[gladeshell](https://github.com/rihadjahanopu/gladeshell)** roadmap. This document outlines our product vision, architectural pillars, historical milestones, and upcoming technical developments.
 
 > [!NOTE]
-> This roadmap represents our current strategic direction. Feature priorities may evolve based on community feedback, user proposals, and contributions.
+> Priorities are driven by real-world developer workflows, community proposals, and performance benchmarks.
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/Current%20Version-1.1.0-ec4899?style=for-the-badge)](#)
-[![Roadmap Status](https://img.shields.io/badge/Roadmap-Active-22c55e?style=for-the-badge&logo=target&logoColor=white)](#)
+[![Current Version](https://img.shields.io/badge/Current%20Version-v1.1.0-ec4899?style=for-the-badge&logo=rust)](https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.0)
+[![Roadmap Status](https://img.shields.io/badge/Roadmap-Active%20%26%20Updated-22c55e?style=for-the-badge&logo=target&logoColor=white)](#)
 [![Discussions](https://img.shields.io/badge/Feature%20Requests-Discussions-22d3ee?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rihadjahanopu/gladeshell/discussions)
 
 </div>
@@ -18,74 +18,103 @@ Welcome to the **gladeshell** project roadmap! This document outlines our produc
 ## 📌 Table of Contents
 
 - [1. Core Vision & Design Philosophy](#1-core-vision--design-philosophy)
-- [2. Release Milestones & History](#2-release-milestones--history)
-  - [v1.0.0 — Legacy Shell Architecture](#v100--legacy-shell-architecture)
-  - [v2.0.0 — Pure Rust Core Engine & Ratatui TUI Era](#v200--pure-rust-core-engine--ratatui-tui-era)
-  - [v2.2.0 — Parallel Compressor & Multi-Tool Suite](#v220--parallel-compressor--multi-tool-suite)
-- [3. Near-Term Roadmap (v2.3 — v2.5)](#3-near-term-roadmap-v23--v25)
-- [4. Mid-Term & Long-Term Vision (v3.0+)](#4-mid-term--long-term-vision-v30)
-- [5. How to Propose or Vote on Features](#5-how-to-propose-or-vote-on-features)
+- [2. Architectural Pillars](#2-architectural-pillars)
+- [3. Historical Milestones & Current Release (v1.1.0)](#3-historical-milestones--current-release-v110)
+- [4. Near-Term Roadmap (v1.2.0 — v1.3.0)](#4-near-term-roadmap-v120--v130)
+- [5. Mid-Term & Long-Term Vision (v2.0.0+)](#5-mid-term--long-term-vision-v200)
+- [6. Feature Proposal & Contribution Guide](#6-feature-proposal--contribution-guide)
 
 ---
 
 ## 1. Core Vision & Design Philosophy
 
-`gladeshell` aims to be the ultimate, zero-latency Rust CLI suite for modern developers. All roadmap features must strictly adhere to four foundational pillars:
+`gladeshell` is designed to be the ultra-high-performance, zero-latency developer suite for modern terminals. Every roadmap initiative is measured against strict performance and security constraints:
 
 ```mermaid
-flowchart LR
-    A[⚡ Pure Rust Zero-Latency] --> E[gladeshell Engine]
-    B[🛡️ 100% Memory Safe] --> E
-    C[🔄 Cross-Platform Parity] --> E
-    D[🛠️ Rich Ratatui TUIs] --> E
+flowchart TD
+    A["⚡ Sub-millisecond Execution (< 1ms Prompt)"] --> E["gladeshell Core Engine"]
+    B["🛡️ Memory Safety (#![deny(unsafe_code)])"] --> E
+    C["🌐 100% Offline-First & Zero Telemetry"] --> E
+    D["🖥️ Rich Ratatui Native TUIs"] --> E
+    E --> F["🚀 Cross-Platform Parity (Linux, macOS, Windows)"]
 ```
 
-1. **⚡ Zero-Latency Execution**: Sub-millisecond prompt rendering and zero subshell overhead.
-2. **🛡️ 100% Memory Safe**: `#![deny(unsafe_code)]` compliance across all sub-tools.
-3. **🔄 Cross-Platform Parity**: Universal support across Linux (glibc/musl), macOS (Intel/M-Series), and Windows (MSVC).
-4. **🛠️ Rich Ratatui TUI Suite**: Modern terminal UI components with fast keyboard navigation and fallback resilience.
+---
+
+## 2. Architectural Pillars
+
+| Pillar | Principle | Enforcement Mechanism |
+| :--- | :--- | :--- |
+| ⚡ **Sub-Millisecond Latency** | Zero subshell forks, cold startup $\le 25\text{ ms}$, prompt render $< 1\text{ ms}$ | Criterion micro-benchmarks (`benches/`) & Fat LTO release binaries |
+| 🛡️ **Memory Safety** | Zero unsafe code memory corruption vulnerabilities | `#![deny(unsafe_code)]` compile flags across core & tools |
+| 🔒 **Zero-Trust Security** | 100% local execution, zero analytics, RAM memory zeroization | `zeroize` crate & AES-256-GCM encrypted vaults |
+| 🖥️ **Native Terminal UI** | Responsive Ratatui TUI apps with fallbacks | Crossterm raw mode with terminal escape sanitization |
+| 🔄 **Cross-Shell Parity** | Single binary powering Bash, Zsh, Fish, and PowerShell | Centralized `aliases.toml` & `clap_complete` engines |
 
 ---
 
-## 2. Release Milestones & History
+## 3. Historical Milestones & Current Release (v1.1.0)
 
-### v1.0.0 — Legacy Shell Architecture
+### 📦 v1.0.0 — Prototype Era
+- ✅ Initial Bash script configuration and alias registry.
+- ✅ Basic theme switcher proof-of-concept.
 
-- ✅ Initial shell script environment and aliases.
+### 🚀 v1.1.0 — Pure Rust Core & Native CLI Suite (Current Production) `[RELEASED]`
 
-### v2.0.0 — Pure Rust Core Engine & Ratatui TUI Era
+```
+Overall v1.1.0 Completion: [████████████████████] 100%
+```
 
-- ✅ Rebuilt entire core in pure Rust (`gladeshell`).
-- ✅ Integrated Ratatui TUI framework for terminal interactive tools.
-- ✅ Added 55-theme interactive prompt switcher (`gladeshell theme`).
-- ✅ Implemented `vault` (AES-256 decoy guard), `todo`, `notes`, `filetree`, `process_manager`.
-
-### v2.2.0 — Parallel Compressor & Multi-Tool Suite
-
-- ✅ Added `compressor` with Level 1 Fast default, smart media store mode, and Rayon parallel thread pool.
-- ✅ Added 24-in-1 `ffmedia` multimedia suite.
-- ✅ Integrated GitHub Actions multi-target matrix release binaries (`x86_64`, `aarch64` ARM64).
-
----
-
-## 3. Near-Term Roadmap (v2.3 — v2.5)
-
-| Feature / Module                          |     Status     | Target Version | Description                                                 |
-| :---------------------------------------- | :------------: | :------------: | :---------------------------------------------------------- |
-| **📊 WebAssembly Terminal Widget**        | 🏗️ In Planning |    `v2.3.0`    | Browser-run WebAssembly binary preview for landing website. |
-| **🤖 Local LLM AI Assistant**             | 🏗️ In Research |    `v2.4.0`    | Rust native client for local Ollama / llama.cpp CLI helper. |
-| **🔍 Interactive Git Stash & Branch TUI** |  📅 Scheduled  |    `v2.5.0`    | Ratatui visual Git branch manager and stash inspector.      |
+- ✅ **Pure Rust Engine Architecture**: Rebuilt core in 100% safe Rust with sub-millisecond execution.
+- ✅ **Native Auto-Completions (`gladeshell completions <shell>`)**: Built-in `clap_complete` generator for Bash, Zsh, Fish, PowerShell, and Elvish with auto-eval shell init integration.
+- ✅ **55 Prompt Themes**: Tokyo Night, Catppuccin, Dracula, Matrix, Rose Pine, and 50 more available with single-command instant switching (`gladeshell theme <name>`).
+- ✅ **Native IDE Setup Commands (`zed-setup` & `code-setup`)**: Bulletproof settings installers across Native, Flatpak, Snap, and Windows AppData paths.
+- ✅ **Level 1 Fast Parallel Multi-Core Compressor (`cmp` / `ex`)**: Multi-core archive compressor with smart media store mode.
+- ✅ **Hardened Security Vault (`vault`)**: AES-256-GCM memory-guarded directory vault with panic decoy mode.
+- ✅ **Automated GitHub Release Pipeline**: Version bump auto-detection, tag creation (`vX.Y.Z`), 7-OS compilation matrix, binary stripping (`strip`), and `CHANGELOG.md` auto-extraction.
 
 ---
 
-## 4. Mid-Term & Long-Term Vision (v3.0+)
+## 4. Near-Term Roadmap (v1.2.0 — v1.3.0)
 
-- **🔌 Dynamic Plugin Submodules**: Load optional Rust tool plugins dynamically.
-- **☁️ Encrypted Cloud Dotfile Sync**: Securely sync user prompt themes and alias configurations across machines using SSH/Gist.
-- **⏱️ Micro-Benchmarking Suite (`gladebench`)**: Automated Criterion bench suite measuring sub-microsecond prompt telemetry.
+### 🎯 Phase 1 — v1.2.0 (Target: Q4 2026) `[IN PROGRESS]`
+
+```
+Phase 1 Progress: [████████░░░░░░░░░░░░] 40%
+```
+
+| Feature / Module | Status | Target | Description |
+| :--- | :---: | :---: | :--- |
+| 🌿 **Git Branching & Stash Visualizer TUI** | 🏗️ In Development | `v1.2.0` | Native Ratatui TUI for interactive git rebase, stash inspection, and branch switching. |
+| 🎨 **Interactive Theme Studio (`glade-studio`)** | 🧪 Prototyping | `v1.2.0` | Built-in TUI wizard to create, preview, and save custom prompt themes live. |
+| 🌐 **WASM Web Playground** | 📅 Scheduled | `v1.2.0` | WebAssembly-compiled terminal simulator embedded on `gladeshell.netlify.app`. |
+
+### 🎯 Phase 2 — v1.3.0 (Target: Q1 2027) `[PLANNED]`
+
+```
+Phase 2 Progress: [██░░░░░░░░░░░░░░░░░░] 10%
+```
+
+| Feature / Module | Status | Target | Description |
+| :--- | :---: | :---: | :--- |
+| 🤖 **Local AI Coding & Terminal Assistant (`glade-ai`)** | 🔬 Researching | `v1.3.0` | Native client for local Ollama / llama.cpp models for offline terminal command generation. |
+| ☁️ **Encrypted Dotfile & Vault Sync** | 📅 Scheduled | `v1.3.0` | End-to-end encrypted backup and sync of themes, aliases, and vault configurations. |
+| ⚡ **Criterion Micro-Benchmarking Suite (`gladebench`)** | 🏗️ In Planning | `v1.3.0` | Automated sub-microsecond prompt telemetry performance benchmarking utility. |
 
 ---
 
-## 5. How to Propose or Vote on Features
+## 5. Mid-Term & Long-Term Vision (v2.0.0+)
 
-We encourage community participation! Visit [GitHub Discussions](https://github.com/rihadjahanopu/gladeshell/discussions) to suggest ideas or report feature requests.
+- **🔌 Dynamic Rust Plugin Submodules**: Modular Rust plugin registry allowing users to extend `gladeshell` subcommands without recompiling the core.
+- **🖥️ Cross-Platform GUI Configuration Panel**: Lightweight desktop companion app for managing themes, keybindings, and system metrics.
+- **🌐 Package Manager Repositories**: Direct distribution through Homebrew (`brew install gladeshell`), Arch AUR (`yay -S gladeshell`), WinGet (`winget install gladeshell`), and Crates.io (`cargo install gladeshell`).
+
+---
+
+## 6. Feature Proposal & Contribution Guide
+
+We actively welcome community feedback and contributions! 
+
+1. **Propose a Feature**: Open a discussion on **[GitHub Discussions](https://github.com/rihadjahanopu/gladeshell/discussions)** or submit an issue using the `feature_request` template.
+2. **Contribute Code**: Read our **[CONTRIBUTING.md](CONTRIBUTING.md)** guidelines and open a Pull Request.
+3. **Security Reports**: Review **[SECURITY.md](SECURITY.md)** for responsible disclosure procedures.

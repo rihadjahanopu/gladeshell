@@ -14,7 +14,7 @@
     Cache-Control = "no-cache, no-store, must-revalidate"
 
 [[redirects]]
-  from = "/i.sh"
+  from = "/install.sh"
   to = "/install.sh"
   status = 301
   force = true
@@ -26,7 +26,7 @@
   force = true
 
 [[redirects]]
-  from = "/i.ps1"
+  from = "/install.ps1"
   to = "/install.ps1"
   status = 301
   force = true

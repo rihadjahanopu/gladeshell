@@ -1,32 +1,80 @@
 version: 2
 
 updates:
-  # 1. Cargo Rust dependency updates
+  # ── 1. Cargo Rust Dependencies ───────────────────────────────────────────────
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Asia/Dhaka"
+    open-pull-requests-limit: 5
+    versioning-strategy: "increase-if-necessary"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
     labels:
       - "dependencies"
       - "rust"
+    assignees:
+      - "rihadjahanopu"
     reviewers:
       - "rihadjahanopu"
-    open-pull-requests-limit: 10
 
-  # 2. GitHub Actions workflow dependency updates
+    # Smart Grouping Rules: Combines related dependency updates into a single clean PR
+    groups:
+      gitoxide-ecosystem:
+        patterns:
+          - "gix*"
+        semantic-title: "chore(deps): bump gitoxide (gix) crate suite"
+
+      crypto-security:
+        patterns:
+          - "aes-gcm"
+          - "pbkdf2"
+          - "sha2"
+          - "zeroize"
+          - "rpassword"
+          - "rand*"
+        semantic-title: "chore(deps): bump crypto & security crates"
+
+      terminal-ui:
+        patterns:
+          - "ratatui"
+          - "crossterm"
+          - "unicode-width"
+          - "inquire"
+          - "termcolor"
+        semantic-title: "chore(deps): bump terminal UI crates"
+
+      cargo-patch-updates:
+        update-types:
+          - "patch"
+        semantic-title: "chore(deps): bump patch cargo dependencies"
+
+  # ── 2. GitHub Actions Workflows ──────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Asia/Dhaka"
+    open-pull-requests-limit: 3
     commit-message:
-      prefix: "ci"
+      prefix: "ci(deps)"
       include: "scope"
     labels:
       - "ci"
       - "dependencies"
+    assignees:
+      - "rihadjahanopu"
     reviewers:
       - "rihadjahanopu"
-    open-pull-requests-limit: 5
+
+    groups:
+      actions-workflows:
+        patterns:
+          - "*"
+        semantic-title: "ci(deps): bump GitHub Actions workflow dependencies"

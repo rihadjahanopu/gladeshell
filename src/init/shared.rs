@@ -256,6 +256,36 @@ if (Get-Command eza -ErrorAction SilentlyContinue) {
     }
 }
 
+/// Render automatic CLI completion evaluation for gladeshell itself.
+pub fn render_cli_completions(shell: Shell) -> String {
+    match shell {
+        Shell::Zsh => r#"
+# ── Auto-load gladeshell CLI completions ──
+if command -v gladeshell >/dev/null 2>&1; then
+    eval "$(gladeshell completions zsh 2>/dev/null)"
+fi
+"#.to_string(),
+        Shell::Bash => r#"
+# ── Auto-load gladeshell CLI completions ──
+if command -v gladeshell >/dev/null 2>&1; then
+    eval "$(gladeshell completions bash 2>/dev/null)"
+fi
+"#.to_string(),
+        Shell::Fish => r#"
+# ── Auto-load gladeshell CLI completions ──
+if command -v gladeshell >/dev/null 2>&1
+    gladeshell completions fish 2>/dev/null | source
+end
+"#.to_string(),
+        Shell::Pwsh => r#"
+# ── Auto-load gladeshell CLI completions ──
+if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
+    gladeshell completions pwsh 2>/dev/null | Invoke-Expression
+}
+"#.to_string(),
+    }
+}
+
 /// Render shell function helpers for filesystem operations (mkd, rmd, rmf, bak, trash).
 pub fn render_file_helpers(shell: Shell) -> String {
     match shell {

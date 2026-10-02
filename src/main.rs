@@ -56,6 +56,14 @@ enum Commands {
     /// Print the gladeshell version
     Version,
 
+    /// Generate shell auto-completions for Bash, Zsh, Fish, PowerShell, or Elvish
+    #[command(alias = "completion")]
+    Completions {
+        /// Target shell (bash, zsh, fish, powershell, elvish)
+        #[arg(value_name = "SHELL")]
+        shell: String,
+    },
+
     /// Theme management (list available themes or set active theme)
     #[command(alias = "glade", alias = "glade_theme")]
     Theme(ThemeArgs),
@@ -645,6 +653,7 @@ fn main() {
                 println!("gladeshell {}", env!("CARGO_PKG_VERSION"));
                 Ok(())
             }
+            Commands::Completions { shell } => cmd_completions(&shell),
             Commands::Theme(args) => cmd_theme(args),
             Commands::Gen(args) => cmd_gen(args),
             Commands::Ex(args) => cmd_ex(args),
@@ -1067,5 +1076,26 @@ fn cmd_prompt(args: PromptArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    Ok(())
+}
+
+fn cmd_completions(shell_str: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use clap::CommandFactory;
+    use clap_complete::{generate, Shell};
+
+    let shell = match shell_str.to_ascii_lowercase().as_str() {
+        "bash" => Shell::Bash,
+        "zsh" => Shell::Zsh,
+        "fish" => Shell::Fish,
+        "powershell" | "pwsh" => Shell::PowerShell,
+        "elvish" => Shell::Elvish,
+        other => {
+            eprintln!("error: unsupported shell '{other}'. Supported shells: bash, zsh, fish, powershell, elvish");
+            std::process::exit(1);
+        }
+    };
+
+    let mut cmd = Cli::command();
+    generate(shell, &mut cmd, "gladeshell", &mut std::io::stdout());
     Ok(())
 }

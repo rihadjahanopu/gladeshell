@@ -1,46 +1,72 @@
 # Auto-label rules for gladeshell pull requests
-# Docs: https://github.com/actions/labeler
+# Official Docs: https://github.com/actions/labeler
 
-# ── Rust Core Engine ───────────────────────────────────────────
+# ── 1. Rust Core Engine ────────────────────────────────────────
 rust:
   - changed-files:
       - any-glob-to-any-file:
           - 'src/**/*.rs'
-          - 'benches/**/*.rs'
           - 'Cargo.toml'
           - 'Cargo.lock'
           - 'aliases.toml'
 
-# ── Shell & PowerShell Installers ─────────────────────────────
+# ── 2. Native Tools & Ratatui TUI Apps ─────────────────────────
+tools-tui:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/tools/**/*.rs'
+
+# ── 3. Shell Init & Auto-Completions Engine ────────────────────
+shell-init:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/init/**/*.rs'
+          - 'src/plugins/**/*.rs'
+
+# ── 4. Cryptographic Vault & Security ──────────────────────────
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/tools/vault.rs'
+          - 'SECURITY.md'
+          - 'LICENSE'
+
+# ── 5. Shell & PowerShell Installers ───────────────────────────
 installer:
   - changed-files:
       - any-glob-to-any-file:
           - 'install.sh'
           - 'install.ps1'
+          - 'setup.sh'
+          - 'setup.ps1'
+          - 'setup.fish'
+          - 'setup.zsh'
 
-# ── Website / Documentation Site ──────────────────────────────
+# ── 6. Web Portal & Static Site ────────────────────────────────
 website:
   - changed-files:
       - any-glob-to-any-file:
           - 'web/**'
 
-# ── Documentation & Architecture Specs ─────────────────────────
+# ── 7. Documentation & Project Specs ──────────────────────────
 documentation:
   - changed-files:
       - any-glob-to-any-file:
           - '*.md'
           - '*.txt'
-          - 'wiki.md'
           - 'ARCHITECTURE.txt'
+          - 'ROADMAP.md'
+          - 'CHANGELOG.md'
+          - 'SUPPORT.md'
 
-# ── Performance Benchmarks ────────────────────────────────────
+# ── 8. Performance Micro-Benchmarks ───────────────────────────
 benchmarks:
   - changed-files:
       - any-glob-to-any-file:
           - 'benches/**'
           - 'benchmark.md'
 
-# ── CI / CD & Git Hooks ────────────────────────────────────────
+# ── 9. CI / CD & Git Hygiene Hooks ─────────────────────────────
 ci:
   - changed-files:
       - any-glob-to-any-file:

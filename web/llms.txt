@@ -14,7 +14,7 @@
 
 ```bash
 # Universal installer (Auto-detects OS and shell):
-curl -fsSL https://gladeshell.netlify.app/i.sh | bash
+curl -fsSL https://gladeshell.netlify.app/install.sh | bash
 ```
 
 ## Highlights

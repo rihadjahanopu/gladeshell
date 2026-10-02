@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initInstallerBuilder();
   initSearchModal();
   initMobileSidebar();
-  initBenchmark();      // ← Advanced benchmark section
+  initBenchmark(); // ← Advanced benchmark section
 });
 
 /* ============================================================
@@ -145,7 +145,7 @@ const AUTOCOMPLETE_DICTIONARY = [
   {
     id: 'powershell-setup',
     title: 'PowerShell Setup',
-    sub: '$PROFILE / i.ps1',
+    sub: '$PROFILE / install.ps1',
     type: 'section',
     icon: '💠',
   },
@@ -1253,8 +1253,7 @@ function initInstallerBuilder() {
     bash: 'curl -fsSL https://gladeshell.netlify.app/public/install.sh | bash',
     zsh: 'curl -fsSL https://gladeshell.netlify.app/public/install.zsh | zsh',
     fish: 'curl -fsSL https://gladeshell.netlify.app/public/install.fish | fish',
-    powershell:
-      'irm https://gladeshell.netlify.app/public/i.ps1 | iex',
+    powershell: 'irm https://gladeshell.netlify.app/public/install.ps1 | iex',
   };
 
   function updateBuilder() {
@@ -1456,17 +1455,17 @@ function escapeHtml(str) {
 
 function initBenchmark() {
   /* ── 1. Tab Switcher ── */
-  const tabBtns  = document.querySelectorAll('.bench-tab-btn');
-  const panels   = document.querySelectorAll('.bench-panel');
+  const tabBtns = document.querySelectorAll('.bench-tab-btn');
+  const panels = document.querySelectorAll('.bench-panel');
 
   if (!tabBtns.length) return;
 
-  tabBtns.forEach(btn => {
+  tabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.benchTab;
 
       // Update buttons
-      tabBtns.forEach(b => {
+      tabBtns.forEach((b) => {
         b.classList.remove('active');
         b.setAttribute('aria-selected', 'false');
       });
@@ -1474,7 +1473,7 @@ function initBenchmark() {
       btn.setAttribute('aria-selected', 'true');
 
       // Update panels
-      panels.forEach(p => p.classList.remove('active'));
+      panels.forEach((p) => p.classList.remove('active'));
       const activePanel = document.getElementById('bpanel-' + target);
       if (activePanel) {
         activePanel.classList.add('active');
@@ -1491,7 +1490,7 @@ function initBenchmark() {
   /* ── 2. Animated Bar Fills via IntersectionObserver ── */
   function triggerBarsInPanel(panel) {
     const fills = panel.querySelectorAll('.bench-bar-fill[data-pct]');
-    fills.forEach(fill => {
+    fills.forEach((fill) => {
       const pct = parseFloat(fill.dataset.pct) || 0;
       // Use requestAnimationFrame to ensure layout is computed before animating
       requestAnimationFrame(() => {
@@ -1503,16 +1502,19 @@ function initBenchmark() {
   // Observe the benchmark hero to trigger the initially visible panel's bars
   const hero = document.querySelector('.bench-hero');
   if (hero && 'IntersectionObserver' in window) {
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          // Animate the currently active panel
-          const activePanel = document.querySelector('.bench-panel.active');
-          if (activePanel) triggerBarsInPanel(activePanel);
-          obs.disconnect();
-        }
-      });
-    }, { threshold: 0.15 });
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Animate the currently active panel
+            const activePanel = document.querySelector('.bench-panel.active');
+            if (activePanel) triggerBarsInPanel(activePanel);
+            obs.disconnect();
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
     obs.observe(hero);
   } else {
     // Fallback: trigger immediately
@@ -1529,7 +1531,7 @@ function initBenchmark() {
     const H = canvas.height;
     const cx = W / 2;
     const cy = H / 2;
-    const R  = Math.min(W, H) / 2 - 32;
+    const R = Math.min(W, H) / 2 - 32;
 
     // Axes labels
     const axes = [
@@ -1538,18 +1540,43 @@ function initBenchmark() {
       'Memory\nEfficiency',
       'Feature\nCount',
       'Theme\nRichness',
-      'POSIX\nCompat'
+      'POSIX\nCompat',
     ];
     const N = axes.length;
 
     // Shell scores [0-10] per axis: Startup, Prompt, Memory, Features, Themes, POSIX
     const shells = [
-      { name: 'GladeShell', color: '#22d3ee',  fill: 'rgba(34,211,238,0.15)',  scores: [10, 10, 9.8, 8.5, 9, 9] },
-      { name: 'Bash',      color: '#22c55e',  fill: 'rgba(34,197,94,0.10)',   scores: [9.7, 5, 9.9, 4, 1, 10] },
-      { name: 'Fish',      color: '#0891b2',  fill: 'rgba(8,145,178,0.10)',   scores: [8.5, 7, 8.5, 7, 3, 0] },
-      { name: 'PS7',       color: '#3b82f6',  fill: 'rgba(59,130,246,0.10)',  scores: [2, 4, 1, 7, 3, 0] },
-      { name: 'Oh My Zsh', color: '#ef4444',  fill: 'rgba(239,68,68,0.10)',   scores: [1, 2, 1, 9, 10, 10] },
-      { name: 'Oh My Posh',color: '#f97316',  fill: 'rgba(249,115,22,0.10)',  scores: [4, 1, 4, 7, 10, 5] },
+      {
+        name: 'GladeShell',
+        color: '#22d3ee',
+        fill: 'rgba(34,211,238,0.15)',
+        scores: [10, 10, 9.8, 8.5, 9, 9],
+      },
+      {
+        name: 'Bash',
+        color: '#22c55e',
+        fill: 'rgba(34,197,94,0.10)',
+        scores: [9.7, 5, 9.9, 4, 1, 10],
+      },
+      {
+        name: 'Fish',
+        color: '#0891b2',
+        fill: 'rgba(8,145,178,0.10)',
+        scores: [8.5, 7, 8.5, 7, 3, 0],
+      },
+      { name: 'PS7', color: '#3b82f6', fill: 'rgba(59,130,246,0.10)', scores: [2, 4, 1, 7, 3, 0] },
+      {
+        name: 'Oh My Zsh',
+        color: '#ef4444',
+        fill: 'rgba(239,68,68,0.10)',
+        scores: [1, 2, 1, 9, 10, 10],
+      },
+      {
+        name: 'Oh My Posh',
+        color: '#f97316',
+        fill: 'rgba(249,115,22,0.10)',
+        scores: [4, 1, 4, 7, 10, 5],
+      },
     ];
 
     // Clear
@@ -1569,7 +1596,7 @@ function initBenchmark() {
       const radius = (R / rings) * r;
       ctx.beginPath();
       for (let i = 0; i < N; i++) {
-        const angle = (2 * Math.PI / N) * i;
+        const angle = ((2 * Math.PI) / N) * i;
         const pt = polar(angle, radius);
         i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y);
       }
@@ -1581,7 +1608,7 @@ function initBenchmark() {
 
     // Draw axis spokes
     for (let i = 0; i < N; i++) {
-      const angle = (2 * Math.PI / N) * i;
+      const angle = ((2 * Math.PI) / N) * i;
       const outer = polar(angle, R);
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -1597,7 +1624,7 @@ function initBenchmark() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let i = 0; i < N; i++) {
-      const angle = (2 * Math.PI / N) * i;
+      const angle = ((2 * Math.PI) / N) * i;
       const labelR = R + 22;
       const pt = polar(angle, labelR);
       const lines = axes[i].split('\n');
@@ -1607,26 +1634,26 @@ function initBenchmark() {
     }
 
     // Draw each shell polygon
-    shells.forEach(shell => {
+    shells.forEach((shell) => {
       ctx.beginPath();
       for (let i = 0; i < N; i++) {
-        const angle = (2 * Math.PI / N) * i;
-        const val   = shell.scores[i] / 10;
-        const pt    = polar(angle, R * val);
+        const angle = ((2 * Math.PI) / N) * i;
+        const val = shell.scores[i] / 10;
+        const pt = polar(angle, R * val);
         i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y);
       }
       ctx.closePath();
-      ctx.fillStyle   = shell.fill;
+      ctx.fillStyle = shell.fill;
       ctx.fill();
       ctx.strokeStyle = shell.color;
-      ctx.lineWidth   = 1.8;
+      ctx.lineWidth = 1.8;
       ctx.stroke();
 
       // Dot markers on each axis
       for (let i = 0; i < N; i++) {
-        const angle = (2 * Math.PI / N) * i;
-        const val   = shell.scores[i] / 10;
-        const pt    = polar(angle, R * val);
+        const angle = ((2 * Math.PI) / N) * i;
+        const val = shell.scores[i] / 10;
+        const pt = polar(angle, R * val);
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
         ctx.fillStyle = shell.color;

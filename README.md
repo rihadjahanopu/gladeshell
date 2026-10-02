@@ -3,12 +3,12 @@
 <br>
 
 ```
-   ██████╗ ██╗    █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗   ██╗
-  ██╔════╝ ██║   ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║   ██║
-  ██║  ███╗██║   ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║   ██║
-  ██║   ██║██║   ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║   ██║
-  ╚██████╔╝██████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗██████╗██████╗
-   ╚═════╝ ╚═════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚═════╝╚═════╝
+   ██████╗ ██╗      █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗     ██╗
+  ██╔════╝ ██║     ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║     ██║
+  ██║  ███╗██║     ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║     ██║
+  ██║   ██║██║     ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║     ██║
+  ╚█████╔╝ ███████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗███████╗███████╗
+   ╚════╝  ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
 ```
 
 ### ⚡ The Ultimate Pure Rust Shell & Developer Suite for Modern Terminal Users
@@ -42,10 +42,12 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 
 - [✨ What is gladeshell?](#-what-is-gladeshell)
 - [🌟 Feature Highlights](#-feature-highlights)
+- [⚡ Performance Benchmarks](#-performance-benchmark-matrix)
 - [🚀 Quick Install](#-quick-install)
 - [🗑️ Uninstall](#️-uninstall)
+- [🦄 Zsh Setup Guide](#-zsh-setup-guide)
 - [⚙️ Font Setup](#️-font-setup-for-emoji--icons)
-- [📟 Smart Prompt System](#-smart-prompt-system)
+- [📟 Smart Prompt](#-smart-prompt-system)
 - [🎨 Prompt Themes](#-prompt-themes)
   - [🖼️ Preview All 55 Themes](#️-preview-all-55-themes)
   - [⚡ Switch Themes](#-switch-themes)
@@ -56,16 +58,25 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
   - [🌿 Git Shortcuts](#-git-version-control)
   - [🔧 Project Setup](#-project-initialization)
   - [⚙️ System Tools](#-system--maintenance)
-  - [🔨 Utility Tools](#-utility-tools)
-  - [🗜️ Fast Multi-Core Compressor & Extractor](#️-fast-multi-core-compressor--extractor)
-  - [🎬 FFmedia Multimedia Suite](#-ffmedia-all-in-one-multimedia-suite)
-  - [🔐 Hardened Multi-Vault Security Suite](#-hardened-multi-vault-security-suite)
-  - [🖥️ Native Ratatui TUI Modules](#️-native-ratatui-tui-modules)
+  - [🔨 Utilities](#-utility-tools)
+  - [🚀 Interactive Utilities (GUM & FZF)](#-interactive-utilities-gum--fzf)
+    - [📋 Todo Manager](#-todo-manager)
+    - [📝 Notes Manager](#-notes-manager)
+    - [🎬 FFmedia Multimedia Suite](#-ffmedia-all-in-one-multimedia-suite)
+    - [🔐 Hardened Multi-Vault Security Suite](#-hardened-multi-vault-security-suite)
+    - [🔀 Other GUM / FZF Utilities](#-other-gum--fzf-utilities)
   - [🐳 Docker & Containers](#-docker--containers)
+    - [📊 Dashboard & Monitoring](#-interactive-dashboard--monitoring)
+    - [⚡ Service Control](#-service-control)
+    - [🔄 Container Lifecycle](#-container-lifecycle)
+    - [🐛 Debugging & Building](#-debugging--building)
+    - [🧩 Docker Compose](#-docker-compose)
+    - [🧪 Quick Test Sandboxes](#-quick-test-sandboxes)
+    - [🧠 Advanced Functions](#-advanced-functions)
   - [🐘 PostgreSQL](#-postgresql)
   - [💎 Prisma ORM](#-prisma-orm)
 - [🏗️ Project Structure](#️-project-structure)
-- [💻 Development & Testing](#-development--testing)
+- [🖥️ Zed IDE Settings](#️-zed-ide-settings)
 - [🐧 Linux App Ecosystem](#-linux-app-ecosystem)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
@@ -95,9 +106,38 @@ One binary. One install. Absolute speed.
 | 🎬 **24-in-1 FFmedia Suite**   | Comprehensive FFmpeg multimedia processor (compression, trimming, visualizer, GIFs, screen recording) |
 | 🔐 **AES-256 PBKDF2 Vault**    | Memory-guarded directory vault with panic password decoy mode and auto-shredding                      |
 | 🎨 **55 Prompt Themes**        | Swap between Catppuccin, Tokyo Night, Dracula, Matrix, Starship, Rose Pine, and 49 more in 1 command  |
-| 🔄 **Cross-Shell Integration** | Built-in shell integration generator for Bash, Zsh, Fish, and PowerShell (`gladeshell shell-init`)     |
+| 🔄 **Cross-Shell Integration** | Built-in shell integration generator for Bash, Zsh, Fish, and PowerShell (`gladeshell shell-init`)    |
 | 📦 **Universal Uninstaller**   | `uu` — interactive fuzzy application remover across apt/snap/flatpak/AppImage                         |
 | 🔁 **Mega Updater**            | `uup` — updates system packages, runtimes, and flatpaks in one command                                |
+
+---
+
+## ⚡ Performance Benchmark Matrix
+
+> **Empirical Performance Comparison:** `gladeshell` vs `Starship` vs `Oh My Posh` vs `Oh My Zsh`
+>
+> Tested on Linux x86_64 / macOS ARM64 using 10,000-iteration sample suites. See [benchmark.md](benchmark.md) for full methodology.
+
+| Performance Metric | ⚡ **`gladeshell`** | 🚀 **`Starship`** | 🎨 **`Oh My Posh`** | 🐚 **`Oh My Zsh`** |
+| :--- | :---: | :---: | :---: | :---: |
+| **Engine Architecture** | **Rust (Pure `gix` / Zero-Alloc)** | Rust (Modular Binary) | Go (GC Static Binary) | Zsh Scripting |
+| **Core Prompt Latency (`PS1`)** | **0.0165 ms (16.5 µs)** 🏆 | 2.40 ms – 8.50 ms | 8.20 ms – 26.50 ms | 18.50 ms – 95.00 ms |
+| **Terminal Startup Overhead** | **~2 ms (Cached init)** ⚡ | 18.5 ms – 32.0 ms | 38.0 ms – 85.0 ms | 180 ms – 450 ms |
+| **Subshell Process Forks** | **0 (Zero subshells)** | 1 (Exec binary) | 1 (Exec binary) | 3 – 8 (git/env subshells) |
+| **Git Repo Overhead (`gix`)** | **0 ms cache / < 0.5 ms live** | 8.5 ms – 35.0 ms | 15.0 ms – 55.0 ms | 45.0 ms – 250.0 ms |
+| **Tab RSS Memory Footprint** | **~3.9 MB (Fat LTO Stripped)** | ~12.5 MB – 18.2 MB | ~18.5 MB – 32.0 MB | ~28.0 MB – 55.0 MB |
+| **Autocompletion Engine Latency** | **~0.08 ms (Native Rust)** | N/A | N/A | ~12.5 ms (`zsh-syntax-hl`) |
+| **Included Themes** | **55 Themes** | Config required | JSON Presets | Community themes |
+
+```
+Prompt Render Latency (Lower is better):
+gladeshell (Pure Rust Engine) : █ 0.0165 ms  [145x FASTER THAN STARSHIP]
+Starship (Rust Modular)      : ███████ 2.40 ms
+Oh My Posh (Go Engine)       : █████████████████████ 8.20 ms
+Oh My Zsh (Zsh Scripting)    : ██████████████████████████████████████████ 18.50 ms
+```
+
+> 📖 *For complete micro-benchmarking methodology, IPC socket metrics, and memory profiles, see [benchmark.md](benchmark.md).*
 
 ---
 
@@ -205,49 +245,83 @@ gladeshell renders a responsive, contextual prompt powered by Rust:
 ❯❯❯                                   ← Fast response line
 ```
 
-**Built-in dynamic prompt features:**
+**Prompt features include:**
 
-- Folder-aware emoji matching (Web `🌐`, Node `🟢`, Bun `🥐`, Python `🐍`, Rust `🦀`).
-- Git dirty status (`❗`), active branch detection, and unpushed commit counters.
-- System metrics: CPU temperature, free disk space, load average, and process counters.
-- Command execution timer (`⏱️ Ns` for commands taking >1s).
-- Read-only filesystem warning indicator (`🔒`).
+| Element            | Description                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `rand_emoji`       | Folder-aware emoji — `🌐` for web, `🟢` for node, `🥐` for bun, `🐍` for py, random otherwise |
+| `rand_color`       | Rainbow color cycle on every prompt render                                                    |
+| `parse_git_branch` | Shows `branchname ❗` when working tree is dirty                                              |
+| `cpu_temp`         | 🟢 Green / 🟡 Yellow / 🔴 Red based on temperature thresholds                                 |
+| `disk_usage`       | Shows free disk space on `/`                                                                  |
+| `load_avg`         | System load average                                                                           |
+| `get_duration`     | Shows `⏱️ Ns` for any command taking longer than 1 second                                     |
+| `check_readonly`   | Shows `🔒` when current directory is not writable                                             |
+| `pending_updates`  | Shows `🆙 N` if system packages need updating                                                 |
+| `battery_info`     | Shows battery % when available                                                                |
+| `kernel_version`   | Displays current kernel version                                                               |
+
+### ⚙️ Customizing the Prompt Layout
+
+By default, gladeshell/gladezsh renders a clean, minimalistic **single-line** prompt. However, all the dynamic system monitoring metrics listed above (such as CPU temp, disk space, active runtime versions) are already built-in and ready to be used.
+
+You can modify or toggle the prompt layout to your liking by editing your shell configuration file (`~/.bashrc` or `~/.zshrc`) and uncommenting/commenting the lines under the **`🎯 TWO LINE PROMPT`** section:
+
+```bash
+# 💡 Uncomment these lines in your ~/.bashrc or ~/.zshrc if you want the full two-line prompt:
+# PS1="\$(rand_emoji) \[\033[\$(rand_color)m\]\W\[\033[0m\] "
+# PS1+="\$(folder_size) [🌿 \$(parse_git_branch)]\$(cpu_temp) \$(disk_usage) \$(load_avg) \$(get_duration) \$(check_readonly) \$(pending_updates)\n"
+# PS1+="\$(node_version) │ \$(npm_version) │ \$(bun_version) │ \$(kernel_version) │ "
+# PS1+="\$(time_date) │ \$(sys_info) │ \$(battery_info)\n"
+```
+
+Feel free to customize, add, or remove any helper functions (like `node_version`, `cpu_temp`, etc.) from your configuration block to design your own custom layout!
 
 ---
 
 ## 🎨 Prompt Themes
 
-gladeshell includes **55 built-in themes** inspired by popular terminal prompts.
+gladeshell ships with **55 world-class prompt themes** inspired by the best designs from Oh My Zsh, Oh My Posh, Starship, Spaceship, and modern terminal communities. Every theme works on **Bash, Zsh, and Fish** with full color and emoji support.
 
 ### 🖼️ Preview All 55 Themes
 
 ```bash
-gladeshell theme preview
-# or shorthand:
+# Open interactive scrollable gallery — scroll with ↑↓ / PageUp / PageDown
 glade preview
+
+# Same as above:
+glade list
 ```
+
+The gallery opens in a `less`-powered pager showing all 55 themes numbered `[1/55]` through `[55/55]` with full ANSI colors. Press **`q`** to exit.
 
 ### ⚡ Switch Themes
 
 ```bash
-# Interactive TUI picker:
+# Interactive picker (gum or fzf UI — arrow keys to select)
 glade
 
-# Direct selection:
+# Switch directly by name
 glade catppuccin
 glade tokyonight
 glade dracula
+glade cyberpunk
 glade starship
 glade matrix
+glade gruvbox
 glade rosepine
+glade kanagawa
+glade nightowl
+
+# Theme is saved to ~/.gladeshell_theme and persists across sessions
 ```
 
 ### 📋 All 55 Themes
 
 | #   | Theme               | Style                                 | Inspiration            |
 | --- | ------------------- | ------------------------------------- | ---------------------- |
-| 01  | `minimal`           | 🌈 Emoji + color · 1-line             | Gladeshell default      |
-| 02  | `full`              | 📊 3-line with all metrics            | Gladeshell full info    |
+| 01  | `minimal`           | 🌈 Emoji + color · 1-line             | gladeshell default     |
+| 02  | `full`              | 📊 3-line with all metrics            | gladeshell full info   |
 | 03  | `robbyrussell`      | ➜ Green arrow · 1-line                | Oh My Zsh default      |
 | 04  | `p10k`              | ╭─ 2-line rich · user@host            | Powerlevel10k          |
 | 05  | `agnoster`          | ▓ Powerline segments                  | Oh My Zsh Agnoster     |
@@ -306,187 +380,361 @@ glade rosepine
 
 ## 🛠️ Command Reference
 
-Run `gladeshell --help` to view all CLI tool modules.
+> Run `keep` in your terminal to see this full reference at any time.
 
 ---
 
 ### 📂 Navigation & Movement
 
-| Command               | Action                                        |
-| --------------------- | --------------------------------------------- |
-| `..`                  | Go up one directory                           |
-| `...`                 | Go up two directories                         |
-| `....`                | Go up three directories                       |
-| `dev`                 | Jump to `~/Development`                       |
-| `fr` / `ba` / `fu`    | Jump to Frontend / Backend / Fullstack folder |
-| `des` / `doc` / `dow` | Jump to Desktop / Documents / Downloads       |
+| Command               | Action                                                |
+| --------------------- | ----------------------------------------------------- |
+| `..`                  | Go up one directory                                   |
+| `...`                 | Go up two directories                                 |
+| `....`                | Go up three directories                               |
+| `dev`                 | Jump to `~/Development`                               |
+| `fr` / `ba` / `fu`    | Jump to Frontend / Backend / Fullstack project folder |
+| `fig` / `ar` / `de`   | Jump to Figma / Archive / Dev folders                 |
+| `des` / `doc` / `dow` | Jump to Desktop / Documents / Downloads               |
+| `bv` / `ch` / `gp`    | Jump to Brave / Chrome / Photos Downloads             |
 
 ---
 
 ### 📦 NPM & Bun Commands
 
-| Alias | Expands To       |
-| ----- | ---------------- |
-| `ni`  | `npm install`    |
-| `nid` | `npm install -D` |
-| `nr`  | `npm run`        |
-| `nrd` | `npm run dev`    |
-| `bi`  | `bun install`    |
-| `brd` | `bun run dev`    |
-| `brb` | `bun run build`  |
+| Alias  | Expands To           |
+| ------ | -------------------- |
+| `ni`   | `npm install`        |
+| `nid`  | `npm install -D`     |
+| `nr`   | `npm run`            |
+| `nrd`  | `npm run dev`        |
+| `nrb`  | `npm run build`      |
+| `nrs`  | `npm run start`      |
+| `bi`   | `bun install`        |
+| `br`   | `bun run`            |
+| `brd`  | `bun run dev`        |
+| `bhot` | `bun --hot`          |
+| `w`    | `bun --watch`        |
+| `brb`  | `bun run build`      |
+| `brs`  | `bun run start`      |
+| `html` | `bun run index.html` |
 
 ---
 
 ### 🌿 Git Version Control
 
-| Command       | Description                    |
-| ------------- | ------------------------------ |
-| `gi`          | Initialize new git repository  |
-| `gs`          | Git status (short format)      |
-| `ga`          | Stage all files (`git add .`)  |
-| `gcm "msg"`   | Commit with message            |
-| `gps` / `gpl` | Push / Pull from remote        |
-| `gl`          | Pretty git log graph           |
-| `gwip "msg"`  | Work-in-progress commit & push |
+| Command                 | Description                                    |
+| ----------------------- | ---------------------------------------------- |
+| `gi`                    | Initialize new git repository                  |
+| `gs`                    | Git status (short format)                      |
+| `ga`                    | Stage all files (`git add .`)                  |
+| `gcm "msg"`             | Commit with message                            |
+| `gps` / `gpl`           | Push / Pull from remote                        |
+| `gl`                    | Pretty git log with graph                      |
+| `gco <branch>`          | Checkout branch                                |
+| `gcb <name>`            | Create & checkout new branch                   |
+| `gd`                    | View diff                                      |
+| `gst` / `gsta` / `gpop` | Stash / Apply stash / Pop stash                |
+| `gwip "msg"`            | Quick WIP commit + auto push to current branch |
+
+#### `gwip` — Smart WIP Pusher
+
+```bash
+gwip                         # Prompts for message, falls back to "Work in progress (Save Point)"
+gwip "add auth middleware"   # Custom message
+```
 
 ---
 
 ### 🔧 Project Initialization
 
-| Command | Description                                           |
-| ------- | ----------------------------------------------------- |
-| `ii`    | Interactive project init (Bun or NPM, auto gitignore) |
-| `next`  | Scaffold Next.js app                                  |
-| `vite`  | Scaffold Vite project with optional Tailwind CSS v4   |
-| `ui`    | Install & initialize Shadcn/UI                        |
-| `css`   | Install Tailwind CSS + `clsx` + `tailwind-merge`      |
+| Command      | Description                                                                      |
+| ------------ | -------------------------------------------------------------------------------- |
+| `ii`         | Interactive project init — choose Bun or NPM, auto-creates `.gitignore`          |
+| `next`       | Scaffold Next.js app (`create-next-app`) via Bun or NPM                          |
+| `vite`       | Scaffold Vite project with optional Tailwind CSS v4 setup                        |
+| `ui`         | Install & init Shadcn/UI with optional component selection                       |
+| `css`        | Auto-detect package manager and install Tailwind CSS + `clsx` + `tailwind-merge` |
+| `run`        | Interactive JS/TS file runner via Bun                                            |
+| `pg`         | Generate `package.json` for current project                                      |
+| `makecpp`    | Advance C/C++ boilerplate generator (auto cd, makefile, git, vscode)             |
+| `make run`   | Compile and run the generated C/C++ project                                      |
+| `make clean` | Remove compiled binary file                                                      |
+
+#### `vite` example flow:
+
+```bash
+vite
+# ⚡ Setup Vite with:
+# 1) Bun  2) NPM
+# Add Tailwind CSS v4? (y/n): y
+# → Installs packages, creates src/index.css with @import "tailwindcss"
+```
 
 ---
 
 ### ⚙️ System & Maintenance
 
-| Command     | Description                                           |
-| ----------- | ----------------------------------------------------- |
-| `uup`       | Mega Updater — OS, Snap, Flatpak, Bun, Node.js update |
-| `uu`        | Universal Uninstaller — fuzzy application remover     |
-| `uc`        | Universal system clean                                |
-| `myip`      | Display public IP address                             |
-| `ports`     | List all active open ports                            |
-| `kp <port>` | Kill process running on a specific port               |
+| Command     | Description                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------- |
+| `uup`       | **Mega Updater** — interactive fzf menu: OS core, Snap, Flatpak, Bun, Node.js, NPM, deep clean       |
+| `uu`        | **Universal Uninstaller** — fuzzy search across apt/snap/flatpak/AppImage, shows size & install date |
+| `uc`        | Universal system clean (cache, orphans, logs)                                                        |
+| `update`    | Update system packages                                                                               |
+| `clean`     | Clean apt cache & remove orphaned packages                                                           |
+| `setuppc`   | Bootstrap a new PC with all essential developer tools                                                |
+| `rt`        | Install Node.js (via nvm), Bun, and Deno                                                             |
+| `ut`        | Setup optimized CLI tooling for the PC                                                               |
+| `rel`       | Reload `.bashrc` configuration                                                                       |
+| `myip`      | Show your public IP address                                                                          |
+| `iploc`     | Show IP + city/region/org info via `ipinfo.io`                                                       |
+| `ports`     | List all open ports                                                                                  |
+| `kp <port>` | Kill the process running on a given port                                                             |
+| `serve`     | Start a local Python HTTP server in current directory                                                |
+| `rn`        | Rename all files — removes special characters (`@`, `%`, `*`, `#`)                                   |
+
+#### `uup` — Interactive Mega Updater
+
+```bash
+uup
+# Opens fzf menu:
+# 0. ALL_MAINTENANCE_TASKS
+# 1. Core_System_Update
+# 2. Snap_Package_Refresh
+# 3. Flatpak_Cleanup_Update
+# 4. Bun_Runtime_Upgrade
+# 5. Node.js_LTS_Sync
+# 6. Global_NPM_Update
+# 7. Full_System_Deep_Clean
+```
+
+#### `uu` — Universal Uninstaller
+
+```bash
+uu
+# Opens fzf picker with all installed apps (apt + snap + flatpak + AppImage)
+# Columns: IDX | NAME | SOURCE | VERSION | SIZE | INSTALL DATE
+# TAB to multi-select, ENTER to purge with animated progress bar
+# Automatically runs turbo-clean after removal
+```
 
 ---
 
 ### 🔨 Utility Tools
 
-| Command        | Description                                  | Example         |
-| -------------- | -------------------------------------------- | --------------- |
-| `mkd <name>`   | Create directory and `cd` into it            | `mkd my-app`    |
-| `rmd <name>`   | Recursive directory removal                  | `rmd build`     |
-| `bak <file>`   | Create `.bak` timestamped copy               | `bak .env`      |
-| `gen <len>`    | Generate cryptographically secure secret key | `gen 32`        |
-| `ex <archive>` | Multi-format archive extractor               | `ex app.tar.gz` |
+| Command        | Description                                             | Example                      |
+| -------------- | ------------------------------------------------------- | ---------------------------- |
+| `mkd <name>`   | Create directory and `cd` into it                       | `mkd my-app`                 |
+| `t <file>`     | Create a file with feedback                             | `t index.js`                 |
+| `rmd <name>`   | Force remove directory recursively                      | `rmd old-build`              |
+| `rmf <file>`   | Safely remove a file                                    | `rmf config.bak`             |
+| `bak <file>`   | Create a `.bak` backup copy                             | `bak .env`                   |
+| `trash <file>` | Move file to system trash (safe delete)                 | `trash temp.log`             |
+| `ex <archive>` | Extract any archive format                              | `ex project.tar.gz`          |
+| `ff <name>`    | Find file by name (skips `node_modules`, `.git`)        | `ff tsconfig`                |
+| `gen <len>`    | Generate a cryptographically secure secret key          | `gen 32`                     |
+| `completions`  | Shell auto-completion generator (auto-loaded in shell init) | `gladeshell completions zsh` |
+| `h <word>`     | Search command history                                  | `h docker`                   |
+| `to`           | Open current directory in VS Code                       |                              |
+| `v`            | Play video in terminal                                  |                              |
+| `c` / `cls`    | Clear the terminal screen                               |                              |
+
+#### Archive formats supported by `ex`:
+
+`.tar.bz2` · `.tar.gz` · `.bz2` · `.rar` · `.gz` · `.tar` · `.zip` · `.7z`
 
 ---
 
-### 🗜️ Fast Multi-Core Compressor & Extractor
+### 🚀 Interactive Utilities (GUM & FZF)
 
-`gladeshell` includes a high-throughput parallel multi-core compression engine:
+> These utilities use `gum` and/or `fzf` for rich interactive UIs.
+> They degrade gracefully: **gum → fzf → plain `read` prompt** — no tool is strictly required.
 
-```bash
-# Compress folder using Level 1 Fast parallel mode:
-gladeshell compressor /path/to/source output.tar.zst
+#### 📋 Todo Manager
 
-# Extract archive:
-gladeshell extractor archive.tar.zst /path/to/destination
-```
+Tasks are saved to `~/.todo_list.txt`.
 
-**Compression Level:** **Level 1 (Fast)** — configured for ultra-fast archive generation utilizing all CPU threads.
+| Command           | Description                                           |
+| ----------------- | ----------------------------------------------------- |
+| `todo`            | Open interactive gum menu, or show numbered task list |
+| `todo add "Task"` | Add a new task directly                               |
+| `todo add`        | Add task via interactive prompt (gum / read)          |
+| `todo list`       | Show all pending tasks (numbered)                     |
+| `todo done`       | Mark done — fzf picker → gum chooser → ask for number |
+| `todo done 2`     | Mark task #2 as done directly                         |
+| `todo clear`      | Clear all tasks                                       |
+| `todo --help`     | Show usage                                            |
 
----
+#### 📝 Notes Manager
 
-### 🎬 FFmedia All-in-One Multimedia Suite
+Notes are stored in `~/.my_notes/<Category>/<Title>.md`.
 
-Launch via `gladeshell ffmedia` or `ffmedia`:
+| Command        | Description                                            |
+| -------------- | ------------------------------------------------------ |
+| `notes`        | Browse all notes with fzf + live preview               |
+| `notes add`    | Add a note — pick category, enter title, write content |
+| `notes search` | Full-text search inside all notes with fzf             |
+| `notes find`   | Alias for `notes search`                               |
+| `notes --help` | Show usage                                             |
 
-| Command / Option        | Description                                                 |
-| ----------------------- | ----------------------------------------------------------- |
-| `ffmedia compress`      | High-efficiency video compression preserving visual quality |
-| `ffmedia trim`          | Lossless video trim without re-encoding                     |
-| `ffmedia concat`        | Join multiple video files                                   |
-| `ffmedia visualizer`    | Audio waveform & spectrum video generation                  |
-| `ffmedia gif`           | High-quality 2-pass palette GIF renderer                    |
-| `ffmedia screen-record` | Terminal-driven desktop & audio recording                   |
-| `ffmedia privacy-clean` | Strip EXIF, GPS location, and camera metadata               |
+**Viewer fallback:** `glow` → `bat` → `batcat` → `less`
+**Preview (fzf):** `bat` → `batcat` → `glow` → `cat`
+**Clipboard:** `wl-copy` (Wayland) → `xclip` → `xsel` → `pbcopy` (macOS)
 
----
+#### 🎬 FFmedia All-in-One Multimedia Suite
 
-### 🔐 Hardened Multi-Vault Security Suite
+Interactive FFmpeg powerhouse driven by `gum`, `fzf`, and terminal prompts.
 
-Launch via `gladeshell vault` or `vault`:
+| Command                    | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| `ffmedia`                  | Launch interactive 24-in-1 FFmpeg multimedia menu            |
+| `ffstudio`                 | Alias for `ffmedia`                                          |
+| `fftool`                   | Alias for `ffmedia`                                          |
+| `glade_ffmpeg`             | Alias for `ffmedia`                                          |
+| `ffmedia compress`         | Compress video preserving quality (50%-80% size reduction)   |
+| `ffmedia trim`             | Lossless video trim without re-encoding                      |
+| `ffmedia concat`           | Merge multiple video clips into one file                     |
+| `ffmedia resolution`       | Convert resolution (1080p/720p) or crop to 9:16 Reels/Shorts |
+| `ffmedia speed`            | Slow Motion (0.25x-0.5x) or Time-lapse (2x-8x)               |
+| `ffmedia rotate`           | Rotate (90°/180°) or Flip horizontally/vertically            |
+| `ffmedia watermark`        | Apply image logo or text banner watermark                    |
+| `ffmedia grid`             | Side-by-Side (2 videos) or 2x2 grid (4 videos) comparison    |
+| `ffmedia audio-extract`    | Extract audio to MP3, AAC, WAV, FLAC, M4A                    |
+| `ffmedia mute`             | Strip audio stream completely from video                     |
+| `ffmedia audio-replace`    | Replace or mix background audio with video track             |
+| `ffmedia loudness`         | Loudness Normalization (-14 LUFS YouTube / -23 LUFS EBU)     |
+| `ffmedia visualizer`       | Generate Waveform or Frequency Spectrum video from audio     |
+| `ffmedia audio-speed`      | Change audio playback speed while preserving pitch           |
+| `ffmedia snapshot`         | Extract Ultra HD image frame (JPG/PNG) at exact timestamp    |
+| `ffmedia bulk-frames`      | Bulk extract video frames as image sequence                  |
+| `ffmedia gif`              | Render pro-quality ultra-sharp GIF using 2-pass palette      |
+| `ffmedia contact-sheet`    | Generate 3x3 or 4x4 mosaic thumbnail grid image              |
+| `ffmedia screen-record`    | Record desktop screen + audio straight from terminal         |
+| `ffmedia subtitle-burn`    | Hardcode .srt or .ass subtitle file into video               |
+| `ffmedia subtitle-extract` | Extract embedded subtitle tracks from MKV/MP4                |
+| `ffmedia privacy-clean`    | Remove EXIF, GPS location, and camera metadata               |
+| `ffmedia convert`          | Convert format between MP4, MKV, WEBM, MOV, AVI              |
+| `ffmedia batch`            | Run bulk compression/conversion/metadata wiping on a folder  |
 
-```bash
-# Interactive vault manager:
-gladeshell vault
+#### 🔐 Hardened Multi-Vault Security Suite
 
-# Direct commands:
-gladeshell vault lock /path/to/folder
-gladeshell vault unlock /path/to/vault
-gladeshell vault list
-```
+Universal Linux & macOS directory vault manager with AES-256 PBKDF2 memory guard, panic password decoy mode, anti-brute-force protection, auto-relock timers, and optional Telegram security alerts.
+
+| Command        | Description                                                                     |
+| -------------- | ------------------------------------------------------------------------------- |
+| `vault`        | Open interactive GUM/FZF vault menu (Lock, Unlock, List, Config)                |
+| `secvault`     | Alias for `vault`                                                               |
+| `fvault`       | Alias for `vault`                                                               |
+| `vault lock`   | Interactive directory encryption & secure source wiping                         |
+| `vault unlock` | Decrypt vault directly into RAM (`/dev/shm`) and symlink to `$HOME`             |
+| `vault list`   | List all encrypted vaults in `~/.secret_vaults` with file sizes                 |
+| `vault config` | Configure Telegram bot token & chat ID for instant security alert notifications |
+| `vault --help` | Show full usage guide & features                                                |
 
 **Key Security Features:**
 
-- AES-256 CBC + PBKDF2 (500,000 iterations) OpenSSL encryption.
-- Decrypts directly into RAM (`/dev/shm`) to keep plaintext off disk storage.
-- Panic password decoy mode with automated security notification.
-- Multi-pass source folder shredding (`shred -u -n 3 -z`).
+- **AES-256 CBC + PBKDF2 (500,000 Iterations)** encryption using OpenSSL.
+- **RAM Execution Guard:** Decrypts files into `/dev/shm` (or `$TMPDIR`), keeping plain files out of persistent storage.
+- **Panic Password Decoy:** Entering a panic password automatically wipes secret data, generates a decoy folder, triggers a Telegram security alert, and logs access.
+- **Self-Destruct Sequence:** Permanently wipes vault data after 3 consecutive wrong password attempts.
+- **Multi-pass Shredding:** Wipes original source folders with `shred -u -n 3 -z` (Linux) or `rm -P` (macOS).
+
+#### ⚡ Dev Walk & Quick CD (`cf`)
+
+Interactive fuzzy directory navigator and multi-media file launcher with rich live preview and interactive keybindings.
+
+**Usage:** `cf [directory]` (Defaults to current directory `.`)
+
+| Keybinding | Action / Operation                                                            |
+| ---------- | ----------------------------------------------------------------------------- |
+| `<ENTER>`  | Navigate into selected Directory OR open File in default app/editor           |
+| `CTRL-Z`   | Switch candidate list to System Frecent Directories (`zoxide`)                |
+| `CTRL-V`   | Play selected Video file with `v()` player                                    |
+| `CTRL-P`   | Open selected PDF document in Browser                                         |
+| `CTRL-O`   | Open file or directory in Code Editor (`code` / `cursor` / `nvim`)            |
+| `CTRL-E`   | Open directory in GUI File Explorer (`nautilus` / `dolphin` / `explorer.exe`) |
+| `CTRL-Y`   | Copy path to Clipboard (`wl-copy` / `xclip` / `clip.exe` / `pbcopy`)          |
+| `CTRL-H`   | Navigate to Parent Directory (`..`) inside FZF                                |
+
+**Live Preview Features:**
+
+- 📁 **Directories:** Interactive folder tree (`eza` / `tree` / `ls`), Git active branch & recent 3 commits.
+- 📄 **Code & Text:** Colorized syntax-highlighted preview via `bat` / `batcat`.
+- 🖼️ **Images:** High-resolution terminal thumbnail preview powered by `chafa`.
+- 📦 **Archives:** Previews `.zip`, `.tar.gz`, `.7z`, `.rar` contents without extracting.
+- 🎵 **Audio & Video:** Audio metadata preview (`mediainfo`) and video quick actions.
+
+#### 🔀 Other GUM / FZF Utilities
+
+| `cf` | Advanced FZF Dev Walk & Quick CD (see above) |
+| `gbranch` | Modern interactive Git branch manager (fzf / gum) |
+| `fkill` | Advanced interactive process killer (fzf / gum) |
+| `fcd` | Fuzzy quick directory jump (fzf / gum) |
 
 ---
 
-### 🖥️ Native Ratatui TUI Modules
+### 🌿 `gbranch` — Modern Git Branch Manager
 
-`gladeshell` features native terminal user interfaces powered by Ratatui:
+> **Usage:** `gbranch [-l] [-r] [-a] [-h]`
 
-```bash
-gladeshell todo             # Interactive Task Manager TUI
-gladeshell notes            # Interactive Markdown Notes TUI
-gladeshell filetree         # Interactive Filetree & Directory Explorer TUI
-gladeshell process_manager  # Interactive Process Killer & Resource TUI
-gladeshell system_clean     # Interactive System Disk Cleanup TUI
-```
+Replaces the basic `git branch` workflow with a fully interactive, fuzzy-searchable branch manager. Branches are sorted by **most recently committed** so your active branches are always at the top.
 
----
+| Flag             | Description                      |
+| ---------------- | -------------------------------- |
+| _(none)_         | Show all local + remote branches |
+| `-l`, `--local`  | Show local branches only         |
+| `-r`, `--remote` | Show remote branches only        |
+| `-a`, `--all`    | Explicitly show all branches     |
+| `-h`, `--help`   | Print usage and keybindings      |
 
-### 🐳 Docker & Containers
+**FZF Keybindings:**
 
-| Command           | Description                                      |
-| ----------------- | ------------------------------------------------ |
-| `dman`            | Interactive Docker TUI Manager                   |
-| `dstats`          | Realtime container resource dashboard            |
-| `dps` / `dpsa`    | Container listing                                |
-| `dstart` / `doff` | Docker daemon service control                    |
-| `dclean`          | Deep clean of unused volumes, containers, images |
+| Key      | Action                                                  |
+| -------- | ------------------------------------------------------- |
+| `Enter`  | Checkout selected branch (`git checkout`)               |
+| `Ctrl-D` | Delete local branch (`git branch -D`) with confirmation |
+| `Ctrl-R` | Rebase current branch onto selected (`git rebase`)      |
+| `Ctrl-O` | Merge selected branch into current (`git merge`)        |
 
----
+**Preview Panel:** Live commit graph with hash, author, date, and subject (`git log --graph --color`) shown on the right side as you navigate.
 
-### 🐘 PostgreSQL
+**Smart Remote Checkout:** Selecting `origin/feature-xyz` auto-strips the remote prefix and runs a clean `git checkout feature-xyz`.
 
-| Alias                | Description                      |
-| -------------------- | -------------------------------- |
-| `pgstart` / `pgstop` | Service management               |
-| `pgl`                | Connect via `psql` as `postgres` |
-| `pgls`               | List databases                   |
-| `pgdump <db>`        | Backup database                  |
+**Fallback chain:** `fzf` → `gum filter` → numbered interactive menu (no dependencies required).
 
 ---
 
-### 💎 Prisma ORM
+### ⚡ `fkill` — Advanced Interactive Process Killer
 
-| Node (`np*`) | Bun (`bp*`) | Description          |
-| ------------ | ----------- | -------------------- |
-| `npg`        | `bpg`       | `prisma generate`    |
-| `npmd`       | `bpmd`      | `prisma migrate dev` |
-| `nps`        | `bps`       | `prisma studio`      |
+> **Usage:** `fkill [query] [port_number]`
+
+A full-featured process manager in your terminal. Processes are sorted by **CPU usage** (highest first) so resource-hungry processes are instantly visible.
+
+| Argument     | Description                                         |
+| ------------ | --------------------------------------------------- |
+| _(none)_     | Open all processes sorted by CPU descending         |
+| `fkill node` | Pre-filter list to show only `node` processes       |
+| `fkill 3000` | Directly find and kill the process on **port 3000** |
+
+**FZF Keybindings:**
+
+| Key      | Action                                                           |
+| -------- | ---------------------------------------------------------------- |
+| `Tab`    | Multi-select multiple processes                                  |
+| `Enter`  | **Soft kill** selected process(es) (SIGTERM — graceful shutdown) |
+| `Ctrl-X` | **Force kill** selected process(es) (SIGKILL -9 — immediate)     |
+| `Ctrl-R` | Reload live process list without closing fzf                     |
+
+**Process Type Badges:**
+
+- `[APP]` — User GUI Applications (Chrome, VS Code, Slack, Discord, Firefox, VLC, Zed, Spotify, etc.)
+- `[SYS]` — System Services & Daemons (`root`, `systemd`, `dbus`, background system workers)
+- `[USR]` — User CLI, Scripts, and Shell processes (`node`, `python`, `npm`, `bash`, etc.)
+
+**Preview Panel:** Shows Process Type, PID, User, CPU %, Memory %, Uptime, and open network ports for the highlighted process.
+
+**Port-based kill:** `fkill 3000` uses `ss` / `lsof` to identify the process on that port, confirms with you, tries SIGTERM first, then SIGKILL if needed.
+
+**Fallback chain:** `fzf` (multi-select + preview) → `gum filter` (with confirm) → numbered interactive menu.
 
 ---
 
@@ -556,68 +804,362 @@ gladeshell/
 
 ---
 
-## 💻 Development & Testing
+## 🖥️ Zed IDE Settings
 
-### Cargo Commands & Makefile
+Install a fully-configured `settings.json` for the [Zed](https://zed.dev) editor — works for native, Flatpak, Snap, and Windows installations in one command.
 
-```bash
-# Check code syntax & dependencies:
-make check       # or: cargo check
+### Instant Command Setup
 
-# Run Linter with strict warnings:
-make clippy      # or: cargo clippy --all-targets -- -D warnings
-
-# Format codebase:
-make fmt         # or: cargo fmt
-
-# Run test suite:
-make test        # or: cargo test
-
-# Run benchmarks:
-make bench       # or: cargo bench
-```
-
-### Git Hooks Setup
-
-To activate pre-commit and pre-push hooks:
+Run the built-in installer command directly in your shell:
 
 ```bash
-make hooks       # or: git config core.hooksPath .githooks
+zed-setup
+# or
+gladeshell zed-setup
 ```
 
-The `pre-commit` hook automatically checks:
+The command will:
 
-1. Installer synchronization (`install.sh` and `install.ps1` matching `web/`).
-2. Absence of unresolved merge conflict markers.
-3. Code formatting via `cargo fmt -- --check`.
-4. Linting via `cargo clippy`.
+1. 💾 **Back up** any existing `settings.json` with a timestamp
+2. ✍️ **Write** the new config across all detected installation paths (Native, Flatpak, Snap, and Windows AppData)
+3. ✅ Print a confirmation for each updated target path
+
+> **Restart Zed** after running the command for all settings to take effect.
+
+### What's included
+
+| Setting            | Value                                                      |
+| ------------------ | ---------------------------------------------------------- |
+| Theme              | `BlackFox` (dark) / `Everforest Light Hard` (light)        |
+| Buffer Font        | `Cascadia Code` 22px (fallback: JetBrains Mono, Fira Code) |
+| UI Font            | `JetBrains Mono` 20px                                      |
+| Terminal Font      | `JetBrains Mono` 22px + `FiraCode Nerd Font` fallback      |
+| Tab Size           | `2` spaces                                                 |
+| Soft Wrap          | `editor_width`                                             |
+| Autosave           | `on_focus_change`                                          |
+| Keymap             | `VSCode`                                                   |
+| Inlay Hints        | Enabled with background                                    |
+| Inline Diagnostics | Enabled                                                    |
+| Minimap            | `auto`                                                     |
+| Prettier           | Allowed                                                    |
+| Git Inline Blame   | With commit summary                                        |
 
 ---
 
 ## 🐧 Linux App Ecosystem
 
-gladeshell includes a curated guide to desktop applications for Linux developers:
+A curated list of essential applications for a Linux development and creative environment.
 
-- **Creative:** Inkscape, Kdenlive, OBS Studio, HandBrake, Upscayl.
-- **IDEs:** VS Code, Zed, Antigravity.
-- **Browsers:** Google Chrome, Brave.
-- **Utilities:** Flatseal, Fzf, Zram.
+This project provides a clean, searchable, and filterable web interface to discover and browse recommended Linux applications. It includes categories for Creative Applications, IDEs, Browsers, System Tools, and Dev Tools.
 
-Explore the searchable interactive web database on [gladeshell.netlify.app/linux-setup.html](https://gladeshell.netlify.app/linux-setup.html).
+**Features:**
+
+- **Searchable Interface:** Instantly search for applications by name, category, or format.
+- **Dynamic Filters:** Filter applications by categories like Creative, Development IDE, Browser, Dev Tools, and Tools.
+- **Package Formats:** Displays the recommended package format (Flatpak, DEB, etc.) for each application with color-coded badges.
+
+This page has been integrated into the main `gladeshell` website and can be accessed via the **Linux Apps** link in the navigation menu.
+
+The **[Docs page](https://gladeshell.netlify.app/docs.html)** (`docs.html`) provides a full interactive documentation experience with:
+
+- 🔍 **Trie-based autocomplete** search (O(k) prefix lookup)
+- ⚡ **Live Command Explorer** — filter 60+ aliases by category
+- 🛠️ **Terminal Simulator** — click chips to demo gladeshell commands
+- 🎨 **4 Color Themes** — Cyber Cyan, Matrix Green, Sunset Pink, Nord Frost
+- 📱 **Fully Mobile Responsive** — hamburger drawer sidebar, touch-friendly layout
+
+<details>
+<summary><b>View the full list of recommended apps</b></summary>
+
+### 🎨 Creative Applications
+
+| Application      | Format  | Description                             |
+| ---------------- | ------- | --------------------------------------- |
+| **Flatseal**     | Flatpak | Flatpak App Managed Software            |
+| **ytDownloader** | Flatpak | Video Downloader Software               |
+| **Packet**       | Flatpak | Quick share for Linux                   |
+| **Inkscape**     | Flatpak | Vector Image Editor                     |
+| **VLC**          | Flatpak | Video Player Software                   |
+| **Upscayl**      | Flatpak | Image Upscaling Software                |
+| **Pinta**        | Flatpak | General Image Editor                    |
+| **Discord**      | Flatpak | Social Media & Voice Chat               |
+| **Pods**         | Flatpak | Containers Manager                      |
+| **HandBrake**    | Flatpak | Video Compressor                        |
+| **OBS Studio**   | Flatpak | Video Recorder & Streamer               |
+| **Valot**        | Flatpak | Note & Task tracking with alarm         |
+| **Collector**    | Flatpak | Drag and drop everything in one place   |
+| **Gitte**        | Flatpak | Git Client Desktop Software             |
+| **Kdenlive**     | Flatpak | Video Editor Software                   |
+| **Bazaar**       | Flatpak | App store for Flatpak Applications      |
+| **Akizip**       | Flatpak | Archive Manager (7z, ZIP, TAR)          |
+| **BudsLink**     | Flatpak | Air buds Control for Linux              |
+| **Emojify**      | Flatpak | Emoji finder                            |
+| **Xournal++**    | Flatpak | Digital notebook / PDF Annotator        |
+| **Drawy**        | Flatpak | Draw notebook                           |
+| **Gradia**       | Flatpak | Screenshot Utility                      |
+| **Scribus**      | Flatpak | Vector Image Print / Desktop Publishing |
+
+### 💻 Development IDEs
+
+| Application     | Format  | Description                              |
+| --------------- | ------- | ---------------------------------------- |
+| **VS Code**     | DEB     | Powerful code editor by Microsoft        |
+| **Qoder**       | DEB     | Code Editor                              |
+| **Antigravity** | DEV     | Advanced Agentic Coding Environment      |
+| **Zed**         | Flatpak | High-performance multiplayer code editor |
+| **VSCodium**    | Flatpak | Telemetry-free VS Code build             |
+
+### 🌐 Browsers
+
+| Application | Format  | Description                 |
+| ----------- | ------- | --------------------------- |
+| **Chrome**  | DEB     | Google Web Browser          |
+| **Brave**   | Flatpak | Privacy-focused Web Browser |
+
+### 🛠️ System Tools & Utilities
+
+| Application   | Format | Category                   |
+| ------------- | ------ | -------------------------- |
+| **rEFInd**    | DEB    | Dual boot Manager          |
+| **Zram**      | DEB    | Memory compression in RAM  |
+| **Fzf**       | DEB    | Command-line fuzzy finder  |
+| **ls-sensor** | DEB    | Hardware sensor monitoring |
+| **Git**       | DEB    | Version Control System     |
+| **Node.js**   | DEB    | JavaScript Runtime         |
+| **Bun**       | DEB    | Fast JavaScript Runtime    |
+| **curl**      | DEB    | Network Data Transfer      |
+| **wget**      | DEB    | Network File Retrieval     |
+
+</details>
+
+---
+
+## 🐳 Docker & Containers
+
+> gladeshell includes **The Ultimate Docker Swiss Army Knife** — a full suite of aliases and smart functions for managing containers, images, volumes, and services.
+
+### 📊 Interactive Dashboard & Monitoring
+
+| Command  | Description                                                   |
+| -------- | ------------------------------------------------------------- |
+| `dman`   | 🐳 Docker Desktop & DevOps Terminal Edition (interactive TUI) |
+| `dstats` | Live realtime resource dashboard (CPU, RAM, Net IO, PIDs)     |
+| `dps`    | List running containers (clean table format)                  |
+| `dpsa`   | List **all** containers including stopped ones                |
+| `di`     | List all downloaded Docker images                             |
+| `dvl`    | List all Docker volumes                                       |
+| `dnl`    | List all Docker networks                                      |
+| `dsize`  | Inspect total Docker disk usage                               |
+| `dtop`   | Live resource monitor — CPU, RAM, Net & Block I/O             |
+
+#### Sudo variants (for rootless-mode setups)
+
+| Command            | Description                       |
+| ------------------ | --------------------------------- |
+| `sdps` / `sdpsa`   | `sudo` versions of `dps` / `dpsa` |
+| `sdi`              | `sudo docker images`              |
+| `sdvl` / `sdnl`    | `sudo` volume / network list      |
+| `sdsize` / `sdtop` | `sudo` disk usage / live stats    |
+
+---
+
+### ⚡ Service Control
+
+| Command    | Description                                               |
+| ---------- | --------------------------------------------------------- |
+| `dstart`   | Start the Docker service                                  |
+| `doff`     | Stop the Docker service                                   |
+| `dstatus`  | Check Docker service status                               |
+| `denable`  | Enable Docker auto-start on boot (docker + docker.socket) |
+| `ddisable` | Disable Docker auto-start on boot                         |
+
+---
+
+### 🔄 Container Lifecycle
+
+| Command           | Description                                    |
+| ----------------- | ---------------------------------------------- |
+| `dstop <name>`    | Stop a container                               |
+| `drm <name>`      | Remove a container                             |
+| `drmi <image>`    | Remove an image                                |
+| `drestart <name>` | Restart a container                            |
+| `dkill <name>`    | Force stop + delete a container in one command |
+| `dstopall`        | Stop **all** running containers at once        |
+| `drmall`          | Remove **all** stopped containers at once      |
+
+---
+
+### 🐛 Debugging & Building
+
+| Command                | Description                                  | Example                  |
+| ---------------------- | -------------------------------------------- | ------------------------ |
+| `dsh <name>`           | Open an interactive shell inside a container | `dsh myapp`              |
+| `dlogs <name>`         | Follow live logs of a container              | `dlogs myapp`            |
+| `dbuild <tag>`         | Build a Docker image with a tag              | `dbuild myapp .`         |
+| `dbuild-nocache <tag>` | Build image from scratch (no cache)          | `dbuild-nocache myapp .` |
+| `dhist <image>`        | View image layer history                     | `dhist myapp`            |
+| `dports <name>`        | Check open port bindings of a container      | `dports myapp`           |
+
+---
+
+### 🧩 Docker Compose
+
+| Command  | Description                                              |
+| -------- | -------------------------------------------------------- |
+| `dcup`   | Start services in detached mode (`docker compose up -d`) |
+| `dcdn`   | Stop and remove services (`docker compose down`)         |
+| `dclogs` | Follow compose service logs                              |
+| `dcupb`  | Rebuild images and start services (`up -d --build`)      |
+
+---
+
+### 🧪 Quick Test Sandboxes
+
+Spin up a temporary container that **auto-deletes on exit**:
+
+| Command        | Launches                  |
+| -------------- | ------------------------- |
+| `dtest-ubuntu` | `ubuntu:latest` with bash |
+| `dtest-node`   | `node:alpine` with sh     |
+| `dtest-alpine` | `alpine:latest` with sh   |
+
+---
+
+### 🧠 Advanced Functions
+
+| Function               | Usage                       | Description                                                            |
+| ---------------------- | --------------------------- | ---------------------------------------------------------------------- |
+| `dfind <term>`         | `dfind nginx`               | Search containers and images by name                                   |
+| `droot <name>`         | `droot myapp`               | Enter container as **root** user                                       |
+| `dip <name>`           | `dip myapp`                 | Show container's local IP address                                      |
+| `dwatch <name>`        | `dwatch myapp`              | Live-track filesystem changes inside container                         |
+| `dnetstat <name>`      | `dnetstat myapp`            | Show active network connections inside container                       |
+| `dtop-proc <name>`     | `dtop-proc myapp`           | Show process tree inside container                                     |
+| `dbackup <vol> <file>` | `dbackup mydata backup.tar` | Backup a Docker volume as a `.tar` file                                |
+| `dkill-force`          | `dkill-force`               | Interactively force-kill **all** running containers                    |
+| `dclean`               | `dclean`                    | Deep clean — removes all unused containers, images, volumes & networks |
+
+#### `dclean` — Deep Clean
+
+```bash
+dclean
+# 🧹 Performing deep clean of all unused Docker resources...
+# → docker system prune -a --volumes -f
+# ✨ System optimization complete!
+```
+
+#### `dbackup` — Volume Backup
+
+```bash
+dbackup mydata backup.tar
+# Backs up 'mydata' volume to backup.tar in current directory
+```
+
+> 💡 **Tab Completion** is built-in — press `Tab` after `dsh`, `dlogs`, `dstop`, `dkill`, `drestart`, `dports`, `dwatch`, `dnetstat`, `dtop-proc` to auto-complete container names. Same for `drmi` and `dhist` with image names.
+
+---
+
+## 🐘 PostgreSQL
+
+> gladeshell includes a full suite of **PostgreSQL aliases** for managing your database service with minimal typing.
+
+### 🔌 Service Control
+
+| Alias       | Description                           |
+| ----------- | ------------------------------------- |
+| `pgstart`   | Start the PostgreSQL service          |
+| `pgstop`    | Stop the PostgreSQL service           |
+| `pgrestart` | Restart the PostgreSQL service        |
+| `pgstatus`  | Check PostgreSQL service status       |
+| `pgenable`  | Enable PostgreSQL auto-start on boot  |
+| `pgdisable` | Disable PostgreSQL auto-start on boot |
+| `pglogs`    | Follow the PostgreSQL log file live   |
+
+### 🗄️ Database Management
+
+| Alias            | Usage                         | Description                           |
+| ---------------- | ----------------------------- | ------------------------------------- |
+| `pgl`            | `pgl`                         | Login as `postgres` user via `psql`   |
+| `pgdb <name>`    | `pgdb mydb`                   | Connect to a specific database        |
+| `pgls`           | `pgls`                        | List all databases (`\l`)             |
+| `pgtables`       | `pgtables`                    | List all tables in current DB (`\dt`) |
+| `pgusers`        | `pgusers`                     | List all users / roles (`\du`)        |
+| `pgsize`         | `pgsize`                      | Show size of each database            |
+| `pgver`          | `pgver`                       | Show PostgreSQL version               |
+| `pgconn`         | `pgconn`                      | Show active connections count         |
+| `pgcreate <db>`  | `pgcreate mydb`               | Create a new database                 |
+| `pgdrop <db>`    | `pgdrop mydb`                 | Drop / delete a database              |
+| `pgdump <db>`    | `pgdump mydb > backup.sql`    | Dump / backup a database              |
+| `pgrestore <db>` | `pgrestore mydb < backup.sql` | Restore a database from file          |
+
+---
+
+## 💎 Prisma ORM
+
+> gladeshell includes a complete suite of **Prisma ORM aliases** using the **first letter of each word** for maximum typing speed.
+>
+> Pattern: `n`(px) + `p`(risma) + sub-command initials → **Node** | `b`(unx) + `p`(risma) + sub-command initials → **Bun**
+
+### 🟢 Node / NPX Prisma — `np*`
+
+| Alias          | Full Command                           | Description                                  |
+| -------------- | -------------------------------------- | -------------------------------------------- |
+| `np`           | `npx prisma`                           | Base Prisma CLI command                      |
+| `npi`          | `npx prisma init`                      | Initialize Prisma project                    |
+| `npg`          | `npx prisma generate`                  | Generate Prisma Client                       |
+| `nps`          | `npx prisma studio`                    | Open Prisma Studio GUI                       |
+| `npmd`         | `npx prisma migrate dev`               | Run dev migrations                           |
+| `npmdn <name>` | `npx prisma migrate dev --name <name>` | Run named migration (e.g. `npmdn add_users`) |
+| `npmr`         | `npx prisma migrate reset`             | Reset database & re-migrate                  |
+| `npmdp`        | `npx prisma migrate deploy`            | Apply migrations in production               |
+| `npms`         | `npx prisma migrate status`            | Check migration status                       |
+| `npdp`         | `npx prisma db push`                   | Push schema state directly to DB             |
+| `npdl`         | `npx prisma db pull`                   | Pull schema from DB / Introspect             |
+| `npds`         | `npx prisma db seed`                   | Seed the database                            |
+| `npf`          | `npx prisma format`                    | Format `schema.prisma` file                  |
+| `npv`          | `npx prisma version`                   | Show Prisma CLI & engine version             |
+
+### 🥐 Bun Runtime Prisma — `bp*`
+
+| Alias          | Full Command                            | Description                         |
+| -------------- | --------------------------------------- | ----------------------------------- |
+| `bp`           | `bunx prisma`                           | Base Prisma CLI via Bun runner      |
+| `bpi`          | `bunx prisma init`                      | Initialize Prisma project via Bun   |
+| `bpg`          | `bunx prisma generate`                  | Generate Prisma Client via Bun      |
+| `bps`          | `bunx prisma studio`                    | Open Prisma Studio GUI via Bun      |
+| `bpmd`         | `bunx prisma migrate dev`               | Run dev migrations via Bun          |
+| `bpmdn <name>` | `bunx prisma migrate dev --name <name>` | Run named migration via Bun         |
+| `bpmr`         | `bunx prisma migrate reset`             | Reset database via Bun              |
+| `bpmdp`        | `bunx prisma migrate deploy`            | Apply migrations in prod via Bun    |
+| `bpms`         | `bunx prisma migrate status`            | Check migration status via Bun      |
+| `bpdp`         | `bunx prisma db push`                   | Push schema directly to DB via Bun  |
+| `bpdl`         | `bunx prisma db pull`                   | Pull schema from DB via Bun         |
+| `bpds`         | `bunx prisma db seed`                   | Seed database via Bun               |
+| `bpf`          | `bunx prisma format`                    | Format `schema.prisma` file via Bun |
+| `bpv`          | `bunx prisma version`                   | Check Prisma version via Bun        |
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome!
+Contributions are welcome! Whether it's a new alias, a bug fix, or a feature idea:
 
-1. **Fork** the repository.
-2. **Create** a feature branch (`git checkout -b feat/new-feature`).
-3. **Commit** your changes (`git commit -m "feat: add feature"`).
-4. **Verify** with `make check && make test`.
-5. **Push** and submit a **Pull Request**.
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feat/my-feature`
+3. **Commit** your changes: `gcm "feat: add my feature"` _(or regular `git commit`)_
+4. **Push** and open a **Pull Request**
 
-Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+Please keep functions focused, well-commented, and compatible with **Bash 4+**.
+
+### 📚 Community & Documentation Links
+
+- 🤝 **[CONTRIBUTING.md](CONTRIBUTING.md)** — Step-by-step guidelines for contributing to gladeshell.
+- 🆘 **[SUPPORT.md](SUPPORT.md)** — Support options, quick troubleshooting, and issue reporting.
+- 🗺️ **[ROADMAP.md](ROADMAP.md)** — Future feature plans, version milestones, and community voting.
+- 👥 **[AUTHORS.md](AUTHORS.md)** — Core maintainers and project leadership.
+- 🤝 **[CONTRIBUTORS.md](CONTRIBUTORS.md)** — Community contributor recognition wall.
+- 🌟 **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — Community standards and covenant.
+- 🔒 **[SECURITY.md](SECURITY.md)** — Vulnerability reporting policy.
 
 ---
 

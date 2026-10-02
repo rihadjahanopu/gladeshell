@@ -2,9 +2,17 @@ name: Release Cross-Platform Binaries
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - 'Cargo.toml'
     tags:
       - 'v*'
   workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -13,10 +21,93 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  prepare-release:
+    name: Prepare & Tag Release
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.get_version.outputs.tag_name }}
+      version: ${{ steps.get_version.outputs.version }}
+      should_release: ${{ steps.get_version.outputs.should_release }}
+      release_notes: ${{ steps.changelog.outputs.notes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify Crate Publishability (Cargo Dry-Run)
+        run: cargo publish --dry-run --allow-dirty
+
+      - name: Detect Version Bump & Handle Tagging
+        id: get_version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION="${TAG_NAME#v}"
+            SHOULD_RELEASE="true"
+            echo "Triggered by git tag push: $TAG_NAME"
+          else
+            # Parse version string from Cargo.toml safely
+            VERSION=$(grep -m1 '^version' Cargo.toml | sed -E 's/version = "(.*)"/\1/' | tr -d '[:space:]')
+            TAG_NAME="v${VERSION}"
+
+            echo "Cargo.toml version detected: $VERSION ($TAG_NAME)"
+
+            # Check if tag exists on origin
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1 || git ls-remote --tags origin "$TAG_NAME" | grep -q "$TAG_NAME"; then
+              echo "Tag $TAG_NAME already exists on origin."
+              if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+                echo "Manual workflow dispatch: proceed with release for $TAG_NAME."
+                SHOULD_RELEASE="true"
+              else
+                echo "No version bump detected in Cargo.toml ($TAG_NAME already released). Skipping release build."
+                SHOULD_RELEASE="false"
+              fi
+            else
+              echo "✨ New version bump detected ($TAG_NAME)! Creating and pushing git tag..."
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+              git push origin "$TAG_NAME" || true
+              SHOULD_RELEASE="true"
+            fi
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "should_release=${SHOULD_RELEASE}" >> $GITHUB_OUTPUT
+
+      - name: Extract Release Notes from CHANGELOG.md
+        id: changelog
+        shell: bash
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          CHANGELOG_FILE="CHANGELOG.md"
+          
+          NOTES=""
+          if [[ -f "$CHANGELOG_FILE" ]]; then
+            NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" "$CHANGELOG_FILE" | sed '$d' | sed '1d')
+          fi
+
+          if [[ -z "$NOTES" ]]; then
+            NOTES="Automated cross-platform binary release for gladeshell **v${VERSION}**."
+          fi
+
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "notes<<$EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
   build-release:
     name: Build Release (${{ matrix.target }})
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_release == 'true'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -56,6 +147,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+          shared-key: "release-${{ matrix.target }}"
 
       - name: Install musl dependencies (Linux MUSL)
         if: matrix.target == 'x86_64-unknown-linux-musl'
@@ -74,6 +166,17 @@ jobs:
             cargo build --release --target ${{ matrix.target }}
           fi
 
+      - name: Strip Debug Symbols (Unix Optimization)
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
+            BIN_PATH="target/${{ matrix.target }}/release/gladeshell"
+            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/gladeshell"
+            if [ -f "$BIN_PATH" ]; then
+              strip "$BIN_PATH" 2>/dev/null || true
+            fi
+          fi
+
       - name: Package binary & release archive
         shell: bash
         run: |
@@ -88,7 +191,13 @@ jobs:
             cp "$BIN_PATH" "${{ matrix.asset_name }}"
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
             7z a "${STAGE_DIR}.zip" "./${STAGE_DIR}/*"
-            sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+            
+            # Cross-platform SHA256 sum for Windows
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+            else
+              powershell -c "(Get-FileHash -Algorithm SHA256 '${{ matrix.asset_name }}').Hash.ToLower() + '  ${{ matrix.asset_name }}'" > "${{ matrix.asset_name }}.sha256"
+            fi
           else
             BIN_PATH="target/${{ matrix.target }}/release/gladeshell"
             [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/gladeshell"
@@ -107,9 +216,12 @@ jobs:
 
       - name: Publish Release Artifacts
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
+          tag_name: ${{ needs.prepare-release.outputs.tag_name }}
+          name: "gladeshell ${{ needs.prepare-release.outputs.tag_name }}"
+          body: ${{ needs.prepare-release.outputs.release_notes }}
           generate_release_notes: true
+          fail_on_unmatched_files: false
           files: |
             gladeshell-*
             SHA256SUMS-*.txt

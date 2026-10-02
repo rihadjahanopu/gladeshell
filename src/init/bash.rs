@@ -76,6 +76,7 @@ command_not_found_handle() {
 
     out.push_str(&shared::render_auto_ls_hook(Shell::Bash));
     out.push_str(&shared::render_cf_wrapper(Shell::Bash));
+    out.push_str(&shared::render_cli_completions(Shell::Bash));
     out.push_str("\n# gladeshell bash init complete\n");
     out
 }

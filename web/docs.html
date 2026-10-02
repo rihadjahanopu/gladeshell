@@ -334,9 +334,9 @@
           <p>
             <strong>gladeshell</strong> is a lightweight, opinionated terminal enhancement
             environment engineered specifically for full-stack, DevOps, and open-source developers.
-            Unlike heavy framework monoliths (such as Oh My Zsh or bulky plugin managers), gladeshell
-            operates with <strong>zero external script dependencies</strong>, instant terminal cold
-            startup (< 15ms), and a safe single-file modular architecture.
+            Unlike heavy framework monoliths (such as Oh My Zsh or bulky plugin managers),
+            gladeshell operates with <strong>zero external script dependencies</strong>, instant
+            terminal cold startup (< 15ms), and a safe single-file modular architecture.
           </p>
 
           <div class="alert-box alert-note">
@@ -385,8 +385,8 @@
 
           <h3 id="universal-install">Universal 1-Line Installer</h3>
           <p>
-            The smartest way to set up gladeshell. It automatically detects your operating system and
-            current default shell, injecting the appropriate configuration cleanly:
+            The smartest way to set up gladeshell. It automatically detects your operating system
+            and current default shell, injecting the appropriate configuration cleanly:
           </p>
 
           <div class="code-wrapper">
@@ -394,7 +394,7 @@
               <span class="code-lang">Bash / Zsh (Universal)</span>
               <button class="copy-btn"><span>📋</span> Copy Command</button>
             </div>
-            <pre><code>curl -fsSL https://gladeshell.netlify.app/i.sh | bash</code></pre>
+            <pre><code>curl -fsSL https://gladeshell.netlify.app/install.sh | bash</code></pre>
           </div>
 
           <div class="code-wrapper">
@@ -402,7 +402,7 @@
               <span class="code-lang">PowerShell (Windows Universal)</span>
               <button class="copy-btn"><span>📋</span> Copy Command</button>
             </div>
-            <pre><code>irm https://gladeshell.netlify.app/public/i.ps1 | iex</code></pre>
+            <pre><code>irm https://gladeshell.netlify.app/public/install.ps1 | iex</code></pre>
           </div>
 
           <h3 id="shell-installers">Shell-Specific Installers</h3>
@@ -602,7 +602,7 @@ source ~/.config/fish/config.fish</code></pre>
           </div>
 
           <h3 id="powershell-setup">PowerShell Setup ($PROFILE)</h3>
-          <p>PowerShell 7+ and Windows PowerShell 5.1 are fully supported via `i.ps1`.</p>
+          <p>PowerShell 7+ and Windows PowerShell 5.1 are fully supported via `install.ps1`.</p>
           <div class="alert-box alert-warning">
             <div class="alert-title">⚠️ Windows Script Execution Policy</div>
             <p>
@@ -3718,9 +3718,10 @@ glade matrix
             >
               Cold interactive shell startup measured via
               <code style="color: var(--docs-cyan)">hyperfine --warmup 3 'zsh -i -c exit'</code> and
-              equivalent per shell. GladeShell Zsh uses pre-compiled <strong>.zwc bytecode</strong> +
-              single-pass <code style="color: var(--docs-cyan)">compinit -C</code> dump cache. Bars
-              are scaled relative to the worst performer (Oh My Zsh · 890 ms).
+              equivalent per shell. GladeShell Zsh uses pre-compiled
+              <strong>.zwc bytecode</strong> + single-pass
+              <code style="color: var(--docs-cyan)">compinit -C</code> dump cache. Bars are scaled
+              relative to the worst performer (Oh My Zsh · 890 ms).
             </p>
 
             <div class="bench-chart-grid" id="bench-startup-chart">

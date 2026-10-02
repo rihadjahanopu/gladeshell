@@ -1,6 +1,7 @@
 MIT License
 
-Copyright (c) 2026 Rihad Jahan Opu 
+Copyright (c) 2026 Rihad Jahan Opu (https://github.com/rihadjahanopu)
+Project: gladeshell (https://github.com/rihadjahanopu/gladeshell)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -9,8 +10,15 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. The above copyright notice, this permission notice, and explicit credit to 
+   the original author (Rihad Jahan Opu) shall be included in all copies or 
+   substantial portions of the Software.
+
+2. ATTRIBUTION REQUIREMENT: Any redistribution, derivative work, or application 
+   incorporating code, algorithms, or architecture from gladeshell MUST retain 
+   visible credit to "gladeshell" and the author "Rihad Jahan Opu", including 
+   a hyperlink back to the official repository (https://github.com/rihadjahanopu/gladeshell). 
+   Failure to include this notice constitutes copyright infringement.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

@@ -26,6 +26,7 @@ path = "src/lib.rs"
 [dependencies]
 # CLI framework
 clap = { version = "4", features = ["derive", "env", "string"] }
+clap_complete = "4"
 
 # Serialization / config
 serde = { version = "1", features = ["derive"] }

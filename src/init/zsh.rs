@@ -314,6 +314,7 @@ command_not_found_handler() {
 "#);
     out.push_str(&shared::render_auto_ls_hook(Shell::Zsh));
     out.push_str(&shared::render_cf_wrapper(Shell::Zsh));
+    out.push_str(&shared::render_cli_completions(Shell::Zsh));
 
     out.push_str("\n# gladeshell zsh init complete\n");
     out

@@ -1,4 +1,3 @@
-
 ================================================================================
   ███████╗ █████╗ ███╗   ██╗ ██████╗██╗   ██╗██████╗  █████╗ ███████╗██╗  ██╗
   ██╔════╝██╔══██╗████╗  ██║██╔════╝╚██╗ ██╔╝██╔══██╗██╔══██╗██╔════╝██║  ██║
@@ -18,193 +17,218 @@ TABLE OF CONTENTS
 ─────────────────
   1.  Project Overview
   2.  Design Philosophy & Safety Guarantees
-  3.  High-Level Architecture & Core Engine
-  4.  Repository Structure (Annotated)
-  5.  Core Components & Subsystems
-        5a. Pure Rust Core Engine      (src/core/)
-        5b. Ratatui TUI Tools Suite    (src/tools/)
-        5c. Installer Layer            (install.sh / install.ps1)
-        5d. Web Layer                  (web/)
-        5e. CI/CD & Automation Layer   (.github/ & .githooks/)
-  6.  Data Flow: How Installation Works
-  7.  Prompt System & Telemetry Engine
-  8.  Multi-Threaded Parallel Compressor (`compressor`)
-  9.  Cross-Platform Binary Compatibility Matrix
-  10. Key Design Decisions & Trade-offs
-  11. Extension Points (How to Add New Rust Tools)
-  12. Testing & Verification Protocol
-  13. Glossary
+  3.  High-Level System Architecture
+  4.  Annotated Directory Layout
+  5.  Core Subsystems & Technical Details
+        5a. Pure Rust CLI Engine & Router    (src/main.rs & src/cli.rs)
+        5b. Prompt & Telemetry Engine        (src/core/)
+        5c. Native Shell Auto-Completions    (src/main.rs & src/init/)
+        5d. Native IDE Setup Modules         (src/tools/zed_setup.rs / code_setup.rs)
+        5e. Ratatui TUI Tools Suite          (src/tools/)
+        5f. Parallel Multi-Core Compressor   (src/tools/compressor.rs)
+        5g. Hardened Security Vault          (src/tools/vault.rs)
+        5h. Installer & Deployment Layer     (install.sh / install.ps1)
+        5i. Bulletproof CI/CD Pipeline       (.github/workflows/release.yml)
+  6.  Cross-Shell Bootstrap & In-Memory Eval Flow
+  7.  Data Flow & IPC Daemon Architecture
+  8.  Binary Size Optimization Protocol (Fat LTO & Stripping)
+  9.  Testing & Verification Protocol
+  10. Contribution & Extension Guide
 
 
 ================================================================================
 1. PROJECT OVERVIEW
 ================================================================================
 
-gladeshell is a PURE RUST, ZERO-EXTERNAL-SUBSHELL-DEPENDENCY binary toolkit
-and terminal environment for modern software developers. It enhances default
-shell terminals (Bash, Zsh, Fish, PowerShell 7+) with sub-millisecond prompt
-rendering, parallel multi-core compression, 55 TUI themes, and interactive tools.
+gladeshell is a 100% PURE RUST, ZERO-EXTERNAL-BINARY-DEPENDENCY toolkit and
+modular terminal developer suite. It enhances terminal environments (Bash,
+Zsh, Fish, PowerShell 7+) with sub-millisecond prompt rendering, 55 themes,
+native shell completions, multi-core compression, AES-256 security vaults,
+and native Ratatui TUI developer applications.
 
-  Target Users  : Full-stack developers, DevOps, System Administrators
-  Target Shells : Bash 4+ · Zsh 5+ · PowerShell 7+ · Fish 3+
-  Target OS     : Linux (glibc & static MUSL) · macOS (Intel & ARM64) · Windows
-  Install Method: Universal one-liner (`install.sh` / `install.ps1`) | Cargo build
-  Philosophy    : "Pure Rust compilation. Sub-millisecond latency. 100% Memory safe."
+  Target Users  : Software Developers, DevOps Engineers, System Administrators
+  Target Shells : Bash 4+ · Zsh 5+ · Fish 3+ · PowerShell 7+ · Elvish
+  Target OS     : Linux (glibc & MUSL) · macOS (Intel & Apple Silicon) · Windows
+  Install Method: Universal setup script (`install.sh`/`install.ps1`) | Cargo build
+  Architecture  : Pure Rust compilation · Zero-fork telemetry · Sub-millisecond latency
 
 
 ================================================================================
 2. DESIGN PHILOSOPHY & SAFETY GUARANTEES
 ================================================================================
 
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │  PRINCIPLE            │  IMPLEMENTATION                                 │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │  Zero Subshell Latency│  Sub-millisecond Rust binary telemetry          │
-  │  Memory Safe (#![deny])│  Strict #![deny(unsafe_code)] constraints      │
-  │  Safe by Default      │  Installer NEVER overwrites; creates backups     │
-  │  Idempotent Install   │  Boundary markers prevent duplicate sourcing    │
-  │  Parallel I/O Speed   │  Multi-threaded compression via Rayon thread pool│
-  │  Cross-Platform       │  Native binary matrix for Linux, macOS & Windows │
-  └─────────────────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────┬─────────────────────────────────────────────────┐
+  │ PRINCIPLE               │ TECHNICAL ENFORCEMENT                           │
+  ├─────────────────────────┼─────────────────────────────────────────────────┤
+  │ Zero-Subshell Latency   │ Sub-millisecond prompt telemetry (< 1ms render) │
+  │ Memory Safety Guarantee │ Strict #![deny(unsafe_code)] compile flags      │
+  │ Offline Zero-Trust      │ 100% local execution, zero network telemetry    │
+  │ Idempotent Setup        │ Marker boundary injection & timestamped backups │
+  │ Parallel I/O Throughput │ Rayon thread pool parallel compression & search │
+  │ Cross-Platform Parity   │ 7-target release binary compilation matrix      │
+  └─────────────────────────┴─────────────────────────────────────────────────┘
 
 
 ================================================================================
-3. HIGH-LEVEL ARCHITECTURE & CORE ENGINE
+3. HIGH-LEVEL SYSTEM ARCHITECTURE
 ================================================================================
 
-                        ┌──────────────────────────────┐
-                        │      CONTRIBUTOR / USER        │
-                        └──────────────┬───────────────┘
-                                       │  curl one-liner OR cargo install
-                                       ▼
-                        ┌──────────────────────────────┐
-                        │    INSTALLER LAYER            │
-                        │  install.sh / install.ps1     │
-                        │                               │
-                        │  • OS & CPU Arch Detection    │
-                        │  • Idempotency Guard          │
-                        │  • Timestamped Backup Engine  │
-                        │  • SHA256 Checksum Guard      │
-                        │  • Boundary Marker Sourcing   │
-                        └──────────────┬───────────────┘
-                                       │
-                                       ▼
-                        ┌──────────────────────────────┐
-                        │  PURE RUST ENGINE (src/)      │
-                        │  gladeshell binary CLI         │
-                        │                               │
-                        │  ┌────────────────────────┐  │
-                        │  │ 🎨 55-Theme Switcher   │  │
-                        │  ├────────────────────────┤  │
-                        │  │ 📟 Prompt Telemetry    │  │
-                        │  ├────────────────────────┤  │
-                        │  │ ⚡ Parallel Compressor  │  │
-                        │  ├────────────────────────┤  │
-                        │  │ 🎬 FFmedia 24-in-1     │  │
-                        │  ├────────────────────────┤  │
-                        │  │ 🔐 AES-256 Decoy Vault │  │
-                        │  ├────────────────────────┤  │
-                        │  │ 📝 Todo & Notes TUIs   │  │
-                        │  └────────────────────────┘  │
-                        └──────────────┬───────────────┘
-                                       │
-                   ┌───────────────────┼───────────────────┐
-                   ▼                   ▼                   ▼
-         ┌──────────────┐   ┌──────────────────┐  ┌──────────────────┐
-         │  WEB LAYER   │   │  VS CODE LAYER   │  │  CI/CD LAYER     │
-         │  web/        │   │  .vscode/        │  │  .github/        │
-         │              │   │                  │  │  .githooks/      │
-         │ • Landing pg │   │ • rust-analyzer  │  │ • 7-target release│
-         │ • install.sh │   │ • CodeLLDB Debug │  │ • pre-commit hook│
-         └──────────────┘   └──────────────────┘  └──────────────────┘
+                       ┌─────────────────────────────────┐
+                       │     CONTRIBUTOR / DEVELOPER     │
+                       └────────────────┬────────────────┘
+                                        │  curl one-liner OR cargo install
+                                        ▼
+                       ┌─────────────────────────────────┐
+                       │     INSTALLER & SETUP LAYER     │
+                       │     install.sh / install.ps1    │
+                       │                                 │
+                       │  • OS & CPU Architecture Check  │
+                       │  • Idempotency & Backup Engine  │
+                       │  • SHA256 Checksum Validation   │
+                       └────────────────┬────────────────┘
+                                        │
+                                        ▼
+                       ┌─────────────────────────────────┐
+                       │   PURE RUST CLI ENGINE (src/)   │
+                       │   gladeshell compiled binary     │
+                       │                                 │
+                       │  ┌───────────────────────────┐  │
+                       │  │ 🐚 Shell Auto-Completions │  │
+                       │  ├───────────────────────────┤  │
+                       │  │ 📟 Sub-ms Prompt Engine   │  │
+                       │  ├───────────────────────────┤  │
+                       │  │ 🎨 55-Theme Picker TUI    │  │
+                       │  ├───────────────────────────┤  │
+                       │  │ 🖥️ Zed & Code IDE Setup   │  │
+                       │  ├───────────────────────────┤  │
+                       │  │ 🗜️ Parallel Compressor    │  │
+                       │  ├───────────────────────────┤  │
+                       │  │ 🎬 24-in-1 FFmedia Suite   │  │
+                       │  ├───────────────────────────┤  │
+                       │  │ 🔐 AES-256 Decoy Vault    │  │
+                       │  └───────────────────────────┘  │
+                       └────────────────┬────────────────┘
+                                        │
+             ┌──────────────────────────┼──────────────────────────┐
+             ▼                          ▼                          ▼
+   ┌───────────────────┐      ┌───────────────────┐      ┌───────────────────┐
+   │    WEB PORTAL     │      │  VS CODE / ZED    │      │   BULLETPROOF CI  │
+   │    web/           │      │  .vscode/         │      │   .github/        │
+   │                   │      │                   │      │   .githooks/      │
+   │ • Landing Page    │      │ • Clippy on save  │      │ • 7-target Matrix │
+   │ • Mirror Scripts  │      │ • CodeLLDB Debug  │      │ • Auto-Tag & Release│
+   └───────────────────┘      └───────────────────┘      └───────────────────┘
 
 
 ================================================================================
-4. REPOSITORY STRUCTURE (ANNOTATED)
+4. ANNOTATED DIRECTORY LAYOUT
 ================================================================================
 
 gladeshell/
+├── src/                    ★ PURE RUST APPLICATION CODEBASE
+│   ├── main.rs             ← CLI entrypoint, subcommand router & completion match
+│   ├── lib.rs              ← Core library export interface
+│   ├── buffer_engine.rs    ← High-performance terminal input buffer & ANSI renderer
+│   ├── input_parser.rs     ← Terminal raw key event & mouse parser
+│   ├── plugin_engine.rs    ← Plugin hook dispatcher & auto-complete integration
+│   ├── renderer.rs         ← Dual-layer ANSI screen diffing renderer
+│   ├── core/               ← Prompt engine, telemetry, 55 themes, sysinfo
+│   ├── daemon/             ← Background Unix socket IPC daemon
+│   ├── git/                ← Pure Rust gitoxide repo status checker
+│   ├── init/               ← Shell bootstrap code generators (bash, zsh, fish, pwsh)
+│   ├── plugins/            ← Auto-complete engine & system integrations
+│   └── tools/              ← Standalone developer utilities & Ratatui TUIs:
+│       ├── zed_setup.rs    ← Bulletproof Zed IDE installer
+│       ├── code_setup.rs   ← VS Code settings & extensions installer
+│       ├── compressor.rs   ← Rayon parallel archive compressor (Level 1 fast)
+│       ├── extractor.rs    ← Multi-format parallel archive extractor
+│       ├── ffmedia.rs      ← 24-in-1 FFmpeg multimedia processor
+│       ├── vault.rs        ← AES-256 PBKDF2 vault security engine
+│       ├── todo.rs         ← Task manager Ratatui TUI
+│       ├── notes.rs        ← Notes manager Ratatui TUI
+│       └── pc_info.rs      ← Hardware profiler & PC diagnostics engine
 │
-├── src/                   ★ PURE RUST CORE ENGINE & TUI SUITE
-│   ├── main.rs            ← Binary entrypoint & sub-command dispatcher
-│   ├── core/              ← Prompt engine, telemetry, theme definitions
-│   └── tools/             ← Interactive Ratatui tools:
-│       ├── compressor.rs  ← Parallel archive compressor (Level 1 fast default)
-│       ├── extractor.rs   ← Multi-format high-speed unpacker
-│       ├── ffmedia.rs     ← 24-in-1 FFmpeg media suite
-│       ├── vault.rs       ← AES-256 decoy guard security engine
-│       ├── todo.rs        ← Ratatui interactive task manager
-│       ├── notes.rs       ← 2D viewport terminal note editor
-│       ├── theme_picker.rs← 55-theme interactive prompt switcher
-│       └── ...
+├── Cargo.toml              ← Rust crate manifest & dependency declarations
+├── Cargo.lock              ← Tracked lockfile guaranteeing reproducible builds
+├── aliases.toml            ← Centralized cross-shell alias registry
+├── benches/                ← Criterion micro-benchmarks suite
 │
-├── Cargo.toml             ← Rust package configuration & dependencies
-├── Cargo.lock             ← Tracked lockfile for reproducible builds
-├── aliases.toml           ← Alias taxonomy & custom shell overrides
-├── benches/               ← Criterion micro-benchmarks suite
+├── install.sh              ← Universal Unix/Linux/macOS installer script
+├── install.ps1             ← Universal Windows PowerShell installer script
 │
-├── install.sh             ← Non-destructive Unix/Linux/macOS installer
-├── install.ps1            ← Non-destructive Windows PowerShell installer
+├── web/                    ← Static website deploy root (Netlify)
+│   ├── index.html          ← Main landing page
+│   ├── install.sh          ← Mirrored Linux installer
+│   └── install.ps1         ← Mirrored Windows installer
 │
-├── web/                   ← Static website (deploy root — Netlify)
-│   ├── index.html         ← Landing page & interactive documentation
-│   ├── install.sh         ← Synced web installer script
-│   └── install.ps1        ← Synced PowerShell installer script
+├── .githooks/              ← Git pre-commit & pre-push hygiene guards
+├── .github/workflows/      ← Hardened multi-target CI/CD release workflow
+├── .vscode/                ← VS Code workspace configuration (Clippy, tasks)
 │
-├── .githooks/             ← Git pre-commit & pre-push hooks
-├── .github/workflows/     ← Multi-target CI/CD release matrix
-├── .vscode/               ← VS Code rust-analyzer settings, launch & tasks
-│
-├── Makefile               ← Helper targets (check, clippy, fmt, test, bench)
-├── README.md              ← Comprehensive user documentation
-├── ARCHITECTURE.txt       ← THIS FILE — Contributor architecture manual
-└── LICENSE                ← MIT License
+├── Makefile                ← Workflow shortcuts (check, clippy, fmt, test, install)
+├── README.md               ← Comprehensive user documentation
+├── CHANGELOG.md            ← Strict SemVer version history
+├── ROADMAP.md              ← Strategic technical roadmap
+├── SECURITY.md             ← Security architecture & disclosure policy
+├── SUPPORT.md              ← Troubleshooting & Support Hub
+├── ARCHITECTURE.txt        ← THIS FILE — Architecture blueprint
+└── LICENSE                 ← MIT License with Attribution Clause
 
 
 ================================================================================
-5. CORE COMPONENTS & SUBSYSTEMS
+5. CORE SUBSYSTEMS & TECHNICAL DETAILS
 ================================================================================
 
-────────────────────────────────────────────────────────────────────────────────
-5a. PURE RUST CORE ENGINE  (src/core/ & src/tools/)
-────────────────────────────────────────────────────────────────────────────────
+5a. Native Shell Auto-Completions Subsystem (`src/main.rs` & `src/init/`)
+──────────────────────────────────────────────────────────────────────────
+  • Powered by `clap_complete v4`.
+  • Subcommand `gladeshell completions <shell>` emits native completion scripts.
+  • Embedded directly into `gladeshell init <shell>` (e.g. `eval "$(gladeshell init zsh)"`)
+    so completions load in-memory automatically on shell launch without writing files.
 
-Built in 100% safe Rust with Ratatui TUI components and Rayon parallel thread pool:
+5b. Native IDE Setup Modules (`src/tools/zed_setup.rs` / `src/tools/code_setup.rs`)
+───────────────────────────────────────────────────────────────────────────────────
+  • Installs fully-configured, developer-optimized `settings.json` in one command.
+  • Detects and updates all target paths: Native, Flatpak, Snap, and Windows AppData.
+  • Creates timestamped backups before writing configuration files.
 
-  • src/tools/compressor.rs  — Multi-core parallel archive compressor (Level 1 Fast).
-  • src/tools/extractor.rs   — Multi-format unpacker with stream decoding.
-  • src/tools/ffmedia.rs     — 24-in-1 FFmpeg multimedia suite.
-  • src/tools/vault.rs       — AES-256 PBKDF2 encrypted vault with decoy trigger.
-  • src/tools/theme_picker.rs— 55-theme interactive prompt switcher.
-  • src/tools/todo.rs        — Ratatui task manager with JSON persistence.
-  • src/tools/notes.rs       — Terminal note editor with 2D viewport.
+5c. Parallel Multi-Core Compressor (`src/tools/compressor.rs`)
+─────────────────────────────────────────────────────────────
+  • Utilizes `rayon` data parallelism thread pool.
+  • Level 1 Fast default compression for maximum throughput.
+  • Smart pre-compressed media detection bypasses redundant CPU compression work.
 
-────────────────────────────────────────────────────────────────────────────────
-5b. INSTALLER LAYER  (install.sh / install.ps1)
-────────────────────────────────────────────────────────────────────────────────
-
-  • Idempotent boundary marker injection (`# >>> glade-bashrc >>>`).
-  • SHA-256 checksum verification for downloaded release binaries.
-  • Automatic timestamped backup creation before dotfile modifications.
-
-────────────────────────────────────────────────────────────────────────────────
-5c. CI/CD & AUTOMATION LAYER  (.github/ & .githooks/)
-────────────────────────────────────────────────────────────────────────────────
-
-  • .github/workflows/rust-ci.yml: Multi-OS matrix testing (Linux/macOS/Win).
-  • .github/workflows/release.yml: 7-target platform release binary matrix.
-  • .githooks/pre-commit: Hygiene guard, installer sync, cargo check/clippy/fmt.
-  • .githooks/pre-push: Workspace compilation check & full unit test suite.
+5d. Hardened Security Vault (`src/tools/vault.rs`)
+──────────────────────────────────────────────────
+  • AES-256-GCM authenticated encryption with 96-bit random nonces.
+  • PBKDF2-HMAC-SHA256 key derivation with 100,000 iterations and 128-bit salt.
+  • RAM zeroization via `zeroize` crate to scrub passwords upon drop.
+  • Decoy panic password mode for emergency decoy protection.
 
 
 ================================================================================
-6. TESTING & VERIFICATION PROTOCOL
+6. BULLETPROOF CI/CD RELEASE PIPELINE (.github/workflows/release.yml)
 ================================================================================
 
-Contributors must run the verification suite prior to submitting pull requests:
+  1. Version Bump Auto-Detect: On push to `main`, reads version from `Cargo.toml`.
+  2. Automated Tag Creation: Creates and pushes annotated Git tag `vX.Y.Z`.
+  3. Crate Publish Check: Validates crate publishability via `cargo publish --dry-run`.
+  4. 7-Platform Matrix Compilation:
+     • x86_64-unknown-linux-gnu    • x86_64-unknown-linux-musl
+     • aarch64-unknown-linux-gnu   • x86_64-apple-darwin
+     • aarch64-apple-darwin        • x86_64-pc-windows-msvc
+     • aarch64-pc-windows-msvc
+  5. Binary Size Stripping: Strips debug symbols (`strip`) on Unix runners.
+  6. Automated Release Notes: Parses `CHANGELOG.md` for exact version notes.
 
-  make check      # Run cargo check across all workspace targets
-  make clippy     # Run Clippy lints with strict warning enforcement
+
+================================================================================
+7. TESTING & VERIFICATION PROTOCOL
+================================================================================
+
+  make check      # Verify compilation across all workspace targets
+  make clippy     # Run strict Clippy lint suite
   make fmt        # Format Rust source code
-  make test       # Execute full unit test suite (43+ tests)
-  make bench      # Execute Criterion micro-benchmarks
+  make test       # Run unit and integration tests
+  make bench      # Run Criterion micro-benchmarks
+  make install    # Local release installation to ~/.cargo/bin/

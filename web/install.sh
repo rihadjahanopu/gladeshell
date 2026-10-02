@@ -373,7 +373,37 @@ check_existing_install() {
     printf "  ${GREEN}✔${NC} Ready for installation.\n"
 }
 
-# ─── Remove Old Config Block ───────────────
+# ─── Backup ALL Shell RC Files (before any change) ─────────────────────────
+# We back up EVERY known shell config because remove_old_config touches
+# all of them — not just the currently active shell.
+backup_shell_rc() {
+    local ALL_RC_FILES=(
+        "${HOME}/.bashrc"
+        "${HOME}/.bash_profile"
+        "${HOME}/.zshrc"
+        "${HOME}/.config/fish/config.fish"
+    )
+    if [ -n "${XDG_CONFIG_HOME:-}" ]; then
+        ALL_RC_FILES+=("$XDG_CONFIG_HOME/.bashrc" "$XDG_CONFIG_HOME/.bash_profile")
+    fi
+
+    local ts
+    ts=$(date +%Y%m%d_%H%M%S)
+    backup_files=()
+    for rc in "${ALL_RC_FILES[@]}"; do
+        [ -f "$rc" ] || continue
+        local bfile="${rc}.backup.${ts}"
+        cp "$rc" "$bfile"
+        backup_files+=("$bfile")
+        printf "  ${GREEN}✔${NC} Backup: ${PURPLE}%s${NC}\n" "$(tildify "$bfile")"
+    done
+    if [ ${#backup_files[@]} -eq 0 ]; then
+        printf "  ${GRAY}ℹ No existing shell config files found to back up.${NC}\n"
+    fi
+}
+
+# ─── Remove Old Glade Config Blocks (safe, atomic) ──────────────────────
+# Uses awk + temp-file + mv for safety. Never truncates user content.
 remove_old_config() {
     printf "  ${CYAN}➜${NC} Cleaning up legacy configuration blocks...\n"
     local rcs=(
@@ -386,27 +416,18 @@ remove_old_config() {
         rcs+=("$XDG_CONFIG_HOME/.bashrc" "$XDG_CONFIG_HOME/.bash_profile")
     fi
 
-    local markers=(
-        "# >>> glade-bashrc >>>|# <<< glade-bashrc <<<"
-        "# >>> glade-zshrc >>>|# <<< glade-zshrc <<<"
-        "# >>> glade-fish >>>|# <<< glade-fish <<<"
-    )
-
     local cleaned=false
     for rc in "${rcs[@]}"; do
         [ -f "$rc" ] || continue
-        for pair in "${markers[@]}"; do
-            local start_m="${pair%%|*}"
-            local end_m="${pair##*|}"
-            if grep -qF "$start_m" "$rc" 2>/dev/null; then
-                cleaned=true
-                if [ "$(uname)" = "Darwin" ]; then
-                    sed -i '' "/$start_m/,/$end_m/d" "$rc" 2>/dev/null || true
-                else
-                    sed -i "/$start_m/,/$end_m/d" "$rc" 2>/dev/null || true
-                fi
-            fi
-        done
+        # Quick check: does this file have any glade block at all?
+        grep -qF '# >>> glade-' "$rc" 2>/dev/null || continue
+        cleaned=true
+        local dir tmp
+        dir="$(dirname "$rc")"
+        tmp="$(mktemp "${dir}/.gladeshell_clean.XXXXXX" 2>/dev/null || mktemp -t 'gladeshell_clean')"
+        # awk removes every line between (and including) glade markers
+        awk '/# >>> glade-/{skip=1} skip{if(/# <<< glade-/){skip=0}; next} {print}' \
+            "$rc" > "$tmp" && mv "$tmp" "$rc" || { rm -f "$tmp"; true; }
     done
 
     if [ "$cleaned" = true ]; then
@@ -414,28 +435,6 @@ remove_old_config() {
     else
         printf "  ${GREEN}✔${NC} Shell configuration files are clean.\n"
     fi
-}
-
-# ─── Backup Target RC Files ────────────────
-backup_shell_rc() {
-    local target_shells=()
-    if [ "$ALL_SHELLS" = true ]; then
-        read -r -a target_shells <<< "$(detect_all_installed_shells)"
-    else
-        target_shells=("$(detect_shell)")
-    fi
-
-    backup_files=()
-    for sh in "${target_shells[@]}"; do
-        local target_rc
-        target_rc=$(get_target_rc "$sh")
-        if [ -f "$target_rc" ]; then
-            local bfile="$target_rc.backup.$(date +%Y%m%d_%H%M%S)"
-            cp "$target_rc" "$bfile"
-            backup_files+=("$bfile")
-            printf "  ${GREEN}✔${NC} Backup created for ${BOLD}%s${NC}: ${PURPLE}%s${NC}\n" "$sh" "$(basename "$bfile")"
-        fi
-    done
 }
 
 # ─── Atomic RC Injection Helper ────────────
@@ -475,31 +474,88 @@ _copy_binary_to_dirs() {
     printf "  ${CYAN}ℹ${NC} Version: ${BOLD}%s${NC}\n" "$ver"
 }
 
+# ─── GLIBC version probe (returns e.g. "2" "38" for 2.38) ────────────────
+_glibc_ver_ok() {
+    # Returns 0 (ok) if system glibc >= required, 1 otherwise.
+    # Args: required_major required_minor
+    local req_maj="${1:-2}" req_min="${2:-31}"
+    local sys_ver
+    sys_ver=$(ldd --version 2>&1 | awk 'NR==1{print $NF}' | grep -oE '[0-9]+\.[0-9]+$' || echo "")
+    [ -z "$sys_ver" ] && return 0   # can't probe → assume ok
+    local sys_maj sys_min
+    sys_maj=${sys_ver%%.*}
+    sys_min=${sys_ver##*.}
+    if [ "$sys_maj" -gt "$req_maj" ]; then return 0; fi
+    if [ "$sys_maj" -eq "$req_maj" ] && [ "$sys_min" -ge "$req_min" ]; then return 0; fi
+    return 1
+}
+
+# ─── Source build fallback (cargo required) ───────────────────────────────
+_build_from_source() {
+    local src_dir="${1:-$SCRIPT_DIR}"
+    if [ -f "$src_dir/Cargo.toml" ] && command -v cargo >/dev/null 2>&1; then
+        printf "  ${YELLOW}⚡ Building gladeshell from source (this may take a few minutes)...${NC}\n"
+        if (cd "$src_dir" && cargo build --release 2>&1); then
+            if [ -f "$src_dir/target/release/gladeshell" ]; then
+                _copy_binary_to_dirs "$src_dir/target/release/gladeshell"
+                return 0
+            fi
+        fi
+        printf "  ${RED}✗ cargo build failed.${NC}\n"
+    fi
+    return 1
+}
+
+# ─── Ensure Rust/cargo is available, install via rustup if not ────────────
+_ensure_cargo() {
+    if command -v cargo >/dev/null 2>&1; then
+        return 0
+    fi
+    printf "  ${YELLOW}⚡ Cargo not found — installing Rust via rustup...${NC}\n"
+    local rustup_sh
+    rustup_sh="$(mktemp 2>/dev/null || mktemp -t 'rustup')"
+    if curl -fsSL https://sh.rustup.rs -o "$rustup_sh" 2>/dev/null; then
+        sh "$rustup_sh" -y --no-modify-path --profile minimal 2>&1 || true
+        rm -f "$rustup_sh"
+        # shellcheck disable=SC1091
+        [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+        if command -v cargo >/dev/null 2>&1; then
+            printf "  ${GREEN}✔${NC} Rust installed via rustup.\n"
+            return 0
+        fi
+    fi
+    rm -f "$rustup_sh" 2>/dev/null || true
+    printf "  ${RED}✗ Could not install Rust. Visit https://rustup.rs to install manually.${NC}\n"
+    return 1
+}
+
 setup_rust_binary() {
     printf "  ${CYAN}➜${NC} Installing gladeshell Rust engine binary...\n"
 
+    # 1 ▸ Local release binary (developer workflow)
     if [ -f "$SCRIPT_DIR/target/release/gladeshell" ]; then
         printf "  ${CYAN}⚡ Found local release binary — installing...${NC}\n"
         _copy_binary_to_dirs "$SCRIPT_DIR/target/release/gladeshell"
         return 0
     fi
 
-    local os_type arch_type is_musl=false is_rosetta=false has_avx2=true
+    local os_type arch_type is_musl=false is_rosetta=false
     os_type="$(uname -s | tr '[:upper:]' '[:lower:]')"
     arch_type="$(uname -m)"
 
     case "$os_type" in
-        linux*) os_type="linux" ;;
+        linux*)  os_type="linux" ;;
         darwin*) os_type="darwin" ;;
-        *) os_type="unknown" ;;
+        *)       os_type="unknown" ;;
     esac
 
     case "$arch_type" in
-        x86_64|amd64) arch_type="amd64" ;;
-        aarch64|arm64) arch_type="arm64" ;;
-        *) arch_type="unknown" ;;
+        x86_64|amd64)   arch_type="amd64" ;;
+        aarch64|arm64)  arch_type="arm64" ;;
+        *)              arch_type="unknown" ;;
     esac
 
+    # Rosetta 2 detection (macOS x86 running under arm64)
     if [ "$os_type" = "darwin" ] && [ "$arch_type" = "amd64" ]; then
         if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
             arch_type="arm64"
@@ -508,95 +564,81 @@ setup_rust_binary() {
         fi
     fi
 
+    # Alpine = always musl
     if [ "$os_type" = "linux" ] && [ -f /etc/alpine-release ]; then
         is_musl=true
     fi
 
-    if [ "$arch_type" = "amd64" ]; then
-        if [ "$os_type" = "linux" ] && [ -f /proc/cpuinfo ] && ! grep -qi "avx2" /proc/cpuinfo 2>/dev/null; then
-            has_avx2=false
-        elif [ "$os_type" = "darwin" ] && ! sysctl -a 2>/dev/null | grep -q "AVX2"; then
-            has_avx2=false
-        fi
-    fi
-
+    # 2 ▸ Pre-built binary download
     if [ "$os_type" != "unknown" ] && [ "$arch_type" != "unknown" ]; then
-        local dl_tmp
+        local dl_tmp bin_tmp
         dl_tmp="$(mktemp -d 2>/dev/null || mktemp -d -t 'gladeshell')"
-        local bin_tmp="$dl_tmp/gladeshell"
+        bin_tmp="$dl_tmp/gladeshell"
 
-        local repos=("rihadjahanopu/gladeshell" "rihadjahanopu/gladeshell")
-        local assets=(
-            "gladeshell-${os_type}-${arch_type}"
-            "gladeshell-${arch_type}-${os_type}"
-            "gladeshell-x86_64-unknown-linux-gnu"
-            "gladeshell-aarch64-unknown-linux-gnu"
-            "gladeshell-x86_64-apple-darwin"
-            "gladeshell-aarch64-apple-darwin"
-        )
-
-        if [ "$is_musl" = true ]; then
-            assets=(
-                "gladeshell-x86_64-unknown-linux-musl"
-                "gladeshell-aarch64-unknown-linux-musl"
-                "gladeshell-${os_type}-${arch_type}-musl"
-                "${assets[@]}"
+        # Build asset priority list.
+        # On Linux we ALWAYS try musl (static, zero GLIBC dependency) first.
+        # musl binaries work on every distro regardless of glibc version.
+        local assets=()
+        if [ "$os_type" = "linux" ]; then
+            assets+=(
+                "gladeshell-linux-${arch_type}-musl"
+                "gladeshell-linux-${arch_type}"
             )
-        fi
-
-        if [ "$has_avx2" = false ]; then
-            assets=(
-                "gladeshell-${os_type}-${arch_type}-baseline"
-                "gladeshell-x86_64-unknown-linux-gnu-baseline"
-                "${assets[@]}"
-            )
-        fi
-
-        assets+=("gladeshell")
-
-        printf "  ${CYAN}⚡ Attempting GitHub Release pre-built binary download...${NC}\n"
-        for repo in "${repos[@]}"; do
-            for asset in "${assets[@]}"; do
-                local url="https://github.com/${repo}/releases/latest/download/${asset}"
-                if curl -fsSL "$url" -o "$bin_tmp" 2>/dev/null; then
-                    if [ -s "$bin_tmp" ]; then
-                        chmod +x "$bin_tmp"
-                        if "$bin_tmp" --version >/dev/null 2>&1; then
-                            printf "  ${GREEN}✔${NC} Downloaded latest pre-built binary from GitHub Release (${repo})!\n"
-                            _copy_binary_to_dirs "$bin_tmp"
-                            rm -rf "$dl_tmp" 2>/dev/null || true
-                            return 0
-                        fi
-                    fi
-                fi
-                local tar_url="https://github.com/${repo}/releases/latest/download/${asset}.tar.gz"
-                if curl -fsSL "$tar_url" -o "$dl_tmp/asset.tar.gz" 2>/dev/null; then
-                    if tar -xzf "$dl_tmp/asset.tar.gz" -C "$dl_tmp" 2>/dev/null && [ -f "$bin_tmp" ]; then
-                        chmod +x "$bin_tmp"
-                        if "$bin_tmp" --version >/dev/null 2>&1; then
-                            printf "  ${GREEN}✔${NC} Extracted latest pre-built binary from GitHub Release (${repo})!\n"
-                            _copy_binary_to_dirs "$bin_tmp"
-                            rm -rf "$dl_tmp" 2>/dev/null || true
-                            return 0
-                        fi
-                    fi
-                fi
-            done
-        done
-        rm -rf "$dl_tmp" 2>/dev/null || true
-    fi
-
-    if [ -f "$SCRIPT_DIR/Cargo.toml" ] && command -v cargo >/dev/null 2>&1; then
-        printf "  ${YELLOW}⚡ Building gladeshell from source (release mode)...${NC}\n"
-        if (cd "$SCRIPT_DIR" && cargo build --release 2>&1); then
-            if [ -f "$SCRIPT_DIR/target/release/gladeshell" ]; then
-                _copy_binary_to_dirs "$SCRIPT_DIR/target/release/gladeshell"
-                return 0
+            if [ "$arch_type" = "amd64" ]; then
+                assets+=("gladeshell-linux-amd64-musl" "gladeshell-linux-amd64"
+                         "gladeshell-x86_64-unknown-linux-musl" "gladeshell-x86_64-unknown-linux-gnu")
+            elif [ "$arch_type" = "arm64" ]; then
+                assets+=("gladeshell-linux-arm64-musl" "gladeshell-linux-arm64"
+                         "gladeshell-aarch64-unknown-linux-musl" "gladeshell-aarch64-unknown-linux-gnu")
+            fi
+        elif [ "$os_type" = "darwin" ]; then
+            assets+=("gladeshell-darwin-${arch_type}" "gladeshell-${arch_type}-darwin")
+            if [ "$arch_type" = "amd64" ]; then
+                assets+=("gladeshell-x86_64-apple-darwin")
+            else
+                assets+=("gladeshell-aarch64-apple-darwin")
             fi
         fi
-        printf "  ${RED}✗ cargo build failed.${NC}\n"
+        assets+=("gladeshell")
+
+        local repo="rihadjahanopu/gladeshell"
+        printf "  ${CYAN}⚡ Attempting GitHub Release pre-built binary download...${NC}\n"
+        for asset in "${assets[@]}"; do
+            local url="https://github.com/${repo}/releases/latest/download/${asset}"
+            if curl -fsSL "$url" -o "$bin_tmp" 2>/dev/null && [ -s "$bin_tmp" ]; then
+                chmod +x "$bin_tmp"
+                if "$bin_tmp" --version >/dev/null 2>&1; then
+                    printf "  ${GREEN}✔${NC} Pre-built binary ready: ${CYAN}%s${NC}\n" "$asset"
+                    _copy_binary_to_dirs "$bin_tmp"
+                    rm -rf "$dl_tmp" 2>/dev/null || true
+                    return 0
+                else
+                    printf "  ${GRAY}  ↳ %s downloaded but failed to run (incompatible). Trying next...${NC}\n" "$asset"
+                fi
+            fi
+            local tar_url="${url}.tar.gz"
+            if curl -fsSL "$tar_url" -o "$dl_tmp/asset.tar.gz" 2>/dev/null; then
+                if tar -xzf "$dl_tmp/asset.tar.gz" -C "$dl_tmp" 2>/dev/null && [ -f "$bin_tmp" ]; then
+                    chmod +x "$bin_tmp"
+                    if "$bin_tmp" --version >/dev/null 2>&1; then
+                        printf "  ${GREEN}✔${NC} Pre-built binary extracted: ${CYAN}%s${NC}\n" "$asset"
+                        _copy_binary_to_dirs "$bin_tmp"
+                        rm -rf "$dl_tmp" 2>/dev/null || true
+                        return 0
+                    fi
+                fi
+            fi
+        done
+        rm -rf "$dl_tmp" 2>/dev/null || true
+        printf "  ${YELLOW}⚠ No compatible pre-built binary found. Falling back to source build...${NC}\n"
     fi
 
+    # 3 ▸ Source build (guaranteed to match system GLIBC)
+    if [ -f "$SCRIPT_DIR/Cargo.toml" ]; then
+        _ensure_cargo && _build_from_source "$SCRIPT_DIR" && return 0
+    fi
+
+    # 4 ▸ Already installed?
     if command -v gladeshell >/dev/null 2>&1; then
         local ver
         ver=$(gladeshell --version 2>/dev/null || echo "unknown")
@@ -604,8 +646,9 @@ setup_rust_binary() {
         return 0
     fi
 
-    if command -v cargo >/dev/null 2>&1; then
-        printf "  ${YELLOW}⚡ Installing via cargo from GitHub...${NC}\n"
+    # 5 ▸ cargo install from GitHub (last resort, no local sources)
+    if _ensure_cargo; then
+        printf "  ${YELLOW}⚡ Installing via cargo from GitHub (last resort)...${NC}\n"
         cargo install --git https://github.com/rihadjahanopu/gladeshell --quiet 2>/dev/null || true
         if command -v gladeshell >/dev/null 2>&1; then
             printf "  ${GREEN}✔${NC} Installed gladeshell via cargo install!\n"
@@ -613,7 +656,9 @@ setup_rust_binary() {
         fi
     fi
 
-    printf "  ${YELLOW}⚠ Could not install gladeshell binary. Please install Cargo or download binary manually.${NC}\n"
+    printf "  ${RED}✗ Could not install gladeshell binary.${NC}\n"
+    printf "    Install Rust (https://rustup.rs) and re-run this script, or\n"
+    printf "    download a binary manually from https://github.com/rihadjahanopu/gladeshell/releases\n"
 }
 
 # ─── Fetch & Append Config ─────────────────
@@ -864,8 +909,9 @@ main() {
 
     draw_progress_bar 4 5
     check_existing_install
-    remove_old_config
+    # IMPORTANT: backup FIRST, then remove — never the other way around
     backup_shell_rc
+    remove_old_config
 
     draw_progress_bar 5 5
     install_config

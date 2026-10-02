@@ -112,21 +112,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # ── Linux x86_64 ─────────────────────────────────────────────────────
+          # ubuntu-20.04 → compiles with GLIBC 2.31; runs on any distro ≥ 2020
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-20.04
             asset_name: gladeshell-linux-amd64
+          # musl = fully static, zero GLIBC dependency (Alpine, Deepin, etc.)
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            asset_name: gladeshell-linux-musl
+            os: ubuntu-20.04
+            asset_name: gladeshell-linux-amd64-musl
+          # ── Linux aarch64 ────────────────────────────────────────────────────
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-20.04
             asset_name: gladeshell-linux-arm64
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-20.04
+            asset_name: gladeshell-linux-arm64-musl
+          # ── macOS ─────────────────────────────────────────────────────────────
           - target: x86_64-apple-darwin
             os: macos-latest
             asset_name: gladeshell-darwin-amd64
           - target: aarch64-apple-darwin
             os: macos-latest
             asset_name: gladeshell-darwin-arm64
+          # ── Windows ───────────────────────────────────────────────────────────
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             asset_name: gladeshell-windows-amd64.exe
@@ -150,17 +159,17 @@ jobs:
           shared-key: "release-${{ matrix.target }}"
 
       - name: Install musl dependencies (Linux MUSL)
-        if: matrix.target == 'x86_64-unknown-linux-musl'
+        if: contains(matrix.target, 'musl')
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Install Cross tool (Linux AArch64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        if: contains(matrix.target, 'aarch64-unknown-linux')
         run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Build release binary
         shell: bash
         run: |
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+          if [[ "${{ matrix.target }}" == aarch64-unknown-linux* ]]; then
             cross build --release --target ${{ matrix.target }}
           else
             cargo build --release --target ${{ matrix.target }}

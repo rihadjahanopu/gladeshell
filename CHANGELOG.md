@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🩹 [1.1.1] — 2026-10-02
+
+### 🐛 Bug Fixes
+
+- 🔴 **Critical: Shell config wipe on install** (`install.sh` + `cleaner.rs`):
+  - Fixed backup order: backup now runs **before** `remove_old_config`, not after. Previously the backup was taken from the already-modified file.
+  - `backup_shell_rc` now backs up **all** known shell configs (`~/.bashrc`, `~/.bash_profile`, `~/.zshrc`, `~/.config/fish/config.fish`) since `remove_old_config` touches all of them — previously only the active shell's config was backed up.
+  - `remove_old_config` now uses `awk` + atomic temp-file + `mv` instead of in-place `sed`, preventing potential file truncation on some systems.
+  - Fixed `clean_specific_rc_file` (Rust): previously **reordered** content by moving the glade block to the end of file, displacing any user content written after the block. Now only **removes** the block, preserving all content in original order.
+- 🔴 **Critical: GLIBC version mismatch on older distros** (`install.sh` + `release.yml`):
+  - Linux pre-built binaries now compiled on `ubuntu-20.04` (GLIBC 2.31) instead of `ubuntu-latest` (GLIBC 2.39+) — works on any distro from 2020 onward (Debian 11+, Ubuntu 20.04+, Deepin 25, etc.).
+  - Added `aarch64-unknown-linux-musl` release target (fully static, zero GLIBC dependency).
+  - Renamed musl asset from `gladeshell-linux-musl` → `gladeshell-linux-amd64-musl` for consistency.
+  - `install.sh` now tries **musl (static) binary first** on Linux — works on every distro regardless of GLIBC version.
+  - Added automatic source-build fallback: if no pre-built binary works, installer auto-installs Rust via `rustup` and builds from source.
+
+---
+
 ## 🚀 [1.1.0] — 2026-10-02
 
 ### ⚡ Added & Core Improvements

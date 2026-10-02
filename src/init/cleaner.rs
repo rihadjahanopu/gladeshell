@@ -80,7 +80,9 @@ pub fn clean_rc_file() -> std::io::Result<()> {
     Ok(())
 }
 
-/// Clean and re-order gladeshell block for a specific RC path.
+/// Remove gladeshell config block(s) from a specific RC file.
+/// ONLY removes lines between glade markers — never reorders or
+/// touches any other user content.
 pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
     if !rc_path.exists() {
         return Ok(());
@@ -88,55 +90,36 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
 
     let content = fs::read_to_string(rc_path)?;
 
-    let mut block = Vec::new();
-    let mut others = Vec::new();
-    let mut in_block = false;
+    // Fast path: nothing to clean
+    if !content.contains("# >>> glade-") {
+        return Ok(());
+    }
 
+    // Filter out all lines that fall within a glade marker block.
+    // User content before AND after the block is preserved in original order.
+    let mut out = String::with_capacity(content.len());
+    let mut in_block = false;
     for line in content.lines() {
         if line.contains("# >>> glade-") {
             in_block = true;
         }
-
-        if in_block {
-            block.push(line);
-        } else {
-            others.push(line);
+        if !in_block {
+            out.push_str(line);
+            out.push('\n');
         }
-
         if line.contains("# <<< glade-") {
             in_block = false;
         }
     }
 
-    // Trim trailing empty lines from others
-    while let Some(last) = others.last() {
-        if last.trim().is_empty() {
-            others.pop();
-        } else {
-            break;
-        }
-    }
-
-    let mut final_content = others.join("\n");
-    if !block.is_empty() {
-        if !final_content.is_empty() {
-            final_content.push('\n');
-            final_content.push('\n');
-        }
-        final_content.push_str(&block.join("\n"));
-    }
-    final_content.push('\n');
-
     // Write back atomically using a PID-stamped temp file.
-    // PID stamp prevents collision if another process writes the same file,
-    // and avoids overwriting a user file that happens to be named ".zshrc.tmp".
     let tmp_name = format!(
         "{}.tmp.{}",
         rc_path.file_name().unwrap_or_default().to_string_lossy(),
         std::process::id()
     );
     let tmp_path = rc_path.with_file_name(tmp_name);
-    fs::write(&tmp_path, final_content)?;
+    fs::write(&tmp_path, &out)?;
     fs::rename(&tmp_path, rc_path)?;
 
     // Remove stale compiled bytecode if zsh
@@ -184,14 +167,15 @@ pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
         String::new()
     };
 
-    // Idempotent check — if block is already present and matches, skip
+    // Idempotent check — if our exact block is already present, nothing to do
     if existing.contains(&start_marker) && existing.contains(&end_marker) {
         return Ok(false);
     }
 
-    // Clean old/stale blocks if any exist
+    // Remove any stale/partial glade blocks before appending the fresh one.
+    // This handles upgrades where the marker text changed between versions.
     if existing.contains("# >>> glade-") || existing.contains("gladeshell init") {
-        let _ = clean_specific_rc_file(&rc_path);
+        clean_specific_rc_file(&rc_path)?;
     }
 
     // Ensure parent directory exists

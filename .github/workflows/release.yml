@@ -123,11 +123,11 @@ jobs:
             os: ubuntu-22.04
             asset_name: gladeshell-linux-amd64-musl
             use_zigbuild: false
-          # ── Linux aarch64 (cross-compiled via cargo-zigbuild; no Docker needed)
+          # ── Linux aarch64 (cross-compiled via system GCC / cargo-zigbuild)
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04
             asset_name: gladeshell-linux-arm64
-            use_zigbuild: true
+            use_zigbuild: false
           - target: aarch64-unknown-linux-musl
             os: ubuntu-22.04
             asset_name: gladeshell-linux-arm64-musl
@@ -170,14 +170,25 @@ jobs:
         if: contains(matrix.target, 'musl') && runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install cargo-zigbuild (cross-compilation without Docker)
+      - name: Install AArch64 GNU cross-compiler
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Install cargo-zigbuild + zig (for aarch64-musl)
         if: matrix.use_zigbuild == true
         run: |
           pip3 install ziglang --quiet
+          # Persist zig location to PATH for subsequent steps
+          ZIG_DIR=$(python3 -c "import os, ziglang; print(os.path.dirname(ziglang.__file__))")
+          echo "$ZIG_DIR" >> $GITHUB_PATH
           cargo install cargo-zigbuild --locked --quiet
 
       - name: Build release binary
         shell: bash
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
           if [[ "${{ matrix.use_zigbuild }}" == "true" ]]; then
             cargo zigbuild --release --target ${{ matrix.target }}

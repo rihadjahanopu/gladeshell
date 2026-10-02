@@ -113,35 +113,43 @@ jobs:
       matrix:
         include:
           # ── Linux x86_64 ─────────────────────────────────────────────────────
-          # ubuntu-20.04 → compiles with GLIBC 2.31; runs on any distro ≥ 2020
+          # ubuntu-22.04 → compiles with GLIBC 2.35; runs on any distro ≥ 2022
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             asset_name: gladeshell-linux-amd64
+            use_zigbuild: false
           # musl = fully static, zero GLIBC dependency (Alpine, Deepin, etc.)
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             asset_name: gladeshell-linux-amd64-musl
-          # ── Linux aarch64 ────────────────────────────────────────────────────
+            use_zigbuild: false
+          # ── Linux aarch64 (cross-compiled via cargo-zigbuild; no Docker needed)
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             asset_name: gladeshell-linux-arm64
+            use_zigbuild: true
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             asset_name: gladeshell-linux-arm64-musl
+            use_zigbuild: true
           # ── macOS ─────────────────────────────────────────────────────────────
           - target: x86_64-apple-darwin
             os: macos-latest
             asset_name: gladeshell-darwin-amd64
+            use_zigbuild: false
           - target: aarch64-apple-darwin
             os: macos-latest
             asset_name: gladeshell-darwin-arm64
+            use_zigbuild: false
           # ── Windows ───────────────────────────────────────────────────────────
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             asset_name: gladeshell-windows-amd64.exe
+            use_zigbuild: false
           - target: aarch64-pc-windows-msvc
             os: windows-latest
             asset_name: gladeshell-windows-arm64.exe
+            use_zigbuild: false
 
     steps:
       - name: Checkout repository
@@ -159,18 +167,20 @@ jobs:
           shared-key: "release-${{ matrix.target }}"
 
       - name: Install musl dependencies (Linux MUSL)
-        if: contains(matrix.target, 'musl')
+        if: contains(matrix.target, 'musl') && runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install Cross tool (Linux AArch64)
-        if: contains(matrix.target, 'aarch64-unknown-linux')
-        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Install cargo-zigbuild (cross-compilation without Docker)
+        if: matrix.use_zigbuild == true
+        run: |
+          pip3 install ziglang --quiet
+          cargo install cargo-zigbuild --locked --quiet
 
       - name: Build release binary
         shell: bash
         run: |
-          if [[ "${{ matrix.target }}" == aarch64-unknown-linux* ]]; then
-            cross build --release --target ${{ matrix.target }}
+          if [[ "${{ matrix.use_zigbuild }}" == "true" ]]; then
+            cargo zigbuild --release --target ${{ matrix.target }}
           else
             cargo build --release --target ${{ matrix.target }}
           fi

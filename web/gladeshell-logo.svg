@@ -1,0 +1,31 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 820 92"
+  width="820"
+  height="92"
+  role="img"
+  aria-label="gladeshell logo"
+>
+  <defs>
+    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#22d3ee" />
+    </linearGradient>
+  </defs>
+  <text
+    font-family="'JetBrains Mono', 'Courier New', Courier, monospace"
+    font-size="13"
+    fill="url(#logo-grad)"
+    xml:space="preserve"
+    text-anchor="middle"
+    x="410"
+    y="14"
+  >
+    <tspan x="410" dy="0">   ██████╗ ██╗      █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗     ██╗</tspan>
+    <tspan x="410" dy="14">  ██╔════╝ ██║     ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║     ██║</tspan>
+    <tspan x="410" dy="14">  ██║  ███╗██║     ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║     ██║</tspan>
+    <tspan x="410" dy="14">  ██║   ██║██║     ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║     ██║</tspan>
+    <tspan x="410" dy="14">  ╚█████╔╝ ███████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗███████╗███████╗</tspan>
+    <tspan x="410" dy="14">   ╚════╝  ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝</tspan>
+  </text>
+</svg>

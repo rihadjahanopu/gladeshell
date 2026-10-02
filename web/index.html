@@ -101,7 +101,7 @@
               "price": "0",
               "priceCurrency": "USD"
             },
-            "downloadUrl": "https://gladeshell.netlify.app/i.sh",
+            "downloadUrl": "https://gladeshell.netlify.app/install.sh",
             "codeRepository": "https://github.com/rihadjahanopu/gladeshell",
             "license": "https://opensource.org/licenses/MIT",
             "sameAs": [
@@ -234,14 +234,36 @@
             <span class="badge-dot"></span>
             v2.0 — PowerShell support (Coming Soon)
           </div>
-          <pre class="hero-ascii" aria-label="gladeshell logo">
- ██████╗ ██╗    █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗   ██╗
-██╔════╝ ██║   ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║   ██║
-██║  ███╗██║   ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║   ██║
-██║   ██║██║   ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║   ██║
-╚██████╔╝██████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗██████╗██████╗
- ╚═════╝ ╚═════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚═════╝╚═════╝</pre
+          <svg
+            class="hero-ascii-svg"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 700 90"
+            role="img"
+            aria-label="gladeshell logo"
           >
+            <defs>
+              <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#a855f7" />
+                <stop offset="100%" stop-color="#22d3ee" />
+              </linearGradient>
+            </defs>
+            <text
+              font-family="'JetBrains Mono', 'Courier New', Courier, monospace"
+              font-size="13"
+              fill="url(#logo-grad)"
+              xml:space="preserve"
+              text-anchor="start"
+              x="5"
+              y="14"
+            >
+              <tspan x="5" dy="0">   ██████╗ ██╗      █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗     ██╗</tspan>
+              <tspan x="5" dy="14">  ██╔════╝ ██║     ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║     ██║</tspan>
+              <tspan x="5" dy="14">  ██║  ███╗██║     ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║     ██║</tspan>
+              <tspan x="5" dy="14">  ██║   ██║██║     ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║     ██║</tspan>
+              <tspan x="5" dy="14">  ╚█████╔╝ ███████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗███████╗███████╗</tspan>
+              <tspan x="5" dy="14">   ╚════╝  ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝</tspan>
+            </text>
+          </svg>
           <h1 class="hero-title">
             The Ultimate Bash Environment<br /><span class="gradient-text"
               >for Modern Developers</span
@@ -662,7 +684,7 @@
                   <button
                     class="copy-btn"
                     aria-label="Copy universal Linux/macOS install command"
-                    data-copy="curl -fsSL https://gladeshell.netlify.app/i.sh | bash"
+                    data-copy="curl -fsSL https://gladeshell.netlify.app/install.sh | bash"
                   >
                     <svg
                       width="16"
@@ -679,7 +701,7 @@
                     Copy
                   </button>
                 </div>
-                <pre><code>curl -fsSL https://gladeshell.netlify.app/i.sh | bash</code></pre>
+                <pre><code>curl -fsSL https://gladeshell.netlify.app/install.sh | bash</code></pre>
               </div>
             </div>
 
@@ -705,7 +727,7 @@
                   <button
                     class="copy-btn"
                     aria-label="Copy universal Windows install command"
-                    data-copy='powershell -c "iwr -useb https://gladeshell.netlify.app/i.ps1 | iex"'
+                    data-copy='powershell -c "iwr -useb https://gladeshell.netlify.app/install.ps1 | iex"'
                   >
                     <svg
                       width="16"
@@ -722,7 +744,7 @@
                     Copy
                   </button>
                 </div>
-                <pre><code>powershell -c &quot;iwr -useb https://gladeshell.netlify.app/i.ps1 | iex&quot;</code></pre>
+                <pre><code>powershell -c &quot;iwr -useb https://gladeshell.netlify.app/install.ps1 | iex&quot;</code></pre>
               </div>
             </div>
           </div>
@@ -1914,7 +1936,8 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                   </div>
                   <p class="zsh-tip">
                     <span class="zsh-tip-icon">💡</span> The installer backs up your existing
-                    <code>$PROFILE</code> and safely appends gladeshell — safe to re-run at any time.
+                    <code>$PROFILE</code> and safely appends gladeshell — safe to re-run at any
+                    time.
                   </p>
                 </div>
 
@@ -3684,8 +3707,8 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
               Performance <span class="gradient-text">Benchmark</span>
             </h2>
             <p class="section-desc">
-              Empirical measurements across 7 shell environments on real hardware. GladeShell wins on
-              every metric that matters.
+              Empirical measurements across 7 shell environments on real hardware. GladeShell wins
+              on every metric that matters.
             </p>
           </div>
 

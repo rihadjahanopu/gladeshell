@@ -764,10 +764,6 @@ key         = "clean"
 value       = "gladeshell clean"
 description = "Universal system cache and log cleanup"
 
-[[group.aliases]]
-key         = "ftop"
-value       = "gladeshell ftop"
-description = "Native Ratatui interactive TUI System & Process Monitor"
 
 [[group.aliases]]
 key         = "glade"

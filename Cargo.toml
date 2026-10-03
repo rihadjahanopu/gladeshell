@@ -11,7 +11,7 @@ keywords = ["shell", "prompt", "zsh", "bash", "fish"]
 categories = ["command-line-utilities"]
 
 # ── Crate Targets ────────────────────────────────────────────────────────────
-# 1. Native binary  →  `gladeshell` CLI (init, uup, uu, gen, ex, sysmon, ftop, …)
+# 1. Native binary  →  `gladeshell` CLI (init, uup, uu, gen, ex, sysmon, …)
 [[bin]]
 name = "gladeshell"
 path = "src/main.rs"

@@ -5,7 +5,7 @@
 // ============================================================================
 
 // =============================================================================
-//  src/tools/system_monitor.rs — GLADESHELL TUI System & Process Monitor (`sysmon`)
+//  src/tools/ftop.rs — GLADESHELL TUI System & Process Monitor (`ftop`)
 // =============================================================================
 
 use crossterm::{
@@ -243,8 +243,7 @@ fn draw_header(f: &mut Frame, _app: &App, area: Rect) {
     let header_text = Line::from(vec![
         Span::styled(">_ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
         Span::styled("GLADESHELL ", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        Span::styled("v1.2 ", Style::default().fg(C_DIM)),
-        Span::raw("                   "),
+        Span::raw("       "),
         Span::styled("Hostname: ", Style::default().fg(C_DIM)),
         Span::styled(System::host_name().unwrap_or_else(|| "GLADE-DEV-SRV".into()), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
         Span::raw("   "),
@@ -289,7 +288,7 @@ fn draw_top_grid(f: &mut Frame, app: &App, area: Rect) {
 
     let core_colors = [C_CYAN, C_GREEN, C_YELLOW, C_PURPLE, Color::LightBlue, Color::LightMagenta];
     let num_cpus = app.sys.cpus().len().min(4).max(1);
-    
+
     let cpu_rows = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![Constraint::Length(2); num_cpus])
@@ -354,7 +353,7 @@ fn draw_top_grid(f: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_CYAN));
-    
+
     let temp_inner = temp_block.inner(right_chunks[2]);
     f.render_widget(temp_block, right_chunks[2]);
 

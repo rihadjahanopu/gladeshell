@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🩹 [1.1.2] — 2026-10-03
+
+### 🛠️ CI/CD Fixes
+
+- 🤖 **aarch64 Linux Build Pipeline — Native Runner Migration**:
+  - Replaced `cross` + Docker strategy with a **native `ubuntu-24.04-arm` GitHub Actions runner** for aarch64 Linux builds — eliminates all Docker-in-Docker overhead and C dependency issues.
+  - Reverted `arboard` to default features (native ARM runner has all required system C libraries available; `cargo-zigbuild` workaround no longer needed).
+  - Removed `Cross.toml` config (no longer required after native runner migration).
+  - Replaced `taiki-e/install-action@cross` with direct native build — simpler, faster, and more reliable.
+  - Replaced `cargo-zigbuild` (aarch64 cross-compilation workaround) with native `cargo build` on ARM runner.
+- 🔒 **Cargo.lock Updated**: Regenerated lockfile to reflect dependency graph after CI tooling changes.
+
+---
+
 ## 🩹 [1.1.1] — 2026-10-02
 
 ### 🐛 Bug Fixes
@@ -70,4 +84,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.1.2]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.2
+[1.1.1]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.1
 [1.1.0]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.0

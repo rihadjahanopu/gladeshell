@@ -80,9 +80,9 @@ pub fn clean_rc_file() -> std::io::Result<()> {
     Ok(())
 }
 
-/// Remove gladeshell config block(s) from a specific RC file.
-/// ONLY removes lines between glade markers — never reorders or
-/// touches any other user content.
+/// Reorder the gladeshell config block to the end of a specific RC file.
+/// The block is PRESERVED — never deleted — and moved to the bottom so it
+/// always loads last (after user config). Safe to call multiple times.
 pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
     if !rc_path.exists() {
         return Ok(());
@@ -90,27 +90,50 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
 
     let content = fs::read_to_string(rc_path)?;
 
-    // Fast path: nothing to clean
+    // Fast path: nothing to reorder
     if !content.contains("# >>> glade-") {
         return Ok(());
     }
 
-    // Filter out all lines that fall within a glade marker block.
-    // User content before AND after the block is preserved in original order.
-    let mut out = String::with_capacity(content.len());
+    // Split into: user content (others) and glade block (block).
+    // Block is preserved and relocated to the end of the file.
+    let mut block: Vec<&str> = Vec::new();
+    let mut others: Vec<&str> = Vec::new();
     let mut in_block = false;
+
     for line in content.lines() {
         if line.contains("# >>> glade-") {
             in_block = true;
         }
-        if !in_block {
-            out.push_str(line);
-            out.push('\n');
+        if in_block {
+            block.push(line);
+        } else {
+            others.push(line);
         }
         if line.contains("# <<< glade-") {
             in_block = false;
         }
     }
+
+    // Trim trailing blank lines from user content section
+    while let Some(last) = others.last() {
+        if last.trim().is_empty() {
+            others.pop();
+        } else {
+            break;
+        }
+    }
+
+    // Reassemble: user content first, glade block at the end
+    let mut final_content = others.join("\n");
+    if !block.is_empty() {
+        if !final_content.is_empty() {
+            final_content.push('\n');
+            final_content.push('\n');
+        }
+        final_content.push_str(&block.join("\n"));
+    }
+    final_content.push('\n');
 
     // Write back atomically using a PID-stamped temp file.
     let tmp_name = format!(
@@ -119,7 +142,7 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
         std::process::id()
     );
     let tmp_path = rc_path.with_file_name(tmp_name);
-    fs::write(&tmp_path, &out)?;
+    fs::write(&tmp_path, final_content)?;
     fs::rename(&tmp_path, rc_path)?;
 
     // Remove stale compiled bytecode if zsh
@@ -172,10 +195,17 @@ pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
         return Ok(false);
     }
 
-    // Remove any stale/partial glade blocks before appending the fresh one.
-    // This handles upgrades where the marker text changed between versions.
+    // If the file has any glade block at all (possibly misplaced or from a
+    // previous version), reorder it to the end first, then re-read.
     if existing.contains("# >>> glade-") || existing.contains("gladeshell init") {
         clean_specific_rc_file(&rc_path)?;
+
+        // After reorder, re-check — if markers now exist, block was just
+        // misplaced (not missing). Reorder fixed it; no append needed.
+        let after_reorder = fs::read_to_string(&rc_path).unwrap_or_default();
+        if after_reorder.contains(&start_marker) && after_reorder.contains(&end_marker) {
+            return Ok(false);
+        }
     }
 
     // Ensure parent directory exists

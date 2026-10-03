@@ -113,14 +113,20 @@ export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
             if let Some(node_bin) = get_latest_nvm_node_bin() {
                 out.push_str(&format!("export PATH=\"{}:$PATH\"\n", node_bin));
             }
-            out.push_str(r#"
-if [[ -o interactive ]]; then
-    gladeshell internal-clean-rc >/dev/null 2>&1 &!
+            out.push_str(r##"
+# ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
+if [[ -o interactive ]] && [[ -f "$HOME/.zshrc" ]]; then
+    if ! grep -qF "# >>> glade-zshrc >>>" "$HOME/.zshrc" 2>/dev/null; then
+        # Block is missing → re-inject
+        gladeshell setup >/dev/null 2>&1 &!
+    elif ! tail -3 "$HOME/.zshrc" | grep -qF "# <<< glade-zshrc <<<" 2>/dev/null; then
+        # Block exists but not at bottom (bun/deno/nvm appended after it) → reorder
+        gladeshell internal-clean-rc >/dev/null 2>&1 &!
+    fi
 fi
 
 _fb_lazy_load_nvm() {
     unset -f nvm node npm npx 2>/dev/null
-    gladeshell internal-clean-rc >/dev/null 2>&1 &!
     if [ -s "$NVM_DIR/nvm.sh" ]; then
         \. "$NVM_DIR/nvm.sh"
     fi
@@ -135,7 +141,7 @@ nvm()  { _fb_lazy_load_nvm; nvm  "$@"; }
 node() { _fb_lazy_load_nvm; node "$@"; }
 npm()  { _fb_lazy_load_nvm; npm  "$@"; }
 npx()  { _fb_lazy_load_nvm; npx  "$@"; }
-"#);
+"##);
         }
         Shell::Bash => {
             out.push_str(r#"
@@ -146,7 +152,18 @@ export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
             if let Some(node_bin) = get_latest_nvm_node_bin() {
                 out.push_str(&format!("export PATH=\"{}:$PATH\"\n", node_bin));
             }
-            out.push_str(r#"
+            out.push_str(r##"
+# ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
+if [[ $- == *i* ]] && [[ -f "$HOME/.bashrc" ]]; then
+    if ! grep -qF "# >>> glade-bashrc >>>" "$HOME/.bashrc" 2>/dev/null; then
+        # Block is missing → re-inject
+        gladeshell setup >/dev/null 2>&1 &
+    elif ! tail -3 "$HOME/.bashrc" | grep -qF "# <<< glade-bashrc <<<" 2>/dev/null; then
+        # Block exists but not at bottom → reorder
+        gladeshell internal-clean-rc >/dev/null 2>&1 &
+    fi
+fi
+
 _fb_lazy_load_nvm() {
     unset -f nvm node npm npx
     [[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"
@@ -156,17 +173,30 @@ nvm()  { _fb_lazy_load_nvm; nvm  "$@"; }
 node() { _fb_lazy_load_nvm; node "$@"; }
 npm()  { _fb_lazy_load_nvm; npm  "$@"; }
 npx()  { _fb_lazy_load_nvm; npx  "$@"; }
-"#);
+"##);
         }
         Shell::Fish => {
-            out.push_str(r#"
+            out.push_str(r##"
 # ── NVM (Fish-compatible lazy-load via nvm.fish plugin) ──
 if functions -q nvm
     # nvm.fish is already loaded; nothing to do.
 else
     set -gx NVM_DIR (test -d $HOME/.config/nvm && echo $HOME/.config/nvm || echo $HOME/.nvm)
 end
-"#);
+
+# ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
+if status is-interactive
+    if test -f "$HOME/.config/fish/config.fish"
+        if not grep -qF "# >>> glade-fish >>>" "$HOME/.config/fish/config.fish" 2>/dev/null
+            # Block is missing → re-inject
+            gladeshell setup >/dev/null 2>&1 &
+        else if not tail -3 "$HOME/.config/fish/config.fish" | grep -qF "# <<< glade-fish <<<" 2>/dev/null
+            # Block exists but not at bottom → reorder
+            gladeshell internal-clean-rc >/dev/null 2>&1 &
+        end
+    end
+end
+"##);
         }
         Shell::Pwsh => {}
     }

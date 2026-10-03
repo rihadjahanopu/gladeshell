@@ -32,7 +32,7 @@ pub fn generate() -> String {
     out.push_str(&shared::render_integrations(Shell::Pwsh));
     out.push_str(&shared::render_cli_completions(Shell::Pwsh));
 
-    out.push_str(r#"
+    out.push_str(r##"
 # ── PSReadLine & Native Rust Engine ──
 if (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue) {
     Set-PSReadLineOption -EditMode Emacs
@@ -66,7 +66,22 @@ $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     param($commandName, $commandEventArgs)
     try { gladeshell correct $commandName 2>$null } catch {}
 }
-"#);
+# ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
+$_fb_pwsh_profile = $PROFILE
+if ($_fb_pwsh_profile -and (Test-Path $_fb_pwsh_profile)) {
+    $profileContent = Get-Content $_fb_pwsh_profile -Raw 2>$null
+    if ($profileContent -and -not ($profileContent -match [regex]::Escape("# >>> glade-powershell >>>"))) {
+        # Block is missing → re-inject
+        Start-Job { gladeshell setup 2>$null } | Out-Null
+    } elseif ($profileContent) {
+        $lastLines = (Get-Content $_fb_pwsh_profile -Tail 3 2>$null) -join "`n"
+        if (-not ($lastLines -match [regex]::Escape("# <<< glade-powershell <<<"))) {
+            # Block exists but not at bottom → reorder
+            Start-Job { gladeshell internal-clean-rc 2>$null } | Out-Null
+        }
+    }
+}
+"##);
 
     out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));
 

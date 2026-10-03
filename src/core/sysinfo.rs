@@ -825,7 +825,7 @@ fn read_disk_free_native() -> f32 {
 
         let path = CString::new("/").unwrap_or_default();
         let mut stat: MaybeUninit<libc_statfs> = MaybeUninit::uninit();
-        if unsafe { raw_statfs(path.as_ptr(), stat.as_mut_ptr()) } == 0 {
+        if unsafe { raw_statfs(path.as_ptr() as *const i8, stat.as_mut_ptr()) } == 0 {
             let s = unsafe { stat.assume_init() };
             let avail_bytes = s.f_bavail as u64 * s.f_bsize as u64;
             return avail_bytes as f32 / (1024.0 * 1024.0 * 1024.0);

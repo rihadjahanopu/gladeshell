@@ -178,10 +178,8 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                     (_, KeyCode::Enter) | (_, KeyCode::Char(' ')) => {
                         app.complete_selected(&todo_file_c);
                     }
-                    (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
-                        if !app.tasks.is_empty() {
-                            app.mode = Mode::ConfirmClear;
-                        }
+                    (KeyModifiers::CONTROL, KeyCode::Char('c')) if !app.tasks.is_empty() => {
+                        app.mode = Mode::ConfirmClear;
                     }
                     _ => {}
                 },

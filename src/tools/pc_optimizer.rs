@@ -1554,11 +1554,9 @@ impl UtInstallProgressApp {
             })
             .count();
         let total_count = self.items.len();
-        let percent = if total_count > 0 {
-            (completed_count * 100) / total_count
-        } else {
-            100
-        };
+        let percent = (completed_count * 100)
+            .checked_div(total_count)
+            .unwrap_or(100);
 
         let gauge = Gauge::default()
             .block(
@@ -1932,7 +1930,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(stream) = stdout_stream {
                             use std::io::{BufRead, BufReader};
                             let reader = BufReader::new(stream);
-                            for line in reader.lines().flatten() {
+                            for line in reader.lines().map_while(Result::ok) {
                                 let trimmed = line.trim().to_string();
                                 if !trimmed.is_empty() {
                                     let _ = tx_out.send(InstallEvent::Log { line: trimmed });
@@ -1946,7 +1944,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(stream) = stderr_stream {
                             use std::io::{BufRead, BufReader};
                             let reader = BufReader::new(stream);
-                            for line in reader.lines().flatten() {
+                            for line in reader.lines().map_while(Result::ok) {
                                 let trimmed = line.trim().to_string();
                                 if !trimmed.is_empty() {
                                     let _ = tx_err.send(InstallEvent::Log { line: trimmed });
@@ -2052,10 +2050,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         (KeyCode::Char('c'), KeyModifiers::CONTROL) => break,
                         (KeyCode::Esc, _)
                         | (KeyCode::Char('q'), KeyModifiers::NONE)
-                        | (KeyCode::Enter, _) => {
-                            if progress_app.is_done {
-                                break;
-                            }
+                        | (KeyCode::Enter, _)
+                            if progress_app.is_done =>
+                        {
+                            break;
                         }
                         _ => {}
                     }

@@ -123,13 +123,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     ];
 
     for dir in data_dirs {
-        if dir.exists() {
-            if fs::remove_dir_all(&dir).is_ok() {
-                println!(
-                    "\x1b[1;32m🗑️ Removed directory:\x1b[0m {}",
-                    tildify(&dir, &home)
-                );
-            }
+        if dir.exists() && fs::remove_dir_all(&dir).is_ok() {
+            println!(
+                "\x1b[1;32m🗑️ Removed directory:\x1b[0m {}",
+                tildify(&dir, &home)
+            );
         }
     }
 
@@ -143,13 +141,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     ];
 
     for bin in bin_paths {
-        if bin.exists() {
-            if fs::remove_file(&bin).is_ok() {
-                println!(
-                    "\x1b[1;32m🗑️ Removed executable binary:\x1b[0m {}",
-                    tildify(&bin, &home)
-                );
-            }
+        if bin.exists() && fs::remove_file(&bin).is_ok() {
+            println!(
+                "\x1b[1;32m🗑️ Removed executable binary:\x1b[0m {}",
+                tildify(&bin, &home)
+            );
         }
     }
 

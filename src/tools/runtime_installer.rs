@@ -213,14 +213,10 @@ fn run_runtime_tui() -> Result<Option<&'static str>, Box<dyn Error>> {
                     KeyCode::Esc | KeyCode::Char('q') => break Ok(None),
                     KeyCode::Char('c') if is_ctrl => break Ok(None),
                     KeyCode::Up | KeyCode::Char('k') => {
-                        if cursor > 0 {
-                            cursor -= 1;
-                        }
+                        cursor = cursor.saturating_sub(1);
                     }
                     KeyCode::Char('p') if is_ctrl => {
-                        if cursor > 0 {
-                            cursor -= 1;
-                        }
+                        cursor = cursor.saturating_sub(1);
                     }
                     KeyCode::Down | KeyCode::Char('j') => {
                         if cursor < RUNTIME_OPTIONS.len() - 1 {

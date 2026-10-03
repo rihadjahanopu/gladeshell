@@ -1695,7 +1695,7 @@ impl ExtractorApp {
             };
 
             let path = entry.path();
-            let is_file = entry.file_type().map_or(false, |ft| ft.is_file());
+            let is_file = entry.file_type().is_some_and(|ft| ft.is_file());
             if !is_file {
                 continue;
             }
@@ -1723,7 +1723,7 @@ impl ExtractorApp {
             }
         }
 
-        archive_items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        archive_items.sort_by_key(|a| a.name.to_lowercase());
         self.items = archive_items;
 
         self.apply_filter();
@@ -2366,10 +2366,10 @@ fn main_loop(
                         }
                         _ => {}
                     },
-                    MouseEventKind::Down(MouseButton::Left) => {
-                        if app.active_pane != ActivePane::Extracting {
-                            app.active_pane = ActivePane::Explorer;
-                        }
+                    MouseEventKind::Down(MouseButton::Left)
+                        if app.active_pane != ActivePane::Extracting =>
+                    {
+                        app.active_pane = ActivePane::Explorer;
                     }
                     _ => {}
                 },
@@ -3102,7 +3102,7 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
     let has_recent_completed = app
         .last_completed
         .as_ref()
-        .map_or(false, |c| c.finished_at.elapsed().as_secs() < 12);
+        .is_some_and(|c| c.finished_at.elapsed().as_secs() < 12);
 
     let show_gauge = app.is_extracting || has_recent_completed;
 

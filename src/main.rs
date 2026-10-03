@@ -630,7 +630,7 @@ fn main() {
     }
 
     let _prog_name = raw_args
-        .get(0)
+        .first()
         .map(|s| {
             std::path::Path::new(s)
                 .file_name()
@@ -871,8 +871,8 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
                 THEMES.len()
             );
             println!(
-                "  \x1b[2m{:<4} {:<3} {:<20} {}\x1b[0m",
-                "IDX", "  ", "NAME", "PROMPT"
+                "  \x1b[2m{:<4} {:<3} {:<20} PROMPT\x1b[0m",
+                "IDX", "  ", "NAME"
             );
             println!("  \x1b[2m{}\x1b[0m", "─".repeat(48));
             for (i, t) in THEMES.iter().enumerate() {

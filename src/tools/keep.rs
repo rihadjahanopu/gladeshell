@@ -867,6 +867,6 @@ mod tests {
 
     #[test]
     fn test_keep_run_does_not_panic() {
-        assert!(build_categories().len() > 0);
+        assert!(!build_categories().is_empty());
     }
 }

@@ -254,8 +254,7 @@ fn truncate_to_width(s: &str, max_width: usize) -> String {
 fn strip_ansi_codes(s: &str) -> String {
     let s = if s.contains('\r') {
         s.split('\r')
-            .filter(|part| !part.trim().is_empty())
-            .last()
+            .rfind(|part| !part.trim().is_empty())
             .unwrap_or(s)
     } else {
         s
@@ -385,7 +384,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     let handle_out = proc.stdout.take().map(|out| {
                         let tx_log = tx.clone();
                         std::thread::spawn(move || {
-                            for line in BufReader::new(out).lines().flatten() {
+                            for line in BufReader::new(out).lines().map_while(Result::ok) {
                                 let clean = strip_ansi_codes(&line);
                                 if !clean.trim().is_empty() {
                                     let _ = tx_log.send(Msg::Log(format!("  {}", clean)));
@@ -397,7 +396,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     let handle_err = proc.stderr.take().map(|err| {
                         let tx_log = tx.clone();
                         std::thread::spawn(move || {
-                            for line in BufReader::new(err).lines().flatten() {
+                            for line in BufReader::new(err).lines().map_while(Result::ok) {
                                 let clean = strip_ansi_codes(&line);
                                 if !clean.trim().is_empty() {
                                     let _ = tx_log.send(Msg::Log(format!("  {}", clean)));
@@ -518,11 +517,9 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .filter(|t| t.status == StatusKind::Success || t.status == StatusKind::Failed)
         .count();
     let total_count = app.tasks.len();
-    let percent = if total_count > 0 {
-        (completed_count * 100) / total_count
-    } else {
-        0
-    };
+    let percent = (completed_count * 100)
+        .checked_div(total_count)
+        .unwrap_or(0);
     let is_done = app.state == AppState::Done;
     let tick_spin = if is_done {
         "✨"

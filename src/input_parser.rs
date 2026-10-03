@@ -163,7 +163,7 @@ impl InputParser {
         let mut end_idx = 2usize;
         while end_idx < bytes.len() {
             let b = bytes[end_idx];
-            if b >= 0x40 && b <= 0x7e {
+            if (0x40..=0x7e).contains(&b) {
                 break; // final byte
             }
             end_idx += 1;

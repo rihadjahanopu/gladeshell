@@ -104,10 +104,7 @@ impl DictionarySearchEngine {
             // Index full name
             engine.insert(&item.name, idx);
             // Index individual words split by `-`, `_`, `.`, ` `
-            for word in item
-                .name
-                .split(|c| c == '-' || c == '_' || c == '.' || c == ' ')
-            {
+            for word in item.name.split(['-', '_', '.', ' ']) {
                 if !word.is_empty() {
                     engine.insert(word, idx);
                 }
@@ -227,7 +224,7 @@ fn subsequence_score(query: &str, target: &str) -> Option<i32> {
                     || target
                         .as_bytes()
                         .get(idx.saturating_sub(1))
-                        .map_or(false, |&b| b == b'/' || b == b'-' || b == b'_' || b == b'.')
+                        .is_some_and(|&b| b == b'/' || b == b'-' || b == b'_' || b == b'.')
                 {
                     score += 30;
                 }
@@ -378,7 +375,7 @@ impl FuzzyCdApp {
             if zoxide_db.exists() {
                 if let Ok(file) = fs::File::open(&zoxide_db) {
                     let reader = BufReader::new(file);
-                    for line in reader.lines().flatten() {
+                    for line in reader.lines().map_while(Result::ok) {
                         let path_str = line.split('|').next().unwrap_or("").trim();
                         if !path_str.is_empty() {
                             let p = PathBuf::from(path_str);
@@ -457,7 +454,7 @@ impl FuzzyCdApp {
         if item.is_dir {
             if item.name == "." {
                 let path = self.current_dir.to_string_lossy().to_string();
-                return Some((path, CfAction::CdInto));
+                Some((path, CfAction::CdInto))
             } else {
                 self.history_stack.push(self.current_dir.clone());
                 self.current_dir = item.path.clone();
@@ -584,27 +581,24 @@ impl FuzzyCdApp {
                         _ => {}
                     }
                 }
-                Event::Mouse(mouse) => {
-                    if mouse.kind == MouseEventKind::Down(MouseButton::Left) {
-                        let area = self.last_list_area;
-                        if area.width > 0
-                            && mouse.column >= area.x
-                            && mouse.column < area.x + area.width
-                            && mouse.row > area.y
-                            && mouse.row <= area.y + area.height.saturating_sub(2)
-                        {
-                            let clicked_row = (mouse.row - area.y - 1) as usize;
-                            if clicked_row < self.filtered_indices.len() {
-                                if self.list_state.selected() == Some(clicked_row) {
-                                    if let Some(&orig_idx) = self.filtered_indices.get(clicked_row)
-                                    {
-                                        if let Some(res) = self.enter_selected_directory(orig_idx) {
-                                            return Ok(Some(res));
-                                        }
+                Event::Mouse(mouse) if mouse.kind == MouseEventKind::Down(MouseButton::Left) => {
+                    let area = self.last_list_area;
+                    if area.width > 0
+                        && mouse.column >= area.x
+                        && mouse.column < area.x + area.width
+                        && mouse.row > area.y
+                        && mouse.row <= area.y + area.height.saturating_sub(2)
+                    {
+                        let clicked_row = (mouse.row - area.y - 1) as usize;
+                        if clicked_row < self.filtered_indices.len() {
+                            if self.list_state.selected() == Some(clicked_row) {
+                                if let Some(&orig_idx) = self.filtered_indices.get(clicked_row) {
+                                    if let Some(res) = self.enter_selected_directory(orig_idx) {
+                                        return Ok(Some(res));
                                     }
-                                } else {
-                                    self.list_state.select(Some(clicked_row));
                                 }
+                            } else {
+                                self.list_state.select(Some(clicked_row));
                             }
                         }
                     }

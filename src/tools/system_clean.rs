@@ -192,7 +192,7 @@ fn run_cmd_stream(cmd: &str, args: &[&str], tx: &Sender<Msg>) -> bool {
                 let tx_log = tx.clone();
                 let reader = BufReader::new(stdout);
                 std::thread::spawn(move || {
-                    for line in reader.lines().flatten() {
+                    for line in reader.lines().map_while(Result::ok) {
                         let clean = strip_ansi_codes(&line);
                         if !clean.trim().is_empty() {
                             let _ = tx_log.send(Msg::Log(format!("  {}", clean)));
@@ -548,11 +548,9 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .filter(|t| t.status == StatusKind::Success || t.status == StatusKind::Failed)
         .count();
     let total_count = app.tasks.len();
-    let percent = if total_count > 0 {
-        (completed_count * 100) / total_count
-    } else {
-        0
-    };
+    let percent = (completed_count * 100)
+        .checked_div(total_count)
+        .unwrap_or(0);
     let is_done = app.state == AppState::Done;
     let tick_spin = if is_done {
         "✨"

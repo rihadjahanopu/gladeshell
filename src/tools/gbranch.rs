@@ -677,7 +677,7 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
                     app.log_scroll
                 )
             } else {
-                format!(" Git Log Preview (100 Commits) ")
+                " Git Log Preview (100 Commits) ".to_string()
             };
             let preview = Paragraph::new(log_lines)
                 .wrap(Wrap { trim: false })

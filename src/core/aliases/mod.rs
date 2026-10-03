@@ -63,6 +63,7 @@ pub enum Shell {
 }
 
 impl Shell {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_ascii_lowercase().as_str() {
             "bash" => Some(Shell::Bash),
@@ -198,7 +199,7 @@ impl AliasFile {
 
 /// Convert a kebab/snake alias name to PascalCase for PowerShell function names.
 fn pascal_case(s: &str) -> String {
-    s.split(|c: char| c == '-' || c == '_')
+    s.split(['-', '_'])
         .filter(|p| !p.is_empty())
         .map(|p| {
             let mut chars = p.chars();

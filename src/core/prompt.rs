@@ -1554,9 +1554,7 @@ pub fn save_theme_color_override(
 ) -> Result<(), String> {
     let mut overrides = load_theme_overrides();
     let theme_key = theme_name.trim().to_lowercase();
-    let theme_entry = overrides
-        .entry(theme_key)
-        .or_insert_with(ThemeColorOverrides::default);
+    let theme_entry = overrides.entry(theme_key).or_default();
 
     let val_trim = color_val.trim();
     let val_opt = if val_trim.is_empty()
@@ -1753,7 +1751,7 @@ impl Default for PromptContext {
     }
 }
 
-fn format_short_cwd<'a>(raw_cwd: &'a str) -> &'a str {
+fn format_short_cwd(raw_cwd: &str) -> &str {
     let trimmed = raw_cwd.trim_end_matches('/');
     if trimmed.is_empty() {
         return "/";
@@ -2177,7 +2175,7 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
 pub static RAINBOW_COLORS: &[u8] = &[
     31, 32, 33, 34, 35, 36, 91, 92, 93, 94, 95, 96, 147, 178, 208, 117, 213, 141,
 ];
-pub static RANDOM_EMOJIS: &[&'static str] = &[
+pub static RANDOM_EMOJIS: &[&str] = &[
     "🔥", "⚡️", "🚀", "💫", "🌈", "🌀", "✨", "🧠", "🎯", "🌟", "👾", "🦊", "🎨", "💎", "🔮", "👑",
     "🦄", "🐉",
 ];

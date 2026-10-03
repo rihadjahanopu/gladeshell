@@ -11,7 +11,7 @@
 // ============================================================================
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 /// Maximum number of history entries to keep in memory.
@@ -42,7 +42,7 @@ fn dirs_home() -> Option<PathBuf> {
 }
 
 /// Collect all history files to scan across shells.
-fn history_file_candidates(home: &PathBuf) -> Vec<PathBuf> {
+fn history_file_candidates(home: &Path) -> Vec<PathBuf> {
     let mut candidates = vec![
         home.join(".bash_history"),
         home.join(".zsh_history"),

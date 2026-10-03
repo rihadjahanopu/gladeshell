@@ -72,6 +72,12 @@ pub struct App {
     pub last_tick: Instant,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         let mut sys = System::new_all();
@@ -323,7 +329,7 @@ fn draw_top_grid(f: &mut Frame, app: &App, area: Rect) {
         Color::LightBlue,
         Color::LightMagenta,
     ];
-    let num_cpus = app.sys.cpus().len().min(4).max(1);
+    let num_cpus = app.sys.cpus().len().clamp(1, 4);
 
     let cpu_rows = Layout::default()
         .direction(Direction::Vertical)

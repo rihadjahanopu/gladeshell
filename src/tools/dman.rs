@@ -189,11 +189,11 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = DmanApp::new();
     let docker_cyan = Color::Rgb(50, 180, 245);
 
-    let container_actions = vec!["Start", "Stop", "Restart", "Logs", "Exec Bash", "Remove"];
-    let image_actions = vec!["Remove Image", "Inspect", "History"];
-    let volume_actions = vec!["Inspect", "Remove Volume"];
-    let network_actions = vec!["Inspect", "Remove Network"];
-    let compose_actions = vec![
+    let container_actions = ["Start", "Stop", "Restart", "Logs", "Exec Bash", "Remove"];
+    let image_actions = ["Remove Image", "Inspect", "History"];
+    let volume_actions = ["Inspect", "Remove Volume"];
+    let network_actions = ["Inspect", "Remove Network"];
+    let compose_actions = [
         "docker compose up -d",
         "docker compose down",
         "docker compose ps",
@@ -695,11 +695,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                         app.container_cursor += 1;
                                     }
                                 }
-                                KeyCode::Enter => {
-                                    if !app.containers.is_empty() {
-                                        app.show_container_actions = true;
-                                        app.container_action_cursor = 0;
-                                    }
+                                KeyCode::Enter if !app.containers.is_empty() => {
+                                    app.show_container_actions = true;
+                                    app.container_action_cursor = 0;
                                 }
                                 _ => {}
                             }
@@ -773,11 +771,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                         app.image_cursor += 1;
                                     }
                                 }
-                                KeyCode::Enter => {
-                                    if !app.images.is_empty() {
-                                        app.show_image_actions = true;
-                                        app.image_action_cursor = 0;
-                                    }
+                                KeyCode::Enter if !app.images.is_empty() => {
+                                    app.show_image_actions = true;
+                                    app.image_action_cursor = 0;
                                 }
                                 _ => {}
                             }
@@ -846,11 +842,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                         app.volume_cursor += 1;
                                     }
                                 }
-                                KeyCode::Enter => {
-                                    if !app.volumes.is_empty() {
-                                        app.show_volume_actions = true;
-                                        app.volume_action_cursor = 0;
-                                    }
+                                KeyCode::Enter if !app.volumes.is_empty() => {
+                                    app.show_volume_actions = true;
+                                    app.volume_action_cursor = 0;
                                 }
                                 _ => {}
                             }
@@ -919,11 +913,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                         app.network_cursor += 1;
                                     }
                                 }
-                                KeyCode::Enter => {
-                                    if !app.networks.is_empty() {
-                                        app.show_network_actions = true;
-                                        app.network_action_cursor = 0;
-                                    }
+                                KeyCode::Enter if !app.networks.is_empty() => {
+                                    app.show_network_actions = true;
+                                    app.network_action_cursor = 0;
                                 }
                                 _ => {}
                             }

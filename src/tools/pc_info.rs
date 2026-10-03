@@ -1217,19 +1217,17 @@ fn parse_xrandr_mm_size(text: &str) -> Option<f32> {
                 if let Ok(w_mm) = text[start..i].parse::<f64>() {
                     let rest = &text[i + 2..];
                     let rest_trimmed = rest.trim_start();
-                    if rest_trimmed.starts_with('x') {
-                        let after_x = rest_trimmed[1..].trim_start();
+                    if let Some(after_x_raw) = rest_trimmed.strip_prefix('x') {
+                        let after_x = after_x_raw.trim_start();
                         let end_digits = after_x
                             .find(|c: char| !c.is_ascii_digit())
                             .unwrap_or(after_x.len());
-                        if end_digits > 0 {
-                            if after_x[end_digits..].trim_start().starts_with("mm") {
-                                if let Ok(h_mm) = after_x[..end_digits].parse::<f64>() {
-                                    if w_mm > 0.0 && h_mm > 0.0 {
-                                        let diag_mm = (w_mm * w_mm + h_mm * h_mm).sqrt();
-                                        let diag_inches = diag_mm / 25.4;
-                                        return Some(((diag_inches * 10.0).round() / 10.0) as f32);
-                                    }
+                        if end_digits > 0 && after_x[end_digits..].trim_start().starts_with("mm") {
+                            if let Ok(h_mm) = after_x[..end_digits].parse::<f64>() {
+                                if w_mm > 0.0 && h_mm > 0.0 {
+                                    let diag_mm = (w_mm * w_mm + h_mm * h_mm).sqrt();
+                                    let diag_inches = diag_mm / 25.4;
+                                    return Some(((diag_inches * 10.0).round() / 10.0) as f32);
                                 }
                             }
                         }
@@ -1451,7 +1449,7 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
             per_core_utilization_pct,
             live_temperature_celsius,
             thermal_throttling: ThermalThrottlingStatus {
-                is_throttling: live_temperature_celsius.map_or(false, |t| t > 88.0),
+                is_throttling: live_temperature_celsius.is_some_and(|t| t > 88.0),
                 thermal_headroom_celsius: live_temperature_celsius.map(|t| (95.0 - t).max(0.0)),
                 historical_throttle_events: 0,
             },
@@ -2029,10 +2027,10 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
                 EnvironmentType::DockerContainer
             } else if std::env::var("WSL_DISTRO_NAME").is_ok()
                 || std::fs::read_to_string("/proc/version")
-                    .map_or(false, |v| v.to_lowercase().contains("wsl"))
+                    .is_ok_and(|v| v.to_lowercase().contains("wsl"))
             {
                 EnvironmentType::Wsl { version: 2 }
-            } else if read_sysfs("/sys/class/dmi/id/product_name").map_or(false, |p| {
+            } else if read_sysfs("/sys/class/dmi/id/product_name").is_some_and(|p| {
                 let l = p.to_lowercase();
                 l.contains("kvm")
                     || l.contains("qemu")
@@ -2048,7 +2046,7 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         } else if cfg!(target_os = "windows") {
             if std::env::var("SYSTEMDRIVE").is_ok()
                 && read_sysfs("/sys/class/dmi/id/product_name")
-                    .map_or(false, |p| p.to_lowercase().contains("virtual"))
+                    .is_some_and(|p| p.to_lowercase().contains("virtual"))
             {
                 EnvironmentType::VirtualMachine {
                     hypervisor: "Windows Hypervisor".into(),
@@ -2091,7 +2089,7 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         });
         let top_cpu_processes = processes.iter().take(5).cloned().collect();
 
-        processes.sort_by(|a, b| b.memory_bytes.cmp(&a.memory_bytes));
+        processes.sort_by_key(|p| std::cmp::Reverse(p.memory_bytes));
         let top_memory_processes = processes.iter().take(5).cloned().collect();
 
         let rust_version = query_tool_version("rustc", "--version");
@@ -2865,7 +2863,7 @@ fn render_tab_cpu(f: &mut Frame, area: Rect, report: &SystemReport) {
     // Per-core Gauges
     let core_count = report.cpu.per_core_utilization_pct.len();
     if core_count > 0 {
-        let rows_count = (core_count + 1) / 2;
+        let rows_count = core_count.div_ceil(2);
         let mut constraints = Vec::new();
         for _ in 0..rows_count {
             constraints.push(Constraint::Length(3));
@@ -3631,9 +3629,11 @@ mod tests {
 
     #[test]
     fn test_system_report_serialization() {
-        let mut report = SystemReport::default();
-        report.timestamp = "2026-09-18T11:27:30Z".into();
-        report.schema_version = "1.0.0".into();
+        let mut report = SystemReport {
+            timestamp: "2026-09-18T11:27:30Z".into(),
+            schema_version: "1.0.0".into(),
+            ..Default::default()
+        };
         report.system_identity.hostname = "workstation-01".into();
         report.system_identity.os_name = "Ubuntu Linux".into();
         report.cpu.exact_model = "AMD Ryzen 9 7950X".into();

@@ -11,7 +11,7 @@
 use std::error::Error;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crossterm::{
@@ -2062,7 +2062,7 @@ fn format_system_time(st: std::time::SystemTime) -> String {
     }
 }
 
-fn print_notes_help(root_dir: &PathBuf) {
+fn print_notes_help(root_dir: &Path) {
     let display_dir = root_dir.to_string_lossy();
     println!("\x1b[1;36m📝 Notes Manager — {}\x1b[0m\n", display_dir);
     println!("  \x1b[1;32mnotes\x1b[0m                 Browse all notes with interactive TUI & live preview");
@@ -2156,7 +2156,7 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn Erro
             run_tui(&mut app)?;
         }
 
-        "tui" | "list" | "ls" | _ => {
+        _ => {
             let mut app = NotesApp::new(root_dir);
             run_tui(&mut app)?;
         }

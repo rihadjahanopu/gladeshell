@@ -207,12 +207,12 @@ pub fn str_display_width(s: &str) -> usize {
         } else {
             let u = c as u32;
             // Check for wide characters and emojis (occupy 2 display columns in terminal)
-            if (u >= 0x1F300 && u <= 0x1FAFF) // Emojis & Pictographs
-                || (u >= 0x2600 && u <= 0x27BF) // Misc Symbols & Dingbats
-                || (u >= 0x1100 && u <= 0x11FF) // Hangul Jamo
-                || (u >= 0x2E80 && u <= 0x9FFF) // CJK Radicals, Ideographs
-                || (u >= 0xAC00 && u <= 0xD7AF) // Hangul Syllables
-                || (u >= 0xF900 && u <= 0xFAFF)
+            if (0x1F300..=0x1FAFF).contains(&u) // Emojis & Pictographs
+                || (0x2600..=0x27BF).contains(&u) // Misc Symbols & Dingbats
+                || (0x1100..=0x11FF).contains(&u) // Hangul Jamo
+                || (0x2E80..=0x9FFF).contains(&u) // CJK Radicals, Ideographs
+                || (0xAC00..=0xD7AF).contains(&u) // Hangul Syllables
+                || (0xF900..=0xFAFF).contains(&u)
             // CJK Compatibility Ideographs
             {
                 width += 2;

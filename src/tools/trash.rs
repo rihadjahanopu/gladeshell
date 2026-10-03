@@ -32,9 +32,7 @@ pub fn run(name: &str) -> Result<(), Box<dyn Error>> {
         .or_else(|_| std::env::var("USERPROFILE"))
         .map_err(|_| "Could not determine user HOME directory for trash.")?;
 
-    let trash_dir = if cfg!(target_os = "macos") {
-        Path::new(&home).join(".Trash")
-    } else if cfg!(windows) {
+    let trash_dir = if cfg!(target_os = "macos") || cfg!(windows) {
         Path::new(&home).join(".Trash")
     } else {
         if let Ok(xdg_data) = std::env::var("XDG_DATA_HOME") {

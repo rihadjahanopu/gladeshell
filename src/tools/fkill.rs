@@ -317,7 +317,7 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
                     Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
-                    format!("{:<8} {:<22}", p.pid, &p.name),
+                    format!("{:<8} {:<22}", p.pid, p.name),
                     Style::default()
                         .fg(C_WHITE)
                         .add_modifier(Modifier::BOLD)
@@ -336,7 +336,7 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
             Line::from(vec![
                 Span::styled("   ", Style::default()),
                 Span::styled(
-                    format!("{:<8} {:<22}", p.pid, &p.name),
+                    format!("{:<8} {:<22}", p.pid, p.name),
                     Style::default().fg(C_TEXT),
                 ),
                 Span::styled(

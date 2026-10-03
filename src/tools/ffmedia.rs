@@ -828,7 +828,7 @@ fn concat_videos() -> Result<(), Box<dyn std::error::Error>> {
     println!("Enter file paths to concatenate (separated by space or comma):");
     let input_str = prompt_text("Video files")?;
     let paths: Vec<PathBuf> = input_str
-        .split(|c| c == ',' || c == ' ')
+        .split([',', ' '])
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .map(PathBuf::from)
@@ -1705,7 +1705,7 @@ fn draw_recorder_recording(f: &mut Frame, app: &RecorderApp) {
 
     // ── Banner with timer ──────────────────────────────────────────────────
     let elapsed = app.format_elapsed();
-    let rec_dot = if app.elapsed_secs() % 2 == 0 {
+    let rec_dot = if app.elapsed_secs().is_multiple_of(2) {
         "● REC"
     } else {
         "○ REC"
@@ -1887,9 +1887,8 @@ fn build_detached_recorder(app: &RecorderApp, log_path: &str, pid_path: &str) ->
     // On Linux we use `setsid` to detach from the terminal session so that
     // closing the terminal does NOT send SIGHUP to the child ffmpeg process.
     // stdout/stderr are redirected to the log file.
-    let sh_args: String;
 
-    if os_type == "linux" {
+    let sh_args: String = if os_type == "linux" {
         // Build ffmpeg args string for sh -c
         let display_flag = if is_wayland() {
             std::env::var("DISPLAY").unwrap_or_else(|_| ":0".to_string())
@@ -1935,7 +1934,7 @@ fn build_detached_recorder(app: &RecorderApp, log_path: &str, pid_path: &str) ->
 
         // setsid detaches from terminal; nohup ignores SIGHUP; & runs in bg
         // `echo $! > pidfile` saves ffmpeg PID so we can kill it later
-        sh_args = format!(
+        format!(
             "setsid nohup ffmpeg -y {vaapi}-thread_queue_size 1024 -use_wallclock_as_timestamps 1 -framerate {fps} -f x11grab -video_size {res} -i {disp} {audio} {venc} {out} >'{log}' 2>&1 & echo $! >'{pid}'",
             vaapi  = vaapi_device,
             fps    = fps,
@@ -1946,24 +1945,24 @@ fn build_detached_recorder(app: &RecorderApp, log_path: &str, pid_path: &str) ->
             out    = out,
             log    = log_path,
             pid    = pid_path,
-        );
+        )
     } else if os_type == "macos" {
         let audio_args = if app.audio {
             "-thread_queue_size 1024 -f avfoundation -i 0:0"
         } else {
             "-f avfoundation -i 0"
         };
-        sh_args = format!(
+        format!(
             "nohup ffmpeg -y -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -framerate {fps} {audio} -c:v libx264 -preset ultrafast -crf {crf} -vf '{vf}' -color_range 1 -colorspace 1 -color_primaries 1 -color_trc 1 -movflags +faststart {out} >'{log}' 2>&1 & echo $! >'{pid}'",
             fps=fps, audio=audio_args, crf=crf, vf=vf_cpu, out=out, log=log_path, pid=pid_path,
-        );
+        )
     } else {
         // Windows fallback
-        sh_args = format!(
+        format!(
             "start /B ffmpeg -y -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -framerate {fps} -f gdigrab -i desktop -c:v libx264 -preset ultrafast -crf {crf} -vf '{vf}' -color_range 1 -colorspace 1 -color_primaries 1 -color_trc 1 -movflags +faststart {out} >{log} 2>&1",
             fps=fps, crf=crf, vf=vf_cpu, out=out, log=log_path,
-        );
-    }
+        )
+    };
 
     let mut cmd = Command::new("sh");
     cmd.args(["-c", &sh_args]);

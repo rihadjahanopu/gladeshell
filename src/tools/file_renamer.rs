@@ -179,7 +179,7 @@ impl RenamerApp {
             });
         }
 
-        items.sort_by(|a, b| a.old_name.to_lowercase().cmp(&b.old_name.to_lowercase()));
+        items.sort_by_key(|a| a.old_name.to_lowercase());
 
         let mut app = Self {
             dir_path: dir_path.to_path_buf(),
@@ -410,10 +410,7 @@ impl RenamerApp {
             return;
         }
 
-        let sel_idx = match self.table_state.selected() {
-            Some(i) => i,
-            None => 0,
-        };
+        let sel_idx = self.table_state.selected().unwrap_or_default();
 
         if let Some(target_item) = self.items.get(sel_idx) {
             let target_ext = Path::new(&target_item.old_name)

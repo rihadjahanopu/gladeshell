@@ -72,7 +72,7 @@ pub fn request_prompt(
         let mut resp_buf = vec![0u8; resp_len];
         stream.read_exact(&mut resp_buf)?;
 
-        return Ok(String::from_utf8_lossy(&resp_buf).into_owned());
+        Ok(String::from_utf8_lossy(&resp_buf).into_owned())
     }
 
     #[cfg(not(unix))]

@@ -1641,7 +1641,7 @@ fn shred_directory(path: &Path) -> Result<(), String> {
 }
 
 // ── vault operations ──────────────────────────────────────────────────────────
-fn vault_create(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+fn vault_create(name: &str, pass: &str, store_dir: &Path) -> (String, bool) {
     let enc_file = store_dir.join(format!("{}.enc", name));
     if enc_file.exists() {
         return (format!("❌ Vault '{}.enc' already exists!", name), true);
@@ -1680,12 +1680,7 @@ fn vault_create(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     (format!("✅ Created vault: {}.enc", name), false)
 }
 
-fn vault_lock_path(
-    name: &str,
-    target_path: &Path,
-    pass: &str,
-    store_dir: &PathBuf,
-) -> (String, bool) {
+fn vault_lock_path(name: &str, target_path: &Path, pass: &str, store_dir: &Path) -> (String, bool) {
     if !target_path.exists() {
         return (
             format!("❌ Directory path '{}' not found", target_path.display()),
@@ -1718,7 +1713,7 @@ fn vault_lock_path(
     (format!("🔒 Locked: {}.enc", name), false)
 }
 
-fn vault_unlock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+fn vault_unlock(name: &str, pass: &str, store_dir: &Path) -> (String, bool) {
     let enc_file = store_dir.join(format!("{}.enc", name));
     if !enc_file.exists() {
         return (format!("❌ Vault file not found: {}.enc", name), true);
@@ -1778,7 +1773,7 @@ fn vault_unlock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     (format!("🔓 Unlocked in RAM: ~/{}", name), false)
 }
 
-fn vault_lock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+fn vault_lock(name: &str, pass: &str, store_dir: &Path) -> (String, bool) {
     let home = std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
@@ -1787,7 +1782,7 @@ fn vault_lock(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     vault_lock_path(name, &target, pass, store_dir)
 }
 
-fn vault_delete(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+fn vault_delete(name: &str, pass: &str, store_dir: &Path) -> (String, bool) {
     let enc_file = store_dir.join(format!("{}.enc", name));
     let panic_file = store_dir.join(format!("{}.panic", name));
 

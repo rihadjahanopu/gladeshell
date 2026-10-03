@@ -239,8 +239,8 @@ pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>>
         }
 
         let file_type = entry.file_type();
-        let is_dir = file_type.as_ref().map_or(false, |ft| ft.is_dir());
-        let is_symlink = file_type.as_ref().map_or(false, |ft| ft.is_symlink());
+        let is_dir = file_type.as_ref().is_some_and(|ft| ft.is_dir());
+        let is_symlink = file_type.as_ref().is_some_and(|ft| ft.is_symlink());
 
         // Exclude directories by default for file finder (ff)
         if is_dir {
@@ -250,7 +250,7 @@ pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>>
         // Type filter
         if let Some(ref target_type) = args.file_type {
             match target_type.to_lowercase().as_str() {
-                "f" | "file" if !file_type.as_ref().map_or(false, |ft| ft.is_file()) => continue,
+                "f" | "file" if !file_type.as_ref().is_some_and(|ft| ft.is_file()) => continue,
                 "l" | "link" | "symlink" if !is_symlink => continue,
                 _ => {}
             }
@@ -484,8 +484,8 @@ fn run_interactive(mut args: FfArgs) -> Result<(), Box<dyn Error>> {
     )?;
     terminal.show_cursor()?;
 
-    match res {
-        Ok(Some(action)) => match action {
+    if let Ok(Some(action)) = res {
+        match action {
             FfAction::OpenDefault(path) => {
                 // Handled entirely by Rust — no shell prefix needed (avoids double open)
                 open_file_natively(&path);
@@ -501,8 +501,7 @@ fn run_interactive(mut args: FfArgs) -> Result<(), Box<dyn Error>> {
                 copy_to_clipboard(&path);
                 println!("COPIED:{}", path);
             }
-        },
-        _ => {}
+        }
     }
 
     Ok(())
@@ -705,6 +704,7 @@ fn spinner_char(tick: u64) -> &'static str {
     frames[(tick as usize) % frames.len()]
 }
 
+#[allow(clippy::unwrap_in_result)]
 fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
     terminal: &mut Terminal<B>,
     args: &mut FfArgs,
@@ -944,7 +944,7 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
             };
 
             let is_copied_recently =
-                copy_notice_time.map_or(false, |t| t.elapsed() < Duration::from_secs(2));
+                copy_notice_time.is_some_and(|t| t.elapsed() < Duration::from_secs(2));
 
             let path_title = if is_copied_recently {
                 Span::styled(

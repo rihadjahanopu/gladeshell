@@ -251,7 +251,7 @@ impl<'a> RunnerState<'a> {
     }
 
     fn pulse(&self) -> bool {
-        (self.tick / 4) % 2 == 0
+        (self.tick / 4).is_multiple_of(2)
     }
 }
 
@@ -340,11 +340,9 @@ fn interactive_runner(files: &[FileMeta]) -> Result<Option<(usize, RunMode)>, Bo
                                 }
                             }
 
-                            KeyCode::Enter | KeyCode::Right => {
-                                if st.selected().is_some() {
-                                    st.pane = ActivePane::ModeSelect;
-                                    st.mode_cursor = 0;
-                                }
+                            KeyCode::Enter | KeyCode::Right if st.selected().is_some() => {
+                                st.pane = ActivePane::ModeSelect;
+                                st.mode_cursor = 0;
                             }
                             _ => {}
                         },

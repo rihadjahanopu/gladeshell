@@ -485,10 +485,8 @@ pub fn run(
                                     app.progress = None;
                                 }
                             }
-                            KeyCode::Char('q') => {
-                                if !app.is_compressing {
-                                    break;
-                                }
+                            KeyCode::Char('q') if !app.is_compressing => {
+                                break;
                             }
                             _ => {}
                         }
@@ -579,10 +577,8 @@ pub fn run(
                             app.format = app.format.next();
                         }
                     }
-                    MouseEventKind::ScrollUp => {
-                        if !app.is_compressing {
-                            app.format = app.format.prev();
-                        }
+                    MouseEventKind::ScrollUp if !app.is_compressing => {
+                        app.format = app.format.prev();
                     }
                     _ => {}
                 },

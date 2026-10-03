@@ -337,10 +337,8 @@ pub fn ensure_all_installed_shells_configured() -> std::io::Result<Vec<String>> 
 
     for shell in &target_shells {
         if let Some(path) = get_rc_path_for_shell(shell) {
-            if path.exists() {
-                if ensure_init_in_rc(shell)? {
-                    configured.push(shell.to_string());
-                }
+            if path.exists() && ensure_init_in_rc(shell)? {
+                configured.push(shell.to_string());
             }
         }
     }

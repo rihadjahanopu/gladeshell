@@ -470,7 +470,7 @@ fn strip_ansi_codes(s: &str) -> String {
 fn clean_lines(s: &str) -> Vec<String> {
     let stripped = strip_ansi_codes(s);
     stripped
-        .split(|c| c == '\n' || c == '\r')
+        .split(['\n', '\r'])
         .filter_map(|part| {
             let trimmed = part.trim_end();
             if trimmed.is_empty() {
@@ -880,11 +880,9 @@ fn draw_running_or_done(f: &mut Frame, app: &mut CleanApp) {
         .filter(|s| s.status == StatusKind::Success || s.status == StatusKind::Failed)
         .count();
     let total_count = app.selected_states.len();
-    let percent = if total_count > 0 {
-        (completed_count * 100) / total_count
-    } else {
-        0
-    };
+    let percent = (completed_count * 100)
+        .checked_div(total_count)
+        .unwrap_or(0);
     let is_done = app.state == AppState::Done;
     let tick_spin = if is_done {
         "✨"

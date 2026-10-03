@@ -85,7 +85,7 @@ pub fn run(args: GrepArgs) -> Result<(), Box<dyn Error>> {
                 }
             };
 
-            if entry.file_type().map_or(false, |ft| ft.is_file()) {
+            if entry.file_type().is_some_and(|ft| ft.is_file()) {
                 let path = entry.path();
                 let mut buffer = writer.buffer();
                 let mut printer = StandardBuilder::new().build(&mut buffer);

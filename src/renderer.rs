@@ -242,7 +242,7 @@ impl Renderer {
                     }
                 }
 
-                Some(&c2) if matches!(c2, 'P' | 'X' | '^' | '_') => {
+                Some('P' | 'X' | '^' | '_') => {
                     // DCS / SOS / PM / APC: same termination as OSC
                     chars.next(); // consume the introducer
                     loop {
@@ -275,6 +275,10 @@ impl Default for Renderer {
         Self::new()
     }
 }
+
+// Re-export KeyModifiers for use in tests above
+#[cfg(test)]
+use crate::input_parser::KeyModifiers;
 
 // ============================================================================
 // Unit Tests
@@ -434,7 +438,3 @@ mod tests {
         let _ = renderer.render_line_to_string(&make_buffer("café --option", None), "❯❯❯ ");
     }
 }
-
-// Re-export KeyModifiers for use in tests above
-#[cfg(test)]
-use crate::input_parser::KeyModifiers;

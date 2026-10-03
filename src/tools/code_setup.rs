@@ -1331,12 +1331,10 @@ fn install_settings(dir: &Path) -> bool {
         println!("  {}❌ Cannot create dir → {}{}", RED, dir.display(), NC);
         return false;
     }
-    if target.is_file() {
-        if fs::metadata(&target).map(|m| m.len() > 0).unwrap_or(false) {
-            let bak = dir.join(format!("settings.json.bak.{}", get_timestamp()));
-            if fs::copy(&target, &bak).is_ok() {
-                println!("  {}💾 Backup → {}{}", GRAY, bak.display(), NC);
-            }
+    if target.is_file() && fs::metadata(&target).map(|m| m.len() > 0).unwrap_or(false) {
+        let bak = dir.join(format!("settings.json.bak.{}", get_timestamp()));
+        if fs::copy(&target, &bak).is_ok() {
+            println!("  {}💾 Backup → {}{}", GRAY, bak.display(), NC);
         }
     }
     let payload = format!("{}\n", VSCODE_SETTINGS);

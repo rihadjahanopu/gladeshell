@@ -717,15 +717,14 @@ fn run_version(args: &[&str]) -> Option<String> {
                     _ => None,
                 };
 
-                if let Some(fb_path) = fallback {
+                {
+                    let fb_path = fallback?;
                     Command::new(fb_path)
                         .args(&args[1..])
                         .stdout(Stdio::piped())
                         .stderr(Stdio::null())
                         .output()
                         .ok()?
-                } else {
-                    return None;
                 }
             } else {
                 return None;
@@ -738,101 +737,6 @@ fn run_version(args: &[&str]) -> Option<String> {
         None
     } else {
         Some(s)
-    }
-}
-
-// =============================================================================
-//  Unit tests
-// =============================================================================
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_run_version_debug() {
-        println!("NODE VERSION: {:?}", run_version(&["node", "-v"]));
-        println!("NPM VERSION: {:?}", run_version(&["npm", "-v"]));
-        println!("BUN VERSION: {:?}", run_version(&["bun", "-v"]));
-    }
-
-    #[test]
-    fn test_folder_size_cached() {
-        let size = get_folder_size_cached(Path::new("."));
-        println!("FOLDER SIZE FOR '.': {:?}", size);
-        assert!(!size.is_empty());
-    }
-
-    #[test]
-    fn test_collect_does_not_panic() {
-        let m = SystemMetrics::collect();
-        assert!(m.mem_percent <= 100);
-    }
-
-    #[test]
-    fn test_mem_display_format() {
-        let mut m = SystemMetrics::default();
-        m.mem_used_mb = 512;
-        m.mem_total_mb = 7932;
-        assert_eq!(m.mem_display(), "🧠 512M/7932M");
-    }
-
-    #[test]
-    fn test_cpu_temp_display_colors() {
-        let mut m = SystemMetrics::default();
-
-        m.cpu_temp_c = None;
-        assert!(m.cpu_temp_display().is_empty());
-
-        m.cpu_temp_c = Some(40);
-        assert!(m.cpu_temp_display().contains("🌡️"));
-        assert!(m.cpu_temp_display().contains("\x1b[92m")); // green
-
-        m.cpu_temp_c = Some(60);
-        assert!(m.cpu_temp_display().contains("\x1b[93m")); // yellow
-
-        m.cpu_temp_c = Some(80);
-        assert!(m.cpu_temp_display().contains("\x1b[91m")); // red
-    }
-
-    #[test]
-    fn test_kernel_display() {
-        let mut m = SystemMetrics::default();
-        m.kernel_version = "6.8.0".into();
-        assert_eq!(m.kernel_display(), "🐧 6.8.0");
-
-        m.kernel_version = String::new();
-        assert!(m.kernel_display().is_empty());
-    }
-
-    #[test]
-    fn test_cmd_duration_display() {
-        assert!(cmd_duration_display(0).is_empty());
-        assert_eq!(cmd_duration_display(3), " ⏱️ 3s");
-        assert_eq!(cmd_duration_display(65), " ⏱️ 1m5s");
-        assert_eq!(cmd_duration_display(3665), " ⏱️ 1h1m");
-    }
-
-    #[test]
-    fn test_tool_versions_does_not_panic() {
-        // Just ensure it doesn't crash, versions may or may not be installed
-        let tv = ToolVersions::collect();
-        println!("COLLECTED TV: {:?}", tv);
-    }
-
-    #[test]
-    fn test_time_date_not_empty() {
-        let d = time_date();
-        assert!(!d.is_empty());
-        assert!(d.contains("📅"));
-    }
-
-    #[test]
-    fn test_readonly_display() {
-        let mut m = SystemMetrics::default();
-        m.is_readonly = false;
-        assert!(m.readonly_display().is_empty());
-        m.is_readonly = true;
-        assert_eq!(m.readonly_display(), " 🔒");
     }
 }
 
@@ -863,7 +767,7 @@ fn read_disk_free_native() -> f32 {
         let mut stat: MaybeUninit<libc_statfs> = MaybeUninit::uninit();
         if unsafe { raw_statfs(path.as_ptr() as *const c_char, stat.as_mut_ptr()) } == 0 {
             let s = unsafe { stat.assume_init() };
-            let avail_bytes = s.f_bavail as u64 * s.f_bsize as u64;
+            let avail_bytes = s.f_bavail * s.f_bsize as u64;
             return avail_bytes as f32 / (1024.0 * 1024.0 * 1024.0);
         }
     }
@@ -972,5 +876,115 @@ fn format_bytes(bytes: u64) -> String {
         format!("{:.1}K", bytes as f64 / 1_024.0)
     } else {
         format!("{}B", bytes)
+    }
+}
+
+// =============================================================================
+//  Unit tests
+// =============================================================================
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_run_version_debug() {
+        println!("NODE VERSION: {:?}", run_version(&["node", "-v"]));
+        println!("NPM VERSION: {:?}", run_version(&["npm", "-v"]));
+        println!("BUN VERSION: {:?}", run_version(&["bun", "-v"]));
+    }
+
+    #[test]
+    fn test_folder_size_cached() {
+        let size = get_folder_size_cached(Path::new("."));
+        println!("FOLDER SIZE FOR '.': {:?}", size);
+        assert!(!size.is_empty());
+    }
+
+    #[test]
+    fn test_collect_does_not_panic() {
+        let m = SystemMetrics::collect();
+        assert!(m.mem_percent <= 100);
+    }
+
+    #[test]
+    fn test_mem_display_format() {
+        let m = SystemMetrics {
+            mem_used_mb: 512,
+            mem_total_mb: 7932,
+            ..Default::default()
+        };
+        assert_eq!(m.mem_display(), "🧠 512M/7932M");
+    }
+
+    #[test]
+    fn test_cpu_temp_display_colors() {
+        assert!(SystemMetrics::default().cpu_temp_display().is_empty());
+
+        let m40 = SystemMetrics {
+            cpu_temp_c: Some(40),
+            ..Default::default()
+        };
+        assert!(m40.cpu_temp_display().contains("🌡️"));
+        assert!(m40.cpu_temp_display().contains("\x1b[92m")); // green
+
+        let m60 = SystemMetrics {
+            cpu_temp_c: Some(60),
+            ..Default::default()
+        };
+        assert!(m60.cpu_temp_display().contains("\x1b[93m")); // yellow
+
+        let m80 = SystemMetrics {
+            cpu_temp_c: Some(80),
+            ..Default::default()
+        };
+        assert!(m80.cpu_temp_display().contains("\x1b[91m")); // red
+    }
+
+    #[test]
+    fn test_kernel_display() {
+        let m = SystemMetrics {
+            kernel_version: "6.8.0".into(),
+            ..Default::default()
+        };
+        assert_eq!(m.kernel_display(), "🐧 6.8.0");
+
+        let m2 = SystemMetrics::default();
+        assert!(m2.kernel_display().is_empty());
+    }
+
+    #[test]
+    fn test_cmd_duration_display() {
+        assert!(cmd_duration_display(0).is_empty());
+        assert_eq!(cmd_duration_display(3), " ⏱️ 3s");
+        assert_eq!(cmd_duration_display(65), " ⏱️ 1m5s");
+        assert_eq!(cmd_duration_display(3665), " ⏱️ 1h1m");
+    }
+
+    #[test]
+    fn test_tool_versions_does_not_panic() {
+        // Just ensure it doesn't crash, versions may or may not be installed
+        let tv = ToolVersions::collect();
+        println!("COLLECTED TV: {:?}", tv);
+    }
+
+    #[test]
+    fn test_time_date_not_empty() {
+        let d = time_date();
+        assert!(!d.is_empty());
+        assert!(d.contains("📅"));
+    }
+
+    #[test]
+    fn test_readonly_display() {
+        let m = SystemMetrics {
+            is_readonly: false,
+            ..Default::default()
+        };
+        assert!(m.readonly_display().is_empty());
+        let m2 = SystemMetrics {
+            is_readonly: true,
+            ..Default::default()
+        };
+        assert_eq!(m2.readonly_display(), " 🔒");
     }
 }

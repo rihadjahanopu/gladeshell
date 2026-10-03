@@ -822,10 +822,11 @@ fn read_disk_free_native() -> f32 {
     {
         use std::mem::MaybeUninit;
         use std::ffi::CString;
+        use std::os::raw::c_char;
 
         let path = CString::new("/").unwrap_or_default();
         let mut stat: MaybeUninit<libc_statfs> = MaybeUninit::uninit();
-        if unsafe { raw_statfs(path.as_ptr() as *const i8, stat.as_mut_ptr()) } == 0 {
+        if unsafe { raw_statfs(path.as_ptr() as *const c_char, stat.as_mut_ptr()) } == 0 {
             let s = unsafe { stat.assume_init() };
             let avail_bytes = s.f_bavail as u64 * s.f_bsize as u64;
             return avail_bytes as f32 / (1024.0 * 1024.0 * 1024.0);
@@ -854,11 +855,11 @@ struct libc_statfs {
 
 #[cfg(target_os = "linux")]
 extern "C" {
-    fn statfs(path: *const i8, buf: *mut libc_statfs) -> i32;
+    fn statfs(path: *const std::os::raw::c_char, buf: *mut libc_statfs) -> i32;
 }
 
 #[cfg(target_os = "linux")]
-unsafe fn raw_statfs(path: *const i8, buf: *mut libc_statfs) -> i32 {
+unsafe fn raw_statfs(path: *const std::os::raw::c_char, buf: *mut libc_statfs) -> i32 {
     unsafe { statfs(path, buf) }
 }
 
@@ -866,7 +867,7 @@ unsafe fn raw_statfs(path: *const i8, buf: *mut libc_statfs) -> i32 {
 #[repr(C)]
 struct libc_statfs { f_bsize: i64, f_bavail: u64 }
 #[cfg(not(target_os = "linux"))]
-unsafe fn raw_statfs(_path: *const i8, _buf: *mut libc_statfs) -> i32 { -1 }
+unsafe fn raw_statfs(_path: *const std::os::raw::c_char, _buf: *mut libc_statfs) -> i32 { -1 }
 
 // ── Native dir size — no `du` binary ─────────────────────────────────────────
 

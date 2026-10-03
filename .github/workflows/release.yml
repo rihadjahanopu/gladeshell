@@ -121,15 +121,15 @@ jobs:
             os: ubuntu-22.04
             asset_name: gladeshell-linux-amd64-musl
             use_cross: false
-          # ── Linux aarch64 (via `cargo-zigbuild` — Zig as C cross-linker, used by Bun/Deno)
+          # ── Linux aarch64 (native ubuntu-24.04-arm runner — zero cross-compilation)
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04
+            os: ubuntu-24.04-arm
             asset_name: gladeshell-linux-arm64
-            use_zigbuild: true
+            use_zigbuild: false
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-22.04
+            os: ubuntu-24.04-arm
             asset_name: gladeshell-linux-arm64-musl
-            use_zigbuild: true
+            use_zigbuild: false
           # ── macOS ─────────────────────────────────────────────────────────────
           - target: x86_64-apple-darwin
             os: macos-latest
@@ -168,11 +168,9 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install cargo-zigbuild + Zig (for aarch64 Linux targets)
-        if: matrix.use_zigbuild == true
-        run: |
-          pip install ziglang --quiet
-          cargo install cargo-zigbuild --locked --quiet
+      - name: Install musl tools (aarch64 MUSL on native ARM runner)
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Build release binary
         shell: bash

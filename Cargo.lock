@@ -1088,7 +1088,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "glade-regex"
+name = "fancy-regex"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b95f7c0680e4142284cf8b22c14a476e87d61b004a3a0861872b32ef7ead40a2"
@@ -2180,7 +2180,7 @@ dependencies = [
 
 [[package]]
 name = "gladeshell"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "aes-gcm",
  "arboard",
@@ -4127,7 +4127,7 @@ dependencies = [
  "anyhow",
  "base64 0.22.1",
  "bitflags 2.13.2",
- "glade-regex",
+ "fancy-regex",
  "filedescriptor",
  "finl_unicode",
  "fixedbitset",

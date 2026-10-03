@@ -188,11 +188,13 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
-            BIN_PATH="target/${{ matrix.target }}/release/gladeshell"
-            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/gladeshell"
-            if [ -f "$BIN_PATH" ]; then
-              strip "$BIN_PATH" 2>/dev/null || true
-            fi
+            for BIN in gladeshell ftop; do
+              BIN_PATH="target/${{ matrix.target }}/release/${BIN}"
+              [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/${BIN}"
+              if [ -f "$BIN_PATH" ]; then
+                strip "$BIN_PATH" 2>/dev/null || true
+              fi
+            done
           fi
 
       - name: Package binary & release archive
@@ -201,36 +203,51 @@ jobs:
           STAGE_DIR="gladeshell-${{ matrix.target }}"
           mkdir -p "$STAGE_DIR"
 
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            BIN_PATH="target/${{ matrix.target }}/release/gladeshell.exe"
-            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/gladeshell.exe"
+          # Derive ftop asset name from gladeshell asset name
+          FTOP_ASSET="${{ matrix.asset_name }}"
+          FTOP_ASSET="${FTOP_ASSET/gladeshell/ftop}"
 
-            cp "$BIN_PATH" "$STAGE_DIR/"
-            cp "$BIN_PATH" "${{ matrix.asset_name }}"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            GLADE_BIN="target/${{ matrix.target }}/release/gladeshell.exe"
+            [ ! -f "$GLADE_BIN" ] && GLADE_BIN="target/release/gladeshell.exe"
+            FTOP_BIN="target/${{ matrix.target }}/release/ftop.exe"
+            [ ! -f "$FTOP_BIN" ] && FTOP_BIN="target/release/ftop.exe"
+
+            cp "$GLADE_BIN" "$STAGE_DIR/"
+            cp "$GLADE_BIN" "${{ matrix.asset_name }}"
+            [ -f "$FTOP_BIN" ] && cp "$FTOP_BIN" "$STAGE_DIR/" || true
+            [ -f "$FTOP_BIN" ] && cp "$FTOP_BIN" "${FTOP_ASSET}" || true
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
             7z a "${STAGE_DIR}.zip" "./${STAGE_DIR}/*"
-            
+
             # Cross-platform SHA256 sum for Windows
             if command -v sha256sum >/dev/null 2>&1; then
               sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+              [ -f "${FTOP_ASSET}" ] && sha256sum "${FTOP_ASSET}" > "${FTOP_ASSET}.sha256" || true
             else
               powershell -c "(Get-FileHash -Algorithm SHA256 '${{ matrix.asset_name }}').Hash.ToLower() + '  ${{ matrix.asset_name }}'" > "${{ matrix.asset_name }}.sha256"
+              if (Test-Path "${FTOP_ASSET}") { powershell -c "(Get-FileHash -Algorithm SHA256 '${FTOP_ASSET}').Hash.ToLower() + '  ${FTOP_ASSET}'" > "${FTOP_ASSET}.sha256" }
             fi
           else
-            BIN_PATH="target/${{ matrix.target }}/release/gladeshell"
-            [ ! -f "$BIN_PATH" ] && BIN_PATH="target/release/gladeshell"
+            GLADE_BIN="target/${{ matrix.target }}/release/gladeshell"
+            [ ! -f "$GLADE_BIN" ] && GLADE_BIN="target/release/gladeshell"
+            FTOP_BIN="target/${{ matrix.target }}/release/ftop"
+            [ ! -f "$FTOP_BIN" ] && FTOP_BIN="target/release/ftop"
 
-            cp "$BIN_PATH" "$STAGE_DIR/"
-            cp "$BIN_PATH" "${{ matrix.asset_name }}"
+            cp "$GLADE_BIN" "$STAGE_DIR/"
+            cp "$GLADE_BIN" "${{ matrix.asset_name }}"
+            [ -f "$FTOP_BIN" ] && cp "$FTOP_BIN" "$STAGE_DIR/" || true
+            [ -f "$FTOP_BIN" ] && cp "$FTOP_BIN" "${FTOP_ASSET}" || true
             cp README.md LICENSE "$STAGE_DIR/" 2>/dev/null || true
-            tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" gladeshell README.md LICENSE 2>/dev/null || tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" gladeshell
+            tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" . 2>/dev/null || tar -czf "${STAGE_DIR}.tar.gz" -C "$STAGE_DIR" gladeshell
             sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+            [ -f "${FTOP_ASSET}" ] && sha256sum "${FTOP_ASSET}" > "${FTOP_ASSET}.sha256" || true
           fi
 
       - name: Generate Combined SHA256SUMS Manifest
         shell: bash
         run: |
-          sha256sum gladeshell-* 2>/dev/null > SHA256SUMS-${{ matrix.target }}.txt || true
+          sha256sum gladeshell-* ftop-* 2>/dev/null > SHA256SUMS-${{ matrix.target }}.txt || true
 
       - name: Publish Release Artifacts
         uses: softprops/action-gh-release@v2
@@ -242,4 +259,5 @@ jobs:
           fail_on_unmatched_files: false
           files: |
             gladeshell-*
+            ftop-*
             SHA256SUMS-*.txt

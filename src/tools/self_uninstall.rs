@@ -138,6 +138,12 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         home.join(".local/bin/gladeshell"),
         home.join(".local/bin/gladeshell.exe"),
         PathBuf::from("/usr/local/bin/gladeshell"),
+        // ftop is part of gladeshell — remove it too
+        home.join(".cargo/bin/ftop"),
+        home.join(".cargo/bin/ftop.exe"),
+        home.join(".local/bin/ftop"),
+        home.join(".local/bin/ftop.exe"),
+        PathBuf::from("/usr/local/bin/ftop"),
     ];
 
     for bin in bin_paths {

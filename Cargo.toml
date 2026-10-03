@@ -16,6 +16,14 @@ categories = ["command-line-utilities"]
 name = "gladeshell"
 path = "src/main.rs"
 
+# 2. Standalone `ftop` binary  →  delegates to gladeshell_core::tools::ftop::run()
+#    Always built & installed alongside gladeshell — zero code duplication.
+#    `cargo install --path . --force` installs BOTH ~/.cargo/bin/gladeshell & ~/.cargo/bin/ftop
+[[bin]]
+name = "ftop"
+path = "src/bin/ftop.rs"
+required-features = ["tools"]
+
 # 3. C-ABI dynamic library  →  loaded in-process by the shell (zero-fork prompt)
 [lib]
 name = "gladeshell_core"

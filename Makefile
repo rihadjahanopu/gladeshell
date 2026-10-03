@@ -41,10 +41,9 @@ hooks:
 install:
 	cargo install --path . --force
 	@mkdir -p ~/.local/bin
-	@rm -f ~/.local/bin/gladeshell ~/.local/bin/ftop 2>/dev/null || true
+	@rm -f ~/.local/bin/gladeshell 2>/dev/null || true
 	@cp -f ~/.cargo/bin/gladeshell ~/.local/bin/gladeshell 2>/dev/null || true
-	@cp -f ~/.cargo/bin/ftop ~/.local/bin/ftop 2>/dev/null || true
-	@echo "\n✨ gladeshell + ftop installed to ~/.cargo/bin/ and ~/.local/bin/"
+	@echo "\n✨ gladeshell installed to ~/.cargo/bin/gladeshell and ~/.local/bin/gladeshell"
 	@echo "🔧 Auto-configuring your shell..."
 	@gladeshell setup || true
 	@echo ""
@@ -54,19 +53,17 @@ update:
 	git pull
 	cargo install --path . --force
 	@mkdir -p ~/.local/bin
-	@rm -f ~/.local/bin/gladeshell ~/.local/bin/ftop 2>/dev/null || true
+	@rm -f ~/.local/bin/gladeshell 2>/dev/null || true
 	@cp -f ~/.cargo/bin/gladeshell ~/.local/bin/gladeshell 2>/dev/null || true
-	@cp -f ~/.cargo/bin/ftop ~/.local/bin/ftop 2>/dev/null || true
 	@gladeshell setup || true
-	@echo "✨ gladeshell + ftop updated and auto-configured successfully!"
+	@echo "✨ gladeshell updated and auto-configured successfully!"
 
 ## uninstall: Remove gladeshell binary and restore shell configuration
 uninstall:
 	@gladeshell uninstall 2>/dev/null || true
 	@rm -f ~/.local/bin/gladeshell ~/.cargo/bin/gladeshell 2>/dev/null || true
-	@rm -f ~/.local/bin/ftop ~/.cargo/bin/ftop 2>/dev/null || true
 	@cargo uninstall gladeshell 2>/dev/null || true
-	@echo "🗑️ gladeshell + ftop uninstalled and shell configuration cleaned."
+	@echo "🗑️ gladeshell uninstalled and shell configuration cleaned."
 
 ## help: Display available Makefile targets
 help:

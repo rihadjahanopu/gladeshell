@@ -490,12 +490,6 @@ fn build_categories() -> Vec<CmdCategory> {
                     color: C_ACCENT,
                 },
                 CmdEntry {
-                    cmd: "ftop / sysmon",
-                    desc: "Native Ratatui TUI System & Process Monitor",
-                    example: "sysmon",
-                    color: C_GREEN,
-                },
-                CmdEntry {
                     cmd: "fh",
                     desc: "Fuzzy History Search",
                     example: "fh",

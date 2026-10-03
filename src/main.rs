@@ -187,10 +187,6 @@ enum Commands {
     /// Non-interactive System Maintenance Cache Cleaner (clean)
     Clean,
 
-    /// GLADESHELL TUI System & Process Monitor (ftop / sysmon / monitor)
-    #[command(alias = "ftop", alias = "monitor")]
-    Sysmon,
-
     /// Interactive JS Runtime & NVM Installer (rt)
     Rt,
 
@@ -704,7 +700,6 @@ fn main() {
             Commands::V { target } => gladeshell_core::tools::video_player::run(target.as_deref()),
             Commands::Uc => gladeshell_core::tools::universal_clean::run(),
             Commands::Clean => gladeshell_core::tools::system_clean::run(),
-            Commands::Sysmon => gladeshell_core::tools::ftop::run(),
             Commands::Rt => gladeshell_core::tools::runtime_installer::run(),
             Commands::Rn { target } => gladeshell_core::tools::file_renamer::run(target.as_deref()),
             Commands::Pg { file, install } => {

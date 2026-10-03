@@ -63,10 +63,8 @@ termcolor = { version = "1.4", optional = true }
 # Directory walking (Phase 4 tools: ex, makecpp)
 walkdir = { version = "2", optional = true }
 
-# Native cross-platform clipboard (X11 + macOS + Windows — pure Rust x11rb backend)
-# default-features = false disables `image-data` (CoreGraphics/GDI) and wayland-data-control
-# keeping only the pure-Rust x11rb X11 backend on Linux → zero C deps → cross-compiles anywhere
-arboard = { version = "3", default-features = false, optional = true }
+# Native cross-platform clipboard (X11 + Wayland + macOS — zero external binary)
+arboard = { version = "3", optional = true }
 
 # Pure Rust Cryptography & Vault Archiving Dependencies (Zero external binary)
 aes-gcm = { version = "0.11", optional = true }

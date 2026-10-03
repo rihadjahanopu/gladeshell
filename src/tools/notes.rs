@@ -2269,7 +2269,7 @@ mod tests {
         let (msg, _is_err) = app.status_msg.unwrap();
         // Accept both: clipboard worked OR clipboard unavailable (headless CI)
         assert!(
-            msg.contains("Copied note content") || msg.contains("clipboard"),
+            msg.contains("Copied note content") || msg.to_lowercase().contains("clipboard"),
             "unexpected status message: {msg}"
         );
 

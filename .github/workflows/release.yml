@@ -174,9 +174,6 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install clipboard C dependencies (aarch64 Linux — arboard X11/Wayland)
-        if: contains(matrix.target, 'aarch64') && contains(matrix.target, 'linux')
-        run: sudo apt-get update && sudo apt-get install -y libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libwayland-dev pkg-config
 
       - name: Build release binary
         shell: bash

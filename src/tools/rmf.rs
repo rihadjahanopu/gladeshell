@@ -33,7 +33,10 @@ pub fn run(name: &str, force: bool) -> Result<(), Box<dyn Error>> {
         println!("\x1b[1;32m✅ Removed: {}\x1b[0m", name);
     } else {
         use std::io::{self, Write};
-        print!("\x1b[1;33m❓ Remove '{}'? [y/N] (run with -f to skip prompt): \x1b[0m", name);
+        print!(
+            "\x1b[1;33m❓ Remove '{}'? [y/N] (run with -f to skip prompt): \x1b[0m",
+            name
+        );
         io::stdout().flush()?;
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;

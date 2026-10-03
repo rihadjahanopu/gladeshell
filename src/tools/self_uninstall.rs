@@ -83,7 +83,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     // Create an automatic timestamped backup before touching the file
                     let backup_filename = format!(
                         "{}.gladeshell_bak_{}",
-                        path.file_name().and_then(|s| s.to_str()).unwrap_or("config"),
+                        path.file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("config"),
                         timestamp
                     );
                     let backup_path = path.with_file_name(backup_filename);
@@ -173,9 +175,13 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         );
     }
     if cleaned_count == 0 {
-        println!("\x1b[0;33mℹ️ No active gladeshell initializations were found in shell configs.\x1b[0m");
+        println!(
+            "\x1b[0;33mℹ️ No active gladeshell initializations were found in shell configs.\x1b[0m"
+        );
     }
-    println!("\x1b[1;35m🐚 Please restart your terminal session for all changes to take effect.\x1b[0m");
+    println!(
+        "\x1b[1;35m🐚 Please restart your terminal session for all changes to take effect.\x1b[0m"
+    );
 
     Ok(())
 }
@@ -214,5 +220,3 @@ mod tests {
         assert_eq!(tildify(&path, &home), "~/.bashrc");
     }
 }
-
-

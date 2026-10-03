@@ -90,7 +90,8 @@ impl App {
         if self.filtered.is_empty() {
             self.list_state.select(None);
         } else {
-            self.list_state.select(Some(sel.min(self.filtered.len() - 1)));
+            self.list_state
+                .select(Some(sel.min(self.filtered.len() - 1)));
         }
     }
 
@@ -101,13 +102,21 @@ impl App {
     }
 
     fn move_up(&mut self) {
-        if self.filtered.is_empty() { return; }
+        if self.filtered.is_empty() {
+            return;
+        }
         let i = self.list_state.selected().unwrap_or(0);
-        self.list_state.select(Some(if i == 0 { self.filtered.len() - 1 } else { i - 1 }));
+        self.list_state.select(Some(if i == 0 {
+            self.filtered.len() - 1
+        } else {
+            i - 1
+        }));
     }
 
     fn move_down(&mut self) {
-        if self.filtered.is_empty() { return; }
+        if self.filtered.is_empty() {
+            return;
+        }
         let i = self.list_state.selected().unwrap_or(0);
         self.list_state.select(Some((i + 1) % self.filtered.len()));
     }
@@ -130,11 +139,21 @@ pub fn run_fkill() -> Result<(), Box<dyn std::error::Error>> {
                 "{:<8} {:<22} {:>7.1} MB  CPU {:>5.1}%",
                 pid_num, name, memory_mb, cpu
             );
-            ProcessEntry { pid: pid_num, name, memory_mb, cpu, display }
+            ProcessEntry {
+                pid: pid_num,
+                name,
+                memory_mb,
+                cpu,
+                display,
+            }
         })
         .collect();
 
-    processes.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap_or(std::cmp::Ordering::Equal));
+    processes.sort_by(|a, b| {
+        b.memory_mb
+            .partial_cmp(&a.memory_mb)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     if processes.is_empty() {
         println!("📋 No running processes found.");
@@ -169,7 +188,9 @@ pub fn run_fkill() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
-                    _ => { app.confirm_kill = None; }
+                    _ => {
+                        app.confirm_kill = None;
+                    }
                 }
                 continue;
             }
@@ -203,10 +224,7 @@ pub fn run_fkill() -> Result<(), Box<dyn std::error::Error>> {
 
 fn draw_fkill(f: &mut Frame, app: &mut App) {
     let area = f.area();
-    f.render_widget(
-        Block::default().style(Style::default().bg(C_BG)),
-        area,
-    );
+    f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
 
     let outer = Layout::default()
         .direction(Direction::Vertical)
@@ -221,7 +239,10 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
     // ── Banner ──────────────────────────────────────────────────────────────
     let banner = Paragraph::new(Line::from(vec![
         Span::styled("⚡  ", Style::default().fg(C_ACCENT)),
-        Span::styled("FKILL", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "FKILL",
+            Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" — Interactive Process Killer", Style::default().fg(C_TEXT)),
         Span::styled(
             format!("  ({} procs)", app.processes.len()),
@@ -241,7 +262,10 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
     // ── Search Bar ──────────────────────────────────────────────────────────
     let search_text = Line::from(vec![
         Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
-        Span::styled(&app.query, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &app.query,
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("█", Style::default().fg(C_BORDER)),
         Span::styled(
             format!("  ({} matches)", app.filtered.len()),
@@ -253,32 +277,51 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_ACCENT))
-            .title(Span::styled(" Search Process ", Style::default().fg(C_ACCENT)))
+            .title(Span::styled(
+                " Search Process ",
+                Style::default().fg(C_ACCENT),
+            ))
             .style(Style::default().bg(C_BG)),
     );
     f.render_widget(search_bar, outer[1]);
 
     // ── Process List ────────────────────────────────────────────────────────
-    let header = Line::from(vec![
-        Span::styled(
-            format!("{:<8} {:<22} {:>9}  {:>10}", "PID", "NAME", "MEMORY", "CPU"),
-            Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
-        ),
-    ]);
+    let header = Line::from(vec![Span::styled(
+        format!("{:<8} {:<22} {:>9}  {:>10}", "PID", "NAME", "MEMORY", "CPU"),
+        Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+    )]);
     let mut items: Vec<ListItem> = vec![ListItem::new(header)];
 
     for (display_idx, &proc_idx) in app.filtered.iter().enumerate() {
         let p = &app.processes[proc_idx];
         let is_sel = app.list_state.selected() == Some(display_idx);
-        let mem_color = if p.memory_mb > 500.0 { C_BORDER } else if p.memory_mb > 100.0 { C_YELLOW } else { C_GREEN };
-        let cpu_color = if p.cpu > 50.0 { C_BORDER } else if p.cpu > 10.0 { C_YELLOW } else { C_GREEN };
+        let mem_color = if p.memory_mb > 500.0 {
+            C_BORDER
+        } else if p.memory_mb > 100.0 {
+            C_YELLOW
+        } else {
+            C_GREEN
+        };
+        let cpu_color = if p.cpu > 50.0 {
+            C_BORDER
+        } else if p.cpu > 10.0 {
+            C_YELLOW
+        } else {
+            C_GREEN
+        };
 
         let line = if is_sel {
             Line::from(vec![
-                Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " ▶ ",
+                    Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(
                     format!("{:<8} {:<22}", p.pid, &p.name),
-                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(50, 10, 10)),
+                    Style::default()
+                        .fg(C_WHITE)
+                        .add_modifier(Modifier::BOLD)
+                        .bg(Color::Rgb(50, 10, 10)),
                 ),
                 Span::styled(
                     format!("{:>7.1} MB", p.memory_mb),
@@ -296,8 +339,14 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
                     format!("{:<8} {:<22}", p.pid, &p.name),
                     Style::default().fg(C_TEXT),
                 ),
-                Span::styled(format!("{:>7.1} MB", p.memory_mb), Style::default().fg(mem_color)),
-                Span::styled(format!("  CPU {:>5.1}%", p.cpu), Style::default().fg(cpu_color)),
+                Span::styled(
+                    format!("{:>7.1} MB", p.memory_mb),
+                    Style::default().fg(mem_color),
+                ),
+                Span::styled(
+                    format!("  CPU {:>5.1}%", p.cpu),
+                    Style::default().fg(cpu_color),
+                ),
             ])
         };
         items.push(ListItem::new(line));
@@ -308,7 +357,10 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
-            .title(Span::styled(" Processes ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                " Processes ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ))
             .style(Style::default().bg(C_BG)),
     );
     // offset by 1 for header
@@ -318,16 +370,30 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
 
     // ── Status Bar ──────────────────────────────────────────────────────────
     let status_text = if let Some(ref msg) = app.status_msg {
-        Line::from(vec![Span::styled(msg.clone(), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))])
+        Line::from(vec![Span::styled(
+            msg.clone(),
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )])
     } else {
         Line::from(vec![
-            Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ↑↓ ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Navigate", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("↵ ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "↵ ",
+                Style::default()
+                    .fg(Color::Rgb(255, 100, 100))
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Kill Process", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("⎋ ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "⎋ ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Quit ", Style::default().fg(C_DIM)),
         ])
     };
@@ -344,21 +410,35 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
 
     // ── Confirm Dialog ──────────────────────────────────────────────────────
     if let Some(pid) = app.confirm_kill {
-        let proc_name = app.processes.iter().find(|p| p.pid == pid).map(|p| p.name.clone()).unwrap_or_default();
+        let proc_name = app
+            .processes
+            .iter()
+            .find(|p| p.pid == pid)
+            .map(|p| p.name.clone())
+            .unwrap_or_default();
         let dialog_area = centered_rect(50, 9, area);
         f.render_widget(Clear, dialog_area);
         let dialog = Paragraph::new(vec![
             Line::from(""),
             Line::from(vec![
                 Span::styled("  Kill process ", Style::default().fg(C_TEXT)),
-                Span::styled(format!("'{}' (PID {})", proc_name, pid), Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("'{}' (PID {})", proc_name, pid),
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("?", Style::default().fg(C_TEXT)),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("  Press ", Style::default().fg(C_DIM)),
-                Span::styled("[Y]", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-                Span::styled(" to confirm, any other key to cancel", Style::default().fg(C_DIM)),
+                Span::styled(
+                    "[Y]",
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " to confirm, any other key to cancel",
+                    Style::default().fg(C_DIM),
+                ),
             ]),
             Line::from(""),
         ])
@@ -368,7 +448,10 @@ fn draw_fkill(f: &mut Frame, app: &mut App) {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Double)
                 .border_style(Style::default().fg(C_BORDER))
-                .title(Span::styled(" ⚠  Confirm Kill ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " ⚠  Confirm Kill ",
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ))
                 .style(Style::default().bg(Color::Rgb(25, 8, 8))),
         );
         f.render_widget(dialog, dialog_area);
@@ -412,7 +495,14 @@ pub fn run_kp(port_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> 
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    println!("⚡ Found process(es) on port {}: {}", port, pids.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "));
+    println!(
+        "⚡ Found process(es) on port {}: {}",
+        port,
+        pids.iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
     for pid_num in pids {
         let target_pid = sysinfo::Pid::from(pid_num);
         if let Some(proc) = sys.process(target_pid) {
@@ -453,15 +543,19 @@ fn find_pids_by_port(port: u16) -> Vec<usize> {
         for entry in proc_dir.flatten() {
             let name = entry.file_name();
             let pid_str = name.to_string_lossy();
-            if !pid_str.chars().all(|c| c.is_ascii_digit()) { continue; }
-            let Ok(pid): Result<usize, _> = pid_str.parse() else { continue };
+            if !pid_str.chars().all(|c| c.is_ascii_digit()) {
+                continue;
+            }
+            let Ok(pid): Result<usize, _> = pid_str.parse() else {
+                continue;
+            };
             let fd_dir = entry.path().join("fd");
             if let Ok(fds) = fs::read_dir(&fd_dir) {
                 for fd in fds.flatten() {
                     if let Ok(link) = fs::read_link(fd.path()) {
                         let link_str = link.to_string_lossy();
                         if link_str.starts_with("socket:[") {
-                            let inner = &link_str[8..link_str.len()-1];
+                            let inner = &link_str[8..link_str.len() - 1];
                             if let Ok(inode) = inner.parse::<u64>() {
                                 if inodes.contains(&inode) {
                                     pids.push(pid);

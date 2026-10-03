@@ -8,10 +8,10 @@
 //  src/tools/project_setup/html.rs — Serve or run index.html (`html`)
 // =============================================================================
 
+use super::utils::{cmd_ok, resolve_cmd};
 use std::error::Error;
 use std::path::Path;
 use std::process::Command;
-use super::utils::{cmd_ok, resolve_cmd};
 
 /// `gladeshell html` — Serve or run `index.html` with Bun, or open in default browser.
 pub fn run_html() -> Result<(), Box<dyn Error>> {
@@ -25,7 +25,10 @@ pub fn run_html() -> Result<(), Box<dyn Error>> {
 
     if cmd_ok("bun", &["--version"]) {
         println!("🚀 Serving {html_file} with Bun...");
-        Command::new(resolve_cmd("bun")).arg("run").arg(html_file).status()?;
+        Command::new(resolve_cmd("bun"))
+            .arg("run")
+            .arg(html_file)
+            .status()?;
     } else {
         println!("🌐 Opening {html_file} in default browser...");
         let opener = if cfg!(target_os = "macos") {

@@ -8,11 +8,11 @@
 //  src/tools/project_setup/shadcn_ui.rs — Interactive Shadcn UI Setup
 // =============================================================================
 
+use super::utils::{patch_tsconfig, patch_viteconfig, prompt_select, prompt_text, resolve_cmd};
 use std::error::Error;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use super::utils::{patch_tsconfig, patch_viteconfig, prompt_select, prompt_text, resolve_cmd};
 
 /// `gladeshell ui` — Interactive Shadcn UI Setup.
 pub fn run_ui() -> Result<(), Box<dyn Error>> {
@@ -31,10 +31,14 @@ pub fn run_ui() -> Result<(), Box<dyn Error>> {
     } else {
         println!("  Could not auto-detect project type.");
         let choice = prompt_select("Choose manually:", &["1) Vite (React)", "2) Next.js"])?;
-        if choice.contains("Vite") { "vite" } else { "nextjs" }
+        if choice.contains("Vite") {
+            "vite"
+        } else {
+            "nextjs"
+        }
     };
 
-    let pm         = prompt_select("Package manager:", &["1) Bun", "2) NPM"])?;
+    let pm = prompt_select("Package manager:", &["1) Bun", "2) NPM"])?;
     let components = prompt_text("Add components (e.g. button card input, or empty for default):")?;
 
     println!("\nPre-configuring path aliases before shadcn init...");
@@ -43,11 +47,26 @@ pub fn run_ui() -> Result<(), Box<dyn Error>> {
     let use_bun = pm.contains("Bun");
 
     let runner = resolve_cmd(if use_bun { "bunx" } else { "npx" });
-    let init_prefix: &[&str] = if use_bun { &["--bun", "shadcn@latest", "init"] } else { &["shadcn@latest", "init"] };
-    let add_prefix:  &[&str] = if use_bun { &["--bun", "shadcn@latest", "add"] } else { &["shadcn@latest", "add"] };
-    let vite_flag:   &[&str] = if project_type == "vite" { &["-t", "vite"] } else { &[] };
+    let init_prefix: &[&str] = if use_bun {
+        &["--bun", "shadcn@latest", "init"]
+    } else {
+        &["shadcn@latest", "init"]
+    };
+    let add_prefix: &[&str] = if use_bun {
+        &["--bun", "shadcn@latest", "add"]
+    } else {
+        &["shadcn@latest", "add"]
+    };
+    let vite_flag: &[&str] = if project_type == "vite" {
+        &["-t", "vite"]
+    } else {
+        &[]
+    };
 
-    let _ = Command::new(&runner).args(init_prefix).args(vite_flag).status();
+    let _ = Command::new(&runner)
+        .args(init_prefix)
+        .args(vite_flag)
+        .status();
 
     let mut add_cmd = Command::new(&runner);
     add_cmd.args(add_prefix);

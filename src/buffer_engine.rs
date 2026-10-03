@@ -104,10 +104,20 @@ impl BufferEngine {
                 // Word-backward: skip trailing whitespace, then skip the word
                 let chars: Vec<char> = self.typed_buffer.chars().collect();
                 let mut idx = self.cursor_position;
-                while idx > 0 && chars.get(idx - 1).map(|c| c.is_whitespace()).unwrap_or(false) {
+                while idx > 0
+                    && chars
+                        .get(idx - 1)
+                        .map(|c| c.is_whitespace())
+                        .unwrap_or(false)
+                {
                     idx -= 1;
                 }
-                while idx > 0 && !chars.get(idx - 1).map(|c| c.is_whitespace()).unwrap_or(true) {
+                while idx > 0
+                    && !chars
+                        .get(idx - 1)
+                        .map(|c| c.is_whitespace())
+                        .unwrap_or(true)
+                {
                     idx -= 1;
                 }
                 self.cursor_position = idx;
@@ -363,7 +373,7 @@ mod tests {
         e.set_typed_buffer("git ");
         e.set_active_suggestion(Some("git checkout main".to_string()));
         e.accept_suggestion_word(); // should accept "checkout"
-        // After accepting: "git checkout" (or "git checkout ")
+                                    // After accepting: "git checkout" (or "git checkout ")
         assert!(
             e.typed_buffer().starts_with("git checkout"),
             "word accept should append next word, got: {}",

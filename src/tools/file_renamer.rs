@@ -266,7 +266,9 @@ impl RenamerApp {
                 new_stem = format!("{}{}", new_stem, self.suffix);
             }
 
-            let clean_ext = if self.current_rule == RenameRule::FindReplace && !self.search_pattern.is_empty() {
+            let clean_ext = if self.current_rule == RenameRule::FindReplace
+                && !self.search_pattern.is_empty()
+            {
                 ext.replace(&self.search_pattern, &self.replace_with)
             } else {
                 ext.to_lowercase()
@@ -298,11 +300,19 @@ impl RenamerApp {
 
             if let Some(prop) = &proposed_list[idx] {
                 let final_name = if is_full_replace && item.is_selected {
-                    let total_in_group = raw_name_counts.get(&prop.raw_full_name).copied().unwrap_or(0);
+                    let total_in_group = raw_name_counts
+                        .get(&prop.raw_full_name)
+                        .copied()
+                        .unwrap_or(0);
                     if total_in_group > 1 {
-                        let count = group_counters.entry(prop.raw_full_name.clone()).or_insert(0);
+                        let count = group_counters
+                            .entry(prop.raw_full_name.clone())
+                            .or_insert(0);
                         *count += 1;
-                        format!("{}{}_{:03}{}", prop.prefix_dot, prop.new_stem, count, prop.clean_ext)
+                        format!(
+                            "{}{}_{:03}{}",
+                            prop.prefix_dot, prop.new_stem, count, prop.clean_ext
+                        )
                     } else {
                         prop.raw_full_name.clone()
                     }
@@ -340,7 +350,10 @@ impl RenamerApp {
         let mut error_count = 0;
 
         for item in self.items.iter_mut() {
-            if !item.is_selected || item.old_name == item.new_name || item.status == ItemStatus::Conflict {
+            if !item.is_selected
+                || item.old_name == item.new_name
+                || item.status == ItemStatus::Conflict
+            {
                 if item.status != ItemStatus::Done && item.status != ItemStatus::Unchanged {
                     item.status = ItemStatus::Skipped;
                 }
@@ -358,13 +371,17 @@ impl RenamerApp {
                 Ok(_) => {
                     item.status = ItemStatus::Done;
                     item.path = new_path;
-                    self.log_messages.push(format!("✨ Renamed: '{}' ➔ '{}'", item.old_name, item.new_name));
+                    self.log_messages.push(format!(
+                        "✨ Renamed: '{}' ➔ '{}'",
+                        item.old_name, item.new_name
+                    ));
                     item.old_name = item.new_name.clone();
                     renamed_count += 1;
                 }
                 Err(e) => {
                     item.status = ItemStatus::Error(e.to_string());
-                    self.log_messages.push(format!("❌ Error renaming '{}': {}", item.old_name, e));
+                    self.log_messages
+                        .push(format!("❌ Error renaming '{}': {}", item.old_name, e));
                     error_count += 1;
                 }
             }
@@ -372,7 +389,10 @@ impl RenamerApp {
 
         self.execution_done = true;
         self.status_msg = Some((
-            format!("✅ Batch rename completed: {} renamed, {} errors.", renamed_count, error_count),
+            format!(
+                "✅ Batch rename completed: {} renamed, {} errors.",
+                renamed_count, error_count
+            ),
             error_count == 0,
         ));
         self.update_previews();
@@ -545,7 +565,9 @@ pub fn apply_title_case(stem: &str) -> String {
             let mut c = w.chars();
             match c.next() {
                 None => String::new(),
-                Some(f) => f.to_uppercase().collect::<String>() + c.as_str().to_lowercase().as_str(),
+                Some(f) => {
+                    f.to_uppercase().collect::<String>() + c.as_str().to_lowercase().as_str()
+                }
             }
         })
         .collect::<Vec<_>>()
@@ -571,7 +593,10 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
     let mut app = RenamerApp::new(dir_path)?;
 
     if app.items.is_empty() {
-        println!("\x1b[1;33m⚠️ No files found in directory: {}\x1b[0m", dir_path.display());
+        println!(
+            "\x1b[1;33m⚠️ No files found in directory: {}\x1b[0m",
+            dir_path.display()
+        );
         return Ok(());
     }
 
@@ -596,7 +621,9 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
                                 app.update_previews();
                             }
                             KeyCode::Enter => {
-                                if app.active_field == ActiveField::SearchPattern && app.replace_with.is_empty() {
+                                if app.active_field == ActiveField::SearchPattern
+                                    && app.replace_with.is_empty()
+                                {
                                     app.active_field = ActiveField::ReplaceWith;
                                 } else {
                                     app.active_field = ActiveField::Table;
@@ -625,10 +652,18 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
                             }
                             KeyCode::Backspace => {
                                 match app.active_field {
-                                    ActiveField::SearchPattern => { app.search_pattern.pop(); }
-                                    ActiveField::ReplaceWith => { app.replace_with.pop(); }
-                                    ActiveField::Prefix => { app.prefix.pop(); }
-                                    ActiveField::Suffix => { app.suffix.pop(); }
+                                    ActiveField::SearchPattern => {
+                                        app.search_pattern.pop();
+                                    }
+                                    ActiveField::ReplaceWith => {
+                                        app.replace_with.pop();
+                                    }
+                                    ActiveField::Prefix => {
+                                        app.prefix.pop();
+                                    }
+                                    ActiveField::Suffix => {
+                                        app.suffix.pop();
+                                    }
                                     _ => {}
                                 }
                                 app.update_previews();
@@ -682,13 +717,34 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
                                 app.current_rule = app.current_rule.prev();
                                 app.update_previews();
                             }
-                            KeyCode::Char('1') => { app.current_rule = RenameRule::KebabCase; app.update_previews(); }
-                            KeyCode::Char('2') => { app.current_rule = RenameRule::SnakeCase; app.update_previews(); }
-                            KeyCode::Char('3') => { app.current_rule = RenameRule::TitleCase; app.update_previews(); }
-                            KeyCode::Char('4') => { app.current_rule = RenameRule::Lowercase; app.update_previews(); }
-                            KeyCode::Char('5') => { app.current_rule = RenameRule::Uppercase; app.update_previews(); }
-                            KeyCode::Char('6') => { app.current_rule = RenameRule::Numbering; app.update_previews(); }
-                            KeyCode::Char('7') => { app.current_rule = RenameRule::FindReplace; app.update_previews(); }
+                            KeyCode::Char('1') => {
+                                app.current_rule = RenameRule::KebabCase;
+                                app.update_previews();
+                            }
+                            KeyCode::Char('2') => {
+                                app.current_rule = RenameRule::SnakeCase;
+                                app.update_previews();
+                            }
+                            KeyCode::Char('3') => {
+                                app.current_rule = RenameRule::TitleCase;
+                                app.update_previews();
+                            }
+                            KeyCode::Char('4') => {
+                                app.current_rule = RenameRule::Lowercase;
+                                app.update_previews();
+                            }
+                            KeyCode::Char('5') => {
+                                app.current_rule = RenameRule::Uppercase;
+                                app.update_previews();
+                            }
+                            KeyCode::Char('6') => {
+                                app.current_rule = RenameRule::Numbering;
+                                app.update_previews();
+                            }
+                            KeyCode::Char('7') => {
+                                app.current_rule = RenameRule::FindReplace;
+                                app.update_previews();
+                            }
                             KeyCode::Char('/') | KeyCode::Char('f') | KeyCode::Char('F') => {
                                 app.current_rule = RenameRule::FindReplace;
                                 app.active_field = ActiveField::SearchPattern;
@@ -697,8 +753,12 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
                                 app.current_rule = RenameRule::FindReplace;
                                 app.active_field = ActiveField::ReplaceWith;
                             }
-                            KeyCode::Char('p') | KeyCode::Char('P') => { app.active_field = ActiveField::Prefix; }
-                            KeyCode::Char('s') | KeyCode::Char('S') => { app.active_field = ActiveField::Suffix; }
+                            KeyCode::Char('p') | KeyCode::Char('P') => {
+                                app.active_field = ActiveField::Prefix;
+                            }
+                            KeyCode::Char('s') | KeyCode::Char('S') => {
+                                app.active_field = ActiveField::Suffix;
+                            }
                             _ => {}
                         }
                     }
@@ -733,10 +793,22 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
 
     // 1. Header Banner
     let header_line = Line::from(vec![
-        Span::styled(" 🧹 GLADESHELL BATCH FILE RENAMER ", Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " 🧹 GLADESHELL BATCH FILE RENAMER ",
+            Style::default()
+                .fg(C_WHITE)
+                .bg(C_SELECTED_BG)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("  "),
-        Span::styled(format!("📂 {}", app.dir_path.display()), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-        Span::styled(format!("  [Files: {}]", app.items.len()), Style::default().fg(C_DIM)),
+        Span::styled(
+            format!("📂 {}", app.dir_path.display()),
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!("  [Files: {}]", app.items.len()),
+            Style::default().fg(C_DIM),
+        ),
     ]);
 
     let header = Paragraph::new(header_line)
@@ -765,7 +837,10 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
     .flat_map(|(idx, r)| {
         let is_active = *r == app.current_rule;
         let style = if is_active {
-            Style::default().fg(C_WHITE).bg(C_ACCENT).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(C_WHITE)
+                .bg(C_ACCENT)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(C_TEXT).bg(Color::Rgb(25, 30, 48))
         };
@@ -785,7 +860,10 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_BORDER_DIM))
                 .title(Span::styled(
-                    format!(" ◀ ⚡ Active Rule: {} (Use ◀/▶ or 1-7 to select) ▶ ", app.current_rule.name()),
+                    format!(
+                        " ◀ ⚡ Active Rule: {} (Use ◀/▶ or 1-7 to select) ▶ ",
+                        app.current_rule.name()
+                    ),
                     Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
                 )),
         );
@@ -793,11 +871,20 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
 
     // 3. Main Table View
     let selected_count = app.items.iter().filter(|i| i.is_selected).count();
-    let table_title = format!(" 📁 Files Preview ({}/{} Selected) ", selected_count, app.items.len());
+    let table_title = format!(
+        " 📁 Files Preview ({}/{} Selected) ",
+        selected_count,
+        app.items.len()
+    );
 
-    let header_cells = ["  [X]", "Original Filename", "New Filename Preview", "Status"]
-        .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)));
+    let header_cells = [
+        "  [X]",
+        "Original Filename",
+        "New Filename Preview",
+        "Status",
+    ]
+    .iter()
+    .map(|h| Cell::from(*h).style(Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)));
     let header_row = Row::new(header_cells).height(1).bottom_margin(1);
 
     let rows: Vec<Row> = app
@@ -805,21 +892,40 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
         .iter()
         .map(|item| {
             let checkbox = if item.is_selected { "[✓]" } else { "[ ]" };
-            let check_style = if item.is_selected { Style::default().fg(C_GREEN) } else { Style::default().fg(C_DIM) };
+            let check_style = if item.is_selected {
+                Style::default().fg(C_GREEN)
+            } else {
+                Style::default().fg(C_DIM)
+            };
 
             let (status_str, status_style) = match &item.status {
-                ItemStatus::Ready => (" [READY] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                ItemStatus::Ready => (
+                    " [READY] ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
                 ItemStatus::Unchanged => (" [SAME]  ", Style::default().fg(C_DIM)),
-                ItemStatus::Conflict => (" [CONFLICT] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+                ItemStatus::Conflict => (
+                    " [CONFLICT] ",
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                ),
                 ItemStatus::Skipped => (" [SKIP]  ", Style::default().fg(C_YELLOW)),
-                ItemStatus::Done => (" [DONE]  ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                ItemStatus::Error(_) => (" [ERROR] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+                ItemStatus::Done => (
+                    " [DONE]  ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+                ItemStatus::Error(_) => (
+                    " [ERROR] ",
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                ),
             };
 
             let cells = vec![
                 Cell::from(Span::styled(checkbox, check_style)),
                 Cell::from(Span::styled(&item.old_name, Style::default().fg(C_TEXT))),
-                Cell::from(Span::styled(&item.new_name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD))),
+                Cell::from(Span::styled(
+                    &item.new_name,
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                )),
                 Cell::from(Span::styled(status_str, status_style)),
             ];
 
@@ -843,9 +949,17 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
             .style(Style::default().bg(C_PANEL_BG))
-            .title(Span::styled(table_title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))),
+            .title(Span::styled(
+                table_title,
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            )),
     )
-    .row_highlight_style(Style::default().bg(C_SELECTED_BG).fg(C_SELECTED_FG).add_modifier(Modifier::BOLD));
+    .row_highlight_style(
+        Style::default()
+            .bg(C_SELECTED_BG)
+            .fg(C_SELECTED_FG)
+            .add_modifier(Modifier::BOLD),
+    );
 
     f.render_stateful_widget(table, chunks[2], &mut app.table_state.clone());
 
@@ -869,73 +983,149 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
         let find_str = if app.search_pattern.is_empty() {
             Span::styled("<EMPTY>", Style::default().fg(C_YELLOW))
         } else {
-            Span::styled(format!("'{}'", app.search_pattern), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))
+            Span::styled(
+                format!("'{}'", app.search_pattern),
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            )
         };
 
         let replace_str = if app.replace_with.is_empty() {
             Span::styled("<none>", Style::default().fg(C_DIM))
         } else {
-            Span::styled(format!("'{}'", app.replace_with), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+            Span::styled(
+                format!("'{}'", app.replace_with),
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            )
         };
 
-        let second_line = if app.current_rule == RenameRule::FindReplace && app.search_pattern.is_empty() {
-            if app.replace_with.is_empty() {
-                Line::from(vec![
-                    Span::styled(" 💡 TIP: ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                    Span::styled("Enter ", Style::default().fg(C_WHITE)),
-                    Span::styled("Find Pattern", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled(" to replace text, OR enter ", Style::default().fg(C_WHITE)),
-                    Span::styled("Replace With [R]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                    Span::styled(" to rename all files directly!", Style::default().fg(C_WHITE)),
-                ])
+        let second_line =
+            if app.current_rule == RenameRule::FindReplace && app.search_pattern.is_empty() {
+                if app.replace_with.is_empty() {
+                    Line::from(vec![
+                        Span::styled(
+                            " 💡 TIP: ",
+                            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled("Enter ", Style::default().fg(C_WHITE)),
+                        Span::styled(
+                            "Find Pattern",
+                            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(" to replace text, OR enter ", Style::default().fg(C_WHITE)),
+                        Span::styled(
+                            "Replace With [R]",
+                            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            " to rename all files directly!",
+                            Style::default().fg(C_WHITE),
+                        ),
+                    ])
+                } else {
+                    Line::from(vec![
+                        Span::styled(
+                            " ⚡ DIRECT RENAME: ",
+                            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            "Replacing filename stem with ",
+                            Style::default().fg(C_WHITE),
+                        ),
+                        Span::styled(
+                            format!("'{}'", app.replace_with),
+                            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            " (auto-numbered if multiple files share extension)",
+                            Style::default().fg(C_DIM),
+                        ),
+                    ])
+                }
             } else {
                 Line::from(vec![
-                    Span::styled(" ⚡ DIRECT RENAME: ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                    Span::styled("Replacing filename stem with ", Style::default().fg(C_WHITE)),
-                    Span::styled(format!("'{}'", app.replace_with), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                    Span::styled(" (auto-numbered if multiple files share extension)", Style::default().fg(C_DIM)),
+                    Span::styled(" 🔍 Find: ", Style::default().fg(C_DIM)),
+                    find_str,
+                    Span::styled("  ➜  ✏️ Replace: ", Style::default().fg(C_DIM)),
+                    replace_str,
+                    Span::styled(
+                        format!(
+                            "  |  Prefix: '{}'",
+                            if app.prefix.is_empty() {
+                                "<none>"
+                            } else {
+                                &app.prefix
+                            }
+                        ),
+                        Style::default().fg(C_DIM),
+                    ),
+                    Span::styled(
+                        format!(
+                            "  |  Suffix: '{}'",
+                            if app.suffix.is_empty() {
+                                "<none>"
+                            } else {
+                                &app.suffix
+                            }
+                        ),
+                        Style::default().fg(C_MAGENTA),
+                    ),
                 ])
-            }
-        } else {
-            Line::from(vec![
-                Span::styled(" 🔍 Find: ", Style::default().fg(C_DIM)),
-                find_str,
-                Span::styled("  ➜  ✏️ Replace: ", Style::default().fg(C_DIM)),
-                replace_str,
-                Span::styled(format!("  |  Prefix: '{}'", if app.prefix.is_empty() { "<none>" } else { &app.prefix }), Style::default().fg(C_DIM)),
-                Span::styled(format!("  |  Suffix: '{}'", if app.suffix.is_empty() { "<none>" } else { &app.suffix }), Style::default().fg(C_MAGENTA)),
-            ])
-        };
+            };
 
         vec![
             Line::from(vec![
-                Span::styled(format!(" ✏️ Editing {}: ", field_name), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(format!("{}█", current_val), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!(" ✏️ Editing {}: ", field_name),
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("{}█", current_val),
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
             ]),
             second_line,
         ]
     } else if let Some((ref msg, is_success)) = app.status_msg {
-        let style = if is_success { Style::default().fg(C_GREEN) } else { Style::default().fg(C_RED) };
+        let style = if is_success {
+            Style::default().fg(C_GREEN)
+        } else {
+            Style::default().fg(C_RED)
+        };
         vec![
-            Line::from(Span::styled(msg.clone(), style.add_modifier(Modifier::BOLD))),
-            Line::from(Span::styled(" Press [Q / Esc] to exit or 1-7 to try another rule.", Style::default().fg(C_DIM))),
+            Line::from(Span::styled(
+                msg.clone(),
+                style.add_modifier(Modifier::BOLD),
+            )),
+            Line::from(Span::styled(
+                " Press [Q / Esc] to exit or 1-7 to try another rule.",
+                Style::default().fg(C_DIM),
+            )),
         ]
     } else {
         let last_log = app.log_messages.last().cloned().unwrap_or_default();
         let find_str = if app.search_pattern.is_empty() {
             Span::styled("<EMPTY>", Style::default().fg(C_YELLOW))
         } else {
-            Span::styled(format!("'{}'", app.search_pattern), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))
+            Span::styled(
+                format!("'{}'", app.search_pattern),
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            )
         };
         let replace_str = if app.replace_with.is_empty() {
             Span::styled("<none>", Style::default().fg(C_DIM))
         } else {
-            Span::styled(format!("'{}'", app.replace_with), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+            Span::styled(
+                format!("'{}'", app.replace_with),
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            )
         };
 
         vec![
             Line::from(vec![
-                Span::styled(" 📜 Activity Log: ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " 📜 Activity Log: ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(last_log, Style::default().fg(C_DIM)),
             ]),
             Line::from(vec![
@@ -943,8 +1133,28 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
                 find_str,
                 Span::styled("  ➜  ✏️ Replace: ", Style::default().fg(C_DIM)),
                 replace_str,
-                Span::styled(format!("  |  Prefix: '{}'", if app.prefix.is_empty() { "<none>" } else { &app.prefix }), Style::default().fg(C_DIM)),
-                Span::styled(format!("  |  Suffix: '{}'", if app.suffix.is_empty() { "<none>" } else { &app.suffix }), Style::default().fg(C_DIM)),
+                Span::styled(
+                    format!(
+                        "  |  Prefix: '{}'",
+                        if app.prefix.is_empty() {
+                            "<none>"
+                        } else {
+                            &app.prefix
+                        }
+                    ),
+                    Style::default().fg(C_DIM),
+                ),
+                Span::styled(
+                    format!(
+                        "  |  Suffix: '{}'",
+                        if app.suffix.is_empty() {
+                            "<none>"
+                        } else {
+                            &app.suffix
+                        }
+                    ),
+                    Style::default().fg(C_DIM),
+                ),
             ]),
         ]
     };
@@ -953,29 +1163,59 @@ fn draw_ui(f: &mut Frame, app: &mut RenamerApp) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_BORDER_DIM))
-        .title(Span::styled(" ⚙️ Controls & Input ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            " ⚙️ Controls & Input ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ));
     f.render_widget(Paragraph::new(input_lines).block(log_block), chunks[3]);
 
     // 5. Footer Bar
     let footer_line = Line::from(vec![
-        Span::styled("[◀/▶ / 1-7] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[◀/▶ / 1-7] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Rule  ", Style::default().fg(C_DIM)),
-        Span::styled("[Tab] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Tab] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Input  ", Style::default().fg(C_DIM)),
-        Span::styled("[F/R] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[F/R] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Find/Replace  ", Style::default().fg(C_DIM)),
-        Span::styled("[P/S] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[P/S] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Prefix/Suffix  ", Style::default().fg(C_DIM)),
-        Span::styled("[Space] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Space] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Toggle  ", Style::default().fg(C_DIM)),
-        Span::styled("[E] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[E] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Ext  ", Style::default().fg(C_DIM)),
-        Span::styled("[A] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[A] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("All  ", Style::default().fg(C_DIM)),
-        Span::styled("[ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[ENTER] ",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Apply Rename", Style::default().fg(C_DIM)),
     ]);
-    f.render_widget(Paragraph::new(footer_line).alignment(Alignment::Center), chunks[4]);
+    f.render_widget(
+        Paragraph::new(footer_line).alignment(Alignment::Center),
+        chunks[4],
+    );
 }
 
 #[cfg(test)]

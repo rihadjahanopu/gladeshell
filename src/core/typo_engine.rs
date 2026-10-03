@@ -212,7 +212,8 @@ pub fn str_display_width(s: &str) -> usize {
                 || (u >= 0x1100 && u <= 0x11FF) // Hangul Jamo
                 || (u >= 0x2E80 && u <= 0x9FFF) // CJK Radicals, Ideographs
                 || (u >= 0xAC00 && u <= 0xD7AF) // Hangul Syllables
-                || (u >= 0xF900 && u <= 0xFAFF) // CJK Compatibility Ideographs
+                || (u >= 0xF900 && u <= 0xFAFF)
+            // CJK Compatibility Ideographs
             {
                 width += 2;
             } else {
@@ -295,14 +296,20 @@ pub fn render_pretty_suggestion(input: &str) -> String {
     let reset = "\x1b[0m";
 
     // Row 1: Command Not Found
-    let line1_fmt = format!("❌ {}Command not found:{} '{}{}{}'", red_bold, reset, yellow_bold, input, reset);
+    let line1_fmt = format!(
+        "❌ {}Command not found:{} '{}{}{}'",
+        red_bold, reset, yellow_bold, input, reset
+    );
     let line1_plain = format!("❌ Command not found: '{}'", input);
     let line1_width = str_display_width(&line1_plain);
 
     // Row 2: Did you mean / No matches
     let (line2_fmt, line2_plain) = if let Some(best) = suggestions.first() {
         (
-            format!("💡 {}Did you mean:{} '{}{}{}'", cyan_bold, reset, green_bold, best.candidate, reset),
+            format!(
+                "💡 {}Did you mean:{} '{}{}{}'",
+                cyan_bold, reset, green_bold, best.candidate, reset
+            ),
             format!("💡 Did you mean: '{}'", best.candidate),
         )
     } else {
@@ -339,24 +346,42 @@ pub fn render_pretty_suggestion(input: &str) -> String {
 
     let mut out = String::new();
     // Top border
-    out.push_str(&format!("\n  {red_bold}╭{}╮{reset}\n", "─".repeat(border_width)));
+    out.push_str(&format!(
+        "\n  {red_bold}╭{}╮{reset}\n",
+        "─".repeat(border_width)
+    ));
 
     // Line 1
     let pad1 = max_width.saturating_sub(line1_width);
-    out.push_str(&format!("  {red_bold}│{reset}  {}  {}{red_bold}│{reset}\n", line1_fmt, " ".repeat(pad1)));
+    out.push_str(&format!(
+        "  {red_bold}│{reset}  {}  {}{red_bold}│{reset}\n",
+        line1_fmt,
+        " ".repeat(pad1)
+    ));
 
     // Line 2
     let pad2 = max_width.saturating_sub(line2_width);
-    out.push_str(&format!("  {red_bold}│{reset}  {}  {}{red_bold}│{reset}\n", line2_fmt, " ".repeat(pad2)));
+    out.push_str(&format!(
+        "  {red_bold}│{reset}  {}  {}{red_bold}│{reset}\n",
+        line2_fmt,
+        " ".repeat(pad2)
+    ));
 
     // Line 3
     if let Some((line3_fmt, w3)) = line3_info {
         let pad3 = max_width.saturating_sub(w3);
-        out.push_str(&format!("  {red_bold}│{reset}  {}  {}{red_bold}│{reset}\n", line3_fmt, " ".repeat(pad3)));
+        out.push_str(&format!(
+            "  {red_bold}│{reset}  {}  {}{red_bold}│{reset}\n",
+            line3_fmt,
+            " ".repeat(pad3)
+        ));
     }
 
     // Bottom border
-    out.push_str(&format!("  {red_bold}╰{}╯{reset}\n\n", "─".repeat(border_width)));
+    out.push_str(&format!(
+        "  {red_bold}╰{}╯{reset}\n\n",
+        "─".repeat(border_width)
+    ));
 
     out
 }
@@ -388,7 +413,10 @@ mod tests {
     fn test_deterministic_output() {
         let run1 = find_suggestions("ffme");
         let run2 = find_suggestions("ffme");
-        assert_eq!(run1, run2, "Output must be 100% deterministic across executions");
+        assert_eq!(
+            run1, run2,
+            "Output must be 100% deterministic across executions"
+        );
     }
 
     #[test]

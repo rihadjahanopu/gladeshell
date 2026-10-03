@@ -31,13 +31,15 @@ pub mod zsh;
 pub fn generate(shell: &str) -> Result<String, String> {
     let script = match shell.to_ascii_lowercase().as_str() {
         "bash" => bash::generate(),
-        "zsh"  => zsh::generate(),
+        "zsh" => zsh::generate(),
         "fish" => fish::generate(),
         "pwsh" | "powershell" => pwsh::generate(),
-        other => return Err(format!(
-            "unsupported shell: '{other}'. \
+        other => {
+            return Err(format!(
+                "unsupported shell: '{other}'. \
              Supported: bash, zsh, fish, pwsh (powershell)"
-        )),
+            ))
+        }
     };
 
     // Cache the generated bootstrap script to ~/.gladeshell/cache/init.<shell>
@@ -51,14 +53,13 @@ pub fn generate(shell: &str) -> Result<String, String> {
         s => s,
     };
     if let Ok(home_dir) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
-        let cache_dir = std::path::PathBuf::from(home_dir).join(".gladeshell").join("cache");
+        let cache_dir = std::path::PathBuf::from(home_dir)
+            .join(".gladeshell")
+            .join("cache");
         if std::fs::create_dir_all(&cache_dir).is_ok() {
             let cache_file = cache_dir.join(format!("init.{normalized}"));
             // Write to a pid-stamped temp file so concurrent runs don't collide
-            let tmp_file = cache_dir.join(format!(
-                "init.{normalized}.tmp.{}",
-                std::process::id()
-            ));
+            let tmp_file = cache_dir.join(format!("init.{normalized}.tmp.{}", std::process::id()));
             if std::fs::write(&tmp_file, &script).is_ok() {
                 // Atomic rename: either the full file is visible or nothing changes
                 if std::fs::rename(&tmp_file, &cache_file).is_err() {

@@ -17,7 +17,9 @@ use std::path::{Path, PathBuf};
 
 /// Get current user's HOME directory path.
 pub fn home_dir() -> String {
-    std_env::var("HOME").or_else(|_| std_env::var("USERPROFILE")).unwrap_or_default()
+    std_env::var("HOME")
+        .or_else(|_| std_env::var("USERPROFILE"))
+        .unwrap_or_default()
 }
 
 /// Find first file that exists among candidates on host system.
@@ -103,17 +105,20 @@ pub fn render_nvm_lazy_load(shell: Shell) -> String {
 
     match shell {
         Shell::Zsh => {
-            out.push_str(r#"
+            out.push_str(
+                r#"
 # ======================================================
 # 🟢 NVM & NODE.JS DYNAMIC LAZY-LOAD
 # ======================================================
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
 [[ ! -d "$NVM_DIR" && -d "$HOME/.nvm" ]] && export NVM_DIR="$HOME/.nvm"
-"#);
+"#,
+            );
             if let Some(node_bin) = get_latest_nvm_node_bin() {
                 out.push_str(&format!("export PATH=\"{}:$PATH\"\n", node_bin));
             }
-            out.push_str(r##"
+            out.push_str(
+                r##"
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
 if [[ -o interactive ]] && [[ -f "$HOME/.zshrc" ]]; then
     if ! grep -qF "# >>> glade-zshrc >>>" "$HOME/.zshrc" 2>/dev/null; then
@@ -141,18 +146,22 @@ nvm()  { _fb_lazy_load_nvm; nvm  "$@"; }
 node() { _fb_lazy_load_nvm; node "$@"; }
 npm()  { _fb_lazy_load_nvm; npm  "$@"; }
 npx()  { _fb_lazy_load_nvm; npx  "$@"; }
-"##);
+"##,
+            );
         }
         Shell::Bash => {
-            out.push_str(r#"
+            out.push_str(
+                r#"
 # ── NVM lazy-load (zero startup cost) ──
 export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
 [[ ! -d "$NVM_DIR" && -d "$HOME/.nvm" ]] && export NVM_DIR="$HOME/.nvm"
-"#);
+"#,
+            );
             if let Some(node_bin) = get_latest_nvm_node_bin() {
                 out.push_str(&format!("export PATH=\"{}:$PATH\"\n", node_bin));
             }
-            out.push_str(r##"
+            out.push_str(
+                r##"
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
 if [[ $- == *i* ]] && [[ -f "$HOME/.bashrc" ]]; then
     if ! grep -qF "# >>> glade-bashrc >>>" "$HOME/.bashrc" 2>/dev/null; then
@@ -173,7 +182,8 @@ nvm()  { _fb_lazy_load_nvm; nvm  "$@"; }
 node() { _fb_lazy_load_nvm; node "$@"; }
 npm()  { _fb_lazy_load_nvm; npm  "$@"; }
 npx()  { _fb_lazy_load_nvm; npx  "$@"; }
-"##);
+"##,
+            );
         }
         Shell::Fish => {
             out.push_str(r##"
@@ -220,19 +230,22 @@ fi
 if [[ -s "$BUN_INSTALL/_bun" ]]; then
     [ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun" 2>/dev/null
 fi
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Bash => r#"
 # ── Bun environment ──
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 if [[ -d "$BUN_INSTALL/bin" && ":$PATH:" != *":$BUN_INSTALL/bin:"* ]]; then
     export PATH="$BUN_INSTALL/bin:$PATH"
 fi
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Fish => r#"
 # ── Bun ──
 set -gx BUN_INSTALL "$HOME/.bun"
 fish_add_path --prepend "$BUN_INSTALL/bin"
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Pwsh => "".to_string(),
     }
 }
@@ -254,7 +267,8 @@ else
     alias ll='gladeshell auto-ls'
     alias la='gladeshell auto-ls'
 fi
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Fish => r#"
 # ── Safe ls / eza fallback wrapper ──
 functions -e ls ll la lt tree 2>/dev/null
@@ -269,7 +283,8 @@ else
     alias ll 'gladeshell auto-ls'
     alias la 'gladeshell auto-ls'
 end
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Pwsh => r#"
 # ── Safe ls / eza fallback wrapper ──
 if (Get-Command eza -ErrorAction SilentlyContinue) {
@@ -282,7 +297,8 @@ if (Get-Command eza -ErrorAction SilentlyContinue) {
     function global:ll { gladeshell auto-ls @args }
     function global:la { gladeshell auto-ls @args }
 }
-"#.to_string(),
+"#
+        .to_string(),
     }
 }
 
@@ -294,25 +310,29 @@ pub fn render_cli_completions(shell: Shell) -> String {
 if command -v gladeshell >/dev/null 2>&1; then
     eval "$(gladeshell completions zsh 2>/dev/null)"
 fi
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Bash => r#"
 # ── Auto-load gladeshell CLI completions ──
 if command -v gladeshell >/dev/null 2>&1; then
     eval "$(gladeshell completions bash 2>/dev/null)"
 fi
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Fish => r#"
 # ── Auto-load gladeshell CLI completions ──
 if command -v gladeshell >/dev/null 2>&1
     gladeshell completions fish 2>/dev/null | source
 end
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Pwsh => r#"
 # ── Auto-load gladeshell CLI completions ──
 if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
     gladeshell completions pwsh 2>/dev/null | Invoke-Expression
 }
-"#.to_string(),
+"#
+        .to_string(),
     }
 }
 
@@ -347,7 +367,8 @@ bak() {
 trash() {
     gladeshell trash "$@"
 }
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Fish => r#"
 # ── Native Rust File & Directory Helper Functions ──
 functions -e mkd rmd rmf bak trash 2>/dev/null
@@ -374,7 +395,8 @@ end
 function trash
     gladeshell trash $argv
 end
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Pwsh => r#"
 # ── Native Rust File & Directory Helper Functions ──
 function global:mkd {
@@ -402,7 +424,8 @@ function global:trash {
     param([string]$Path)
     gladeshell trash $Path
 }
-"#.to_string(),
+"#
+        .to_string(),
     }
 }
 
@@ -421,7 +444,6 @@ pub fn render_integrations(_shell: Shell) -> String {
     String::new()
 }
 
-
 /// Render Native Rust Auto-LS hook snippet per shell.
 pub fn render_auto_ls_hook(shell: Shell) -> String {
     match shell {
@@ -432,7 +454,8 @@ accurate_auto_ls() {
     gladeshell auto-ls 2>/dev/null
 }
 add-zsh-hook chpwd accurate_auto_ls
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Bash => r#"
 # ── Native Rust Auto-LS on directory change ──
 _fb_last_pwd="$PWD"
@@ -442,21 +465,24 @@ _fb_auto_ls() {
         gladeshell auto-ls 2>/dev/null
     fi
 }
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Fish => r#"
 # ── Native Rust Auto-LS on directory change ──
 functions -e accurate_auto_ls 2>/dev/null
 function accurate_auto_ls --on-variable PWD
     gladeshell auto-ls 2>/dev/null
 end
-"#.to_string(),
+"#
+        .to_string(),
         Shell::Pwsh => r#"
 # ── Native Rust Auto-LS trigger ──
 if ($cwd -ne $global:_fb_last_pwd) {
     $global:_fb_last_pwd = $cwd
     gladeshell auto-ls 2>$null
 }
-"#.to_string(),
+"#
+        .to_string(),
     }
 }
 
@@ -905,4 +931,3 @@ mod tests {
         assert!(render_integrations(Shell::Pwsh).is_empty());
     }
 }
-

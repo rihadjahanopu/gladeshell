@@ -133,12 +133,14 @@ impl PluginEngine {
 
     /// Render the current line to `writer` (single atomic flush).
     pub fn render<W: Write>(&self, writer: &mut W) -> io::Result<()> {
-        self.renderer.redraw(writer, &self.buffer, &self.prompt_prefix)
+        self.renderer
+            .redraw(writer, &self.buffer, &self.prompt_prefix)
     }
 
     /// Render the current line into a `String` representation.
     pub fn render_to_string(&self) -> String {
-        self.renderer.render_line_to_string(&self.buffer, &self.prompt_prefix)
+        self.renderer
+            .render_line_to_string(&self.buffer, &self.prompt_prefix)
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -231,7 +233,9 @@ mod tests {
         engine.process_input_bytes(b"git");
         assert_eq!(engine.buffer().typed_buffer(), "git");
 
-        engine.buffer_mut().set_active_suggestion(Some("git checkout".to_string()));
+        engine
+            .buffer_mut()
+            .set_active_suggestion(Some("git checkout".to_string()));
 
         // xterm.js SS3 Right Arrow
         engine.process_input_bytes(b"\x1bOC");
@@ -275,7 +279,7 @@ mod tests {
         // Force a unicode typed buffer — tab must not panic
         engine.process_input_bytes("git s".as_bytes());
         engine.process_input_bytes(b"\t"); // Tab
-        // Result doesn't matter — just must not panic
+                                           // Result doesn't matter — just must not panic
         let _ = engine.buffer().typed_buffer();
     }
 

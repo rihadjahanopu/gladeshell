@@ -587,9 +587,7 @@ fn detect_system_and_paths() -> (String, Vec<PathBuf>) {
     } else if os_type.starts_with("Darwin") {
         distro_name = "macOS".to_string();
         target_dirs.push(home.join("Library/Application Support/Zed"));
-    } else if os_type.starts_with("Windows_NT")
-        || cfg!(windows)
-    {
+    } else if os_type.starts_with("Windows_NT") || cfg!(windows) {
         distro_name = "Windows".to_string();
         if let Ok(appdata) = env::var("APPDATA") {
             if !appdata.trim().is_empty() {
@@ -612,17 +610,29 @@ fn show_sysinfo(distro_name: &str, target_count: usize) {
     let arch = get_arch();
     let user = get_user();
 
-    println!("{}──────────────────────────────────────────────────{}", BLUE, NC);
+    println!(
+        "{}──────────────────────────────────────────────────{}",
+        BLUE, NC
+    );
     println!(" 🖥️   {}SYSTEM & ENVIRONMENT INFO{}", BOLD, NC);
-    println!("{}──────────────────────────────────────────────────{}", BLUE, NC);
-    println!("  💻  {}OS:{}            {}{}{}", BOLD, NC, CYAN, distro_name, NC);
+    println!(
+        "{}──────────────────────────────────────────────────{}",
+        BLUE, NC
+    );
+    println!(
+        "  💻  {}OS:{}            {}{}{}",
+        BOLD, NC, CYAN, distro_name, NC
+    );
     println!("  👤  {}User:{}          {}{}{}", BOLD, NC, CYAN, user, NC);
     println!("  ⚙️   {}Arch:{}          {}{}{}", BOLD, NC, CYAN, arch, NC);
     println!(
         "  📂  {}Detected Paths:{} {}{} location(s){}",
         BOLD, NC, CYAN, target_count, NC
     );
-    println!("{}──────────────────────────────────────────────────{}\n", BLUE, NC);
+    println!(
+        "{}──────────────────────────────────────────────────{}\n",
+        BLUE, NC
+    );
 }
 
 // ── Timestamp Generator for Backups ───────────────────────────
@@ -651,7 +661,6 @@ fn get_timestamp() -> String {
 
     format!("{year:04}{m:02}{d:02}_{hours:02}{mins:02}{seconds:02}")
 }
-
 
 // ── Helper: Atomic Safe Installation ─────────────────────────
 fn install_settings(dir: &Path) -> bool {
@@ -764,7 +773,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         println!();
         Ok(())
     } else {
-        println!("{}❌ Failed to update any Zed configuration paths.{}\n", RED, NC);
+        println!(
+            "{}❌ Failed to update any Zed configuration paths.{}\n",
+            RED, NC
+        );
         Err("Failed to update any Zed configuration paths.".into())
     }
 }
@@ -813,7 +825,9 @@ mod tests {
             .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
             .collect();
 
-        assert!(entries.iter().any(|name| name.starts_with("settings.json.bak.")));
+        assert!(entries
+            .iter()
+            .any(|name| name.starts_with("settings.json.bak.")));
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

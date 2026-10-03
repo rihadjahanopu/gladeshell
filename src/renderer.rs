@@ -8,9 +8,9 @@
 //   • No stdout/stderr pollution on failure.
 // ============================================================================
 
+use crate::buffer_engine::BufferEngine;
 use std::io::{self, Write};
 use unicode_width::UnicodeWidthChar;
-use crate::buffer_engine::BufferEngine;
 
 /// Maximum number of characters to render in ghost text (suggestion tail).
 /// Prevents runaway output if a corrupt/very-long suggestion is in the cache.
@@ -317,7 +317,10 @@ mod tests {
         buffer.set_active_suggestion(Some("git status".to_string()));
         buffer.move_home(); // cursor at 0, not at end
         let out = renderer.render_line_to_string(&buffer, "");
-        assert!(!out.contains("status"), "ghost must not render when cursor is not at EOL");
+        assert!(
+            !out.contains("status"),
+            "ghost must not render when cursor is not at EOL"
+        );
     }
 
     #[test]
@@ -332,7 +335,10 @@ mod tests {
         buffer.set_typed_buffer("git check");
         buffer.set_active_suggestion(None);
         let out2 = renderer.render_line_to_string(&buffer, "$ ");
-        assert!(out2.starts_with("\x1b[G\x1b[K"), "must start with move+erase");
+        assert!(
+            out2.starts_with("\x1b[G\x1b[K"),
+            "must start with move+erase"
+        );
         assert!(!out2.contains(" main"), "stale ghost must be gone");
     }
 
@@ -357,7 +363,10 @@ mod tests {
         buffer.move_right(KeyModifiers::None); // cursor after '日' (char 1)
         let out = renderer.render_line_to_string(&buffer, "");
         // 0 prompt cols + 2 cols for '日' + 1 = col 3
-        assert!(out.contains("\x1b[3G"), "CJK cursor must account for 2-col width");
+        assert!(
+            out.contains("\x1b[3G"),
+            "CJK cursor must account for 2-col width"
+        );
     }
 
     #[test]
@@ -365,7 +374,11 @@ mod tests {
         let renderer = Renderer::new();
         // "\x1b[1;32m" is 7 bytes but 0 visible columns
         let s = "\x1b[1;32mhello\x1b[0m";
-        assert_eq!(renderer.visible_width(s), 5, "ANSI CSI must not count toward width");
+        assert_eq!(
+            renderer.visible_width(s),
+            5,
+            "ANSI CSI must not count toward width"
+        );
     }
 
     #[test]
@@ -374,7 +387,11 @@ mod tests {
         // OSC 8 hyperlink: ESC ] 8 ; ; url ST  (simplified)
         let s = "\x1b]8;;https://example.com\x07link\x1b]8;;\x07";
         // "link" = 4 columns
-        assert_eq!(renderer.visible_width(s), 4, "OSC sequences must not count toward width");
+        assert_eq!(
+            renderer.visible_width(s),
+            4,
+            "OSC sequences must not count toward width"
+        );
     }
 
     #[test]
@@ -382,7 +399,11 @@ mod tests {
         let renderer = Renderer::new();
         // ESC O C = SS3 Right Arrow, 0 visible cols
         let s = "\x1bOCtext";
-        assert_eq!(renderer.visible_width(s), 4, "SS3 must not count toward width");
+        assert_eq!(
+            renderer.visible_width(s),
+            4,
+            "SS3 must not count toward width"
+        );
     }
 
     #[test]

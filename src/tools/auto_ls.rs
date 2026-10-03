@@ -174,7 +174,10 @@ pub fn run_path(target_path: Option<&str>) {
                 let is_hidden = name_str.starts_with('.');
                 let file_type = entry.file_type().ok();
                 let is_dir = file_type.as_ref().map(|ft| ft.is_dir()).unwrap_or(false);
-                let is_symlink = file_type.as_ref().map(|ft| ft.is_symlink()).unwrap_or(false);
+                let is_symlink = file_type
+                    .as_ref()
+                    .map(|ft| ft.is_symlink())
+                    .unwrap_or(false);
 
                 let metadata = entry.metadata().ok();
                 let is_exec = if let Some(ref meta) = metadata {
@@ -305,4 +308,3 @@ mod tests {
         assert_eq!(color, "\x1b[38;5;125m");
     }
 }
-

@@ -6,7 +6,6 @@
 
 // src/core/aliases/categories/developer.rs
 
-
 use crate::core::aliases::{AliasEntry, AliasGroup};
 
 pub fn group() -> AliasGroup {

@@ -17,7 +17,7 @@ pub fn run(num: Option<&str>) -> Result<(), Box<dyn Error>> {
 
     let uuid_pattern = match drive_option {
         "1" | "" => "469a94",
-        "2"      => "b2c89f",
+        "2" => "b2c89f",
         _ => return Err("Invalid option! Use 'drive', 'drive 1', or 'drive 2'.".into()),
     };
 

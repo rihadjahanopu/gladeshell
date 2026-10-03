@@ -28,7 +28,11 @@ pub fn run(name: &str, cxx_std: &str) -> Result<(), Box<dyn std::error::Error>> 
 }
 
 /// Helper function to generate project files inside a target parent directory.
-pub fn run_in_dir(base_dir: &Path, name: &str, cxx_std: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run_in_dir(
+    base_dir: &Path,
+    name: &str,
+    cxx_std: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let clean_name = name.trim();
     if clean_name.is_empty() {
         return Err("Project name cannot be empty".into());
@@ -98,7 +102,10 @@ namespace {clean_name} {{
 #endif // {header_guard_name}_HPP
 "#
     );
-    fs::write(include_dir.join(format!("{clean_name}.hpp")), header_content)?;
+    fs::write(
+        include_dir.join(format!("{clean_name}.hpp")),
+        header_content,
+    )?;
 
     // 3. src/main.cpp
     let main_content = format!(
@@ -161,7 +168,10 @@ echo "✅ Build complete! Run with: ./build/{clean_name}"
         fs::set_permissions(&build_sh_path, perms)?;
     }
 
-    println!("✨ Successfully created C++{std_val} project: {}", clean_name);
+    println!(
+        "✨ Successfully created C++{std_val} project: {}",
+        clean_name
+    );
     println!("   Directory : {}", project_dir.display());
     println!("   Files     :");
     println!("     ├── CMakeLists.txt");

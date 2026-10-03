@@ -28,18 +28,18 @@ use ratatui::{
 };
 
 // ── Colour Palette (matching fkill / dark modern violet theme) ───────────────
-const C_BG: Color          = Color::Rgb(10, 10, 18);
-const C_BORDER: Color      = Color::Rgb(180, 100, 255); // deep violet accent
-const C_ACCENT: Color      = Color::Rgb(200, 140, 255); // bright violet
-const C_SELECTED_BG: Color = Color::Rgb(45, 20, 70);  // selected row bg
+const C_BG: Color = Color::Rgb(10, 10, 18);
+const C_BORDER: Color = Color::Rgb(180, 100, 255); // deep violet accent
+const C_ACCENT: Color = Color::Rgb(200, 140, 255); // bright violet
+const C_SELECTED_BG: Color = Color::Rgb(45, 20, 70); // selected row bg
 const C_SELECTED_FG: Color = Color::Rgb(240, 210, 255); // selected text
-const C_DIM: Color         = Color::Rgb(90, 90, 120);
-const C_TEXT: Color        = Color::Rgb(220, 220, 235);
-const C_GREEN: Color       = Color::Rgb(80, 220, 140);
-const C_YELLOW: Color      = Color::Rgb(255, 200, 80);
-const C_WHITE: Color       = Color::Rgb(255, 255, 255);
-const C_CYAN: Color        = Color::Rgb(80, 210, 240);
-const C_PINK: Color        = Color::Rgb(255, 110, 180);
+const C_DIM: Color = Color::Rgb(90, 90, 120);
+const C_TEXT: Color = Color::Rgb(220, 220, 235);
+const C_GREEN: Color = Color::Rgb(80, 220, 140);
+const C_YELLOW: Color = Color::Rgb(255, 200, 80);
+const C_WHITE: Color = Color::Rgb(255, 255, 255);
+const C_CYAN: Color = Color::Rgb(80, 210, 240);
+const C_PINK: Color = Color::Rgb(255, 110, 180);
 
 #[derive(Debug, Clone)]
 pub struct MediaActionInfo {
@@ -342,7 +342,8 @@ impl App {
         if self.filtered.is_empty() {
             self.list_state.select(None);
         } else {
-            self.list_state.select(Some(sel.min(self.filtered.len() - 1)));
+            self.list_state
+                .select(Some(sel.min(self.filtered.len() - 1)));
         }
     }
 
@@ -357,8 +358,11 @@ impl App {
             return;
         }
         let i = self.list_state.selected().unwrap_or(0);
-        self.list_state
-            .select(Some(if i == 0 { self.filtered.len() - 1 } else { i - 1 }));
+        self.list_state.select(Some(if i == 0 {
+            self.filtered.len() - 1
+        } else {
+            i - 1
+        }));
     }
 
     fn move_down(&mut self) {
@@ -366,8 +370,7 @@ impl App {
             return;
         }
         let i = self.list_state.selected().unwrap_or(0);
-        self.list_state
-            .select(Some((i + 1) % self.filtered.len()));
+        self.list_state.select(Some((i + 1) % self.filtered.len()));
     }
 }
 
@@ -416,23 +419,41 @@ pub fn run(action_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
 
 fn parse_action_arg(arg: &str) -> Option<u8> {
     let s = arg.to_lowercase();
-    if s.contains("compress") || s == "1" { Some(1) }
-    else if s.contains("trim") || s == "2" { Some(2) }
-    else if s.contains("concat") || s == "3" { Some(3) }
-    else if s.contains("res") || s.contains("resolution") || s == "4" { Some(4) }
-    else if s.contains("speed") || s == "5" { Some(5) }
-    else if s.contains("rotate") || s.contains("flip") || s == "6" { Some(6) }
-    else if s.contains("extract") || s.contains("audio") || s == "7" { Some(7) }
-    else if s.contains("mute") || s == "8" { Some(8) }
-    else if s.contains("snapshot") || s.contains("snap") || s == "9" { Some(9) }
-    else if s.contains("gif") || s == "10" { Some(10) }
-    else if s.contains("clean") || s.contains("privacy") || s == "11" { Some(11) }
-    else if s.contains("convert") || s.contains("format") || s == "12" { Some(12) }
-    else if s.contains("record") || s.contains("screen") || s == "13" { Some(13) }
-    else if s.contains("burn") || s == "14" { Some(14) }
-    else if s.contains("sub") || s == "15" { Some(15) }
-    else if s.contains("stop") || s == "16" { Some(16) }
-    else { None }
+    if s.contains("compress") || s == "1" {
+        Some(1)
+    } else if s.contains("trim") || s == "2" {
+        Some(2)
+    } else if s.contains("concat") || s == "3" {
+        Some(3)
+    } else if s.contains("res") || s.contains("resolution") || s == "4" {
+        Some(4)
+    } else if s.contains("speed") || s == "5" {
+        Some(5)
+    } else if s.contains("rotate") || s.contains("flip") || s == "6" {
+        Some(6)
+    } else if s.contains("extract") || s.contains("audio") || s == "7" {
+        Some(7)
+    } else if s.contains("mute") || s == "8" {
+        Some(8)
+    } else if s.contains("snapshot") || s.contains("snap") || s == "9" {
+        Some(9)
+    } else if s.contains("gif") || s == "10" {
+        Some(10)
+    } else if s.contains("clean") || s.contains("privacy") || s == "11" {
+        Some(11)
+    } else if s.contains("convert") || s.contains("format") || s == "12" {
+        Some(12)
+    } else if s.contains("record") || s.contains("screen") || s == "13" {
+        Some(13)
+    } else if s.contains("burn") || s == "14" {
+        Some(14)
+    } else if s.contains("sub") || s == "15" {
+        Some(15)
+    } else if s.contains("stop") || s == "16" {
+        Some(16)
+    } else {
+        None
+    }
 }
 
 fn run_ffmedia_tui() -> Result<Option<&'static MediaActionInfo>, Box<dyn std::error::Error>> {
@@ -498,8 +519,14 @@ fn draw_ffmedia(f: &mut Frame, app: &mut App) {
     // ── Banner ──────────────────────────────────────────────────────────────
     let banner_text = Line::from(vec![
         Span::styled("🎬  ", Style::default().fg(C_ACCENT)),
-        Span::styled("FFMEDIA", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-        Span::styled(" — All-in-One FFmpeg Multimedia Suite", Style::default().fg(C_TEXT)),
+        Span::styled(
+            "FFMEDIA",
+            Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            " — All-in-One FFmpeg Multimedia Suite",
+            Style::default().fg(C_TEXT),
+        ),
         Span::styled(
             format!("  ({} Action Modules | FFmpeg Engine)", app.actions.len()),
             Style::default().fg(C_DIM),
@@ -519,7 +546,10 @@ fn draw_ffmedia(f: &mut Frame, app: &mut App) {
     // ── Search Bar ──────────────────────────────────────────────────────────
     let search_text = Line::from(vec![
         Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
-        Span::styled(&app.query, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &app.query,
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("█", Style::default().fg(C_BORDER)),
         Span::styled(
             format!("  ({} matches)", app.filtered.len()),
@@ -531,7 +561,10 @@ fn draw_ffmedia(f: &mut Frame, app: &mut App) {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_ACCENT))
-            .title(Span::styled(" Search Action / Query ", Style::default().fg(C_ACCENT)))
+            .title(Span::styled(
+                " Search Action / Query ",
+                Style::default().fg(C_ACCENT),
+            ))
             .style(Style::default().bg(C_BG)),
     );
     f.render_widget(search_bar, outer[1]);
@@ -553,14 +586,21 @@ fn draw_ffmedia(f: &mut Frame, app: &mut App) {
 
             if is_sel {
                 let line = Line::from(vec![
-                    Span::styled(" ▶ ", Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        " ▶ ",
+                        Style::default()
+                            .fg(C_SELECTED_FG)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(
                         format!("{:<2}. {} ", act.id, act.emoji),
                         Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         act.title,
-                        Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(C_SELECTED_FG)
+                            .add_modifier(Modifier::BOLD),
                     ),
                 ]);
                 ListItem::new(line).style(Style::default().bg(C_SELECTED_BG))
@@ -606,25 +646,37 @@ fn draw_ffmedia(f: &mut Frame, app: &mut App) {
         let mut detail_lines = vec![
             Line::from(vec![
                 Span::styled(format!(" {} ", act.emoji), Style::default().fg(C_YELLOW)),
-                Span::styled(act.title, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    act.title,
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(format!("  [{}]", act.category), Style::default().fg(C_CYAN)),
             ]),
-            Line::from(Span::styled(" ─────────────────────────────────────────────────────────────", Style::default().fg(C_DIM))),
+            Line::from(Span::styled(
+                " ─────────────────────────────────────────────────────────────",
+                Style::default().fg(C_DIM),
+            )),
             Line::from(vec![
-                Span::styled(" Summary: ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " Summary: ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(act.summary, Style::default().fg(C_TEXT)),
             ]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled(" Description:", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            ]),
-            Line::from(vec![
-                Span::styled(format!("  {}", act.description), Style::default().fg(C_TEXT)),
-            ]),
+            Line::from(vec![Span::styled(
+                " Description:",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("  {}", act.description),
+                Style::default().fg(C_TEXT),
+            )]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled(" Key Features & Options:", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            ]),
+            Line::from(vec![Span::styled(
+                " Key Features & Options:",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            )]),
         ];
 
         for feature in act.features {
@@ -636,17 +688,25 @@ fn draw_ffmedia(f: &mut Frame, app: &mut App) {
 
         detail_lines.push(Line::from(""));
         detail_lines.push(Line::from(vec![
-            Span::styled(" Inputs Required:", Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
-            Span::styled(format!(" {}", act.inputs.join(", ")), Style::default().fg(C_TEXT)),
+            Span::styled(
+                " Inputs Required:",
+                Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" {}", act.inputs.join(", ")),
+                Style::default().fg(C_TEXT),
+            ),
         ]));
 
         detail_lines.push(Line::from(""));
-        detail_lines.push(Line::from(vec![
-            Span::styled(" Sample FFmpeg Command:", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-        ]));
-        detail_lines.push(Line::from(vec![
-            Span::styled(format!("  $ {}", act.sample_cmd), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
-        ]));
+        detail_lines.push(Line::from(vec![Span::styled(
+            " Sample FFmpeg Command:",
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )]));
+        detail_lines.push(Line::from(vec![Span::styled(
+            format!("  $ {}", act.sample_cmd),
+            Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+        )]));
 
         let detail_paragraph = Paragraph::new(detail_lines)
             .wrap(Wrap { trim: true })
@@ -665,7 +725,10 @@ fn draw_ffmedia(f: &mut Frame, app: &mut App) {
         Span::styled("  |  ", Style::default().fg(C_BORDER)),
         Span::styled("Type to filter", Style::default().fg(C_DIM)),
         Span::styled("  |  ", Style::default().fg(C_BORDER)),
-        Span::styled("Enter Select Action", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "Enter Select Action",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("  |  ", Style::default().fg(C_BORDER)),
         Span::styled("Esc Quit", Style::default().fg(C_DIM)),
     ]);
@@ -736,7 +799,10 @@ fn trim_video() -> Result<(), Box<dyn std::error::Error>> {
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
     let out = file.with_file_name(format!("{}_trimmed.{}", stem, ext));
 
-    println!("\n⚡ Trimming clip from timestamp {} for {} seconds...", start_time, duration);
+    println!(
+        "\n⚡ Trimming clip from timestamp {} for {} seconds...",
+        start_time, duration
+    );
     let status = Command::new("ffmpeg")
         .arg("-ss")
         .arg(&start_time)
@@ -964,7 +1030,12 @@ fn extract_audio() -> Result<(), Box<dyn std::error::Error>> {
     let out = file.with_file_name(format!("{}.{}", stem, fmt));
 
     println!("\n⚡ Extracting audio track as {}...", fmt.to_uppercase());
-    let status = Command::new("ffmpeg").arg("-i").arg(&file).arg("-vn").arg(&out).status()?;
+    let status = Command::new("ffmpeg")
+        .arg("-i")
+        .arg(&file)
+        .arg("-vn")
+        .arg(&out)
+        .status()?;
 
     if status.success() {
         println!("✅ Extracted audio to {}", out.display());
@@ -1003,7 +1074,10 @@ fn snapshot_video() -> Result<(), Box<dyn std::error::Error>> {
     print_header("📸 Snapshot Capture");
     let file = prompt_file("Select video file")?;
     let timestamp = prompt_text("Timestamp for snapshot (e.g. 00:00:05)")?;
-    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("snapshot");
+    let stem = file
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("snapshot");
     let out = file.with_file_name(format!("{}_snapshot.jpg", stem));
 
     println!("\n⚡ Capturing snapshot frame at {}...", timestamp);
@@ -1077,13 +1151,23 @@ fn clean_metadata() -> Result<(), Box<dyn std::error::Error>> {
 fn convert_format() -> Result<(), Box<dyn std::error::Error>> {
     print_header("🔄 Format Conversion");
     let file = prompt_file("Select media file")?;
-    let target_ext = prompt_select("Select target format:", &["mp4", "mkv", "webm", "mov", "avi"])?;
+    let target_ext = prompt_select(
+        "Select target format:",
+        &["mp4", "mkv", "webm", "mov", "avi"],
+    )?;
 
-    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("converted");
+    let stem = file
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("converted");
     let out = file.with_file_name(format!("{}.{}", stem, target_ext));
 
     println!("\n⚡ Converting format to {}...", target_ext.to_uppercase());
-    let status = Command::new("ffmpeg").arg("-i").arg(&file).arg(&out).status()?;
+    let status = Command::new("ffmpeg")
+        .arg("-i")
+        .arg(&file)
+        .arg(&out)
+        .status()?;
 
     if status.success() {
         println!("✅ Format conversion complete: {}", out.display());
@@ -1135,7 +1219,13 @@ enum GpuEncoder {
 fn detect_gpu_encoder() -> GpuEncoder {
     let probe = |enc: &str| -> bool {
         Command::new("sh")
-            .args(["-c", &format!("ffmpeg -hide_banner -encoders 2>/dev/null | grep -q {}", enc)])
+            .args([
+                "-c",
+                &format!(
+                    "ffmpeg -hide_banner -encoders 2>/dev/null | grep -q {}",
+                    enc
+                ),
+            ])
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -1143,7 +1233,7 @@ fn detect_gpu_encoder() -> GpuEncoder {
 
     // Check if NVIDIA GPU hardware device node actually exists before using NVENC
     let has_nvidia_hw = std::path::Path::new("/dev/nvidia0").exists()
-                     || std::path::Path::new("/dev/nvidiactl").exists();
+        || std::path::Path::new("/dev/nvidiactl").exists();
 
     if has_nvidia_hw && probe("h264_nvenc") {
         return GpuEncoder::Nvenc;
@@ -1179,55 +1269,69 @@ fn apply_gpu_video_args(
     vf_vaapi: &str,
 ) {
     let color_meta: &[&str] = &[
-        "-color_range", "1",
-        "-colorspace", "1",
-        "-color_primaries", "1",
-        "-color_trc", "1",
-        "-movflags", "+faststart",
+        "-color_range",
+        "1",
+        "-colorspace",
+        "1",
+        "-color_primaries",
+        "1",
+        "-color_trc",
+        "1",
+        "-movflags",
+        "+faststart",
     ];
     match gpu {
         GpuEncoder::Nvenc => {
             // NVENC: -cq is analogous to CRF for VBR mode
-            cmd.args(["-c:v", "h264_nvenc",
-                      "-preset", "p1",       // fastest NVENC preset
-                      "-rc", "vbr",           // variable bitrate (closest to CRF)
-                      "-cq", crf,
-                      "-vf", vf_cpu]);
+            cmd.args([
+                "-c:v",
+                "h264_nvenc",
+                "-preset",
+                "p1", // fastest NVENC preset
+                "-rc",
+                "vbr", // variable bitrate (closest to CRF)
+                "-cq",
+                crf,
+                "-vf",
+                vf_cpu,
+            ]);
             cmd.args(color_meta);
         }
         GpuEncoder::Vaapi => {
             // VAAPI: upload to GPU with hwupload, then encode
-            cmd.args(["-c:v", "h264_vaapi",
-                      "-qp", crf,
-                      "-vf", vf_vaapi]);
+            cmd.args(["-c:v", "h264_vaapi", "-qp", crf, "-vf", vf_vaapi]);
             cmd.args(color_meta);
         }
         GpuEncoder::Amf => {
             // AMF: CQP mode with equal quality for I and P frames
-            cmd.args(["-c:v", "h264_amf",
-                      "-rc", "cqp",
-                      "-qp_i", crf,
-                      "-qp_p", crf,
-                      "-vf", vf_cpu]);
+            cmd.args([
+                "-c:v", "h264_amf", "-rc", "cqp", "-qp_i", crf, "-qp_p", crf, "-vf", vf_cpu,
+            ]);
             cmd.args(color_meta);
         }
         GpuEncoder::None => {
             // CPU fallback: libx264 with ultrafast preset
-            cmd.args(["-c:v", "libx264",
-                      "-preset", "ultrafast",
-                      "-crf", crf,
-                      "-vf", vf_cpu]);
+            cmd.args([
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-crf",
+                crf,
+                "-vf",
+                vf_cpu,
+            ]);
             cmd.args(color_meta);
         }
     }
 }
 
 const CRF_PRESETS: &[(&str, &str, &str)] = &[
-    ("Lossless",      "0",  "0% compression, 100% pixel perfect"),
+    ("Lossless", "0", "0% compression, 100% pixel perfect"),
     ("Near Lossless", "15", "Ultra crisp, virtually lossless"),
-    ("High Quality",  "18", "Visually pristine (Recommended)"),
-    ("Balanced",      "23", "Standard default balance"),
-    ("Compact",       "28", "Small file size, fast export"),
+    ("High Quality", "18", "Visually pristine (Recommended)"),
+    ("Balanced", "23", "Standard default balance"),
+    ("Compact", "28", "Small file size, fast export"),
 ];
 
 // ── Screen Recorder TUI State ─────────────────────────────────────────────
@@ -1239,38 +1343,38 @@ enum RecorderScreen {
 }
 
 struct RecorderApp {
-    screen:        RecorderScreen,
-    audio:         bool,
-    fps:           u8,
-    crf_idx:       usize,
+    screen: RecorderScreen,
+    audio: bool,
+    fps: u8,
+    crf_idx: usize,
     focused_field: usize,
-    gpu:           GpuEncoder,
+    gpu: GpuEncoder,
     // Recording state
-    log_lines:     Vec<String>,
-    out_file:      String,
-    log_file:      String,
-    pid_file:      String,   // ← stores ffmpeg PID for stop
-    start_secs:    u64,
-    rec_running:   bool,
-    stopping:      bool,     // ← true when user pressed S to stop
+    log_lines: Vec<String>,
+    out_file: String,
+    log_file: String,
+    pid_file: String, // ← stores ffmpeg PID for stop
+    start_secs: u64,
+    rec_running: bool,
+    stopping: bool, // ← true when user pressed S to stop
 }
 
 impl RecorderApp {
     fn new(gpu: GpuEncoder) -> Self {
         Self {
-            screen:        RecorderScreen::Settings,
-            audio:         false,
-            fps:           30,
-            crf_idx:       2, // Default: High Quality (CRF 18)
+            screen: RecorderScreen::Settings,
+            audio: false,
+            fps: 30,
+            crf_idx: 2, // Default: High Quality (CRF 18)
             focused_field: 0,
             gpu,
-            log_lines:     Vec::new(),
-            out_file:      String::new(),
-            log_file:      String::new(),
-            pid_file:      String::new(),
-            start_secs:    0,
-            rec_running:   false,
-            stopping:      false,
+            log_lines: Vec::new(),
+            out_file: String::new(),
+            log_file: String::new(),
+            pid_file: String::new(),
+            start_secs: 0,
+            rec_running: false,
+            stopping: false,
         }
     }
 
@@ -1287,8 +1391,8 @@ impl RecorderApp {
         match self.gpu {
             GpuEncoder::Nvenc => "NVIDIA NVENC  (h264_nvenc)",
             GpuEncoder::Vaapi => "Intel/AMD VAAPI (h264_vaapi)",
-            GpuEncoder::Amf   => "AMD AMF       (h264_amf)",
-            GpuEncoder::None  => "CPU libx264   (no GPU found)",
+            GpuEncoder::Amf => "AMD AMF       (h264_amf)",
+            GpuEncoder::None => "CPU libx264   (no GPU found)",
         }
     }
 
@@ -1296,8 +1400,8 @@ impl RecorderApp {
         match self.gpu {
             GpuEncoder::Nvenc => "h264_nvenc",
             GpuEncoder::Vaapi => "h264_vaapi",
-            GpuEncoder::Amf   => "h264_amf",
-            GpuEncoder::None  => "libx264",
+            GpuEncoder::Amf => "h264_amf",
+            GpuEncoder::None => "libx264",
         }
     }
 
@@ -1316,7 +1420,9 @@ impl RecorderApp {
 
     /// Tail the log file and append new lines into self.log_lines
     fn refresh_logs(&mut self, max_lines: usize) {
-        if self.log_file.is_empty() { return; }
+        if self.log_file.is_empty() {
+            return;
+        }
         if let Ok(content) = std::fs::read_to_string(&self.log_file) {
             self.log_lines = content
                 .lines()
@@ -1350,7 +1456,10 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
     // ── Banner ─────────────────────────────────────────────────────────────
     let banner = Paragraph::new(Line::from(vec![
         Span::styled("🎥  ", Style::default().fg(C_PINK)),
-        Span::styled("SCREEN RECORDER", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "SCREEN RECORDER",
+            Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("  —  Configure & Start", Style::default().fg(C_DIM)),
     ]))
     .alignment(Alignment::Center)
@@ -1378,7 +1487,11 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
         }
     };
     let cursor = |idx: usize| -> &str {
-        if app.focused_field == idx { "▶ " } else { "  " }
+        if app.focused_field == idx {
+            "▶ "
+        } else {
+            "  "
+        }
     };
 
     let audio_val = if app.audio { "[ ON  ]" } else { "[ OFF ]" };
@@ -1390,14 +1503,22 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
         Line::from(vec![
             Span::styled(cursor(0), Style::default().fg(C_ACCENT)),
             Span::styled("Audio Capture  ", field_style(0)),
-            Span::styled(audio_val, Style::default().fg(audio_color).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                audio_val,
+                Style::default()
+                    .fg(audio_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled("  ← Space", Style::default().fg(C_DIM)),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled(cursor(1), Style::default().fg(C_ACCENT)),
             Span::styled("Frame Rate     ", field_style(1)),
-            Span::styled(&fps_val, Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &fps_val,
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("  ← ←/→", Style::default().fg(C_DIM)),
         ]),
         Line::from(""),
@@ -1412,10 +1533,16 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
     for (i, (name, crf_val, _)) in CRF_PRESETS.iter().enumerate() {
         if i == app.crf_idx {
             lines.push(Line::from(vec![
-                Span::styled("  ▶ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "  ▶ ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(
                     format!(" [ 🌟 {} (CRF {}) ] ", name.to_uppercase(), crf_val),
-                    Style::default().fg(C_BG).bg(C_YELLOW).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(C_BG)
+                        .bg(C_YELLOW)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]));
         } else {
@@ -1430,40 +1557,50 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::from(vec![
-        Span::styled(
-            if app.focused_field == 3 { "  ▶  [ 🔴 START RECORDING ]  ◀" }
-                                      else { "     [ 🔴 START RECORDING ]   " },
-            if app.focused_field == 3 {
-                Style::default().fg(C_BG).bg(C_PINK).add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)
-            },
-        ),
-    ]));
+    lines.push(Line::from(vec![Span::styled(
+        if app.focused_field == 3 {
+            "  ▶  [ 🔴 START RECORDING ]  ◀"
+        } else {
+            "     [ 🔴 START RECORDING ]   "
+        },
+        if app.focused_field == 3 {
+            Style::default()
+                .fg(C_BG)
+                .bg(C_PINK)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)
+        },
+    )]));
 
-    let left = Paragraph::new(lines)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(C_BORDER))
-                .title(Span::styled(
-                    " ⚙  Settings ",
-                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
-                ))
-                .style(Style::default().bg(C_BG)),
-        );
+    let left = Paragraph::new(lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_BORDER))
+            .title(Span::styled(
+                " ⚙  Settings ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ))
+            .style(Style::default().bg(C_BG)),
+    );
     f.render_widget(left, panes[0]);
 
     // Right — GPU & encoding info
     let (sel_name, sel_crf, sel_desc) = CRF_PRESETS[app.crf_idx];
-    let audio_src = if has_pipewire() { "PipeWire" } else { "PulseAudio" };
+    let audio_src = if has_pipewire() {
+        "PipeWire"
+    } else {
+        "PulseAudio"
+    };
     let right_lines: Vec<Line> = vec![
         Line::from(""),
         Line::from(vec![
             Span::styled("  GPU Encoder  ", Style::default().fg(C_DIM)),
-            Span::styled(app.gpu_label(), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                app.gpu_label(),
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -1490,7 +1627,10 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
         Line::from(""),
         Line::from(vec![
             Span::styled("  Color Space  ", Style::default().fg(C_DIM)),
-            Span::styled("sRGB / BT.709 (Mobile Compatible)", Style::default().fg(C_GREEN)),
+            Span::styled(
+                "sRGB / BT.709 (Mobile Compatible)",
+                Style::default().fg(C_GREEN),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -1500,7 +1640,10 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
         Line::from(""),
         Line::from(vec![
             Span::styled("  FPS          ", Style::default().fg(C_DIM)),
-            Span::styled(format!("{} frames/sec", app.fps), Style::default().fg(C_CYAN)),
+            Span::styled(
+                format!("{} frames/sec", app.fps),
+                Style::default().fg(C_CYAN),
+            ),
         ]),
     ];
 
@@ -1527,7 +1670,10 @@ fn draw_recorder_settings(f: &mut Frame, app: &RecorderApp) {
         Span::styled(" Toggle Audio  ", Style::default().fg(C_DIM)),
         Span::styled("←/→", Style::default().fg(C_ACCENT)),
         Span::styled(" Select Quality/FPS  ", Style::default().fg(C_DIM)),
-        Span::styled("Enter", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "Enter",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" Start  ", Style::default().fg(C_DIM)),
         Span::styled("Esc/q", Style::default().fg(C_PINK)),
         Span::styled(" Quit", Style::default().fg(C_DIM)),
@@ -1559,12 +1705,22 @@ fn draw_recorder_recording(f: &mut Frame, app: &RecorderApp) {
 
     // ── Banner with timer ──────────────────────────────────────────────────
     let elapsed = app.format_elapsed();
-    let rec_dot = if app.elapsed_secs() % 2 == 0 { "● REC" } else { "○ REC" };
+    let rec_dot = if app.elapsed_secs() % 2 == 0 {
+        "● REC"
+    } else {
+        "○ REC"
+    };
     let banner = Paragraph::new(Line::from(vec![
         Span::styled("🎥  ", Style::default().fg(C_PINK)),
-        Span::styled(rec_dot, Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            rec_dot,
+            Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("  ", Style::default()),
-        Span::styled(&elapsed, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &elapsed,
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("  —  Recording in progress", Style::default().fg(C_DIM)),
     ]))
     .alignment(Alignment::Center)
@@ -1588,7 +1744,10 @@ fn draw_recorder_recording(f: &mut Frame, app: &RecorderApp) {
         Line::from(""),
         Line::from(vec![
             Span::styled("  File    ", Style::default().fg(C_DIM)),
-            Span::styled(&app.out_file, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &app.out_file,
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -1610,33 +1769,48 @@ fn draw_recorder_recording(f: &mut Frame, app: &RecorderApp) {
             Span::styled("  Audio   ", Style::default().fg(C_DIM)),
             Span::styled(
                 if app.audio { "ON" } else { "OFF" },
-                if app.audio { Style::default().fg(C_GREEN) } else { Style::default().fg(C_DIM) },
+                if app.audio {
+                    Style::default().fg(C_GREEN)
+                } else {
+                    Style::default().fg(C_DIM)
+                },
             ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("  Elapsed ", Style::default().fg(C_DIM)),
-            Span::styled(&elapsed, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &elapsed,
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("  [ Esc / q ] ", Style::default().fg(C_BG).bg(C_PINK).add_modifier(Modifier::BOLD)),
-            Span::styled(" STOP & SAVE RECORDING", Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "  [ Esc / q ] ",
+                Style::default()
+                    .fg(C_BG)
+                    .bg(C_PINK)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                " STOP & SAVE RECORDING",
+                Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+            ),
         ]),
     ];
 
-    let left = Paragraph::new(info_lines)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(C_PINK))
-                .title(Span::styled(
-                    " 📹 Info ",
-                    Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
-                ))
-                .style(Style::default().bg(C_BG)),
-        );
+    let left = Paragraph::new(info_lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(C_PINK))
+            .title(Span::styled(
+                " 📹 Info ",
+                Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+            ))
+            .style(Style::default().bg(C_BG)),
+    );
     f.render_widget(left, panes[0]);
 
     // Right — Live log
@@ -1673,9 +1847,21 @@ fn draw_recorder_recording(f: &mut Frame, app: &RecorderApp) {
 
     // ── Status bar ─────────────────────────────────────────────────────────
     let status = Paragraph::new(Line::from(vec![
-        Span::styled("  [ Esc / q ] ", Style::default().fg(C_BG).bg(C_PINK).add_modifier(Modifier::BOLD)),
-        Span::styled(" Stop & Save Recording  │  ", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-        Span::styled("Press Esc, q, or Enter to stop recording and save video", Style::default().fg(C_DIM)),
+        Span::styled(
+            "  [ Esc / q ] ",
+            Style::default()
+                .fg(C_BG)
+                .bg(C_PINK)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            " Stop & Save Recording  │  ",
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "Press Esc, q, or Enter to stop recording and save video",
+            Style::default().fg(C_DIM),
+        ),
     ]))
     .block(
         Block::default()
@@ -1690,10 +1876,10 @@ fn draw_recorder_recording(f: &mut Frame, app: &RecorderApp) {
 // ── Build the ffmpeg Command (detached) ───────────────────────────────────
 
 fn build_detached_recorder(app: &RecorderApp, log_path: &str, pid_path: &str) -> Command {
-    let fps    = app.fps.to_string();
-    let crf    = app.crf().to_string();
-    let out    = &app.out_file;
-    let vf_cpu   = "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p";
+    let fps = app.fps.to_string();
+    let crf = app.crf().to_string();
+    let out = &app.out_file;
+    let vf_cpu = "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p";
     let vf_vaapi = "hwupload,scale_vaapi=format=nv12:w=trunc(iw/2)*2:h=trunc(ih/2)*2";
 
     let os_type = std::env::consts::OS;
@@ -1739,7 +1925,10 @@ fn build_detached_recorder(app: &RecorderApp, log_path: &str, pid_path: &str) ->
         };
 
         let audio_args = if app.audio {
-            format!("-thread_queue_size 1024 -f {} -i default -c:a aac -b:a 128k", audio_src)
+            format!(
+                "-thread_queue_size 1024 -f {} -i default -c:a aac -b:a 128k",
+                audio_src
+            )
         } else {
             String::new()
         };
@@ -1759,7 +1948,11 @@ fn build_detached_recorder(app: &RecorderApp, log_path: &str, pid_path: &str) ->
             pid    = pid_path,
         );
     } else if os_type == "macos" {
-        let audio_args = if app.audio { "-thread_queue_size 1024 -f avfoundation -i 0:0" } else { "-f avfoundation -i 0" };
+        let audio_args = if app.audio {
+            "-thread_queue_size 1024 -f avfoundation -i 0:0"
+        } else {
+            "-f avfoundation -i 0"
+        };
         sh_args = format!(
             "nohup ffmpeg -y -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -framerate {fps} {audio} -c:v libx264 -preset ultrafast -crf {crf} -vf '{vf}' -color_range 1 -colorspace 1 -color_primaries 1 -color_trc 1 -movflags +faststart {out} >'{log}' 2>&1 & echo $! >'{pid}'",
             fps=fps, audio=audio_args, crf=crf, vf=vf_cpu, out=out, log=log_path, pid=pid_path,
@@ -1810,7 +2003,9 @@ fn record_screen() -> Result<(), Box<dyn std::error::Error>> {
 
                     // Space — toggle audio (when on audio field) OR generic toggle
                     KeyCode::Char(' ') => {
-                        if app.focused_field == 0 { app.audio = !app.audio; }
+                        if app.focused_field == 0 {
+                            app.audio = !app.audio;
+                        }
                     }
 
                     // ←/→ — toggle fps OR navigate quality preset
@@ -1818,7 +2013,11 @@ fn record_screen() -> Result<(), Box<dyn std::error::Error>> {
                         if app.focused_field == 1 {
                             app.fps = if app.fps == 30 { 60 } else { 30 };
                         } else if app.focused_field == 2 {
-                            app.crf_idx = if app.crf_idx == 0 { CRF_PRESETS.len() - 1 } else { app.crf_idx - 1 };
+                            app.crf_idx = if app.crf_idx == 0 {
+                                CRF_PRESETS.len() - 1
+                            } else {
+                                app.crf_idx - 1
+                            };
                         }
                     }
                     KeyCode::Right => {
@@ -1829,16 +2028,14 @@ fn record_screen() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
 
-
-
                     // Enter — start recording if on button, else next field
                     KeyCode::Enter => {
                         if app.focused_field == 3 {
                             // Launch recording
                             let ts = simple_timestamp();
-                            app.out_file  = format!("screen_record_{}.mp4", ts);
-                            app.log_file  = format!("/tmp/ffrecord_{}.log", ts);
-                            app.pid_file  = "/tmp/ffrecord.pid".to_string();
+                            app.out_file = format!("screen_record_{}.mp4", ts);
+                            app.log_file = format!("/tmp/ffrecord_{}.log", ts);
+                            app.pid_file = "/tmp/ffrecord.pid".to_string();
                             app.start_secs = ts;
                             app.rec_running = true;
                             app.screen = RecorderScreen::Recording;
@@ -1906,7 +2103,6 @@ fn record_screen() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-
 /// Kill the ffmpeg recording process by reading its PID from a file.
 /// Sends SIGINT (like Ctrl+C) so ffmpeg can finalize/mux the MP4 cleanly.
 fn kill_recording_by_pid(pid_file: &str) {
@@ -1957,47 +2153,98 @@ fn stop_recording() -> Result<(), Box<dyn std::error::Error>> {
         f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Min(4), Constraint::Length(3)])
+            .constraints([
+                Constraint::Length(3),
+                Constraint::Min(4),
+                Constraint::Length(3),
+            ])
             .split(area);
 
         let banner = Paragraph::new(Line::from(vec![
             Span::styled("⏹️  ", Style::default().fg(C_PINK)),
-            Span::styled("STOP SCREEN RECORDING", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "STOP SCREEN RECORDING",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
         ]))
         .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(C_BORDER)).style(Style::default().bg(C_BG)));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_BORDER))
+                .style(Style::default().bg(C_BG)),
+        );
         f.render_widget(banner, chunks[0]);
 
         let (msg_color, msg) = if pid.is_empty() {
-            (C_YELLOW, vec![
-                Line::from(""),
-                Line::from(Span::styled("  ⚠️  No active recording found.", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))),
-                Line::from(""),
-                Line::from(Span::styled("  PID file not found: /tmp/ffrecord.pid", Style::default().fg(C_DIM))),
-                Line::from(""),
-                Line::from(Span::styled("  If ffmpeg is still running, use:", Style::default().fg(C_DIM))),
-                Line::from(Span::styled("    kill $(pgrep -f ffmpeg)", Style::default().fg(C_CYAN))),
-            ])
+            (
+                C_YELLOW,
+                vec![
+                    Line::from(""),
+                    Line::from(Span::styled(
+                        "  ⚠️  No active recording found.",
+                        Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                    )),
+                    Line::from(""),
+                    Line::from(Span::styled(
+                        "  PID file not found: /tmp/ffrecord.pid",
+                        Style::default().fg(C_DIM),
+                    )),
+                    Line::from(""),
+                    Line::from(Span::styled(
+                        "  If ffmpeg is still running, use:",
+                        Style::default().fg(C_DIM),
+                    )),
+                    Line::from(Span::styled(
+                        "    kill $(pgrep -f ffmpeg)",
+                        Style::default().fg(C_CYAN),
+                    )),
+                ],
+            )
         } else {
-            (C_GREEN, vec![
-                Line::from(""),
-                Line::from(Span::styled(format!("  ✅ Stopping ffmpeg (PID {})...", pid), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))),
-                Line::from(""),
-                Line::from(Span::styled("  Sending SIGINT — ffmpeg will finalize your video.", Style::default().fg(C_TEXT))),
-                Line::from(Span::styled("  Please wait 2-3 seconds for the file to be saved.", Style::default().fg(C_DIM))),
-            ])
+            (
+                C_GREEN,
+                vec![
+                    Line::from(""),
+                    Line::from(Span::styled(
+                        format!("  ✅ Stopping ffmpeg (PID {})...", pid),
+                        Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                    )),
+                    Line::from(""),
+                    Line::from(Span::styled(
+                        "  Sending SIGINT — ffmpeg will finalize your video.",
+                        Style::default().fg(C_TEXT),
+                    )),
+                    Line::from(Span::styled(
+                        "  Please wait 2-3 seconds for the file to be saved.",
+                        Style::default().fg(C_DIM),
+                    )),
+                ],
+            )
         };
         let _ = msg_color; // used via closure capture
 
-        let body = Paragraph::new(msg)
-            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(C_DIM)).style(Style::default().bg(C_BG)));
+        let body = Paragraph::new(msg).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_DIM))
+                .style(Style::default().bg(C_BG)),
+        );
         f.render_widget(body, chunks[1]);
 
-        let status = Paragraph::new(Span::styled("  Press any key to continue...", Style::default().fg(C_DIM)))
-            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(C_DIM)).style(Style::default().bg(C_BG)));
+        let status = Paragraph::new(Span::styled(
+            "  Press any key to continue...",
+            Style::default().fg(C_DIM),
+        ))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(C_DIM))
+                .style(Style::default().bg(C_BG)),
+        );
         f.render_widget(status, chunks[2]);
     });
 
@@ -2034,7 +2281,10 @@ fn stop_recording() -> Result<(), Box<dyn std::error::Error>> {
 fn get_linux_resolution() -> String {
     // Try xrandr (X11)
     if let Ok(out) = Command::new("sh")
-        .args(["-c", "xrandr 2>/dev/null | grep ' connected primary' | grep -oP '\\d+x\\d+' | head -n1"])
+        .args([
+            "-c",
+            "xrandr 2>/dev/null | grep ' connected primary' | grep -oP '\\d+x\\d+' | head -n1",
+        ])
         .output()
     {
         let res = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -2044,7 +2294,10 @@ fn get_linux_resolution() -> String {
     }
     // Try xrandr fallback (any active output)
     if let Ok(out) = Command::new("sh")
-        .args(["-c", "xrandr 2>/dev/null | grep '*' | awk '{print $1}' | head -n1"])
+        .args([
+            "-c",
+            "xrandr 2>/dev/null | grep '*' | awk '{print $1}' | head -n1",
+        ])
         .output()
     {
         let res = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -2054,7 +2307,10 @@ fn get_linux_resolution() -> String {
     }
     // Try wlr-randr (Wayland wlroots compositors)
     if let Ok(out) = Command::new("sh")
-        .args(["-c", "wlr-randr 2>/dev/null | grep -oP '\\d+x\\d+' | head -n1"])
+        .args([
+            "-c",
+            "wlr-randr 2>/dev/null | grep -oP '\\d+x\\d+' | head -n1",
+        ])
         .output()
     {
         let res = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -2064,7 +2320,10 @@ fn get_linux_resolution() -> String {
     }
     // Try kscreen-doctor (KDE Wayland)
     if let Ok(out) = Command::new("sh")
-        .args(["-c", "kscreen-doctor -o 2>/dev/null | grep -oP '\\d+x\\d+' | head -n1"])
+        .args([
+            "-c",
+            "kscreen-doctor -o 2>/dev/null | grep -oP '\\d+x\\d+' | head -n1",
+        ])
         .output()
     {
         let res = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -2171,7 +2430,9 @@ fn prompt_select(msg: &str, options: &[&str]) -> Result<String, Box<dyn std::err
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     let choice: usize = input.trim().parse().unwrap_or(1);
-    let idx = choice.saturating_sub(1).min(options.len().saturating_sub(1));
+    let idx = choice
+        .saturating_sub(1)
+        .min(options.len().saturating_sub(1));
     Ok(options[idx].to_string())
 }
 

@@ -37,17 +37,17 @@ use ratatui::{
 };
 
 // ── Color Palette (Modern Dark Violet — matching uup aesthetic) ──
-const C_BG: Color       = Color::Rgb(10, 10, 18);          // Deep void black
-const C_BORDER: Color   = Color::Rgb(180, 100, 255);        // Violet
-const C_ACCENT: Color   = Color::Rgb(200, 140, 255);        // Soft violet accent
-const C_SELECTED_BG: Color = Color::Rgb(45, 20, 70);       // Deep purple selection bg
-const C_SELECTED_FG: Color = Color::Rgb(240, 210, 255);    // Light lavender text
-const C_DIM: Color      = Color::Rgb(90, 80, 110);         // Muted purple-grey
-const C_GREEN: Color    = Color::Rgb(80, 220, 120);         // Neon emerald
-const C_YELLOW: Color   = Color::Rgb(255, 200, 80);         // Warm gold
-const C_CYAN: Color     = Color::Rgb(80, 220, 210);         // Electric cyan
-const C_WHITE: Color    = Color::Rgb(255, 255, 255);        // Pure white
-const C_RED: Color      = Color::Rgb(255, 90, 90);          // Soft red
+const C_BG: Color = Color::Rgb(10, 10, 18); // Deep void black
+const C_BORDER: Color = Color::Rgb(180, 100, 255); // Violet
+const C_ACCENT: Color = Color::Rgb(200, 140, 255); // Soft violet accent
+const C_SELECTED_BG: Color = Color::Rgb(45, 20, 70); // Deep purple selection bg
+const C_SELECTED_FG: Color = Color::Rgb(240, 210, 255); // Light lavender text
+const C_DIM: Color = Color::Rgb(90, 80, 110); // Muted purple-grey
+const C_GREEN: Color = Color::Rgb(80, 220, 120); // Neon emerald
+const C_YELLOW: Color = Color::Rgb(255, 200, 80); // Warm gold
+const C_CYAN: Color = Color::Rgb(80, 220, 210); // Electric cyan
+const C_WHITE: Color = Color::Rgb(255, 255, 255); // Pure white
+const C_RED: Color = Color::Rgb(255, 90, 90); // Soft red
 
 #[derive(Args, Debug, Clone)]
 pub struct FfArgs {
@@ -133,7 +133,10 @@ pub fn run(args: FfArgs) -> Result<(), Box<dyn Error>> {
 
     if items.is_empty() {
         if let Some(ref pat) = args.pattern {
-            println!("\x1b[1;33m🔍 No files found matching pattern: '\x1b[1;36m{}\x1b[1;33m'\x1b[0m", pat);
+            println!(
+                "\x1b[1;33m🔍 No files found matching pattern: '\x1b[1;36m{}\x1b[1;33m'\x1b[0m",
+                pat
+            );
         } else {
             println!("\x1b[1;33m🔍 No files found in target directory.\x1b[0m");
         }
@@ -217,7 +220,10 @@ pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>>
         walk_builder.max_depth(Some(depth));
     }
 
-    let ext_lower = args.extension.as_ref().map(|e| e.to_lowercase().trim_start_matches('.').to_string());
+    let ext_lower = args
+        .extension
+        .as_ref()
+        .map(|e| e.to_lowercase().trim_start_matches('.').to_string());
     let mut results = Vec::new();
     let walker = walk_builder.build();
 
@@ -260,9 +266,18 @@ pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>>
         if !args.no_ignore {
             let contains_ignored_dir = relative_path.split(std::path::MAIN_SEPARATOR).any(|part| {
                 let p = part.to_lowercase();
-                p == "node_modules" || p == ".next" || p == ".git" || p == "target"
-                    || p == "dist" || p == "build" || p == ".cache" || p == "vendor"
-                    || p == ".turbo" || p == ".output" || p == ".venv" || p == "__pycache__"
+                p == "node_modules"
+                    || p == ".next"
+                    || p == ".git"
+                    || p == "target"
+                    || p == "dist"
+                    || p == "build"
+                    || p == ".cache"
+                    || p == "vendor"
+                    || p == ".turbo"
+                    || p == ".output"
+                    || p == ".venv"
+                    || p == "__pycache__"
             });
             if contains_ignored_dir {
                 continue;
@@ -308,7 +323,11 @@ pub fn search_files(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>> {
     if query.trim().is_empty() {
         Ok(all_files)
     } else {
-        Ok(filter_and_score_items(&all_files, query, args.case_sensitive))
+        Ok(filter_and_score_items(
+            &all_files,
+            query,
+            args.case_sensitive,
+        ))
     }
 }
 
@@ -326,7 +345,11 @@ pub fn score_fuzzy_item(query: &str, relative_path: &str, case_sensitive: bool) 
     let (q, name, path) = if case_sensitive {
         (query.to_string(), file_name, relative_path.to_string())
     } else {
-        (query.to_lowercase(), file_name.to_lowercase(), relative_path.to_lowercase())
+        (
+            query.to_lowercase(),
+            file_name.to_lowercase(),
+            relative_path.to_lowercase(),
+        )
     };
 
     // 1. Exact Filename Match
@@ -411,20 +434,31 @@ fn filter_and_score_items(
         }
     }
 
-    scored.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.relative_path.cmp(&b.0.relative_path)));
+    scored.sort_by(|a, b| {
+        b.1.cmp(&a.1)
+            .then_with(|| a.0.relative_path.cmp(&b.0.relative_path))
+    });
     scored.into_iter().map(|(item, _)| item.clone()).collect()
 }
 
 fn open_tty() -> Box<dyn io::Write + Send> {
     #[cfg(unix)]
     {
-        if let Ok(file) = std::fs::OpenOptions::new().read(true).write(true).open("/dev/tty") {
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/tty")
+        {
             return Box::new(file);
         }
     }
     #[cfg(windows)]
     {
-        if let Ok(file) = std::fs::OpenOptions::new().read(true).write(true).open("CONOUT$") {
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("CONOUT$")
+        {
             return Box::new(file);
         }
     }
@@ -443,7 +477,11 @@ fn run_interactive(mut args: FfArgs) -> Result<(), Box<dyn Error>> {
     let res = tui_loop(&mut terminal, &mut args);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
 
     match res {
@@ -544,19 +582,36 @@ pub fn open_file_natively(path: &str) {
 
     #[cfg(target_os = "macos")]
     {
-        let _ = std::process::Command::new("open")
-            .arg(path)
-            .spawn();
+        let _ = std::process::Command::new("open").arg(path).spawn();
         return;
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         // 1. Image files
-        if lower.ends_with(".jpg") || lower.ends_with(".jpeg") || lower.ends_with(".png")
-            || lower.ends_with(".gif") || lower.ends_with(".webp") || lower.ends_with(".svg")
-            || lower.ends_with(".bmp") || lower.ends_with(".ico") || lower.ends_with(".tiff") {
-            for cmd in &["eog", "feh", "imv", "sxiv", "nomacs", "viewnior", "gwenview", "shotwell", "xdg-open", "wslview", "explorer.exe"] {
+        if lower.ends_with(".jpg")
+            || lower.ends_with(".jpeg")
+            || lower.ends_with(".png")
+            || lower.ends_with(".gif")
+            || lower.ends_with(".webp")
+            || lower.ends_with(".svg")
+            || lower.ends_with(".bmp")
+            || lower.ends_with(".ico")
+            || lower.ends_with(".tiff")
+        {
+            for cmd in &[
+                "eog",
+                "feh",
+                "imv",
+                "sxiv",
+                "nomacs",
+                "viewnior",
+                "gwenview",
+                "shotwell",
+                "xdg-open",
+                "wslview",
+                "explorer.exe",
+            ] {
                 if std::process::Command::new(cmd).arg(path).spawn().is_ok() {
                     return;
                 }
@@ -564,10 +619,23 @@ pub fn open_file_natively(path: &str) {
         }
 
         // 2. Video / Audio files
-        if lower.ends_with(".mp4") || lower.ends_with(".mkv") || lower.ends_with(".avi")
-            || lower.ends_with(".mov") || lower.ends_with(".webm") || lower.ends_with(".mp3")
-            || lower.ends_with(".flac") || lower.ends_with(".wav") {
-            for cmd in &["mpv", "vlc", "mplayer", "xdg-open", "wslview", "explorer.exe"] {
+        if lower.ends_with(".mp4")
+            || lower.ends_with(".mkv")
+            || lower.ends_with(".avi")
+            || lower.ends_with(".mov")
+            || lower.ends_with(".webm")
+            || lower.ends_with(".mp3")
+            || lower.ends_with(".flac")
+            || lower.ends_with(".wav")
+        {
+            for cmd in &[
+                "mpv",
+                "vlc",
+                "mplayer",
+                "xdg-open",
+                "wslview",
+                "explorer.exe",
+            ] {
                 if std::process::Command::new(cmd).arg(path).spawn().is_ok() {
                     return;
                 }
@@ -575,10 +643,24 @@ pub fn open_file_natively(path: &str) {
         }
 
         // 3. Document / PDF files
-        if lower.ends_with(".pdf") || lower.ends_with(".docx") || lower.ends_with(".doc")
-            || lower.ends_with(".xlsx") || lower.ends_with(".pptx") || lower.ends_with(".txt")
-            || lower.ends_with(".odt") || lower.ends_with(".csv") {
-            for cmd in &["xdg-open", "evince", "okular", "libreoffice", "zathura", "wslview", "explorer.exe"] {
+        if lower.ends_with(".pdf")
+            || lower.ends_with(".docx")
+            || lower.ends_with(".doc")
+            || lower.ends_with(".xlsx")
+            || lower.ends_with(".pptx")
+            || lower.ends_with(".txt")
+            || lower.ends_with(".odt")
+            || lower.ends_with(".csv")
+        {
+            for cmd in &[
+                "xdg-open",
+                "evince",
+                "okular",
+                "libreoffice",
+                "zathura",
+                "wslview",
+                "explorer.exe",
+            ] {
                 if std::process::Command::new(cmd).arg(path).spawn().is_ok() {
                     return;
                 }
@@ -604,7 +686,9 @@ pub fn open_in_vscode(path: &str) {
 
 pub fn open_in_explorer(path: &str) {
     let dir = if std::path::Path::new(path).is_file() {
-        std::path::Path::new(path).parent().unwrap_or(std::path::Path::new(path))
+        std::path::Path::new(path)
+            .parent()
+            .unwrap_or(std::path::Path::new(path))
     } else {
         std::path::Path::new(path)
     };
@@ -691,7 +775,6 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                 ])
                 .split(area);
 
-
             let elapsed_ms = if query.trim().is_empty() {
                 if index_elapsed == Duration::ZERO {
                     index_start.elapsed().as_secs_f64() * 1000.0
@@ -707,20 +790,32 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
             let status_line = if !is_done && total_indexed == 0 {
                 format!("{}  Indexing workspace... please wait", spin)
             } else if query.trim().is_empty() {
-                format!("{}  {} files indexed in {:.2}ms — type to search", spin, total_indexed, elapsed_ms)
+                format!(
+                    "{}  {} files indexed in {:.2}ms — type to search",
+                    spin, total_indexed, elapsed_ms
+                )
             } else {
-                format!("{}  {} matches  •  search took {:.2}ms", spin, items.len(), elapsed_ms)
+                format!(
+                    "{}  {} matches  •  search took {:.2}ms",
+                    spin,
+                    items.len(),
+                    elapsed_ms
+                )
             };
 
             let header_lines = vec![
                 Line::from(vec![
-                    Span::styled("  🔍  ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled("FAST FILE FINDER", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  🔍  ",
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        "FAST FILE FINDER",
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("  ff  ", Style::default().fg(C_DIM)),
                 ]),
-                Line::from(vec![
-                    Span::styled(status_line, Style::default().fg(C_DIM)),
-                ]),
+                Line::from(vec![Span::styled(status_line, Style::default().fg(C_DIM))]),
             ];
             let header = Paragraph::new(header_lines)
                 .block(
@@ -739,7 +834,10 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
             // ── Search input inside list title ────────────────────────────────
             let search_title = Line::from(vec![
                 Span::styled(" 🔎 ", Style::default().fg(C_ACCENT)),
-                Span::styled(&query, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &query,
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("▌", Style::default().fg(C_ACCENT)),
                 Span::styled(
                     format!("  ({}/{}) ", items.len(), total_indexed),
@@ -806,14 +904,8 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                                 format!("{:<28}", file_name),
                                 Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
                             ),
-                            Span::styled(
-                                format!("{:<40}", dir_hint),
-                                Style::default().fg(C_DIM),
-                            ),
-                            Span::styled(
-                                format!(" [{}]", size_badge),
-                                Style::default().fg(C_CYAN),
-                            ),
+                            Span::styled(format!("{:<40}", dir_hint), Style::default().fg(C_DIM)),
+                            Span::styled(format!(" [{}]", size_badge), Style::default().fg(C_CYAN)),
                         ]);
 
                         ListItem::new(line)
@@ -851,18 +943,29 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                 String::new()
             };
 
-            let is_copied_recently = copy_notice_time.map_or(false, |t| t.elapsed() < Duration::from_secs(2));
+            let is_copied_recently =
+                copy_notice_time.map_or(false, |t| t.elapsed() < Duration::from_secs(2));
 
             let path_title = if is_copied_recently {
-                Span::styled(" ✔ PATH COPIED TO CLIPBOARD! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    " ✔ PATH COPIED TO CLIPBOARD! ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                )
             } else {
-                Span::styled(" 📍 Full Path ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    " 📍 Full Path ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                )
             };
 
             let path_widget = Paragraph::new(Line::from(vec![
                 Span::styled("  ", Style::default()),
                 Span::styled(
-                    if selected_path_str.is_empty() { "No file selected".to_string() } else { selected_path_str },
+                    if selected_path_str.is_empty() {
+                        "No file selected".to_string()
+                    } else {
+                        selected_path_str
+                    },
                     Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
                 ),
             ]))
@@ -870,7 +973,11 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(if is_copied_recently { C_GREEN } else { C_DIM }))
+                    .border_style(Style::default().fg(if is_copied_recently {
+                        C_GREEN
+                    } else {
+                        C_DIM
+                    }))
                     .title(path_title)
                     .style(Style::default().bg(C_BG)),
             );
@@ -878,17 +985,35 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
 
             // ── 4. Footer Keybinding Bar ──────────────────────────────────────
             let footer_spans = Line::from(vec![
-                Span::styled(" [↑↓] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " [↑↓] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Navigate  ", Style::default().fg(C_DIM)),
-                Span::styled("[Enter] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[Enter] ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Open  ", Style::default().fg(C_DIM)),
-                Span::styled("[Ctrl+C] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[Ctrl+C] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Copy Path  ", Style::default().fg(C_DIM)),
-                Span::styled("[F10] ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[F10] ",
+                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Code ", Style::default().fg(C_DIM)),
-                Span::styled("[Ctrl+O] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[Ctrl+O] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Exp ", Style::default().fg(C_DIM)),
-                Span::styled("[Esc] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[Esc] ",
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Quit ", Style::default().fg(C_DIM)),
             ]);
             let footer = Paragraph::new(footer_spans)
@@ -940,14 +1065,18 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                     KeyCode::F(10) => {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
-                                return Ok(Some(FfAction::OpenCode(item.path.to_string_lossy().to_string())));
+                                return Ok(Some(FfAction::OpenCode(
+                                    item.path.to_string_lossy().to_string(),
+                                )));
                             }
                         }
                     }
                     KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
-                                return Ok(Some(FfAction::Explore(item.path.to_string_lossy().to_string())));
+                                return Ok(Some(FfAction::Explore(
+                                    item.path.to_string_lossy().to_string(),
+                                )));
                             }
                         }
                     }
@@ -968,7 +1097,11 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                     KeyCode::Backspace => {
                         if !query.is_empty() {
                             query.pop();
-                            args.pattern = if query.is_empty() { None } else { Some(query.clone()) };
+                            args.pattern = if query.is_empty() {
+                                None
+                            } else {
+                                Some(query.clone())
+                            };
                             let start_t = Instant::now();
                             items = filter_and_score_items(&all_files, &query, args.case_sensitive);
                             search_elapsed = start_t.elapsed();
@@ -1001,7 +1134,8 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
 
                                 let now = Instant::now();
                                 if last_click_index == Some(clicked_idx)
-                                    && now.duration_since(last_click_time) < Duration::from_millis(400)
+                                    && now.duration_since(last_click_time)
+                                        < Duration::from_millis(400)
                                 {
                                     if let Some(item) = items.get(clicked_idx) {
                                         let path_str = item.path.to_string_lossy().to_string();
@@ -1052,23 +1186,44 @@ fn get_file_icon(path: &str) -> &'static str {
         "🟨"
     } else if lower.ends_with(".ts") || lower.ends_with(".tsx") {
         "📘"
-    } else if lower.ends_with(".json") || lower.ends_with(".toml") || lower.ends_with(".yaml") || lower.ends_with(".yml") {
+    } else if lower.ends_with(".json")
+        || lower.ends_with(".toml")
+        || lower.ends_with(".yaml")
+        || lower.ends_with(".yml")
+    {
         "⚙️"
     } else if lower.ends_with(".md") || lower.ends_with(".txt") {
         "📝"
     } else if lower.ends_with(".sh") || lower.ends_with(".zsh") || lower.ends_with(".bash") {
         "🐚"
-    } else if lower.ends_with(".png") || lower.ends_with(".jpg") || lower.ends_with(".jpeg") || lower.ends_with(".svg") || lower.ends_with(".webp") {
+    } else if lower.ends_with(".png")
+        || lower.ends_with(".jpg")
+        || lower.ends_with(".jpeg")
+        || lower.ends_with(".svg")
+        || lower.ends_with(".webp")
+    {
         "🖼️"
-    } else if lower.ends_with(".mp4") || lower.ends_with(".mkv") || lower.ends_with(".webm") || lower.ends_with(".avi") {
+    } else if lower.ends_with(".mp4")
+        || lower.ends_with(".mkv")
+        || lower.ends_with(".webm")
+        || lower.ends_with(".avi")
+    {
         "🎥"
     } else if lower.ends_with(".mp3") || lower.ends_with(".flac") || lower.ends_with(".wav") {
         "🎵"
-    } else if lower.ends_with(".zip") || lower.ends_with(".tar") || lower.ends_with(".gz") || lower.ends_with(".7z") {
+    } else if lower.ends_with(".zip")
+        || lower.ends_with(".tar")
+        || lower.ends_with(".gz")
+        || lower.ends_with(".7z")
+    {
         "📦"
     } else if lower.ends_with(".py") {
         "🐍"
-    } else if lower.ends_with(".cpp") || lower.ends_with(".c") || lower.ends_with(".h") || lower.ends_with(".hpp") {
+    } else if lower.ends_with(".cpp")
+        || lower.ends_with(".c")
+        || lower.ends_with(".h")
+        || lower.ends_with(".hpp")
+    {
         "⚡"
     } else {
         "📄"

@@ -24,8 +24,8 @@
 //      to the safe builtin fallback (direct binary call).
 // =============================================================================
 
-use crate::core::aliases::Shell;
 use super::{header_comment, shared};
+use crate::core::aliases::Shell;
 
 pub fn generate() -> String {
     let mut out = String::with_capacity(8192);
@@ -34,7 +34,8 @@ pub fn generate() -> String {
     out.push_str(&shared::render_guard(Shell::Zsh));
 
     // ── Core zsh options ─────────────────────────────────────────────────────
-    out.push_str(r#"
+    out.push_str(
+        r#"
 # ── Core Zsh options ──
 setopt PROMPT_SUBST
 setopt AUTO_CD EXTENDED_GLOB HIST_IGNORE_DUPS HIST_IGNORE_ALL_DUPS
@@ -50,17 +51,20 @@ HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 # Prevent git diff outputs, code snippets, multi-word junk from cluttering history
 # Lines that look like patch/diff stats or that start with } / ) / > are skipped.
 HISTORY_IGNORE='([[:space:]]#|[0-9]## file?(s) changed*|},|});|(*insertion*)|(*deletion*)|>*|)*|};)'
-"#);
+"#,
+    );
 
     // ── Autocompletion engine & Plugins (Native Rust Resolved) ─────────────────
     let home = shared::home_dir();
-    out.push_str(r#"
+    out.push_str(
+        r#"
 # ======================================================
 # ⚡ ZSH AUTOCOMPLETION ENGINE & PLUGINS
 # ======================================================
 if [[ -o interactive ]]; then
     typeset -U fpath
-"#);
+"#,
+    );
 
     let fpaths = [
         format!("{}/.zsh/zsh-completions/src", home),

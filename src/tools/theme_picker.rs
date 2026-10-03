@@ -29,30 +29,29 @@ use ratatui::{
 use std::io;
 
 use crate::core::prompt::{
-    active_theme_id, format_color_spec, get_effective_theme, render,
-    reset_theme_color_overrides, save_theme_color_override, set_active_theme, PromptContext,
-    THEMES,
+    active_theme_id, format_color_spec, get_effective_theme, render, reset_theme_color_overrides,
+    save_theme_color_override, set_active_theme, PromptContext, THEMES,
 };
 
 // ── Colour Palette ────────────────────────────────────────────────────────────
-const C_BG:          Color = Color::Rgb(8, 10, 20);
-const C_BORDER:      Color = Color::Rgb(130, 100, 255);   // violet accent (fkill-inspired)
-const C_ACCENT:      Color = Color::Rgb(160, 130, 255);   // bright violet
-const C_SELECTED_BG: Color = Color::Rgb(30, 20, 60);      // deep violet row bg
-const C_SELECTED_FG: Color = Color::Rgb(200, 170, 255);   // selected text
-const C_DIM:         Color = Color::Rgb(80, 80, 110);
-const C_TEXT:        Color = Color::Rgb(210, 215, 235);
-const C_GREEN:       Color = Color::Rgb(80, 220, 140);
-const C_YELLOW:      Color = Color::Rgb(255, 210, 80);
-const C_ACTIVE:      Color = Color::Rgb(0, 240, 180);     // ✅ active theme marker
-const C_WHITE:       Color = Color::Rgb(255, 255, 255);
+const C_BG: Color = Color::Rgb(8, 10, 20);
+const C_BORDER: Color = Color::Rgb(130, 100, 255); // violet accent (fkill-inspired)
+const C_ACCENT: Color = Color::Rgb(160, 130, 255); // bright violet
+const C_SELECTED_BG: Color = Color::Rgb(30, 20, 60); // deep violet row bg
+const C_SELECTED_FG: Color = Color::Rgb(200, 170, 255); // selected text
+const C_DIM: Color = Color::Rgb(80, 80, 110);
+const C_TEXT: Color = Color::Rgb(210, 215, 235);
+const C_GREEN: Color = Color::Rgb(80, 220, 140);
+const C_YELLOW: Color = Color::Rgb(255, 210, 80);
+const C_ACTIVE: Color = Color::Rgb(0, 240, 180); // ✅ active theme marker
+const C_WHITE: Color = Color::Rgb(255, 255, 255);
 
 // ── App Navigation State ──────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CurrentPage {
-    ThemeList,    // Page 1: Select & Search Themes
-    ColorEditor,  // Page 2: Full-Screen Theme Color Customizer
+    ThemeList,   // Page 1: Select & Search Themes
+    ColorEditor, // Page 2: Full-Screen Theme Color Customizer
 }
 
 // ── App State ─────────────────────────────────────────────────────────────────
@@ -106,9 +105,7 @@ impl ThemePickerApp {
             .iter()
             .enumerate()
             .filter(|(_, t)| {
-                q.is_empty()
-                    || t.name.to_lowercase().contains(&q)
-                    || t.emoji.contains(&*q)
+                q.is_empty() || t.name.to_lowercase().contains(&q) || t.emoji.contains(&*q)
             })
             .map(|(i, _)| i)
             .collect();
@@ -132,10 +129,13 @@ impl ThemePickerApp {
     }
 
     fn move_select(&mut self, delta: i32) {
-        if self.filtered.is_empty() { return; }
+        if self.filtered.is_empty() {
+            return;
+        }
         let cur = self.list_state.selected().unwrap_or(0) as i32;
         let len = self.filtered.len() as i32;
-        self.list_state.select(Some((cur + delta).rem_euclid(len) as usize));
+        self.list_state
+            .select(Some((cur + delta).rem_euclid(len) as usize));
     }
 
     fn apply_selected(&mut self) {
@@ -166,7 +166,9 @@ impl ThemePickerApp {
             terminal.draw(|f| self.render_ui(f))?;
 
             if let Event::Key(key) = event::read()? {
-                if key.kind != KeyEventKind::Press { continue; }
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
 
                 // ── PAGE 2: Color Editor Navigation & Input ───────────────────
                 if self.current_page == CurrentPage::ColorEditor {
@@ -178,7 +180,11 @@ impl ThemePickerApp {
                         }
 
                         (KeyCode::Up, _) => {
-                            self.color_element_idx = if self.color_element_idx == 0 { 6 } else { self.color_element_idx - 1 };
+                            self.color_element_idx = if self.color_element_idx == 0 {
+                                6
+                            } else {
+                                self.color_element_idx - 1
+                            };
                         }
                         (KeyCode::Down, _) => {
                             self.color_element_idx = (self.color_element_idx + 1) % 7;
@@ -188,11 +194,22 @@ impl ThemePickerApp {
                         (KeyCode::Enter, _) => {
                             if let Some(theme_idx) = self.selected_theme_idx() {
                                 let theme_name = THEMES[theme_idx].name;
-                                let element_keys = ["user", "path", "git", "prompt", "prefix", "in", "emoji"];
+                                let element_keys =
+                                    ["user", "path", "git", "prompt", "prefix", "in", "emoji"];
                                 let element = element_keys[self.color_element_idx];
-                                match save_theme_color_override(theme_name, element, &self.color_input_buffer) {
+                                match save_theme_color_override(
+                                    theme_name,
+                                    element,
+                                    &self.color_input_buffer,
+                                ) {
                                     Ok(_) => {
-                                        self.status = Some((format!("✅ Set {} color for '{}'", element, theme_name), false));
+                                        self.status = Some((
+                                            format!(
+                                                "✅ Set {} color for '{}'",
+                                                element, theme_name
+                                            ),
+                                            false,
+                                        ));
                                         self.color_input_buffer.clear();
                                     }
                                     Err(e) => {
@@ -203,11 +220,14 @@ impl ThemePickerApp {
                         }
 
                         // Reset colors with Ctrl+R
-                        (KeyCode::Char('r') | KeyCode::Char('R'), modifiers) if modifiers.contains(KeyModifiers::CONTROL) => {
+                        (KeyCode::Char('r') | KeyCode::Char('R'), modifiers)
+                            if modifiers.contains(KeyModifiers::CONTROL) =>
+                        {
                             if let Some(theme_idx) = self.selected_theme_idx() {
                                 let theme_name = THEMES[theme_idx].name;
                                 let _ = reset_theme_color_overrides(Some(theme_name));
-                                self.status = Some((format!("✅ Colors reset for '{}'", theme_name), false));
+                                self.status =
+                                    Some((format!("✅ Colors reset for '{}'", theme_name), false));
                             }
                         }
 
@@ -215,7 +235,8 @@ impl ThemePickerApp {
                         (KeyCode::Backspace, _) => {
                             self.color_input_buffer.pop();
                         }
-                        (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                        (KeyCode::Char(c), KeyModifiers::NONE)
+                        | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                             self.color_input_buffer.push(c);
                         }
                         _ => {}
@@ -229,7 +250,9 @@ impl ThemePickerApp {
                         KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
                             self.apply_selected();
                         }
-                        _ => { self.confirm = false; }
+                        _ => {
+                            self.confirm = false;
+                        }
                     }
                     continue;
                 }
@@ -241,10 +264,12 @@ impl ThemePickerApp {
 
                     (KeyCode::Up, _) => self.move_select(-1),
                     (KeyCode::Down, _) => self.move_select(1),
-                    (KeyCode::PageUp, _)   => self.move_select(-10),
+                    (KeyCode::PageUp, _) => self.move_select(-10),
                     (KeyCode::PageDown, _) => self.move_select(10),
-                    (KeyCode::Home, _) => { self.list_state.select(Some(0)); }
-                    (KeyCode::End, _)  => {
+                    (KeyCode::Home, _) => {
+                        self.list_state.select(Some(0));
+                    }
+                    (KeyCode::End, _) => {
                         let last = self.filtered.len().saturating_sub(1);
                         self.list_state.select(Some(last));
                     }
@@ -317,11 +342,17 @@ impl ThemePickerApp {
         let active_name = THEMES[self.active_idx].name;
         let banner = Paragraph::new(Line::from(vec![
             Span::styled("🎨  ", Style::default().fg(C_ACCENT)),
-            Span::styled("THEME PICKER", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "THEME PICKER",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" — Gladeshell", Style::default().fg(C_TEXT)),
             Span::styled(format!("  ({n} themes)"), Style::default().fg(C_DIM)),
             Span::styled("  │  Active: ", Style::default().fg(C_DIM)),
-            Span::styled(active_name, Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                active_name,
+                Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("  (Page 1 of 2)", Style::default().fg(C_DIM)),
         ]))
         .alignment(Alignment::Center)
@@ -338,7 +369,10 @@ impl ThemePickerApp {
         let match_count = self.filtered.len();
         let search_bar = Paragraph::new(Line::from(vec![
             Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
-            Span::styled(&self.query, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &self.query,
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("█", Style::default().fg(C_BORDER)),
             Span::styled(format!("  ({match_count}/{n})"), Style::default().fg(C_DIM)),
         ]))
@@ -347,7 +381,10 @@ impl ThemePickerApp {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_ACCENT))
-                .title(Span::styled(" Search Theme ", Style::default().fg(C_ACCENT)))
+                .title(Span::styled(
+                    " Search Theme ",
+                    Style::default().fg(C_ACCENT),
+                ))
                 .style(Style::default().bg(C_BG)),
         );
         f.render_widget(search_bar, outer[1]);
@@ -363,8 +400,15 @@ impl ThemePickerApp {
 
         // ── Footer ────────────────────────────────────────────────────────────
         let footer_text = if let Some((ref msg, is_err)) = self.status {
-            let col = if is_err { Color::Rgb(255, 80, 80) } else { C_GREEN };
-            Line::from(Span::styled(msg.clone(), Style::default().fg(col).add_modifier(Modifier::BOLD)))
+            let col = if is_err {
+                Color::Rgb(255, 80, 80)
+            } else {
+                C_GREEN
+            };
+            Line::from(Span::styled(
+                msg.clone(),
+                Style::default().fg(col).add_modifier(Modifier::BOLD),
+            ))
         } else {
             Line::from(vec![
                 Span::styled(" ↑↓ ", Style::default().fg(C_DIM)),
@@ -410,23 +454,35 @@ impl ThemePickerApp {
 
         for (display_idx, &theme_idx) in self.filtered.iter().enumerate() {
             let theme = &THEMES[theme_idx];
-            let is_sel    = self.list_state.selected() == Some(display_idx);
+            let is_sel = self.list_state.selected() == Some(display_idx);
             let is_active = theme_idx == self.active_idx;
 
             let active_marker = if is_active {
-                Span::styled("✓ ", Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "✓ ",
+                    Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("  ")
             };
 
             let cursor = if is_sel {
-                Span::styled("▶ ", Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "▶ ",
+                    Style::default()
+                        .fg(C_SELECTED_FG)
+                        .add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("  ")
             };
 
             // Format emoji to occupy exactly 3 terminal display cells for perfect alignment
-            let raw_emoji = if theme.emoji.is_empty() { "•" } else { theme.emoji };
+            let raw_emoji = if theme.emoji.is_empty() {
+                "•"
+            } else {
+                theme.emoji
+            };
             let w = unicode_width::UnicodeWidthStr::width(raw_emoji);
             let padding = " ".repeat(3_usize.saturating_sub(w));
             let emoji_span = Span::styled(
@@ -435,17 +491,17 @@ impl ThemePickerApp {
             );
 
             let name_style = if is_sel {
-                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(C_SELECTED_BG)
+                Style::default()
+                    .fg(C_WHITE)
+                    .add_modifier(Modifier::BOLD)
+                    .bg(C_SELECTED_BG)
             } else if is_active {
                 Style::default().fg(C_ACTIVE)
             } else {
                 Style::default().fg(C_TEXT)
             };
 
-            let num_span = Span::styled(
-                format!("{:02} ", theme_idx),
-                Style::default().fg(C_DIM),
-            );
+            let num_span = Span::styled(format!("{:02} ", theme_idx), Style::default().fg(C_DIM));
             let name_span = Span::styled(theme.name, name_style);
 
             let line = Line::from(vec![active_marker, cursor, num_span, emoji_span, name_span]);
@@ -490,16 +546,26 @@ impl ThemePickerApp {
         let inner = preview_block.inner(area);
         f.render_widget(preview_block, area);
 
-        if inner.height < 4 || inner.width < 20 { return; }
+        if inner.height < 4 || inner.width < 20 {
+            return;
+        }
 
         let mut lines: Vec<Line> = Vec::new();
 
         // ── Theme metadata ────────────────────────────────────────────────────
         lines.push(Line::from(vec![
             Span::styled("  Theme  ", Style::default().fg(C_DIM)),
-            Span::styled(theme.name, Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                theme.name,
+                Style::default()
+                    .fg(C_SELECTED_FG)
+                    .add_modifier(Modifier::BOLD),
+            ),
             if theme_idx == self.active_idx {
-                Span::styled("  ✓ ACTIVE", Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "  ✓ ACTIVE",
+                    Style::default().fg(C_ACTIVE).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("")
             },
@@ -573,7 +639,10 @@ impl ThemePickerApp {
                 // Re-colorize based on theme colors (approximate)
                 lines.push(Line::from(vec![
                     Span::styled("  ", Style::default()),
-                    Span::styled(clean, Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        clean,
+                        Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+                    ),
                 ]));
             }
         }
@@ -586,11 +655,20 @@ impl ThemePickerApp {
         )));
         lines.push(Line::from(vec![
             Span::styled("  Colors  ", Style::default().fg(C_DIM)),
-            Span::styled("██", Style::default().fg(theme_color_to_ratatui(theme.user_color))),
+            Span::styled(
+                "██",
+                Style::default().fg(theme_color_to_ratatui(theme.user_color)),
+            ),
             Span::styled(" user  ", Style::default().fg(C_DIM)),
-            Span::styled("██", Style::default().fg(theme_color_to_ratatui(theme.path_color))),
+            Span::styled(
+                "██",
+                Style::default().fg(theme_color_to_ratatui(theme.path_color)),
+            ),
             Span::styled(" path  ", Style::default().fg(C_DIM)),
-            Span::styled("██", Style::default().fg(theme_color_to_ratatui(theme.git_color))),
+            Span::styled(
+                "██",
+                Style::default().fg(theme_color_to_ratatui(theme.git_color)),
+            ),
             Span::styled(" git", Style::default().fg(C_DIM)),
         ]));
 
@@ -609,13 +687,19 @@ impl ThemePickerApp {
             Line::from(""),
             Line::from(vec![
                 Span::styled("  Apply theme ", Style::default().fg(C_TEXT)),
-                Span::styled(theme_name, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    theme_name,
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(" as active?", Style::default().fg(C_TEXT)),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("  Press ", Style::default().fg(C_DIM)),
-                Span::styled("[Y/Enter]", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[Y/Enter]",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(" to confirm, any key to cancel", Style::default().fg(C_DIM)),
             ]),
             Line::from(""),
@@ -656,10 +740,16 @@ impl ThemePickerApp {
         // ── Banner ────────────────────────────────────────────────────────────
         let banner = Paragraph::new(Line::from(vec![
             Span::styled("🎨  ", Style::default().fg(C_ACCENT)),
-            Span::styled("THEME COLOR CUSTOMIZER", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "THEME COLOR CUSTOMIZER",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" — Gladeshell", Style::default().fg(C_TEXT)),
             Span::styled("  │  Editing Theme: ", Style::default().fg(C_DIM)),
-            Span::styled(theme.name, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                theme.name,
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(format!(" {}", theme.emoji), Style::default().fg(C_YELLOW)),
             Span::styled("  (Page 2 of 2)", Style::default().fg(C_DIM)),
         ]))
@@ -694,7 +784,12 @@ impl ThemePickerApp {
         for (i, (_key, label, color_u32)) in elements.iter().enumerate() {
             let is_sel = i == self.color_element_idx;
             let cursor = if is_sel {
-                Span::styled("▶ ", Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "▶ ",
+                    Style::default()
+                        .fg(C_SELECTED_FG)
+                        .add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("  ")
             };
@@ -728,7 +823,10 @@ impl ThemePickerApp {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_BORDER))
-                .title(Span::styled(" Color Elements (7) ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " Color Elements (7) ",
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ))
                 .style(Style::default().bg(C_BG)),
         );
         f.render_widget(list_widget, content_panes[0]);
@@ -738,7 +836,10 @@ impl ThemePickerApp {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_ACCENT))
-            .title(Span::styled(" Real-Time Live Prompt Preview ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                " Real-Time Live Prompt Preview ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ))
             .style(Style::default().bg(C_BG));
 
         let inner = preview_block.inner(content_panes[1]);
@@ -747,11 +848,20 @@ impl ThemePickerApp {
         let mut preview_lines = Vec::new();
         preview_lines.push(Line::from(vec![
             Span::styled("  Target Theme: ", Style::default().fg(C_DIM)),
-            Span::styled(theme.name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                theme.name,
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("   Focused Element: ", Style::default().fg(C_DIM)),
-            Span::styled(elements[self.color_element_idx].1, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                elements[self.color_element_idx].1,
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
         ]));
-        preview_lines.push(Line::from(Span::styled("─".repeat(inner.width as usize), Style::default().fg(C_BORDER))));
+        preview_lines.push(Line::from(Span::styled(
+            "─".repeat(inner.width as usize),
+            Style::default().fg(C_BORDER),
+        )));
         preview_lines.push(Line::from(""));
 
         // Render live prompt using PromptContext
@@ -785,37 +895,62 @@ impl ThemePickerApp {
                 let clean = strip_ansi(raw_line);
                 preview_lines.push(Line::from(vec![
                     Span::styled("  ", Style::default()),
-                    Span::styled(clean, Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        clean,
+                        Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+                    ),
                 ]));
             }
         }
 
-        f.render_widget(Paragraph::new(preview_lines).wrap(Wrap { trim: false }), inner);
+        f.render_widget(
+            Paragraph::new(preview_lines).wrap(Wrap { trim: false }),
+            inner,
+        );
 
         // ── Bottom Input Field (outer[2]) ─────────────────────────────────────
         let sel_label = elements[self.color_element_idx].1;
         let input_box = Paragraph::new(Line::from(vec![
             Span::styled(" 🎨 New Color Code for ", Style::default().fg(C_ACCENT)),
-            Span::styled(sel_label, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                sel_label,
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(": ", Style::default().fg(C_ACCENT)),
-            Span::styled(&self.color_input_buffer, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &self.color_input_buffer,
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("█", Style::default().fg(C_BORDER)),
-            Span::styled("  (e.g. #ff0055, 214, cyan, green, default)", Style::default().fg(C_DIM)),
+            Span::styled(
+                "  (e.g. #ff0055, 214, cyan, green, default)",
+                Style::default().fg(C_DIM),
+            ),
         ]))
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_ACCENT))
-                .title(Span::styled(" Type Hex / ANSI Code & Press Enter to Save ", Style::default().fg(C_ACCENT)))
+                .title(Span::styled(
+                    " Type Hex / ANSI Code & Press Enter to Save ",
+                    Style::default().fg(C_ACCENT),
+                ))
                 .style(Style::default().bg(C_BG)),
         );
         f.render_widget(input_box, outer[2]);
 
         // ── Footer Bar (outer[3]) ─────────────────────────────────────────────
         let footer_text = if let Some((ref msg, is_err)) = self.status {
-            let col = if is_err { Color::Rgb(255, 80, 80) } else { C_GREEN };
-            Line::from(Span::styled(msg.clone(), Style::default().fg(col).add_modifier(Modifier::BOLD)))
+            let col = if is_err {
+                Color::Rgb(255, 80, 80)
+            } else {
+                C_GREEN
+            };
+            Line::from(Span::styled(
+                msg.clone(),
+                Style::default().fg(col).add_modifier(Modifier::BOLD),
+            ))
         } else {
             Line::from(vec![
                 Span::styled(" ↑↓ ", Style::default().fg(C_DIM)),
@@ -854,7 +989,7 @@ fn theme_color_to_ratatui(c: u32) -> Color {
     if c & 0x8000_0000 != 0 {
         // True color
         let r = ((c >> 16) & 0xFF) as u8;
-        let g = ((c >> 8)  & 0xFF) as u8;
+        let g = ((c >> 8) & 0xFF) as u8;
         let b = (c & 0xFF) as u8;
         Color::Rgb(r, g, b)
     } else {
@@ -872,8 +1007,12 @@ fn strip_ansi(s: &str) -> String {
         if bytes[i] == b'\x1b' && i + 1 < bytes.len() && bytes[i + 1] == b'[' {
             // Skip until 'm' or other terminator
             i += 2;
-            while i < bytes.len() && !bytes[i].is_ascii_alphabetic() { i += 1; }
-            if i < bytes.len() { i += 1; } // skip the terminator letter
+            while i < bytes.len() && !bytes[i].is_ascii_alphabetic() {
+                i += 1;
+            }
+            if i < bytes.len() {
+                i += 1;
+            } // skip the terminator letter
         } else {
             if let Some(c) = s[i..].chars().next() {
                 out.push(c);

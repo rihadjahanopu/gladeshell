@@ -218,9 +218,8 @@ fn get_status_internal(cwd: &Path) -> GitStatus {
     status.last_updated = Some(Instant::now());
 
     if let Some(ref git_root) = git_root_opt {
-        let is_monorepo = lock_cache(|guard| {
-            guard.get(git_root).map(|e| e.is_monorepo)
-        }).unwrap_or_else(|| detect_monorepo(git_root));
+        let is_monorepo = lock_cache(|guard| guard.get(git_root).map(|e| e.is_monorepo))
+            .unwrap_or_else(|| detect_monorepo(git_root));
 
         lock_cache(|guard| {
             insert_with_cap(
@@ -253,12 +252,18 @@ fn refresh_internal(cwd: &Path) {
     status.last_updated = Some(Instant::now());
 
     if let Some(git_root) = git_root_opt {
-        let is_monorepo = lock_cache(|guard| {
-            guard.get(&git_root).map(|e| e.is_monorepo)
-        }).unwrap_or_else(|| detect_monorepo(&git_root));
+        let is_monorepo = lock_cache(|guard| guard.get(&git_root).map(|e| e.is_monorepo))
+            .unwrap_or_else(|| detect_monorepo(&git_root));
 
         lock_cache(|guard| {
-            insert_with_cap(guard, git_root, CacheEntry { status, is_monorepo });
+            insert_with_cap(
+                guard,
+                git_root,
+                CacheEntry {
+                    status,
+                    is_monorepo,
+                },
+            );
         });
     }
 }
@@ -345,7 +350,12 @@ fn count_stashes(git_dir: &Path) -> u32 {
 fn query_git_status(cwd: &Path) -> GitStatus {
     let git_dir = match find_git_dir(cwd) {
         Some(d) => d,
-        None => return GitStatus { path: cwd.to_path_buf(), ..Default::default() },
+        None => {
+            return GitStatus {
+                path: cwd.to_path_buf(),
+                ..Default::default()
+            }
+        }
     };
 
     let branch = read_head(&git_dir);
@@ -390,7 +400,12 @@ fn query_git_status(cwd: &Path) -> GitStatus {
 fn query_git_status(cwd: &Path) -> GitStatus {
     let git_dir = match find_git_dir(cwd) {
         Some(d) => d,
-        None => return GitStatus { path: cwd.to_path_buf(), ..Default::default() },
+        None => {
+            return GitStatus {
+                path: cwd.to_path_buf(),
+                ..Default::default()
+            }
+        }
     };
 
     let branch = read_head(&git_dir);

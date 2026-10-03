@@ -8,11 +8,19 @@
 //  src/tools/vault.rs — Hardened AES-256 Multi-Vault Manager (Ratatui TUI)
 // =============================================================================
 
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Key, Nonce,
+};
 use crossterm::{
     event::{self, Event, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use pbkdf2::pbkdf2_hmac;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
@@ -21,14 +29,6 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
-use aes_gcm::{
-    aead::{Aead, KeyInit},
-    Aes256Gcm, Key, Nonce,
-};
-use flate2::{read::GzDecoder, write::GzEncoder, Compression};
-use pbkdf2::pbkdf2_hmac;
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
 use sha2::{Digest, Sha256};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Cursor, Write};
@@ -101,7 +101,6 @@ fn open_file_explorer(target_path: &Path) {
     let _ = open::that(target_path);
 }
 
-
 fn scan_directory(dir: &Path) -> Vec<PathBuf> {
     let mut dirs = Vec::new();
     if let Ok(entries) = fs::read_dir(dir) {
@@ -159,7 +158,8 @@ fn send_telegram_alert(msg: &str) {
     let message = format!("⚠️ VAULT ALERT: {}", msg);
     std::thread::spawn(move || {
         let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
-        let _ = ureq::post(&url).send_form([("chat_id", chat_id.as_str()), ("text", message.as_str())]);
+        let _ =
+            ureq::post(&url).send_form([("chat_id", chat_id.as_str()), ("text", message.as_str())]);
     });
 }
 
@@ -202,30 +202,60 @@ const RELOCK_CHOICES: &[&str] = &[
 #[derive(Clone, PartialEq)]
 enum Mode {
     Menu,
-    VaultList { action: VaultAction },
+    VaultList {
+        action: VaultAction,
+    },
     FolderSelect,
-    TextInput { prompt: String, field: InputField },
-    PasswordInput { prompt: String, field: PasswordField, stored: String },
-    RelockChoice { name: String },
-    TelegramConfigInput { field: TelegramConfigField },
+    TextInput {
+        prompt: String,
+        field: InputField,
+    },
+    PasswordInput {
+        prompt: String,
+        field: PasswordField,
+        stored: String,
+    },
+    RelockChoice {
+        name: String,
+    },
+    TelegramConfigInput {
+        field: TelegramConfigField,
+    },
     Processing,
 }
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
-enum VaultAction { Unlock, Lock, Delete, List }
+enum VaultAction {
+    Unlock,
+    Lock,
+    Delete,
+    List,
+}
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
-enum InputField { VaultName, LockName }
+enum InputField {
+    VaultName,
+    LockName,
+}
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
-enum PasswordField { First, Second, Panic, DeleteConfirm, UnlockAttempt }
+enum PasswordField {
+    First,
+    Second,
+    Panic,
+    DeleteConfirm,
+    UnlockAttempt,
+}
 
 #[allow(dead_code)]
 #[derive(Clone, PartialEq)]
-enum TelegramConfigField { BotToken, ChatId }
+enum TelegramConfigField {
+    BotToken,
+    ChatId,
+}
 
 struct App {
     menu_state: ListState,
@@ -257,7 +287,9 @@ impl App {
         let mut menu_state = ListState::default();
         menu_state.select(Some(0));
         let mut vault_state = ListState::default();
-        if !vaults.is_empty() { vault_state.select(Some(0)); }
+        if !vaults.is_empty() {
+            vault_state.select(Some(0));
+        }
         let mut folder_state = ListState::default();
         folder_state.select(Some(0));
         let mut relock_state = ListState::default();
@@ -300,7 +332,8 @@ impl App {
 
     fn move_menu_up(&mut self) {
         let i = self.menu_state.selected().unwrap_or(0);
-        self.menu_state.select(Some(if i == 0 { MENU_ITEMS.len() - 1 } else { i - 1 }));
+        self.menu_state
+            .select(Some(if i == 0 { MENU_ITEMS.len() - 1 } else { i - 1 }));
     }
 
     fn move_menu_down(&mut self) {
@@ -309,39 +342,54 @@ impl App {
     }
 
     fn move_vault_up(&mut self) {
-        if self.vaults.is_empty() { return; }
+        if self.vaults.is_empty() {
+            return;
+        }
         let i = self.vault_state.selected().unwrap_or(0);
-        self.vault_state.select(Some(if i == 0 { self.vaults.len() - 1 } else { i - 1 }));
+        self.vault_state
+            .select(Some(if i == 0 { self.vaults.len() - 1 } else { i - 1 }));
     }
 
     fn move_vault_down(&mut self) {
-        if self.vaults.is_empty() { return; }
+        if self.vaults.is_empty() {
+            return;
+        }
         let i = self.vault_state.selected().unwrap_or(0);
         self.vault_state.select(Some((i + 1) % self.vaults.len()));
     }
 
     fn move_folder_up(&mut self) {
         let total = self.total_folder_items();
-        if total == 0 { return; }
+        if total == 0 {
+            return;
+        }
         let i = self.folder_state.selected().unwrap_or(0);
-        self.folder_state.select(Some(if i == 0 { total - 1 } else { i - 1 }));
+        self.folder_state
+            .select(Some(if i == 0 { total - 1 } else { i - 1 }));
     }
 
     fn move_folder_down(&mut self) {
         let total = self.total_folder_items();
-        if total == 0 { return; }
+        if total == 0 {
+            return;
+        }
         let i = self.folder_state.selected().unwrap_or(0);
         self.folder_state.select(Some((i + 1) % total));
     }
 
     fn move_relock_up(&mut self) {
         let i = self.relock_state.selected().unwrap_or(0);
-        self.relock_state.select(Some(if i == 0 { RELOCK_CHOICES.len() - 1 } else { i - 1 }));
+        self.relock_state.select(Some(if i == 0 {
+            RELOCK_CHOICES.len() - 1
+        } else {
+            i - 1
+        }));
     }
 
     fn move_relock_down(&mut self) {
         let i = self.relock_state.selected().unwrap_or(0);
-        self.relock_state.select(Some((i + 1) % RELOCK_CHOICES.len()));
+        self.relock_state
+            .select(Some((i + 1) % RELOCK_CHOICES.len()));
     }
 
     fn selected_vault(&self) -> Option<&str> {
@@ -391,16 +439,24 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                     (_, KeyCode::Enter) => {
                         let sel = app.menu_state.selected().unwrap_or(0);
                         match sel {
-                            0 => { // Unlock
-                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                            0 => {
+                                // Unlock
+                                app.vaults =
+                                    list_encrypted_vaults(&store_dir_c).unwrap_or_default();
                                 if app.vaults.is_empty() {
-                                    app.status_msg = Some(("📋 No encrypted vaults found".into(), true));
+                                    app.status_msg =
+                                        Some(("📋 No encrypted vaults found".into(), true));
                                 } else {
-                                    if !app.vaults.is_empty() { app.vault_state.select(Some(0)); }
-                                    app.mode = Mode::VaultList { action: VaultAction::Unlock };
+                                    if !app.vaults.is_empty() {
+                                        app.vault_state.select(Some(0));
+                                    }
+                                    app.mode = Mode::VaultList {
+                                        action: VaultAction::Unlock,
+                                    };
                                 }
                             }
-                            1 => { // Lock (Folder selector)
+                            1 => {
+                                // Lock (Folder selector)
                                 let home = std::env::var_os("HOME")
                                     .or_else(|| std::env::var_os("USERPROFILE"))
                                     .map(PathBuf::from)
@@ -409,31 +465,53 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                 app.refresh_folder_browser();
                                 app.mode = Mode::FolderSelect;
                             }
-                            2 => { // Create
+                            2 => {
+                                // Create
                                 app.pending_path = None;
                                 app.input.clear();
-                                app.mode = Mode::TextInput { prompt: "New vault name (e.g. MySecrets):".into(), field: InputField::VaultName };
+                                app.mode = Mode::TextInput {
+                                    prompt: "New vault name (e.g. MySecrets):".into(),
+                                    field: InputField::VaultName,
+                                };
                             }
-                            3 => { // List
-                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
-                                if !app.vaults.is_empty() { app.vault_state.select(Some(0)); }
-                                app.mode = Mode::VaultList { action: VaultAction::List };
+                            3 => {
+                                // List
+                                app.vaults =
+                                    list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                if !app.vaults.is_empty() {
+                                    app.vault_state.select(Some(0));
+                                }
+                                app.mode = Mode::VaultList {
+                                    action: VaultAction::List,
+                                };
                             }
-                            4 => { // Delete
-                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                            4 => {
+                                // Delete
+                                app.vaults =
+                                    list_encrypted_vaults(&store_dir_c).unwrap_or_default();
                                 if app.vaults.is_empty() {
-                                    app.status_msg = Some(("📋 No encrypted vaults found to delete".into(), true));
+                                    app.status_msg = Some((
+                                        "📋 No encrypted vaults found to delete".into(),
+                                        true,
+                                    ));
                                 } else {
-                                    if !app.vaults.is_empty() { app.vault_state.select(Some(0)); }
-                                    app.mode = Mode::VaultList { action: VaultAction::Delete };
+                                    if !app.vaults.is_empty() {
+                                        app.vault_state.select(Some(0));
+                                    }
+                                    app.mode = Mode::VaultList {
+                                        action: VaultAction::Delete,
+                                    };
                                 }
                             }
-                            5 => { // Telegram Config
+                            5 => {
+                                // Telegram Config
                                 let (tok, chat) = get_telegram_config();
                                 app.telegram_token = tok;
                                 app.telegram_chat_id = chat;
                                 app.input.clear();
-                                app.mode = Mode::TelegramConfigInput { field: TelegramConfigField::BotToken };
+                                app.mode = Mode::TelegramConfigInput {
+                                    field: TelegramConfigField::BotToken,
+                                };
                             }
                             _ => {}
                         }
@@ -482,7 +560,11 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                             }
                         };
 
-                        let name = target_folder.file_name().unwrap_or_default().to_string_lossy().to_string();
+                        let name = target_folder
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_string();
                         app.pending_path = Some(target_folder);
                         app.pending_name = name.clone();
                         app.input.clear();
@@ -509,14 +591,20 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                 VaultAction::Unlock => {
                                     app.unlock_attempts = 0;
                                     app.mode = Mode::PasswordInput {
-                                        prompt: format!("Enter Master Password for [{}] (Attempts left: 3)", clean),
+                                        prompt: format!(
+                                            "Enter Master Password for [{}] (Attempts left: 3)",
+                                            clean
+                                        ),
                                         field: PasswordField::UnlockAttempt,
                                         stored: String::new(),
                                     };
                                 }
                                 VaultAction::Delete => {
                                     app.mode = Mode::PasswordInput {
-                                        prompt: format!("Enter Master Password to CONFIRM DELETE [{}]", clean),
+                                        prompt: format!(
+                                            "Enter Master Password to CONFIRM DELETE [{}]",
+                                            clean
+                                        ),
                                         field: PasswordField::DeleteConfirm,
                                         stored: String::new(),
                                     };
@@ -531,8 +619,14 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                 },
 
                 // ── Text Input ──────────────────────────────────────────────
-                Mode::TextInput { prompt: _, field: _ } => match (key.modifiers, key.code) {
-                    (_, KeyCode::Esc) => { app.mode = Mode::Menu; app.input.clear(); }
+                Mode::TextInput {
+                    prompt: _,
+                    field: _,
+                } => match (key.modifiers, key.code) {
+                    (_, KeyCode::Esc) => {
+                        app.mode = Mode::Menu;
+                        app.input.clear();
+                    }
                     (_, KeyCode::Enter) => {
                         let name = app.input.trim().replace(' ', "_");
                         if name.is_empty() {
@@ -548,14 +642,25 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                             };
                         }
                     }
-                    (_, KeyCode::Backspace) => { app.input.pop(); }
-                    (_, KeyCode::Char(c)) => { app.input.push(c); }
+                    (_, KeyCode::Backspace) => {
+                        app.input.pop();
+                    }
+                    (_, KeyCode::Char(c)) => {
+                        app.input.push(c);
+                    }
                     _ => {}
                 },
 
                 // ── Password Input ──────────────────────────────────────────
-                Mode::PasswordInput { prompt: _, ref field, stored: _ } => match (key.modifiers, key.code) {
-                    (_, KeyCode::Esc) => { app.mode = Mode::Menu; app.input.clear(); }
+                Mode::PasswordInput {
+                    prompt: _,
+                    ref field,
+                    stored: _,
+                } => match (key.modifiers, key.code) {
+                    (_, KeyCode::Esc) => {
+                        app.mode = Mode::Menu;
+                        app.input.clear();
+                    }
                     (_, KeyCode::Enter) => {
                         let pass = app.input.trim().to_string();
                         app.input.clear();
@@ -568,19 +673,29 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                 if panic_file.exists() {
                                     if let Ok(saved_hash) = fs::read_to_string(&panic_file) {
                                         if hash_panic_password(&pass) == saved_hash.trim() {
-                                            send_telegram_alert(&format!("PANIC PASSWORD USED FOR {}! Data wiped.", name));
-                                            let enc_file = store_dir_c.join(format!("{}.enc", name));
+                                            send_telegram_alert(&format!(
+                                                "PANIC PASSWORD USED FOR {}! Data wiped.",
+                                                name
+                                            ));
+                                            let enc_file =
+                                                store_dir_c.join(format!("{}.enc", name));
                                             let _ = shred_file(&enc_file);
                                             let _ = shred_file(&panic_file);
 
-                                            let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
+                                            let home = std::env::var_os("HOME")
+                                                .map(PathBuf::from)
+                                                .unwrap_or_else(|| PathBuf::from("."));
                                             let vault_dir = home.join(&name);
                                             let _ = fs::create_dir_all(&vault_dir);
                                             let notes_file = vault_dir.join("notes.txt");
-                                            let _ = fs::write(&notes_file, format!("Confidential Project Notes {}...\n", 2026));
+                                            let _ = fs::write(
+                                                &notes_file,
+                                                format!("Confidential Project Notes {}...\n", 2026),
+                                            );
                                             open_file_explorer(&vault_dir);
 
-                                            app.status_msg = Some(("✅ Access Granted!".into(), false));
+                                            app.status_msg =
+                                                Some(("✅ Access Granted!".into(), false));
                                             app.mode = Mode::Menu;
                                             continue;
                                         }
@@ -589,27 +704,35 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
 
                                 // 2. Attempt normal unlock
                                 let result = vault_unlock(&name, &pass, &store_dir_c);
-                                if !result.1 { // success
+                                if !result.1 {
+                                    // success
                                     app.status_msg = Some((result.0, false));
                                     app.relock_state.select(Some(0));
                                     app.mode = Mode::RelockChoice { name };
-                                } else { // failed
+                                } else {
+                                    // failed
                                     app.unlock_attempts += 1;
                                     let remaining = 3_u32.saturating_sub(app.unlock_attempts);
                                     if app.unlock_attempts >= 3 {
                                         // Self-destruct sequence
-                                        send_telegram_alert(&format!("3 Failed attempts on {}! Self-destruct activated.", name));
+                                        send_telegram_alert(&format!(
+                                            "3 Failed attempts on {}! Self-destruct activated.",
+                                            name
+                                        ));
                                         let enc_file = store_dir_c.join(format!("{}.enc", name));
                                         let _ = shred_file(&enc_file);
                                         let _ = shred_file(&panic_file);
                                         close_vault_session(&name);
 
                                         app.status_msg = Some((format!("🚨 SELF-DESTRUCT: 3 Failed attempts! Vault '{}' wiped.", name), true));
-                                        app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                        app.vaults =
+                                            list_encrypted_vaults(&store_dir_c).unwrap_or_default();
                                         app.mode = Mode::Menu;
                                     } else {
                                         let delay = app.unlock_attempts * 3;
-                                        std::thread::sleep(std::time::Duration::from_secs(delay as u64));
+                                        std::thread::sleep(std::time::Duration::from_secs(
+                                            delay as u64,
+                                        ));
                                         app.mode = Mode::PasswordInput {
                                             prompt: format!("Invalid Password! Re-enter for [{}] (Attempts left: {})", name, remaining),
                                             field: PasswordField::UnlockAttempt,
@@ -628,7 +751,8 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                             }
                             PasswordField::Second => {
                                 if pass != app.pending_pass1 {
-                                    app.status_msg = Some(("❌ Passwords do not match!".into(), true));
+                                    app.status_msg =
+                                        Some(("❌ Passwords do not match!".into(), true));
                                     app.mode = Mode::Menu;
                                 } else {
                                     app.mode = Mode::PasswordInput {
@@ -656,21 +780,27 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                 } else {
                                     vault_create(&name, &p1, &store_dir_c)
                                 };
-                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                app.vaults =
+                                    list_encrypted_vaults(&store_dir_c).unwrap_or_default();
                                 app.status_msg = Some(result);
                                 app.mode = Mode::Menu;
                             }
                             PasswordField::DeleteConfirm => {
                                 let name = app.pending_name.clone();
                                 let result = vault_delete(&name, &pass, &store_dir_c);
-                                app.vaults = list_encrypted_vaults(&store_dir_c).unwrap_or_default();
+                                app.vaults =
+                                    list_encrypted_vaults(&store_dir_c).unwrap_or_default();
                                 app.status_msg = Some(result);
                                 app.mode = Mode::Menu;
                             }
                         }
                     }
-                    (_, KeyCode::Backspace) => { app.input.pop(); }
-                    (_, KeyCode::Char(c)) => { app.input.push(c); }
+                    (_, KeyCode::Backspace) => {
+                        app.input.pop();
+                    }
+                    (_, KeyCode::Char(c)) => {
+                        app.input.push(c);
+                    }
                     _ => {}
                 },
 
@@ -687,7 +817,8 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                         let sel = app.relock_state.selected().unwrap_or(0);
                         let name_c = name.clone();
                         match sel {
-                            0 => { // Subshell
+                            0 => {
+                                // Subshell
                                 disable_raw_mode()?;
                                 execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
 
@@ -699,10 +830,14 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                 let vault_dir = home.join(&name_c);
 
                                 #[cfg(windows)]
-                                let shell = std::env::var("COMSPEC").unwrap_or_else(|_| "powershell.exe".into());
+                                let shell = std::env::var("COMSPEC")
+                                    .unwrap_or_else(|_| "powershell.exe".into());
                                 #[cfg(not(windows))]
-                                let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
-                                let _ = std::process::Command::new(shell).current_dir(&vault_dir).status();
+                                let shell =
+                                    std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
+                                let _ = std::process::Command::new(shell)
+                                    .current_dir(&vault_dir)
+                                    .status();
 
                                 close_vault_session(&name_c);
                                 println!("\n\x1b[1;33m[🔒] Session ended. Vault '{}' relocked & RAM purged.\x1b[0m\n", name_c);
@@ -710,20 +845,32 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                 enable_raw_mode()?;
                                 execute!(io::stdout(), EnterAlternateScreen)?;
                                 terminal.clear()?;
-                                app.status_msg = Some((format!("🔒 Relocked session for '{}'.", name_c), false));
+                                app.status_msg =
+                                    Some((format!("🔒 Relocked session for '{}'.", name_c), false));
                                 app.mode = Mode::Menu;
                             }
-                            1 => { // 10-Minute Timer
+                            1 => {
+                                // 10-Minute Timer
                                 std::thread::spawn(move || {
                                     std::thread::sleep(std::time::Duration::from_secs(600));
                                     close_vault_session(&name_c);
                                 });
-                                app.status_msg = Some((format!("⏱️ 10-Minute auto-relock timer started for '{}'.", name), false));
+                                app.status_msg = Some((
+                                    format!(
+                                        "⏱️ 10-Minute auto-relock timer started for '{}'.",
+                                        name
+                                    ),
+                                    false,
+                                ));
                                 app.mode = Mode::Menu;
                             }
-                            2 => { // Relock Now
+                            2 => {
+                                // Relock Now
                                 close_vault_session(name);
-                                app.status_msg = Some((format!("🔒 Vault '{}' relocked & RAM purged.", name), false));
+                                app.status_msg = Some((
+                                    format!("🔒 Vault '{}' relocked & RAM purged.", name),
+                                    false,
+                                ));
                                 app.mode = Mode::Menu;
                             }
                             _ => {}
@@ -734,29 +881,45 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
 
                 // ── Telegram Config Input ──────────────────────────────────
                 Mode::TelegramConfigInput { ref field } => match (key.modifiers, key.code) {
-                    (_, KeyCode::Esc) => { app.mode = Mode::Menu; app.input.clear(); }
+                    (_, KeyCode::Esc) => {
+                        app.mode = Mode::Menu;
+                        app.input.clear();
+                    }
                     (_, KeyCode::Enter) => {
                         let val = app.input.trim().to_string();
                         app.input.clear();
                         match field {
                             TelegramConfigField::BotToken => {
                                 app.telegram_token = val;
-                                app.mode = Mode::TelegramConfigInput { field: TelegramConfigField::ChatId };
+                                app.mode = Mode::TelegramConfigInput {
+                                    field: TelegramConfigField::ChatId,
+                                };
                             }
                             TelegramConfigField::ChatId => {
                                 app.telegram_chat_id = val;
-                                if let Err(e) = save_telegram_config(&app.telegram_token, &app.telegram_chat_id) {
+                                if let Err(e) =
+                                    save_telegram_config(&app.telegram_token, &app.telegram_chat_id)
+                                {
                                     app.status_msg = Some((e, true));
                                 } else {
-                                    send_telegram_alert("Telegram security alert configuration saved!");
-                                    app.status_msg = Some(("✅ Telegram alert configuration saved!".into(), false));
+                                    send_telegram_alert(
+                                        "Telegram security alert configuration saved!",
+                                    );
+                                    app.status_msg = Some((
+                                        "✅ Telegram alert configuration saved!".into(),
+                                        false,
+                                    ));
                                 }
                                 app.mode = Mode::Menu;
                             }
                         }
                     }
-                    (_, KeyCode::Backspace) => { app.input.pop(); }
-                    (_, KeyCode::Char(c)) => { app.input.push(c); }
+                    (_, KeyCode::Backspace) => {
+                        app.input.pop();
+                    }
+                    (_, KeyCode::Char(c)) => {
+                        app.input.push(c);
+                    }
                     _ => {}
                 },
 
@@ -786,9 +949,18 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
     // ── Banner ──────────────────────────────────────────────────────────────
     let banner = Paragraph::new(Line::from(vec![
         Span::styled("🔐  ", Style::default().fg(C_ACCENT)),
-        Span::styled("VAULT", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
-        Span::styled(" — AES-256 Multi-Vault Manager", Style::default().fg(C_TEXT)),
-        Span::styled(format!("  ({} vaults)", app.vaults.len()), Style::default().fg(C_DIM)),
+        Span::styled(
+            "VAULT",
+            Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            " — AES-256 Multi-Vault Manager",
+            Style::default().fg(C_TEXT),
+        ),
+        Span::styled(
+            format!("  ({} vaults)", app.vaults.len()),
+            Style::default().fg(C_DIM),
+        ),
     ]))
     .alignment(Alignment::Center)
     .block(
@@ -807,26 +979,42 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
         .split(layout[1]);
 
     // Left: menu
-    let menu_items: Vec<ListItem> = MENU_ITEMS.iter().enumerate().map(|(i, item)| {
-        let is_sel = app.menu_state.selected() == Some(i);
-        if is_sel {
-            ListItem::new(Line::from(vec![
-                Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                Span::styled(item.trim(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
-            ]))
-        } else {
-            ListItem::new(Line::from(vec![
-                Span::styled("   ", Style::default()),
-                Span::styled(item.trim(), Style::default().fg(C_TEXT)),
-            ]))
-        }
-    }).collect();
+    let menu_items: Vec<ListItem> = MENU_ITEMS
+        .iter()
+        .enumerate()
+        .map(|(i, item)| {
+            let is_sel = app.menu_state.selected() == Some(i);
+            if is_sel {
+                ListItem::new(Line::from(vec![
+                    Span::styled(
+                        " ▶ ",
+                        Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        item.trim(),
+                        Style::default()
+                            .fg(C_WHITE)
+                            .add_modifier(Modifier::BOLD)
+                            .bg(Color::Rgb(30, 20, 5)),
+                    ),
+                ]))
+            } else {
+                ListItem::new(Line::from(vec![
+                    Span::styled("   ", Style::default()),
+                    Span::styled(item.trim(), Style::default().fg(C_TEXT)),
+                ]))
+            }
+        })
+        .collect();
     let menu = List::new(menu_items).block(
         Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
-            .title(Span::styled(" Menu ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                " Menu ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ))
             .style(Style::default().bg(C_BG)),
     );
     f.render_stateful_widget(menu, body[0], &mut app.menu_state.clone());
@@ -848,49 +1036,74 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
                     Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
                 )]))]
             } else {
-                app.vaults.iter().enumerate().map(|(i, v)| {
-                    let is_sel = app.vault_state.selected() == Some(i);
-                    let clean = v.trim_end_matches(".enc");
-                    let enc_file = store_dir.join(v);
-                    let size_str = if let Ok(meta) = fs::metadata(&enc_file) {
-                        format!("{} KB", meta.len() / 1024)
-                    } else {
-                        "-".into()
-                    };
-                    let ram_dir = ram_base.join(clean);
-                    let is_unlocked = ram_dir.exists();
+                app.vaults
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        let is_sel = app.vault_state.selected() == Some(i);
+                        let clean = v.trim_end_matches(".enc");
+                        let enc_file = store_dir.join(v);
+                        let size_str = if let Ok(meta) = fs::metadata(&enc_file) {
+                            format!("{} KB", meta.len() / 1024)
+                        } else {
+                            "-".into()
+                        };
+                        let ram_dir = ram_base.join(clean);
+                        let is_unlocked = ram_dir.exists();
 
-                    let status_span = if is_unlocked {
-                        Span::styled(" [UNLOCKED in RAM]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
-                    } else {
-                        Span::styled(" [LOCKED]", Style::default().fg(C_DIM))
-                    };
+                        let status_span = if is_unlocked {
+                            Span::styled(
+                                " [UNLOCKED in RAM]",
+                                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                            )
+                        } else {
+                            Span::styled(" [LOCKED]", Style::default().fg(C_DIM))
+                        };
 
-                    let icon = if is_unlocked { "🔓" } else { "🔒" };
+                        let icon = if is_unlocked { "🔓" } else { "🔒" };
 
-                    if is_sel {
-                        ListItem::new(Line::from(vec![
-                            Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                            Span::styled(format!("{} {} ", icon, clean), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
-                            Span::styled(format!("({})", size_str), Style::default().fg(C_ACCENT)),
-                            status_span,
-                        ]))
-                    } else {
-                        ListItem::new(Line::from(vec![
-                            Span::styled("   ", Style::default()),
-                            Span::styled(format!("{} {} ", icon, clean), Style::default().fg(C_TEXT)),
-                            Span::styled(format!("({})", size_str), Style::default().fg(C_DIM)),
-                            status_span,
-                        ]))
-                    }
-                }).collect()
+                        if is_sel {
+                            ListItem::new(Line::from(vec![
+                                Span::styled(
+                                    " ▶ ",
+                                    Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                                ),
+                                Span::styled(
+                                    format!("{} {} ", icon, clean),
+                                    Style::default()
+                                        .fg(C_WHITE)
+                                        .add_modifier(Modifier::BOLD)
+                                        .bg(Color::Rgb(30, 20, 5)),
+                                ),
+                                Span::styled(
+                                    format!("({})", size_str),
+                                    Style::default().fg(C_ACCENT),
+                                ),
+                                status_span,
+                            ]))
+                        } else {
+                            ListItem::new(Line::from(vec![
+                                Span::styled("   ", Style::default()),
+                                Span::styled(
+                                    format!("{} {} ", icon, clean),
+                                    Style::default().fg(C_TEXT),
+                                ),
+                                Span::styled(format!("({})", size_str), Style::default().fg(C_DIM)),
+                                status_span,
+                            ]))
+                        }
+                    })
+                    .collect()
             };
             let vault_list = List::new(vault_items).block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        title,
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_stateful_widget(vault_list, body[1], &mut app.vault_state.clone());
@@ -904,13 +1117,25 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
                 let is_sel = app.folder_state.selected() == Some(0);
                 if is_sel {
                     folder_items.push(ListItem::new(Line::from(vec![
-                        Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                        Span::styled("📁 .. (Go Up Parent Directory)", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
+                        Span::styled(
+                            " ▶ ",
+                            Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            "📁 .. (Go Up Parent Directory)",
+                            Style::default()
+                                .fg(C_WHITE)
+                                .add_modifier(Modifier::BOLD)
+                                .bg(Color::Rgb(30, 20, 5)),
+                        ),
                     ])));
                 } else {
                     folder_items.push(ListItem::new(Line::from(vec![
                         Span::styled("   ", Style::default()),
-                        Span::styled("📁 .. (Go Up Parent Directory)", Style::default().fg(C_ACCENT)),
+                        Span::styled(
+                            "📁 .. (Go Up Parent Directory)",
+                            Style::default().fg(C_ACCENT),
+                        ),
                     ])));
                 }
             }
@@ -927,9 +1152,21 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
                     let name = path.file_name().unwrap_or_default().to_string_lossy();
                     if is_sel {
                         folder_items.push(ListItem::new(Line::from(vec![
-                            Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                            Span::styled(format!("📁 {}/", name), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
-                            Span::styled("  [Space / L to LOCK]", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+                            Span::styled(
+                                " ▶ ",
+                                Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                format!("📁 {}/", name),
+                                Style::default()
+                                    .fg(C_WHITE)
+                                    .add_modifier(Modifier::BOLD)
+                                    .bg(Color::Rgb(30, 20, 5)),
+                            ),
+                            Span::styled(
+                                "  [Space / L to LOCK]",
+                                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                            ),
                         ])));
                     } else {
                         folder_items.push(ListItem::new(Line::from(vec![
@@ -946,33 +1183,52 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        title,
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_stateful_widget(folder_list, body[1], &mut app.folder_state.clone());
         }
 
         Mode::RelockChoice { name } => {
-            let choices: Vec<ListItem> = RELOCK_CHOICES.iter().enumerate().map(|(i, item)| {
-                let is_sel = app.relock_state.selected() == Some(i);
-                if is_sel {
-                    ListItem::new(Line::from(vec![
-                        Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                        Span::styled(item.trim(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(30, 20, 5))),
-                    ]))
-                } else {
-                    ListItem::new(Line::from(vec![
-                        Span::styled("   ", Style::default()),
-                        Span::styled(item.trim(), Style::default().fg(C_TEXT)),
-                    ]))
-                }
-            }).collect();
+            let choices: Vec<ListItem> = RELOCK_CHOICES
+                .iter()
+                .enumerate()
+                .map(|(i, item)| {
+                    let is_sel = app.relock_state.selected() == Some(i);
+                    if is_sel {
+                        ListItem::new(Line::from(vec![
+                            Span::styled(
+                                " ▶ ",
+                                Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                item.trim(),
+                                Style::default()
+                                    .fg(C_WHITE)
+                                    .add_modifier(Modifier::BOLD)
+                                    .bg(Color::Rgb(30, 20, 5)),
+                            ),
+                        ]))
+                    } else {
+                        ListItem::new(Line::from(vec![
+                            Span::styled("   ", Style::default()),
+                            Span::styled(item.trim(), Style::default().fg(C_TEXT)),
+                        ]))
+                    }
+                })
+                .collect();
             let relock_list = List::new(choices).block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Double)
                     .border_style(Style::default().fg(C_GREEN))
-                    .title(Span::styled(format!(" 🔓 Vault '{}' Unlocked! Select Relock Mode ", name), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        format!(" 🔓 Vault '{}' Unlocked! Select Relock Mode ", name),
+                        Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_stateful_widget(relock_list, body[1], &mut app.relock_state.clone());
@@ -981,21 +1237,33 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
         Mode::TextInput { prompt, .. } => {
             let pane = Paragraph::new(vec![
                 Line::from(""),
-                Line::from(vec![Span::styled(format!("  {}", prompt), Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    format!("  {}", prompt),
+                    Style::default().fg(C_DIM),
+                )]),
                 Line::from(vec![
                     Span::styled("  ", Style::default()),
-                    Span::styled(&app.input, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &app.input,
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("█", Style::default().fg(C_BORDER)),
                 ]),
                 Line::from(""),
-                Line::from(vec![Span::styled("  Enter to confirm  Esc to cancel", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    "  Enter to confirm  Esc to cancel",
+                    Style::default().fg(C_DIM),
+                )]),
             ])
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(" Input ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        " Input ",
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_widget(pane, body[1]);
@@ -1005,21 +1273,33 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
             let masked: String = "●".repeat(app.input.len());
             let pane = Paragraph::new(vec![
                 Line::from(""),
-                Line::from(vec![Span::styled(format!("  {}", prompt), Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    format!("  {}", prompt),
+                    Style::default().fg(C_DIM),
+                )]),
                 Line::from(vec![
                     Span::styled("  ", Style::default()),
-                    Span::styled(&masked, Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &masked,
+                        Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("█", Style::default().fg(C_BORDER)),
                 ]),
                 Line::from(""),
-                Line::from(vec![Span::styled("  Enter to confirm  Esc to cancel", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    "  Enter to confirm  Esc to cancel",
+                    Style::default().fg(C_DIM),
+                )]),
             ])
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Double)
                     .border_style(Style::default().fg(C_BORDER))
-                    .title(Span::styled(" 🔑 Password ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        " 🔑 Password ",
+                        Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(Color::Rgb(15, 12, 3))),
             );
             f.render_widget(pane, body[1]);
@@ -1032,21 +1312,33 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
             };
             let pane = Paragraph::new(vec![
                 Line::from(""),
-                Line::from(vec![Span::styled(format!("  {}", label), Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    format!("  {}", label),
+                    Style::default().fg(C_DIM),
+                )]),
                 Line::from(vec![
                     Span::styled("  ", Style::default()),
-                    Span::styled(&app.input, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &app.input,
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("█", Style::default().fg(C_BORDER)),
                 ]),
                 Line::from(""),
-                Line::from(vec![Span::styled("  Enter to save  Esc to cancel", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    "  Enter to save  Esc to cancel",
+                    Style::default().fg(C_DIM),
+                )]),
             ])
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(" ⚙️ Telegram Alert Setup ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        " ⚙️ Telegram Alert Setup ",
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_widget(pane, body[1]);
@@ -1062,33 +1354,53 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
 
             let info_lines = vec![
                 Line::from(""),
-                Line::from(vec![Span::styled("  AES-256-GCM encrypted vaults", Style::default().fg(C_DIM))]),
-                Line::from(vec![Span::styled("  PBKDF2 key derivation (500k iter)", Style::default().fg(C_DIM))]),
-                Line::from(vec![Span::styled("  3-Pass DoD Forensic Secure Shredding", Style::default().fg(C_DIM))]),
-                Line::from(vec![Span::styled("  RAM-only unlock & auto-relock timers", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    "  AES-256-GCM encrypted vaults",
+                    Style::default().fg(C_DIM),
+                )]),
+                Line::from(vec![Span::styled(
+                    "  PBKDF2 key derivation (500k iter)",
+                    Style::default().fg(C_DIM),
+                )]),
+                Line::from(vec![Span::styled(
+                    "  3-Pass DoD Forensic Secure Shredding",
+                    Style::default().fg(C_DIM),
+                )]),
+                Line::from(vec![Span::styled(
+                    "  RAM-only unlock & auto-relock timers",
+                    Style::default().fg(C_DIM),
+                )]),
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("  Store dir: ", Style::default().fg(C_DIM)),
-                    Span::styled(vault_store_dir().display().to_string(), Style::default().fg(C_ACCENT)),
+                    Span::styled(
+                        vault_store_dir().display().to_string(),
+                        Style::default().fg(C_ACCENT),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("  RAM base:  ", Style::default().fg(C_DIM)),
-                    Span::styled(ram_base_dir().display().to_string(), Style::default().fg(C_ACCENT)),
+                    Span::styled(
+                        ram_base_dir().display().to_string(),
+                        Style::default().fg(C_ACCENT),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("  Telegram:  ", Style::default().fg(C_DIM)),
                     tg_status,
                 ]),
             ];
-            let info = Paragraph::new(info_lines)
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .border_style(Style::default().fg(C_DIM))
-                        .title(Span::styled(" Vault System Info ", Style::default().fg(C_DIM)))
-                        .style(Style::default().bg(C_BG)),
-                );
+            let info = Paragraph::new(info_lines).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(C_DIM))
+                    .title(Span::styled(
+                        " Vault System Info ",
+                        Style::default().fg(C_DIM),
+                    ))
+                    .style(Style::default().bg(C_BG)),
+            );
             f.render_widget(info, body[1]);
         }
     }
@@ -1096,7 +1408,10 @@ fn draw_vault(f: &mut Frame, app: &mut App) {
     // ── Status Bar ──────────────────────────────────────────────────────────
     let status_text = if let Some((ref msg, is_err)) = app.status_msg {
         let color = if is_err { C_RED } else { C_GREEN };
-        Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
+        Line::from(vec![Span::styled(
+            msg.clone(),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        )])
     } else if app.mode == Mode::FolderSelect {
         Line::from(vec![Span::styled(
             " ↑↓ Navigate  ·  ↵ / → Open Folder  ·  ← / Backspace Go Up  ·  Space / L Lock Folder  ·  ⎋ Back",
@@ -1183,7 +1498,10 @@ fn decrypt_vault_payload(vault_data: &[u8], password: &str) -> Result<Zeroizing<
 
 fn create_in_memory_tarball(dir_path: &Path) -> Result<Zeroizing<Vec<u8>>, String> {
     if !dir_path.exists() || !dir_path.is_dir() {
-        return Err(format!("Directory path '{}' does not exist", dir_path.display()));
+        return Err(format!(
+            "Directory path '{}' does not exist",
+            dir_path.display()
+        ));
     }
 
     let buffer = Vec::new();
@@ -1195,8 +1513,12 @@ fn create_in_memory_tarball(dir_path: &Path) -> Result<Zeroizing<Vec<u8>>, Strin
         .append_dir_all(folder_name, dir_path)
         .map_err(|e| format!("Tar build error: {}", e))?;
 
-    let encoder = builder.into_inner().map_err(|e| format!("Tar finalize error: {}", e))?;
-    let compressed_bytes = encoder.finish().map_err(|e| format!("Gz finish error: {}", e))?;
+    let encoder = builder
+        .into_inner()
+        .map_err(|e| format!("Tar finalize error: {}", e))?;
+    let compressed_bytes = encoder
+        .finish()
+        .map_err(|e| format!("Gz finish error: {}", e))?;
 
     Ok(Zeroizing::new(compressed_bytes))
 }
@@ -1208,7 +1530,10 @@ fn extract_in_memory_tarball(tarball_data: &[u8], target_dir: &Path) -> Result<(
     let decoder = GzDecoder::new(cursor);
     let mut archive = Archive::new(decoder);
 
-    for entry_res in archive.entries().map_err(|e| format!("Tar read error: {}", e))? {
+    for entry_res in archive
+        .entries()
+        .map_err(|e| format!("Tar read error: {}", e))?
+    {
         let mut entry = entry_res.map_err(|e| format!("Tar entry error: {}", e))?;
 
         // ZipSlip mitigation
@@ -1218,7 +1543,9 @@ fn extract_in_memory_tarball(tarball_data: &[u8], target_dir: &Path) -> Result<(
             let _ = fs::create_dir_all(parent);
         }
 
-        entry.unpack_in(target_dir).map_err(|e| format!("Tar unpack error: {}", e))?;
+        entry
+            .unpack_in(target_dir)
+            .map_err(|e| format!("Tar unpack error: {}", e))?;
     }
 
     Ok(())
@@ -1231,7 +1558,10 @@ fn shred_file(path: &Path) -> Result<(), String> {
 
     let meta = fs::metadata(path).map_err(|e| e.to_string())?;
     let file_len = meta.len();
-    let mut file = OpenOptions::new().write(true).open(path).map_err(|e| e.to_string())?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .open(path)
+        .map_err(|e| e.to_string())?;
     let mut rng = ChaCha20Rng::from_rng(&mut rand::rng());
 
     let buf_size = 64 * 1024;
@@ -1245,13 +1575,15 @@ fn shred_file(path: &Path) -> Result<(), String> {
 
     // Pass 3: CSPRNG Random bytes
     use std::io::Seek;
-    file.seek(std::io::SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+    file.seek(std::io::SeekFrom::Start(0))
+        .map_err(|e| e.to_string())?;
     let mut remaining = file_len;
     let mut rand_buf = vec![0u8; buf_size];
     while remaining > 0 {
         let chunk = (remaining as usize).min(buf_size);
         rng.fill_bytes(&mut rand_buf[..chunk]);
-        file.write_all(&rand_buf[..chunk]).map_err(|e| e.to_string())?;
+        file.write_all(&rand_buf[..chunk])
+            .map_err(|e| e.to_string())?;
         remaining -= chunk as u64;
     }
     file.sync_all().map_err(|e| e.to_string())?;
@@ -1270,7 +1602,8 @@ fn shred_file(path: &Path) -> Result<(), String> {
 
 fn overwrite_bytes(file: &mut fs::File, mut remaining: u64, buf: &[u8]) -> Result<(), String> {
     use std::io::Seek;
-    file.seek(std::io::SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+    file.seek(std::io::SeekFrom::Start(0))
+        .map_err(|e| e.to_string())?;
     while remaining > 0 {
         let chunk = (remaining as usize).min(buf.len());
         file.write_all(&buf[..chunk]).map_err(|e| e.to_string())?;
@@ -1319,7 +1652,7 @@ fn vault_create(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
         return ("❌ Failed to create temp directory".into(), true);
     }
     let _ = fs::write(ram_vault.join("README.txt"), format!("Vault '{}'", name));
-    
+
     let tarball = match create_in_memory_tarball(&ram_vault) {
         Ok(t) => t,
         Err(e) => {
@@ -1347,9 +1680,17 @@ fn vault_create(name: &str, pass: &str, store_dir: &PathBuf) -> (String, bool) {
     (format!("✅ Created vault: {}.enc", name), false)
 }
 
-fn vault_lock_path(name: &str, target_path: &Path, pass: &str, store_dir: &PathBuf) -> (String, bool) {
+fn vault_lock_path(
+    name: &str,
+    target_path: &Path,
+    pass: &str,
+    store_dir: &PathBuf,
+) -> (String, bool) {
     if !target_path.exists() {
-        return (format!("❌ Directory path '{}' not found", target_path.display()), true);
+        return (
+            format!("❌ Directory path '{}' not found", target_path.display()),
+            true,
+        );
     }
 
     let enc_file = store_dir.join(format!("{}.enc", name));
@@ -1489,7 +1830,11 @@ fn list_encrypted_vaults(store_dir: &PathBuf) -> Result<Vec<String>, Box<dyn std
     Ok(vaults)
 }
 
-fn run_cli(action: &str, args: &[String], store_dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn run_cli(
+    action: &str,
+    args: &[String],
+    store_dir: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         "create" | "new" => {
             let name = args.first().cloned().unwrap_or_else(|| {

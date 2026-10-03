@@ -6,7 +6,6 @@
 
 // src/core/aliases/categories/maintenance.rs
 
-
 use crate::core::aliases::{AliasEntry, AliasGroup};
 
 pub fn group() -> AliasGroup {
@@ -17,7 +16,9 @@ pub fn group() -> AliasGroup {
             AliasEntry {
                 key: "update".to_string(),
                 value: "gladeshell update".to_string(),
-                description: "Non-interactive system package update (APT, Pacman, DNF, Brew, Flatpak, Snap)".to_string(),
+                description:
+                    "Non-interactive system package update (APT, Pacman, DNF, Brew, Flatpak, Snap)"
+                        .to_string(),
                 only_shells: vec![],
             },
             AliasEntry {

@@ -144,4 +144,3 @@ mod tests {
         assert!(run(args).is_err());
     }
 }
-

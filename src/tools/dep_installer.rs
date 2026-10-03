@@ -68,13 +68,25 @@ fn cmd_exists(name: &str) -> bool {
 fn pkg_name<'a>(args: &'a DepArgs, pm: &PkgManager) -> &'a str {
     match pm {
         PkgManager::Apt | PkgManager::Unknown => {
-            if args.apt_pkg.is_empty() { &args.cmd } else { &args.apt_pkg }
+            if args.apt_pkg.is_empty() {
+                &args.cmd
+            } else {
+                &args.apt_pkg
+            }
         }
         PkgManager::Dnf | PkgManager::Yum => {
-            if args.dnf_pkg.is_empty() { &args.cmd } else { &args.dnf_pkg }
+            if args.dnf_pkg.is_empty() {
+                &args.cmd
+            } else {
+                &args.dnf_pkg
+            }
         }
         PkgManager::Pacman | PkgManager::Zypper | PkgManager::Apk | PkgManager::Xbps => {
-            if args.pac_pkg.is_empty() { &args.cmd } else { &args.pac_pkg }
+            if args.pac_pkg.is_empty() {
+                &args.cmd
+            } else {
+                &args.pac_pkg
+            }
         }
     }
 }
@@ -88,9 +100,15 @@ pub fn run(args: &DepArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // ── 2. Handle well-known Debian alternative binary names ──────────────────
-    if cmd == "fd"  && cmd_exists("fdfind")  { return Ok(()); }
-    if cmd == "bat" && cmd_exists("batcat")  { return Ok(()); }
-    if cmd == "exa" && cmd_exists("eza")     { return Ok(()); }
+    if cmd == "fd" && cmd_exists("fdfind") {
+        return Ok(());
+    }
+    if cmd == "bat" && cmd_exists("batcat") {
+        return Ok(());
+    }
+    if cmd == "exa" && cmd_exists("eza") {
+        return Ok(());
+    }
 
     // ── 3. Detect distro & package manager ───────────────────────────────────
     let distro = Distro::detect().unwrap_or_else(|_| Distro {
@@ -114,10 +132,20 @@ pub fn run(args: &DepArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Run update step first for apt (needed before install on fresh systems)
     let update_args: Vec<String> = match pm {
         PkgManager::Apt | PkgManager::Unknown => {
-            vec!["sudo".into(), "apt-get".into(), "update".into(), "-qq".into()]
+            vec![
+                "sudo".into(),
+                "apt-get".into(),
+                "update".into(),
+                "-qq".into(),
+            ]
         }
         PkgManager::Pacman => {
-            vec!["sudo".into(), "pacman".into(), "-Sy".into(), "--noconfirm".into()]
+            vec![
+                "sudo".into(),
+                "pacman".into(),
+                "-Sy".into(),
+                "--noconfirm".into(),
+            ]
         }
         _ => vec![],
     };
@@ -132,16 +160,29 @@ pub fn run(args: &DepArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Build install command
     let mut install_args: Vec<String> = match pm {
         PkgManager::Apt | PkgManager::Unknown => {
-            vec!["sudo".into(), "apt-get".into(), "install".into(), "-y".into()]
+            vec![
+                "sudo".into(),
+                "apt-get".into(),
+                "install".into(),
+                "-y".into(),
+            ]
         }
         PkgManager::Dnf => vec!["sudo".into(), "dnf".into(), "install".into(), "-y".into()],
         PkgManager::Yum => vec!["sudo".into(), "yum".into(), "install".into(), "-y".into()],
         PkgManager::Pacman => vec![
-            "sudo".into(), "pacman".into(), "-S".into(),
-            "--noconfirm".into(), "--needed".into(),
+            "sudo".into(),
+            "pacman".into(),
+            "-S".into(),
+            "--noconfirm".into(),
+            "--needed".into(),
         ],
         PkgManager::Zypper => {
-            vec!["sudo".into(), "zypper".into(), "install".into(), "-y".into()]
+            vec![
+                "sudo".into(),
+                "zypper".into(),
+                "install".into(),
+                "-y".into(),
+            ]
         }
         PkgManager::Apk => vec!["sudo".into(), "apk".into(), "add".into()],
         PkgManager::Xbps => vec!["sudo".into(), "xbps-install".into(), "-y".into()],

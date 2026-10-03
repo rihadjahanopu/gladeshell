@@ -161,7 +161,9 @@ impl SystemReport {
         let mut html = String::with_capacity(32768);
         html.push_str("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
         html.push_str("<meta charset=\"UTF-8\">\n");
-        html.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.push_str(
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+        );
         html.push_str("<title>System Diagnostic Report - ");
         html.push_str(&html_escape(&self.system_identity.hostname));
         html.push_str("</title>\n");
@@ -235,7 +237,9 @@ impl SystemReport {
         // Header
         html.push_str("<div class=\"header\">\n<div>\n<h1>🖥️ ");
         html.push_str(&html_escape(&self.system_identity.hostname));
-        html.push_str("</h1>\n<p style=\"color: var(--text-muted); font-size: 0.9rem;\">Report generated at ");
+        html.push_str(
+            "</h1>\n<p style=\"color: var(--text-muted); font-size: 0.9rem;\">Report generated at ",
+        );
         html.push_str(&html_escape(&self.timestamp));
         html.push_str("</p>\n</div>\n");
         html.push_str("<div class=\"badge\">gladeshell pcinfo v");
@@ -259,7 +263,9 @@ impl SystemReport {
         html.push_str("</div>\n");
 
         // Card 2: CPU Info
-        html.push_str("<div class=\"card\">\n<div class=\"card-title\">⚙️ Microprocessor (CPU)</div>\n");
+        html.push_str(
+            "<div class=\"card\">\n<div class=\"card-title\">⚙️ Microprocessor (CPU)</div>\n",
+        );
         html.push_str(&format!("<div class=\"row\"><span class=\"label\">Model</span><span class=\"value\">{}</span></div>\n", html_escape(&self.cpu.exact_model)));
         html.push_str(&format!("<div class=\"row\"><span class=\"label\">Cores / Threads</span><span class=\"value\">{} Cores / {} Threads</span></div>\n", self.cpu.physical_cores, self.cpu.logical_threads));
         html.push_str(&format!("<div class=\"row\"><span class=\"label\">Clock Speed</span><span class=\"value\">{:.2} GHz</span></div>\n", self.cpu.clock_current_ghz));
@@ -267,10 +273,18 @@ impl SystemReport {
             html.push_str(&format!("<div class=\"row\"><span class=\"label\">L3 Cache</span><span class=\"value\">{} KB</span></div>\n", l3));
         }
         let mut caps = Vec::new();
-        if self.cpu.instruction_sets.avx2 { caps.push("AVX2"); }
-        if self.cpu.instruction_sets.avx512 { caps.push("AVX512"); }
-        if self.cpu.instruction_sets.vtx_amdv { caps.push("VT-x/AMD-V"); }
-        if self.cpu.instruction_sets.neon { caps.push("NEON"); }
+        if self.cpu.instruction_sets.avx2 {
+            caps.push("AVX2");
+        }
+        if self.cpu.instruction_sets.avx512 {
+            caps.push("AVX512");
+        }
+        if self.cpu.instruction_sets.vtx_amdv {
+            caps.push("VT-x/AMD-V");
+        }
+        if self.cpu.instruction_sets.neon {
+            caps.push("NEON");
+        }
         if !caps.is_empty() {
             html.push_str(&format!("<div class=\"row\"><span class=\"label\">CPU Features</span><span class=\"value\"><span class=\"tag tag-blue\">{}</span></span></div>\n", caps.join(", ")));
         }
@@ -298,7 +312,10 @@ impl SystemReport {
         if !self.memory.slots.is_empty() {
             for slot in &self.memory.slots {
                 let slot_gb = slot.capacity_bytes as f64 / 1_073_741_824.0;
-                let speed_str = slot.speed_mts.map(|s| format!(" @ {} MT/s", s)).unwrap_or_default();
+                let speed_str = slot
+                    .speed_mts
+                    .map(|s| format!(" @ {} MT/s", s))
+                    .unwrap_or_default();
                 html.push_str(&format!("<div class=\"row\"><span class=\"label\">Slot {}</span><span class=\"value\">{:.1} GB{}</span></div>\n", html_escape(&slot.slot_name), slot_gb, speed_str));
             }
         }
@@ -306,7 +323,9 @@ impl SystemReport {
 
         // Card: Battery Telemetry (if available)
         if let Some(bat) = &self.battery {
-            html.push_str("<div class=\"card\">\n<div class=\"card-title\">🔋 Battery Telemetry</div>\n");
+            html.push_str(
+                "<div class=\"card\">\n<div class=\"card-title\">🔋 Battery Telemetry</div>\n",
+            );
             html.push_str(&format!("<div class=\"row\"><span class=\"label\">Charge Level</span><span class=\"value\">{:.1}% ({:?})</span></div>\n", bat.state_of_charge_pct, bat.power_state));
             html.push_str(&format!("<div class=\"progress-bar\"><div class=\"progress-fill\" style=\"width: {:.1}%\"></div></div>\n", bat.state_of_charge_pct.min(100.0)));
             html.push_str(&format!("<div class=\"row\"><span class=\"label\">Battery Wear Level</span><span class=\"value\">{:.1}% (Health: {:.1}%)</span></div>\n",
@@ -329,7 +348,9 @@ impl SystemReport {
 
         // Card: Displays & Monitors (if available)
         if !self.displays.is_empty() {
-            html.push_str("<div class=\"card\">\n<div class=\"card-title\">🖥️ Displays & Monitors</div>\n");
+            html.push_str(
+                "<div class=\"card\">\n<div class=\"card-title\">🖥️ Displays & Monitors</div>\n",
+            );
             for monitor in &self.displays {
                 let primary_badge = if monitor.is_primary { " (Primary)" } else { "" };
                 html.push_str(&format!("<div class=\"row\"><span class=\"label\">Monitor</span><span class=\"value\">{}{}</span></div>\n", html_escape(&monitor.model_name), primary_badge));
@@ -354,7 +375,8 @@ impl SystemReport {
                 let vram_used_gb = gpu.vram_used_mb as f64 / 1024.0;
                 let vram_total_gb = gpu.vram_total_mb as f64 / 1024.0;
                 if gpu.vram_total_mb > 0 {
-                    let vram_pct = (gpu.vram_used_mb as f64 / gpu.vram_total_mb as f64 * 100.0).min(100.0);
+                    let vram_pct =
+                        (gpu.vram_used_mb as f64 / gpu.vram_total_mb as f64 * 100.0).min(100.0);
                     html.push_str(&format!("<div class=\"row\"><span class=\"label\">VRAM Usage</span><span class=\"value\">{:.2} GB / {:.2} GB ({:.1}%)</span></div>\n", vram_used_gb, vram_total_gb, vram_pct));
                 }
                 if let Some(temp) = gpu.temperature_celsius {
@@ -366,7 +388,9 @@ impl SystemReport {
 
         // Card 5: Storage Drives (if available)
         if !self.storage_drives.is_empty() {
-            html.push_str("<div class=\"card\">\n<div class=\"card-title\">💾 Storage Drives</div>\n");
+            html.push_str(
+                "<div class=\"card\">\n<div class=\"card-title\">💾 Storage Drives</div>\n",
+            );
             for (idx, drive) in self.storage_drives.iter().enumerate() {
                 if idx > 0 {
                     html.push_str("<div style=\"margin: 0.8rem 0; border-top: 1px dashed var(--card-border);\"></div>\n");
@@ -374,7 +398,8 @@ impl SystemReport {
                 let used_gb = drive.used_capacity_bytes as f64 / 1_073_741_824.0;
                 let total_gb = drive.total_capacity_bytes as f64 / 1_073_741_824.0;
                 let pct = if drive.total_capacity_bytes > 0 {
-                    (drive.used_capacity_bytes as f64 / drive.total_capacity_bytes as f64 * 100.0).min(100.0)
+                    (drive.used_capacity_bytes as f64 / drive.total_capacity_bytes as f64 * 100.0)
+                        .min(100.0)
                 } else {
                     0.0
                 };
@@ -392,8 +417,15 @@ impl SystemReport {
         }
 
         // Card 6: Network & Listening Ports
-        html.push_str("<div class=\"card\">\n<div class=\"card-title\">🌐 Network & Active Ports</div>\n");
-        for iface in self.network_and_peripherals.active_interfaces.iter().take(3) {
+        html.push_str(
+            "<div class=\"card\">\n<div class=\"card-title\">🌐 Network & Active Ports</div>\n",
+        );
+        for iface in self
+            .network_and_peripherals
+            .active_interfaces
+            .iter()
+            .take(3)
+        {
             let ip_str = if !iface.ipv4_addresses.is_empty() {
                 iface.ipv4_addresses.join(", ")
             } else {
@@ -405,7 +437,11 @@ impl SystemReport {
         }
         let port_count = self.network_and_peripherals.open_ports.len();
         if port_count > 0 {
-            let top_ports: Vec<String> = self.network_and_peripherals.open_ports.iter().take(6)
+            let top_ports: Vec<String> = self
+                .network_and_peripherals
+                .open_ports
+                .iter()
+                .take(6)
                 .map(|p| format!(":{}", p.port))
                 .collect();
             html.push_str(&format!("<div class=\"row\" style=\"margin-top: 0.6rem;\"><span class=\"label\">Active Ports ({})</span><span class=\"value\">{}</span></div>\n",
@@ -417,10 +453,23 @@ impl SystemReport {
         html.push_str("</div>\n");
 
         // Card: Connected USB Devices (if available)
-        if !self.network_and_peripherals.connected_usb_devices.is_empty() {
+        if !self
+            .network_and_peripherals
+            .connected_usb_devices
+            .is_empty()
+        {
             html.push_str("<div class=\"card\">\n<div class=\"card-title\">🔌 USB Devices</div>\n");
-            for usb in self.network_and_peripherals.connected_usb_devices.iter().take(5) {
-                let name = usb.product_name.as_deref().or(usb.manufacturer.as_deref()).unwrap_or("USB Device");
+            for usb in self
+                .network_and_peripherals
+                .connected_usb_devices
+                .iter()
+                .take(5)
+            {
+                let name = usb
+                    .product_name
+                    .as_deref()
+                    .or(usb.manufacturer.as_deref())
+                    .unwrap_or("USB Device");
                 html.push_str(&format!("<div class=\"row\"><span class=\"label\">{:04x}:{:04x}</span><span class=\"value\">{}</span></div>\n",
                     usb.vendor_id, usb.product_id, html_escape(name)
                 ));
@@ -429,7 +478,9 @@ impl SystemReport {
         }
 
         // Card 7: Hardware Security & Virtualization
-        html.push_str("<div class=\"card\">\n<div class=\"card-title\">🔒 Hardware Security & Virt</div>\n");
+        html.push_str(
+            "<div class=\"card\">\n<div class=\"card-title\">🔒 Hardware Security & Virt</div>\n",
+        );
         let env_str = match &self.security_and_virt.environment {
             EnvironmentType::BareMetal => "Bare Metal Physical Host".to_string(),
             EnvironmentType::VirtualMachine { hypervisor } => format!("VM ({})", hypervisor),
@@ -459,8 +510,12 @@ impl SystemReport {
         html.push_str("</div>\n");
 
         // Card: Top Processes (if available)
-        if !self.diagnostics.top_cpu_processes.is_empty() || !self.diagnostics.top_memory_processes.is_empty() {
-            html.push_str("<div class=\"card\">\n<div class=\"card-title\">🔥 Top Heavy Processes</div>\n");
+        if !self.diagnostics.top_cpu_processes.is_empty()
+            || !self.diagnostics.top_memory_processes.is_empty()
+        {
+            html.push_str(
+                "<div class=\"card\">\n<div class=\"card-title\">🔥 Top Heavy Processes</div>\n",
+            );
             for proc in self.diagnostics.top_cpu_processes.iter().take(4) {
                 let mem_mb = proc.memory_bytes / 1_048_576;
                 html.push_str(&format!("<div class=\"row\"><span class=\"label\">{} (PID {})</span><span class=\"value\">{:.1}% CPU | {} MB</span></div>\n",
@@ -471,7 +526,9 @@ impl SystemReport {
         }
 
         // Card 9: Health Score
-        html.push_str("<div class=\"card\">\n<div class=\"card-title\">🩺 System Health Score</div>\n");
+        html.push_str(
+            "<div class=\"card\">\n<div class=\"card-title\">🩺 System Health Score</div>\n",
+        );
         let score_color = if self.diagnostics.health_score.overall_score >= 80 {
             "var(--accent-green)"
         } else if self.diagnostics.health_score.overall_score >= 60 {
@@ -479,7 +536,10 @@ impl SystemReport {
         } else {
             "var(--accent-red)"
         };
-        html.push_str(&format!("<div class=\"health-score\" style=\"color: {};\">{}/100</div>\n", score_color, self.diagnostics.health_score.overall_score));
+        html.push_str(&format!(
+            "<div class=\"health-score\" style=\"color: {};\">{}/100</div>\n",
+            score_color, self.diagnostics.health_score.overall_score
+        ));
         if !self.diagnostics.health_score.summary_notes.is_empty() {
             html.push_str("<ul style=\"padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-muted);\">\n");
             for note in &self.diagnostics.health_score.summary_notes {
@@ -1159,7 +1219,9 @@ fn parse_xrandr_mm_size(text: &str) -> Option<f32> {
                     let rest_trimmed = rest.trim_start();
                     if rest_trimmed.starts_with('x') {
                         let after_x = rest_trimmed[1..].trim_start();
-                        let end_digits = after_x.find(|c: char| !c.is_ascii_digit()).unwrap_or(after_x.len());
+                        let end_digits = after_x
+                            .find(|c: char| !c.is_ascii_digit())
+                            .unwrap_or(after_x.len());
                         if end_digits > 0 {
                             if after_x[end_digits..].trim_start().starts_with("mm") {
                                 if let Ok(h_mm) = after_x[..end_digits].parse::<f64>() {
@@ -1206,7 +1268,10 @@ fn read_edid_screen_size(name: &str) -> Option<f32> {
 
 /// Utility helper to read sysfs file string content
 fn read_sysfs(path: &str) -> Option<String> {
-    std::fs::read_to_string(path).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
+    std::fs::read_to_string(path)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 /// Helper to estimate directory bloat size in Megabytes (MB)
@@ -1236,7 +1301,11 @@ fn query_tool_version(cmd: &str, arg: &str) -> Option<String> {
             if out.status.success() {
                 let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
                 let first_line = text.lines().next().unwrap_or(&text).to_string();
-                if first_line.is_empty() { None } else { Some(first_line) }
+                if first_line.is_empty() {
+                    None
+                } else {
+                    Some(first_line)
+                }
             } else {
                 None
             }
@@ -1284,8 +1353,10 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         let serial_number = read_sysfs("/sys/class/dmi/id/board_serial");
         let revision = read_sysfs("/sys/class/dmi/id/board_version");
 
-        let bios_vendor = read_sysfs("/sys/class/dmi/id/bios_vendor").unwrap_or_else(|| "System BIOS".into());
-        let bios_version = read_sysfs("/sys/class/dmi/id/bios_version").unwrap_or_else(|| "1.0".into());
+        let bios_vendor =
+            read_sysfs("/sys/class/dmi/id/bios_vendor").unwrap_or_else(|| "System BIOS".into());
+        let bios_version =
+            read_sysfs("/sys/class/dmi/id/bios_version").unwrap_or_else(|| "1.0".into());
         let bios_date = read_sysfs("/sys/class/dmi/id/bios_date");
         let system_uuid = read_sysfs("/sys/class/dmi/id/product_uuid");
 
@@ -1333,14 +1404,24 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
                 .iter()
                 .find(|c| {
                     let l = c.label().to_lowercase();
-                    l.contains("cpu") || l.contains("core") || l.contains("package") || l.contains("tctl") || l.contains("tdie")
+                    l.contains("cpu")
+                        || l.contains("core")
+                        || l.contains("package")
+                        || l.contains("tctl")
+                        || l.contains("tdie")
                 })
                 .and_then(|c| c.temperature())
                 .or_else(|| components.first().and_then(|c| c.temperature()));
 
             if let Some(t) = comp_temp {
-                if t > 0.0 { Some(t) } else { None }
-            } else if let Ok(t_str) = std::fs::read_to_string("/sys/class/thermal/thermal_zone0/temp") {
+                if t > 0.0 {
+                    Some(t)
+                } else {
+                    None
+                }
+            } else if let Ok(t_str) =
+                std::fs::read_to_string("/sys/class/thermal/thermal_zone0/temp")
+            {
                 t_str.trim().parse::<f32>().ok().map(|v| v / 1000.0)
             } else {
                 None
@@ -1421,7 +1502,10 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
                 let text = String::from_utf8_lossy(&output.stdout);
                 for line in text.lines() {
                     let lower = line.to_lowercase();
-                    if lower.contains("vga compatible controller") || lower.contains("3d controller") || lower.contains("display controller") {
+                    if lower.contains("vga compatible controller")
+                        || lower.contains("3d controller")
+                        || lower.contains("display controller")
+                    {
                         let name = if let Some(idx) = line.find(": ") {
                             line[idx + 2..].to_string()
                         } else {
@@ -1430,7 +1514,10 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
 
                         let vendor = if lower.contains("nvidia") {
                             GpuVendor::Nvidia
-                        } else if lower.contains("amd") || lower.contains("ati") || lower.contains("radeon") {
+                        } else if lower.contains("amd")
+                            || lower.contains("ati")
+                            || lower.contains("radeon")
+                        {
                             GpuVendor::Amd
                         } else if lower.contains("intel") {
                             GpuVendor::Intel
@@ -1513,108 +1600,109 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
             swap_utilization_pct,
         };
 
-fn get_disk_parent_name(name: &str, mount_point: &str) -> String {
-    let clean = if !name.is_empty() {
-        name.trim_start_matches("/dev/")
-    } else {
-        mount_point.trim_start_matches("/dev/")
-    };
-
-    if clean.starts_with("nvme") {
-        if let Some(pos) = clean.find('p') {
-            if clean[..pos].contains('n') {
-                return clean[..pos].to_string();
-            }
-        }
-        return clean.to_string();
-    } else {
-        let alpha: String = clean.chars().take_while(|c| c.is_alphabetic()).collect();
-        if !alpha.is_empty() {
-            return alpha;
-        }
-    }
-    "sda".to_string()
-}
-
-fn detect_storage_type(parent: &str) -> StorageType {
-    let rotational_path = format!("/sys/block/{}/queue/rotational", parent);
-    if let Ok(val) = std::fs::read_to_string(&rotational_path) {
-        if val.trim() == "0" {
-            if parent.starts_with("nvme") {
-                return StorageType::Nvme;
+        fn get_disk_parent_name(name: &str, mount_point: &str) -> String {
+            let clean = if !name.is_empty() {
+                name.trim_start_matches("/dev/")
             } else {
-                return StorageType::SataSsd;
-            }
-        } else if val.trim() == "1" {
-            return StorageType::Hdd;
-        }
-    }
-    if parent.starts_with("nvme") {
-        StorageType::Nvme
-    } else {
-        StorageType::SataSsd
-    }
-}
+                mount_point.trim_start_matches("/dev/")
+            };
 
-fn read_disk_temperature(parent: &str) -> Option<f32> {
-    if parent.starts_with("nvme") {
-        if let Ok(entries) = std::fs::read_dir("/sys/class/hwmon") {
-            for entry in entries.flatten() {
-                let name_file = entry.path().join("name");
-                if let Ok(name) = std::fs::read_to_string(name_file) {
-                    if name.trim() == "nvme" {
-                        let temp_file = entry.path().join("temp1_input");
-                        if let Ok(t_str) = std::fs::read_to_string(temp_file) {
-                            if let Ok(t_val) = t_str.trim().parse::<f32>() {
-                                return Some((t_val / 1000.0 * 10.0).round() / 10.0);
+            if clean.starts_with("nvme") {
+                if let Some(pos) = clean.find('p') {
+                    if clean[..pos].contains('n') {
+                        return clean[..pos].to_string();
+                    }
+                }
+                return clean.to_string();
+            } else {
+                let alpha: String = clean.chars().take_while(|c| c.is_alphabetic()).collect();
+                if !alpha.is_empty() {
+                    return alpha;
+                }
+            }
+            "sda".to_string()
+        }
+
+        fn detect_storage_type(parent: &str) -> StorageType {
+            let rotational_path = format!("/sys/block/{}/queue/rotational", parent);
+            if let Ok(val) = std::fs::read_to_string(&rotational_path) {
+                if val.trim() == "0" {
+                    if parent.starts_with("nvme") {
+                        return StorageType::Nvme;
+                    } else {
+                        return StorageType::SataSsd;
+                    }
+                } else if val.trim() == "1" {
+                    return StorageType::Hdd;
+                }
+            }
+            if parent.starts_with("nvme") {
+                StorageType::Nvme
+            } else {
+                StorageType::SataSsd
+            }
+        }
+
+        fn read_disk_temperature(parent: &str) -> Option<f32> {
+            if parent.starts_with("nvme") {
+                if let Ok(entries) = std::fs::read_dir("/sys/class/hwmon") {
+                    for entry in entries.flatten() {
+                        let name_file = entry.path().join("name");
+                        if let Ok(name) = std::fs::read_to_string(name_file) {
+                            if name.trim() == "nvme" {
+                                let temp_file = entry.path().join("temp1_input");
+                                if let Ok(t_str) = std::fs::read_to_string(temp_file) {
+                                    if let Ok(t_val) = t_str.trim().parse::<f32>() {
+                                        return Some((t_val / 1000.0 * 10.0).round() / 10.0);
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
+            None
         }
-    }
-    None
-}
 
-fn read_disk_stat_rw(parent: &str) -> (Option<u64>, Option<u64>) {
-    let stat_path = format!("/sys/block/{}/stat", parent);
-    if let Ok(content) = std::fs::read_to_string(stat_path) {
-        let parts: Vec<&str> = content.split_whitespace().collect();
-        if parts.len() >= 7 {
-            let read_sectors = parts[2].parse::<u64>().ok();
-            let written_sectors = parts[6].parse::<u64>().ok();
-            let read_bytes = read_sectors.map(|s| s * 512);
-            let written_bytes = written_sectors.map(|s| s * 512);
-            return (read_bytes, written_bytes);
-        }
-    }
-    (None, None)
-}
-
-fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
-    if parent.starts_with("nvme") {
-        let nvme_ctrl = if let Some(idx) = parent.find('n') {
-            &parent[..idx]
-        } else {
-            "nvme0"
-        };
-        let state_path = format!("/sys/class/nvme/{}/state", nvme_ctrl);
-        if let Ok(state) = std::fs::read_to_string(state_path) {
-            let s = state.trim().to_lowercase();
-            if s == "live" || s == "ok" {
-                return SmartHealthStatus::Healthy;
-            } else if s.contains("fail") || s.contains("dead") {
-                return SmartHealthStatus::Critical;
+        fn read_disk_stat_rw(parent: &str) -> (Option<u64>, Option<u64>) {
+            let stat_path = format!("/sys/block/{}/stat", parent);
+            if let Ok(content) = std::fs::read_to_string(stat_path) {
+                let parts: Vec<&str> = content.split_whitespace().collect();
+                if parts.len() >= 7 {
+                    let read_sectors = parts[2].parse::<u64>().ok();
+                    let written_sectors = parts[6].parse::<u64>().ok();
+                    let read_bytes = read_sectors.map(|s| s * 512);
+                    let written_bytes = written_sectors.map(|s| s * 512);
+                    return (read_bytes, written_bytes);
+                }
             }
+            (None, None)
         }
-    }
-    SmartHealthStatus::Healthy
-}
+
+        fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
+            if parent.starts_with("nvme") {
+                let nvme_ctrl = if let Some(idx) = parent.find('n') {
+                    &parent[..idx]
+                } else {
+                    "nvme0"
+                };
+                let state_path = format!("/sys/class/nvme/{}/state", nvme_ctrl);
+                if let Ok(state) = std::fs::read_to_string(state_path) {
+                    let s = state.trim().to_lowercase();
+                    if s == "live" || s == "ok" {
+                        return SmartHealthStatus::Healthy;
+                    } else if s.contains("fail") || s.contains("dead") {
+                        return SmartHealthStatus::Critical;
+                    }
+                }
+            }
+            SmartHealthStatus::Healthy
+        }
 
         // 5. Real Storage Info (Deduplicated by physical device node)
         let disks = Disks::new_with_refreshed_list();
-        let mut drive_map: std::collections::HashMap<String, StorageInfo> = std::collections::HashMap::new();
+        let mut drive_map: std::collections::HashMap<String, StorageInfo> =
+            std::collections::HashMap::new();
 
         for disk in disks.iter() {
             let raw_name = disk.name().to_string_lossy().to_string();
@@ -1664,20 +1752,23 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
                     raw_name
                 };
 
-                drive_map.insert(key, StorageInfo {
-                    drive_name,
-                    drive_type,
-                    mount_point: mount,
-                    partition_table: Some(PartitionTableType::Gpt),
-                    file_system: disk.file_system().to_string_lossy().to_string(),
-                    smart_status,
-                    temperature_celsius,
-                    total_capacity_bytes,
-                    free_capacity_bytes,
-                    used_capacity_bytes,
-                    read_bytes_total,
-                    written_bytes_total,
-                });
+                drive_map.insert(
+                    key,
+                    StorageInfo {
+                        drive_name,
+                        drive_type,
+                        mount_point: mount,
+                        partition_table: Some(PartitionTableType::Gpt),
+                        file_system: disk.file_system().to_string_lossy().to_string(),
+                        smart_status,
+                        temperature_celsius,
+                        total_capacity_bytes,
+                        free_capacity_bytes,
+                        used_capacity_bytes,
+                        read_bytes_total,
+                        written_bytes_total,
+                    },
+                );
             }
         }
 
@@ -1701,7 +1792,8 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
                     let mut j = i + 1;
                     while j < lines.len() {
                         let next_line = lines[j];
-                        if next_line.contains(" connected ") || next_line.contains(" disconnected ") {
+                        if next_line.contains(" connected ") || next_line.contains(" disconnected ")
+                        {
                             break;
                         }
                         block.push(next_line);
@@ -1730,7 +1822,9 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
                                 }
                             }
                         }
-                    } else if let Some(res_part) = parts.iter().find(|p| p.contains('x') && p.contains('+')) {
+                    } else if let Some(res_part) =
+                        parts.iter().find(|p| p.contains('x') && p.contains('+'))
+                    {
                         if let Some(dim) = res_part.split('+').next() {
                             if let Some((w_s, h_s)) = dim.split_once('x') {
                                 width = w_s.parse().unwrap_or(1920);
@@ -1750,8 +1844,16 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
                         resolution_pixels: Resolution { width, height },
                         refresh_rate_hz,
                         screen_size_inches,
-                        hdr_support: HdrCapability { is_supported: false, peak_luminance_nits: None, supported_standards: vec![] },
-                        color_space_coverage: ColorSpaceCoverage { srgb_pct: Some(99.0), dci_p3_pct: None, adobe_rgb_pct: None },
+                        hdr_support: HdrCapability {
+                            is_supported: false,
+                            peak_luminance_nits: None,
+                            supported_standards: vec![],
+                        },
+                        color_space_coverage: ColorSpaceCoverage {
+                            srgb_pct: Some(99.0),
+                            dci_p3_pct: None,
+                            adobe_rgb_pct: None,
+                        },
                         is_primary,
                     });
                 }
@@ -1763,11 +1865,22 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
             displays.push(DisplayInfo {
                 monitor_id: "DISPLAY-01".into(),
                 model_name: "Primary Display Monitor".into(),
-                resolution_pixels: Resolution { width: 1920, height: 1080 },
+                resolution_pixels: Resolution {
+                    width: 1920,
+                    height: 1080,
+                },
                 refresh_rate_hz: 60.0,
                 screen_size_inches: None,
-                hdr_support: HdrCapability { is_supported: false, peak_luminance_nits: None, supported_standards: vec![] },
-                color_space_coverage: ColorSpaceCoverage { srgb_pct: Some(100.0), dci_p3_pct: None, adobe_rgb_pct: None },
+                hdr_support: HdrCapability {
+                    is_supported: false,
+                    peak_luminance_nits: None,
+                    supported_standards: vec![],
+                },
+                color_space_coverage: ColorSpaceCoverage {
+                    srgb_pct: Some(100.0),
+                    dci_p3_pct: None,
+                    adobe_rgb_pct: None,
+                },
                 is_primary: true,
             });
         }
@@ -1797,7 +1910,10 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
                 };
 
                 let power_draw_mw = Some(bat.energy_rate().value * 1000.0);
-                let time_rem = bat.time_to_empty().map(|t| t.value as u64).or_else(|| bat.time_to_full().map(|t| t.value as u64));
+                let time_rem = bat
+                    .time_to_empty()
+                    .map(|t| t.value as u64)
+                    .or_else(|| bat.time_to_full().map(|t| t.value as u64));
 
                 Some(BatteryInfo {
                     state_of_charge_pct,
@@ -1833,7 +1949,8 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
                         .and_then(|s| s.parse::<f32>().ok())
                         .unwrap_or(100.0);
 
-                    let status_str = read_sysfs(&bp.join("status").to_string_lossy()).unwrap_or_else(|| "Discharging".into());
+                    let status_str = read_sysfs(&bp.join("status").to_string_lossy())
+                        .unwrap_or_else(|| "Discharging".into());
                     let power_state = match status_str.to_lowercase().as_str() {
                         "charging" => BatteryState::Charging,
                         "full" => BatteryState::Full,
@@ -1910,19 +2027,32 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
         let environment = if cfg!(target_os = "linux") {
             if std::path::Path::new("/.dockerenv").exists() {
                 EnvironmentType::DockerContainer
-            } else if std::env::var("WSL_DISTRO_NAME").is_ok() || std::fs::read_to_string("/proc/version").map_or(false, |v| v.to_lowercase().contains("wsl")) {
+            } else if std::env::var("WSL_DISTRO_NAME").is_ok()
+                || std::fs::read_to_string("/proc/version")
+                    .map_or(false, |v| v.to_lowercase().contains("wsl"))
+            {
                 EnvironmentType::Wsl { version: 2 }
             } else if read_sysfs("/sys/class/dmi/id/product_name").map_or(false, |p| {
                 let l = p.to_lowercase();
-                l.contains("kvm") || l.contains("qemu") || l.contains("vmware") || l.contains("virtualbox")
+                l.contains("kvm")
+                    || l.contains("qemu")
+                    || l.contains("vmware")
+                    || l.contains("virtualbox")
             }) {
-                EnvironmentType::VirtualMachine { hypervisor: "KVM/QEMU Hypervisor".into() }
+                EnvironmentType::VirtualMachine {
+                    hypervisor: "KVM/QEMU Hypervisor".into(),
+                }
             } else {
                 EnvironmentType::BareMetal
             }
         } else if cfg!(target_os = "windows") {
-            if std::env::var("SYSTEMDRIVE").is_ok() && read_sysfs("/sys/class/dmi/id/product_name").map_or(false, |p| p.to_lowercase().contains("virtual")) {
-                EnvironmentType::VirtualMachine { hypervisor: "Windows Hypervisor".into() }
+            if std::env::var("SYSTEMDRIVE").is_ok()
+                && read_sysfs("/sys/class/dmi/id/product_name")
+                    .map_or(false, |p| p.to_lowercase().contains("virtual"))
+            {
+                EnvironmentType::VirtualMachine {
+                    hypervisor: "Windows Hypervisor".into(),
+                }
             } else {
                 EnvironmentType::BareMetal
             }
@@ -1954,7 +2084,11 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
             })
             .collect();
 
-        processes.sort_by(|a, b| b.cpu_usage_pct.partial_cmp(&a.cpu_usage_pct).unwrap_or(std::cmp::Ordering::Equal));
+        processes.sort_by(|a, b| {
+            b.cpu_usage_pct
+                .partial_cmp(&a.cpu_usage_pct)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         let top_cpu_processes = processes.iter().take(5).cloned().collect();
 
         processes.sort_by(|a, b| b.memory_bytes.cmp(&a.memory_bytes));
@@ -1985,7 +2119,10 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
             overall_score = overall_score.saturating_sub(10);
             summary_notes.push(format!("RAM pressure high ({:.1}%)", ram_utilization_pct));
         } else {
-            summary_notes.push(format!("RAM pressure nominal ({:.1}%)", ram_utilization_pct));
+            summary_notes.push(format!(
+                "RAM pressure nominal ({:.1}%)",
+                ram_utilization_pct
+            ));
         }
 
         summary_notes.push("Storage drives verified healthy".into());
@@ -2045,7 +2182,13 @@ fn read_disk_smart_status(parent: &str) -> SmartHealthStatus {
             temp_files_mb,
         };
 
-        let est_watts = if logical_threads > 16 { 120 } else if logical_threads > 8 { 65 } else { 35 };
+        let est_watts = if logical_threads > 16 {
+            120
+        } else if logical_threads > 8 {
+            65
+        } else {
+            35
+        };
         let monthly_kwh = (est_watts as f32 * 8.0 * 30.0) / 1000.0;
         let monthly_cost = monthly_kwh * 0.15;
 
@@ -2120,13 +2263,21 @@ mod theme {
 fn open_tty() -> Box<dyn std::io::Write + Send> {
     #[cfg(unix)]
     {
-        if let Ok(file) = std::fs::OpenOptions::new().read(true).write(true).open("/dev/tty") {
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/tty")
+        {
             return Box::new(file);
         }
     }
     #[cfg(windows)]
     {
-        if let Ok(file) = std::fs::OpenOptions::new().read(true).write(true).open("CONOUT$") {
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("CONOUT$")
+        {
             return Box::new(file);
         }
     }
@@ -2142,18 +2293,78 @@ pub struct PcCategoryInfo {
 }
 
 pub const PC_CATEGORIES: &[PcCategoryInfo] = &[
-    PcCategoryInfo { id: 1,  title: "System & Host",          emoji: "💻", summary: "OS, Kernel, Host & Architecture" },
-    PcCategoryInfo { id: 2,  title: "CPU & Cores",            emoji: "⚡", summary: "Processor Model, Cores & Frequency" },
-    PcCategoryInfo { id: 3,  title: "Thermals & Cooling",     emoji: "🔥", summary: "Temperature Sensors & Thermal Limits" },
-    PcCategoryInfo { id: 4,  title: "GPU & Graphics",         emoji: "🎮", summary: "Video Cards, Driver & VRAM Telemetry" },
-    PcCategoryInfo { id: 5,  title: "Display & Monitors",     emoji: "🖥️", summary: "Screen Resolution, Refresh Rate & HDR" },
-    PcCategoryInfo { id: 6,  title: "Memory (RAM & Swap)",    emoji: "🧠", summary: "Physical RAM Usage, Speed & Swap Space" },
-    PcCategoryInfo { id: 7,  title: "Storage & Drives",       emoji: "💾", summary: "Disks, Mount Points, Space & SMART" },
-    PcCategoryInfo { id: 8,  title: "Battery & Power",        emoji: "🔋", summary: "Battery Health, Wattage & Peripherals" },
-    PcCategoryInfo { id: 9,  title: "Network Interfaces",     emoji: "🌐", summary: "Interfaces, IP Addresses & MAC Status" },
-    PcCategoryInfo { id: 10, title: "Ports & Security",       emoji: "🔌", summary: "Listening Sockets & Security State" },
-    PcCategoryInfo { id: 11, title: "Heavy Processes",       emoji: "⚙️", summary: "Top CPU & Memory Resource Consumers" },
-    PcCategoryInfo { id: 12, title: "Dev Environment",        emoji: "🛠️", summary: "Compilers, Containers & Shell Tools" },
+    PcCategoryInfo {
+        id: 1,
+        title: "System & Host",
+        emoji: "💻",
+        summary: "OS, Kernel, Host & Architecture",
+    },
+    PcCategoryInfo {
+        id: 2,
+        title: "CPU & Cores",
+        emoji: "⚡",
+        summary: "Processor Model, Cores & Frequency",
+    },
+    PcCategoryInfo {
+        id: 3,
+        title: "Thermals & Cooling",
+        emoji: "🔥",
+        summary: "Temperature Sensors & Thermal Limits",
+    },
+    PcCategoryInfo {
+        id: 4,
+        title: "GPU & Graphics",
+        emoji: "🎮",
+        summary: "Video Cards, Driver & VRAM Telemetry",
+    },
+    PcCategoryInfo {
+        id: 5,
+        title: "Display & Monitors",
+        emoji: "🖥️",
+        summary: "Screen Resolution, Refresh Rate & HDR",
+    },
+    PcCategoryInfo {
+        id: 6,
+        title: "Memory (RAM & Swap)",
+        emoji: "🧠",
+        summary: "Physical RAM Usage, Speed & Swap Space",
+    },
+    PcCategoryInfo {
+        id: 7,
+        title: "Storage & Drives",
+        emoji: "💾",
+        summary: "Disks, Mount Points, Space & SMART",
+    },
+    PcCategoryInfo {
+        id: 8,
+        title: "Battery & Power",
+        emoji: "🔋",
+        summary: "Battery Health, Wattage & Peripherals",
+    },
+    PcCategoryInfo {
+        id: 9,
+        title: "Network Interfaces",
+        emoji: "🌐",
+        summary: "Interfaces, IP Addresses & MAC Status",
+    },
+    PcCategoryInfo {
+        id: 10,
+        title: "Ports & Security",
+        emoji: "🔌",
+        summary: "Listening Sockets & Security State",
+    },
+    PcCategoryInfo {
+        id: 11,
+        title: "Heavy Processes",
+        emoji: "⚙️",
+        summary: "Top CPU & Memory Resource Consumers",
+    },
+    PcCategoryInfo {
+        id: 12,
+        title: "Dev Environment",
+        emoji: "🛠️",
+        summary: "Compilers, Containers & Shell Tools",
+    },
 ];
 
 /// Runs the interactive Ratatui TUI for `pc-info`.
@@ -2194,7 +2405,15 @@ pub fn run_tui() -> Result<(), Box<dyn Error>> {
             }
 
             let cat_index = list_state.selected().unwrap_or(0);
-            terminal.draw(|f| draw_ui(f, &report, cat_index, &mut list_state, status_msg.as_deref()))?;
+            terminal.draw(|f| {
+                draw_ui(
+                    f,
+                    &report,
+                    cat_index,
+                    &mut list_state,
+                    status_msg.as_deref(),
+                )
+            })?;
 
             let timeout = tick_rate.saturating_sub(last_tick.elapsed());
             if event::poll(timeout)? {
@@ -2205,20 +2424,29 @@ pub fn run_tui() -> Result<(), Box<dyn Error>> {
                         KeyCode::Char('c') if is_ctrl => break,
                         KeyCode::Char('h') if is_ctrl => {
                             if std::fs::write("pcinfo_report.html", report.to_html()).is_ok() {
-                                status_msg = Some("✨ Exported HTML dashboard to ./pcinfo_report.html".to_string());
+                                status_msg = Some(
+                                    "✨ Exported HTML dashboard to ./pcinfo_report.html"
+                                        .to_string(),
+                                );
                                 status_clear_time = Some(Instant::now());
                             }
                         }
                         KeyCode::Char('s') if is_ctrl => {
                             if std::fs::write("pcinfo_badge.svg", report.to_svg()).is_ok() {
-                                status_msg = Some("✨ Exported SVG status badge to ./pcinfo_badge.svg".to_string());
+                                status_msg = Some(
+                                    "✨ Exported SVG status badge to ./pcinfo_badge.svg"
+                                        .to_string(),
+                                );
                                 status_clear_time = Some(Instant::now());
                             }
                         }
                         KeyCode::Char('j') if is_ctrl => {
                             if let Ok(json) = report.to_json_pretty() {
                                 if std::fs::write("pcinfo_report.json", json).is_ok() {
-                                    status_msg = Some("✨ Exported JSON report to ./pcinfo_report.json".to_string());
+                                    status_msg = Some(
+                                        "✨ Exported JSON report to ./pcinfo_report.json"
+                                            .to_string(),
+                                    );
                                     status_clear_time = Some(Instant::now());
                                 }
                             }
@@ -2226,7 +2454,10 @@ pub fn run_tui() -> Result<(), Box<dyn Error>> {
                         KeyCode::Char('y') if is_ctrl => {
                             if let Ok(yaml) = report.to_yaml() {
                                 if std::fs::write("pcinfo_report.yaml", yaml).is_ok() {
-                                    status_msg = Some("✨ Exported YAML report to ./pcinfo_report.yaml".to_string());
+                                    status_msg = Some(
+                                        "✨ Exported YAML report to ./pcinfo_report.yaml"
+                                            .to_string(),
+                                    );
                                     status_clear_time = Some(Instant::now());
                                 }
                             }
@@ -2234,14 +2465,21 @@ pub fn run_tui() -> Result<(), Box<dyn Error>> {
                         KeyCode::Char('t') if is_ctrl => {
                             if let Ok(toml_str) = report.to_toml() {
                                 if std::fs::write("pcinfo_report.toml", toml_str).is_ok() {
-                                    status_msg = Some("✨ Exported TOML report to ./pcinfo_report.toml".to_string());
+                                    status_msg = Some(
+                                        "✨ Exported TOML report to ./pcinfo_report.toml"
+                                            .to_string(),
+                                    );
                                     status_clear_time = Some(Instant::now());
                                 }
                             }
                         }
                         KeyCode::Up | KeyCode::Char('k') => {
                             let i = list_state.selected().unwrap_or(0);
-                            let next = if i == 0 { PC_CATEGORIES.len() - 1 } else { i - 1 };
+                            let next = if i == 0 {
+                                PC_CATEGORIES.len() - 1
+                            } else {
+                                i - 1
+                            };
                             list_state.select(Some(next));
                         }
                         KeyCode::Down | KeyCode::Char('j') => {
@@ -2307,10 +2545,25 @@ fn draw_ui(
 
     // ── 1. Header Banner Bar ──────────────────────────────────────────────────
     let header_text = vec![
-        Span::styled(" 🖥️ PC-INFO DIAGNOSTICS ", Style::default().fg(C_HEADER_FG).bg(C_HEADER_BG).bold()),
-        Span::styled(format!("  Host: {} ", report.system_identity.hostname), Style::default().fg(C_CYAN).bold()),
-        Span::styled(format!("│ OS: {} {}", report.system_identity.os_name, report.system_identity.os_version), Style::default().fg(C_TEXT)),
-        Span::styled(format!(" │ Kernel: {} ", report.system_identity.kernel_version), Style::default().fg(C_DIM)),
+        Span::styled(
+            " 🖥️ PC-INFO DIAGNOSTICS ",
+            Style::default().fg(C_HEADER_FG).bg(C_HEADER_BG).bold(),
+        ),
+        Span::styled(
+            format!("  Host: {} ", report.system_identity.hostname),
+            Style::default().fg(C_CYAN).bold(),
+        ),
+        Span::styled(
+            format!(
+                "│ OS: {} {}",
+                report.system_identity.os_name, report.system_identity.os_version
+            ),
+            Style::default().fg(C_TEXT),
+        ),
+        Span::styled(
+            format!(" │ Kernel: {} ", report.system_identity.kernel_version),
+            Style::default().fg(C_DIM),
+        ),
     ];
 
     let header = Paragraph::new(Line::from(header_text))
@@ -2359,7 +2612,10 @@ fn draw_ui(
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_BORDER))
-                .title(Span::styled(" Modules (35%) ", Style::default().fg(C_TEAL).bold())),
+                .title(Span::styled(
+                    " Modules (35%) ",
+                    Style::default().fg(C_TEAL).bold(),
+                )),
         )
         .style(Style::default().bg(C_BG));
 
@@ -2386,9 +2642,7 @@ fn draw_ui(
 
     // ── 3. Footer Bar & Shortcut Hints ────────────────────────────────────────
     let footer_text = if let Some(msg) = status_msg {
-        Line::from(vec![
-            Span::styled(msg, Style::default().fg(C_GREEN).bold()),
-        ])
+        Line::from(vec![Span::styled(msg, Style::default().fg(C_GREEN).bold())])
     } else {
         Line::from(vec![
             Span::styled(" [Ctrl+H] ", Style::default().fg(C_CYAN).bold()),
@@ -2427,11 +2681,17 @@ fn render_tab_overview(f: &mut Frame, area: Rect, report: &SystemReport) {
     let sys_lines = vec![
         Line::from(vec![
             Span::styled("Hostname:          ", Style::default().fg(C_CYAN).bold()),
-            Span::styled(&report.system_identity.hostname, Style::default().fg(C_TEXT).bold()),
+            Span::styled(
+                &report.system_identity.hostname,
+                Style::default().fg(C_TEXT).bold(),
+            ),
         ]),
         Line::from(vec![
             Span::styled("OS Name:           ", Style::default().fg(C_CYAN).bold()),
-            Span::raw(format!("{} ({})", report.system_identity.os_name, report.system_identity.os_version)),
+            Span::raw(format!(
+                "{} ({})",
+                report.system_identity.os_name, report.system_identity.os_version
+            )),
         ]),
         Line::from(vec![
             Span::styled("Kernel Version:    ", Style::default().fg(C_CYAN).bold()),
@@ -2439,23 +2699,53 @@ fn render_tab_overview(f: &mut Frame, area: Rect, report: &SystemReport) {
         ]),
         Line::from(vec![
             Span::styled("Uptime:            ", Style::default().fg(C_CYAN).bold()),
-            Span::raw(format!("{}h {}m ({} sec)", report.system_identity.uptime_seconds / 3600, (report.system_identity.uptime_seconds % 3600) / 60, report.system_identity.uptime_seconds)),
+            Span::raw(format!(
+                "{}h {}m ({} sec)",
+                report.system_identity.uptime_seconds / 3600,
+                (report.system_identity.uptime_seconds % 3600) / 60,
+                report.system_identity.uptime_seconds
+            )),
         ]),
         Line::from(vec![
             Span::styled("Reclaimable Bloat: ", Style::default().fg(C_YELLOW).bold()),
-            Span::raw(format!("{} MB (Cache: {} MB, Logs: {} MB, Temp: {} MB)", report.bloat_audit.reclaimable_space_mb, report.bloat_audit.package_cache_mb, report.bloat_audit.system_logs_mb, report.bloat_audit.temp_files_mb)),
+            Span::raw(format!(
+                "{} MB (Cache: {} MB, Logs: {} MB, Temp: {} MB)",
+                report.bloat_audit.reclaimable_space_mb,
+                report.bloat_audit.package_cache_mb,
+                report.bloat_audit.system_logs_mb,
+                report.bloat_audit.temp_files_mb
+            )),
         ]),
         Line::from(vec![
             Span::styled("Est. Power Draw:   ", Style::default().fg(C_PURPLE).bold()),
-            Span::raw(format!("{} Watts (~{:.1} kWh/mo | ~${:.2} USD/mo)", report.power_analytics.est_power_draw_watts, report.power_analytics.est_monthly_kwh, report.power_analytics.est_monthly_cost_usd)),
+            Span::raw(format!(
+                "{} Watts (~{:.1} kWh/mo | ~${:.2} USD/mo)",
+                report.power_analytics.est_power_draw_watts,
+                report.power_analytics.est_monthly_kwh,
+                report.power_analytics.est_monthly_cost_usd
+            )),
         ]),
         Line::from(vec![
             Span::styled("Motherboard:       ", Style::default().fg(C_CYAN).bold()),
-            Span::raw(report.system_identity.motherboard.as_ref().map(|m| format!("{} {}", m.manufacturer, m.product_name)).unwrap_or_else(|| "N/A".into())),
+            Span::raw(
+                report
+                    .system_identity
+                    .motherboard
+                    .as_ref()
+                    .map(|m| format!("{} {}", m.manufacturer, m.product_name))
+                    .unwrap_or_else(|| "N/A".into()),
+            ),
         ]),
         Line::from(vec![
             Span::styled("BIOS Vendor:       ", Style::default().fg(C_CYAN).bold()),
-            Span::raw(report.system_identity.bios.as_ref().map(|b| format!("{} (v{})", b.vendor, b.version)).unwrap_or_else(|| "N/A".into())),
+            Span::raw(
+                report
+                    .system_identity
+                    .bios
+                    .as_ref()
+                    .map(|b| format!("{} (v{})", b.vendor, b.version))
+                    .unwrap_or_else(|| "N/A".into()),
+            ),
         ]),
     ];
 
@@ -2496,7 +2786,12 @@ fn render_tab_overview(f: &mut Frame, area: Rect, report: &SystemReport) {
         .health_score
         .summary_notes
         .iter()
-        .map(|n| ListItem::new(Span::styled(format!("• {}", n), Style::default().fg(C_TEXT))))
+        .map(|n| {
+            ListItem::new(Span::styled(
+                format!("• {}", n),
+                Style::default().fg(C_TEXT),
+            ))
+        })
         .collect();
 
     let notes_list = List::new(notes).block(
@@ -2520,18 +2815,37 @@ fn render_tab_cpu(f: &mut Frame, area: Rect, report: &SystemReport) {
         .split(area);
 
     let cpu_lines = vec![
-        Line::from(vec![Span::styled("Model Name:      ", Style::default().fg(C_YELLOW).bold()), Span::raw(&report.cpu.exact_model)]),
+        Line::from(vec![
+            Span::styled("Model Name:      ", Style::default().fg(C_YELLOW).bold()),
+            Span::raw(&report.cpu.exact_model),
+        ]),
         Line::from(vec![
             Span::styled("Topology:        ", Style::default().fg(C_CYAN)),
-            Span::raw(format!("{} Physical Cores │ {} Logical Threads", report.cpu.physical_cores, report.cpu.logical_threads)),
+            Span::raw(format!(
+                "{} Physical Cores │ {} Logical Threads",
+                report.cpu.physical_cores, report.cpu.logical_threads
+            )),
         ]),
         Line::from(vec![
             Span::styled("Clocks:          ", Style::default().fg(C_CYAN)),
-            Span::raw(format!("Current: {:.2} GHz │ Base: {:.2} GHz │ Max Boost: {:.2} GHz", report.cpu.clock_current_ghz, report.cpu.clock_base_ghz.unwrap_or(0.0), report.cpu.clock_max_ghz.unwrap_or(0.0))),
+            Span::raw(format!(
+                "Current: {:.2} GHz │ Base: {:.2} GHz │ Max Boost: {:.2} GHz",
+                report.cpu.clock_current_ghz,
+                report.cpu.clock_base_ghz.unwrap_or(0.0),
+                report.cpu.clock_max_ghz.unwrap_or(0.0)
+            )),
         ]),
         Line::from(vec![
             Span::styled("Thermals:        ", Style::default().fg(C_CYAN)),
-            Span::raw(format!("{:.1}°C │ Throttling: {}", report.cpu.live_temperature_celsius.unwrap_or(0.0), if report.cpu.thermal_throttling.is_throttling { "YES (WARNING)" } else { "NO (Nominal)" })),
+            Span::raw(format!(
+                "{:.1}°C │ Throttling: {}",
+                report.cpu.live_temperature_celsius.unwrap_or(0.0),
+                if report.cpu.thermal_throttling.is_throttling {
+                    "YES (WARNING)"
+                } else {
+                    "NO (Nominal)"
+                }
+            )),
         ]),
         Line::from(vec![
             Span::styled("Instructions:    ", Style::default().fg(C_CYAN)),
@@ -2577,7 +2891,11 @@ fn render_tab_cpu(f: &mut Frame, area: Rect, report: &SystemReport) {
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded),
                     )
-                    .gauge_style(Style::default().fg(if *usage > 80.0 { C_RED } else { C_TEAL }).bg(C_CARD_BG))
+                    .gauge_style(
+                        Style::default()
+                            .fg(if *usage > 80.0 { C_RED } else { C_TEAL })
+                            .bg(C_CARD_BG),
+                    )
                     .percent((*usage).clamp(0.0, 100.0) as u16);
                 f.render_widget(g, row_split[col_idx]);
             }
@@ -2597,7 +2915,13 @@ fn render_tab_thermals(f: &mut Frame, area: Rect, report: &SystemReport) {
 
     let temp_c = report.cpu.live_temperature_celsius.unwrap_or(0.0);
     let is_throttling = report.cpu.thermal_throttling.is_throttling;
-    let temp_color = if temp_c > 85.0 || is_throttling { C_RED } else if temp_c > 70.0 { C_YELLOW } else { C_GREEN };
+    let temp_color = if temp_c > 85.0 || is_throttling {
+        C_RED
+    } else if temp_c > 70.0 {
+        C_YELLOW
+    } else {
+        C_GREEN
+    };
 
     let temp_gauge = Gauge::default()
         .block(
@@ -2615,8 +2939,14 @@ fn render_tab_thermals(f: &mut Frame, area: Rect, report: &SystemReport) {
         Line::from(vec![
             Span::styled("Thermal Throttling State: ", Style::default().fg(C_CYAN)),
             Span::styled(
-                if is_throttling { "ACTIVE THROTTLING DETECTED" } else { "Nominal Operating Temp" },
-                Style::default().fg(if is_throttling { C_RED } else { C_GREEN }).bold(),
+                if is_throttling {
+                    "ACTIVE THROTTLING DETECTED"
+                } else {
+                    "Nominal Operating Temp"
+                },
+                Style::default()
+                    .fg(if is_throttling { C_RED } else { C_GREEN })
+                    .bold(),
             ),
         ]),
         Line::from(vec![
@@ -2649,14 +2979,20 @@ fn render_tab_gpu(f: &mut Frame, area: Rect, report: &SystemReport) {
         .iter()
         .map(|gpu| {
             let text = vec![
-                Line::from(vec![Span::styled(&gpu.model_name, Style::default().fg(C_MAGENTA).bold())]),
+                Line::from(vec![Span::styled(
+                    &gpu.model_name,
+                    Style::default().fg(C_MAGENTA).bold(),
+                )]),
                 Line::from(vec![
                     Span::styled("  Type: ", Style::default().fg(C_CYAN)),
                     Span::raw(format!("{:?} ({:?})", gpu.gpu_type, gpu.vendor)),
                 ]),
                 Line::from(vec![
                     Span::styled("  VRAM: ", Style::default().fg(C_CYAN)),
-                    Span::raw(format!("{} MB / {} MB Total", gpu.vram_used_mb, gpu.vram_total_mb)),
+                    Span::raw(format!(
+                        "{} MB / {} MB Total",
+                        gpu.vram_used_mb, gpu.vram_total_mb
+                    )),
                 ]),
                 Line::from(vec![
                     Span::styled("  Driver: ", Style::default().fg(C_CYAN)),
@@ -2664,7 +3000,11 @@ fn render_tab_gpu(f: &mut Frame, area: Rect, report: &SystemReport) {
                 ]),
                 Line::from(vec![
                     Span::styled("  Temp/Power: ", Style::default().fg(C_CYAN)),
-                    Span::raw(format!("{:.1}°C │ {:.1} W", gpu.temperature_celsius.unwrap_or(0.0), gpu.power_draw_watts.unwrap_or(0.0))),
+                    Span::raw(format!(
+                        "{:.1}°C │ {:.1} W",
+                        gpu.temperature_celsius.unwrap_or(0.0),
+                        gpu.power_draw_watts.unwrap_or(0.0)
+                    )),
                 ]),
             ];
             ListItem::new(text)
@@ -2691,10 +3031,18 @@ fn render_tab_display(f: &mut Frame, area: Rect, report: &SystemReport) {
         .iter()
         .map(|disp| {
             let text = vec![
-                Line::from(vec![Span::styled(&disp.model_name, Style::default().fg(C_YELLOW).bold())]),
+                Line::from(vec![Span::styled(
+                    &disp.model_name,
+                    Style::default().fg(C_YELLOW).bold(),
+                )]),
                 Line::from(vec![
                     Span::styled("  Resolution: ", Style::default().fg(C_CYAN)),
-                    Span::raw(format!("{}x{} @ {:.0} Hz", disp.resolution_pixels.width, disp.resolution_pixels.height, disp.refresh_rate_hz)),
+                    Span::raw(format!(
+                        "{}x{} @ {:.0} Hz",
+                        disp.resolution_pixels.width,
+                        disp.resolution_pixels.height,
+                        disp.refresh_rate_hz
+                    )),
                 ]),
                 Line::from(vec![
                     Span::styled("  Screen Size: ", Style::default().fg(C_CYAN)),
@@ -2705,11 +3053,19 @@ fn render_tab_display(f: &mut Frame, area: Rect, report: &SystemReport) {
                 ]),
                 Line::from(vec![
                     Span::styled("  HDR Support: ", Style::default().fg(C_CYAN)),
-                    Span::raw(if disp.hdr_support.is_supported { "Supported" } else { "No" }),
+                    Span::raw(if disp.hdr_support.is_supported {
+                        "Supported"
+                    } else {
+                        "No"
+                    }),
                 ]),
                 Line::from(vec![
                     Span::styled("  Gamut Coverage: ", Style::default().fg(C_CYAN)),
-                    Span::raw(format!("sRGB {:.0}% │ DCI-P3 {:.0}%", disp.color_space_coverage.srgb_pct.unwrap_or(0.0), disp.color_space_coverage.dci_p3_pct.unwrap_or(0.0))),
+                    Span::raw(format!(
+                        "sRGB {:.0}% │ DCI-P3 {:.0}%",
+                        disp.color_space_coverage.srgb_pct.unwrap_or(0.0),
+                        disp.color_space_coverage.dci_p3_pct.unwrap_or(0.0)
+                    )),
                 ]),
             ];
             ListItem::new(text)
@@ -2739,15 +3095,24 @@ fn render_tab_memory(f: &mut Frame, area: Rect, report: &SystemReport) {
     let ram_lines = vec![
         Line::from(vec![
             Span::styled("Total Physical RAM: ", Style::default().fg(C_CYAN)),
-            Span::raw(format!("{} GB", report.memory.total_ram_bytes / (1024 * 1024 * 1024))),
+            Span::raw(format!(
+                "{} GB",
+                report.memory.total_ram_bytes / (1024 * 1024 * 1024)
+            )),
         ]),
         Line::from(vec![
             Span::styled("DDR Generation:     ", Style::default().fg(C_CYAN)),
-            Span::raw(format!("{:?}", report.memory.ddr_version.unwrap_or(RamType::Ddr5))),
+            Span::raw(format!(
+                "{:?}",
+                report.memory.ddr_version.unwrap_or(RamType::Ddr5)
+            )),
         ]),
         Line::from(vec![
             Span::styled("Bus Speed:          ", Style::default().fg(C_CYAN)),
-            Span::raw(format!("{} MT/s", report.memory.bus_speed_mts.unwrap_or(6000))),
+            Span::raw(format!(
+                "{} MT/s",
+                report.memory.bus_speed_mts.unwrap_or(6000)
+            )),
         ]),
         Line::from(vec![
             Span::styled("RAM Used:           ", Style::default().fg(C_CYAN)),
@@ -2774,13 +3139,23 @@ fn render_tab_memory(f: &mut Frame, area: Rect, report: &SystemReport) {
         .split(chunks[1]);
 
     let ram_g = Gauge::default()
-        .block(Block::default().title(" RAM Utilization ").borders(Borders::ALL).border_type(BorderType::Rounded))
+        .block(
+            Block::default()
+                .title(" RAM Utilization ")
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
         .gauge_style(Style::default().fg(C_CYAN).bg(C_CARD_BG))
         .percent(report.memory.ram_utilization_pct.clamp(0.0, 100.0) as u16);
     f.render_widget(ram_g, right_chunks[0]);
 
     let swap_g = Gauge::default()
-        .block(Block::default().title(" Swap Utilization ").borders(Borders::ALL).border_type(BorderType::Rounded))
+        .block(
+            Block::default()
+                .title(" Swap Utilization ")
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
         .gauge_style(Style::default().fg(C_PURPLE).bg(C_CARD_BG))
         .percent(report.memory.swap_utilization_pct.clamp(0.0, 100.0) as u16);
     f.render_widget(swap_g, right_chunks[1]);
@@ -2832,33 +3207,54 @@ fn render_tab_storage(f: &mut Frame, area: Rect, report: &SystemReport) {
             };
 
             let io_str = match (drive.read_bytes_total, drive.written_bytes_total) {
-                (Some(r), Some(w)) => format!("Read: {} │ Written: {}", format_bytes_human(r), format_bytes_human(w)),
+                (Some(r), Some(w)) => format!(
+                    "Read: {} │ Written: {}",
+                    format_bytes_human(r),
+                    format_bytes_human(w)
+                ),
                 _ => "N/A".to_string(),
             };
 
             let lines = vec![
                 Line::from(vec![
-                    Span::styled(format!("💾 Device: {} ", drive.drive_name), Style::default().fg(C_YELLOW).bold()),
+                    Span::styled(
+                        format!("💾 Device: {} ", drive.drive_name),
+                        Style::default().fg(C_YELLOW).bold(),
+                    ),
                     Span::styled(format!("[{}]", type_str), Style::default().fg(C_CYAN)),
                 ]),
                 Line::from(vec![
                     Span::styled("   Mount:        ", Style::default().fg(C_DIM)),
-                    Span::styled(format!("{} ({})", drive.mount_point, drive.file_system), Style::default().fg(C_TEXT)),
+                    Span::styled(
+                        format!("{} ({})", drive.mount_point, drive.file_system),
+                        Style::default().fg(C_TEXT),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("   Capacity:     ", Style::default().fg(C_DIM)),
-                    Span::raw(format!("{} Used / {} Total ({:.1}% Used)", format_bytes_human(drive.used_capacity_bytes), format_bytes_human(drive.total_capacity_bytes), usage_pct)),
+                    Span::raw(format!(
+                        "{} Used / {} Total ({:.1}% Used)",
+                        format_bytes_human(drive.used_capacity_bytes),
+                        format_bytes_human(drive.total_capacity_bytes),
+                        usage_pct
+                    )),
                 ]),
                 Line::from(vec![
                     Span::styled("   Diagnostics:  ", Style::default().fg(C_DIM)),
-                    Span::styled(format!("SMART Health: {} ", health_label), Style::default().fg(health_color).bold()),
+                    Span::styled(
+                        format!("SMART Health: {} ", health_label),
+                        Style::default().fg(health_color).bold(),
+                    ),
                     Span::styled(format!("│ Temp: {}", temp_str), Style::default().fg(C_TEAL)),
                 ]),
                 Line::from(vec![
                     Span::styled("   Lifetime I/O: ", Style::default().fg(C_DIM)),
                     Span::styled(io_str, Style::default().fg(C_TEXT)),
                 ]),
-                Line::from(Span::styled("─────────────────────────────────────────────────────────────────────────────", Style::default().fg(C_BORDER))),
+                Line::from(Span::styled(
+                    "─────────────────────────────────────────────────────────────────────────────",
+                    Style::default().fg(C_BORDER),
+                )),
             ];
             ListItem::new(lines)
         })
@@ -2887,7 +3283,8 @@ fn render_tab_battery(f: &mut Frame, area: Rect, report: &SystemReport) {
 
     if let Some(bat) = &report.battery {
         let health_pct = if bat.health.design_capacity_mwh > 0 {
-            (bat.health.full_charge_capacity_mwh as f32 / bat.health.design_capacity_mwh as f32) * 100.0
+            (bat.health.full_charge_capacity_mwh as f32 / bat.health.design_capacity_mwh as f32)
+                * 100.0
         } else {
             100.0
         };
@@ -2900,11 +3297,18 @@ fn render_tab_battery(f: &mut Frame, area: Rect, report: &SystemReport) {
         let lines = vec![
             Line::from(vec![
                 Span::styled("State of Charge:    ", Style::default().fg(C_GREEN).bold()),
-                Span::raw(format!("{:.1}% ({:?})", bat.state_of_charge_pct, bat.power_state)),
+                Span::raw(format!(
+                    "{:.1}% ({:?})",
+                    bat.state_of_charge_pct, bat.power_state
+                )),
             ]),
             Line::from(vec![
                 Span::styled("Battery Health:     ", Style::default().fg(C_GREEN).bold()),
-                Span::raw(format!("{:.1}% (Wear Level: {:.1}%)", health_pct.clamp(0.0, 100.0), bat.health.wear_level_pct)),
+                Span::raw(format!(
+                    "{:.1}% (Wear Level: {:.1}%)",
+                    health_pct.clamp(0.0, 100.0),
+                    bat.health.wear_level_pct
+                )),
             ]),
             Line::from(vec![
                 Span::styled("Design Capacity:    ", Style::default().fg(C_CYAN)),
@@ -2933,7 +3337,10 @@ fn render_tab_battery(f: &mut Frame, area: Rect, report: &SystemReport) {
             .connected_bluetooth_devices
             .iter()
             .map(|dev| {
-                ListItem::new(Span::raw(format!("🎧 {} ({}) — {:.0}% Battery", dev.name, dev.device_type, dev.battery_pct)))
+                ListItem::new(Span::raw(format!(
+                    "🎧 {} ({}) — {:.0}% Battery",
+                    dev.name, dev.device_type, dev.battery_pct
+                )))
             })
             .collect();
 
@@ -2966,7 +3373,10 @@ fn render_tab_network(f: &mut Frame, area: Rect, report: &SystemReport) {
     let wan_lines = vec![
         Line::from(vec![
             Span::styled("Public IP (WAN):  ", Style::default().fg(C_CYAN).bold()),
-            Span::styled("Auto-detected via active interface", Style::default().fg(C_TEXT)),
+            Span::styled(
+                "Auto-detected via active interface",
+                Style::default().fg(C_TEXT),
+            ),
         ]),
         Line::from(vec![
             Span::styled("DNS Ping Latency: ", Style::default().fg(C_YELLOW).bold()),
@@ -2974,7 +3384,10 @@ fn render_tab_network(f: &mut Frame, area: Rect, report: &SystemReport) {
         ]),
         Line::from(vec![
             Span::styled("Open Socket Summary: ", Style::default().fg(C_CYAN).bold()),
-            Span::raw(format!("{} active listening TCP/UDP ports detected", report.network_and_peripherals.open_ports.len())),
+            Span::raw(format!(
+                "{} active listening TCP/UDP ports detected",
+                report.network_and_peripherals.open_ports.len()
+            )),
         ]),
     ];
 
@@ -3010,7 +3423,10 @@ fn render_tab_network(f: &mut Frame, area: Rect, report: &SystemReport) {
             Constraint::Percentage(15),
         ],
     )
-    .header(Row::new(vec!["Interface", "MAC Address", "IPv4", "Status"]).style(Style::default().fg(C_CYAN).bold()))
+    .header(
+        Row::new(vec!["Interface", "MAC Address", "IPv4", "Status"])
+            .style(Style::default().fg(C_CYAN).bold()),
+    )
     .block(
         Block::default()
             .title(" 📡 Active Network Interfaces ")
@@ -3037,7 +3453,18 @@ fn render_tab_ports(f: &mut Frame, area: Rect, report: &SystemReport) {
         ]),
         Line::from(vec![
             Span::styled("Virtualization VBS: ", Style::default().fg(C_YELLOW)),
-            Span::raw(if report.security_and_virt.virt_security.vbs_enabled.unwrap_or(false) { "Active" } else { "Disabled" }),
+            Span::raw(
+                if report
+                    .security_and_virt
+                    .virt_security
+                    .vbs_enabled
+                    .unwrap_or(false)
+                {
+                    "Active"
+                } else {
+                    "Disabled"
+                },
+            ),
         ]),
         Line::from(vec![
             Span::styled("Environment:        ", Style::default().fg(C_YELLOW)),
@@ -3069,7 +3496,10 @@ fn render_tab_processes(f: &mut Frame, area: Rect, report: &SystemReport) {
                 proc_item.pid.to_string(),
                 proc_item.name.clone(),
                 format!("{:.1}%", proc_item.cpu_usage_pct),
-                format!("{:.1} MB", proc_item.memory_bytes as f64 / (1024.0 * 1024.0)),
+                format!(
+                    "{:.1} MB",
+                    proc_item.memory_bytes as f64 / (1024.0 * 1024.0)
+                ),
             ])
         })
         .collect();
@@ -3083,7 +3513,10 @@ fn render_tab_processes(f: &mut Frame, area: Rect, report: &SystemReport) {
             Constraint::Percentage(20),
         ],
     )
-    .header(Row::new(vec!["PID", "Process", "CPU %", "RAM MB"]).style(Style::default().fg(C_MAGENTA).bold()))
+    .header(
+        Row::new(vec!["PID", "Process", "CPU %", "RAM MB"])
+            .style(Style::default().fg(C_MAGENTA).bold()),
+    )
     .block(
         Block::default()
             .title(" ⚙️ Heavy Resource Consumers ")
@@ -3106,25 +3539,41 @@ fn render_tab_dev(f: &mut Frame, area: Rect, report: &SystemReport) {
 
     let sec_lines = vec![
         Line::from(vec![
-            Span::styled("Execution Environment: ", Style::default().fg(C_YELLOW).bold()),
+            Span::styled(
+                "Execution Environment: ",
+                Style::default().fg(C_YELLOW).bold(),
+            ),
             Span::raw(match &report.security_and_virt.environment {
                 EnvironmentType::BareMetal => "Bare Metal Host System".to_string(),
                 EnvironmentType::DockerContainer => "Docker Container".to_string(),
-                EnvironmentType::Wsl { version } => format!("Windows Subsystem for Linux (WSL {})", version),
-                EnvironmentType::VirtualMachine { hypervisor } => format!("Virtual Machine ({})", hypervisor),
+                EnvironmentType::Wsl { version } => {
+                    format!("Windows Subsystem for Linux (WSL {})", version)
+                }
+                EnvironmentType::VirtualMachine { hypervisor } => {
+                    format!("Virtual Machine ({})", hypervisor)
+                }
                 EnvironmentType::Unknown => "Linux Host / Standard Environment".to_string(),
             }),
         ]),
         Line::from(vec![
-            Span::styled("Secure Boot:           ", Style::default().fg(C_CYAN).bold()),
+            Span::styled(
+                "Secure Boot:           ",
+                Style::default().fg(C_CYAN).bold(),
+            ),
             Span::raw(format!("{:?}", report.security_and_virt.secure_boot_status)),
         ]),
         Line::from(vec![
-            Span::styled("TPM Hardware Module:   ", Style::default().fg(C_CYAN).bold()),
+            Span::styled(
+                "TPM Hardware Module:   ",
+                Style::default().fg(C_CYAN).bold(),
+            ),
             Span::raw(format!("{:?}", report.security_and_virt.tpm_status)),
         ]),
         Line::from(vec![
-            Span::styled("Kernel Security:       ", Style::default().fg(C_CYAN).bold()),
+            Span::styled(
+                "Kernel Security:       ",
+                Style::default().fg(C_CYAN).bold(),
+            ),
             Span::raw("AppArmor / SELinux Active (Spectre & Meltdown Patched)"),
         ]),
     ];
@@ -3140,12 +3589,30 @@ fn render_tab_dev(f: &mut Frame, area: Rect, report: &SystemReport) {
 
     let dev_tools = &report.diagnostics.detected_dev_tools;
     let dev_lines = vec![
-        Line::from(vec![Span::styled("Rust Compiler:   ", Style::default().fg(C_TEAL).bold()), Span::raw(dev_tools.rust_version.as_deref().unwrap_or("N/A"))]),
-        Line::from(vec![Span::styled("Node.js Runtime: ", Style::default().fg(C_TEAL).bold()), Span::raw(dev_tools.node_version.as_deref().unwrap_or("N/A"))]),
-        Line::from(vec![Span::styled("Python Engine:   ", Style::default().fg(C_TEAL).bold()), Span::raw(dev_tools.python_version.as_deref().unwrap_or("N/A"))]),
-        Line::from(vec![Span::styled("Docker Engine:   ", Style::default().fg(C_TEAL).bold()), Span::raw(dev_tools.docker_version.as_deref().unwrap_or("N/A"))]),
-        Line::from(vec![Span::styled("GCC Compiler:    ", Style::default().fg(C_TEAL).bold()), Span::raw(dev_tools.gcc_version.as_deref().unwrap_or("N/A"))]),
-        Line::from(vec![Span::styled("Git SCM:         ", Style::default().fg(C_TEAL).bold()), Span::raw(dev_tools.git_version.as_deref().unwrap_or("N/A"))]),
+        Line::from(vec![
+            Span::styled("Rust Compiler:   ", Style::default().fg(C_TEAL).bold()),
+            Span::raw(dev_tools.rust_version.as_deref().unwrap_or("N/A")),
+        ]),
+        Line::from(vec![
+            Span::styled("Node.js Runtime: ", Style::default().fg(C_TEAL).bold()),
+            Span::raw(dev_tools.node_version.as_deref().unwrap_or("N/A")),
+        ]),
+        Line::from(vec![
+            Span::styled("Python Engine:   ", Style::default().fg(C_TEAL).bold()),
+            Span::raw(dev_tools.python_version.as_deref().unwrap_or("N/A")),
+        ]),
+        Line::from(vec![
+            Span::styled("Docker Engine:   ", Style::default().fg(C_TEAL).bold()),
+            Span::raw(dev_tools.docker_version.as_deref().unwrap_or("N/A")),
+        ]),
+        Line::from(vec![
+            Span::styled("GCC Compiler:    ", Style::default().fg(C_TEAL).bold()),
+            Span::raw(dev_tools.gcc_version.as_deref().unwrap_or("N/A")),
+        ]),
+        Line::from(vec![
+            Span::styled("Git SCM:         ", Style::default().fg(C_TEAL).bold()),
+            Span::raw(dev_tools.git_version.as_deref().unwrap_or("N/A")),
+        ]),
     ];
 
     let dev_card = Paragraph::new(dev_lines).block(
@@ -3173,7 +3640,9 @@ mod tests {
         report.cpu.physical_cores = 16;
         report.cpu.logical_threads = 32;
 
-        let json = report.to_json_pretty().expect("Failed to serialize to JSON");
+        let json = report
+            .to_json_pretty()
+            .expect("Failed to serialize to JSON");
         assert!(json.contains("workstation-01"));
         assert!(json.contains("AMD Ryzen 9 7950X"));
 

@@ -8,23 +8,23 @@
 //  src/tools/project_setup/mod.rs — Modular Web & Native Project Generators
 // =============================================================================
 
-pub mod utils;
-pub mod next;
-pub mod vite;
-pub mod shadcn_ui;
-pub mod tailwind;
-pub mod ii;
 pub mod html;
 pub mod hub;
+pub mod ii;
+pub mod next;
+pub mod shadcn_ui;
+pub mod tailwind;
+pub mod utils;
+pub mod vite;
 
-pub use utils::{patch_tsconfig, patch_viteconfig, inject_ts_paths};
+pub use html::run_html;
+pub use hub::{run_project, ProjectToolItem, PROJECT_TOOLS};
+pub use ii::run_ii;
 pub use next::run_next;
-pub use vite::run_vite;
 pub use shadcn_ui::run_ui;
 pub use tailwind::run_css;
-pub use ii::run_ii;
-pub use html::run_html;
-pub use hub::{run_project, PROJECT_TOOLS, ProjectToolItem};
+pub use utils::{inject_ts_paths, patch_tsconfig, patch_viteconfig};
+pub use vite::run_vite;
 
 #[cfg(test)]
 mod tests {

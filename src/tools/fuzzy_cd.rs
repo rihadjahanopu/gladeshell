@@ -18,7 +18,10 @@ use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseButton, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseButton,
+        MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -34,15 +37,15 @@ use walkdir::WalkDir;
 
 // ── colour palette (modern dark theme matching fkill.rs) ───────────────────────
 const C_BG: Color = Color::Reset;
-const C_BORDER: Color = Color::Rgb(0, 180, 120);   // Emerald mint green
-const C_ACCENT: Color = Color::Rgb(0, 150, 220);   // Royal cyan
+const C_BORDER: Color = Color::Rgb(0, 180, 120); // Emerald mint green
+const C_ACCENT: Color = Color::Rgb(0, 150, 220); // Royal cyan
 const C_SELECTED: Color = Color::Rgb(255, 40, 120); // Hot pink / magenta
-const C_DIM: Color = Color::Rgb(100, 120, 150);     // Muted steel slate
-const C_TEXT: Color = Color::Reset;                 // Adaptive text (black in Light mode, white in Dark mode)
-const C_GREEN: Color = Color::Rgb(0, 160, 80);     // Rich emerald
-const C_YELLOW: Color = Color::Rgb(210, 120, 0);   // High-contrast Amber / Gold
+const C_DIM: Color = Color::Rgb(100, 120, 150); // Muted steel slate
+const C_TEXT: Color = Color::Reset; // Adaptive text (black in Light mode, white in Dark mode)
+const C_GREEN: Color = Color::Rgb(0, 160, 80); // Rich emerald
+const C_YELLOW: Color = Color::Rgb(210, 120, 0); // High-contrast Amber / Gold
 const C_WHITE: Color = Color::Rgb(255, 255, 255);
-const C_CYAN: Color = Color::Rgb(0, 140, 210);     // Deep electric cyan
+const C_CYAN: Color = Color::Rgb(0, 140, 210); // Deep electric cyan
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SearchMode {
@@ -101,7 +104,10 @@ impl DictionarySearchEngine {
             // Index full name
             engine.insert(&item.name, idx);
             // Index individual words split by `-`, `_`, `.`, ` `
-            for word in item.name.split(|c| c == '-' || c == '_' || c == '.' || c == ' ') {
+            for word in item
+                .name
+                .split(|c| c == '-' || c == '_' || c == '.' || c == ' ')
+            {
                 if !word.is_empty() {
                     engine.insert(word, idx);
                 }
@@ -590,12 +596,9 @@ impl FuzzyCdApp {
                             let clicked_row = (mouse.row - area.y - 1) as usize;
                             if clicked_row < self.filtered_indices.len() {
                                 if self.list_state.selected() == Some(clicked_row) {
-                                    if let Some(&orig_idx) =
-                                        self.filtered_indices.get(clicked_row)
+                                    if let Some(&orig_idx) = self.filtered_indices.get(clicked_row)
                                     {
-                                        if let Some(res) =
-                                            self.enter_selected_directory(orig_idx)
-                                        {
+                                        if let Some(res) = self.enter_selected_directory(orig_idx) {
                                             return Ok(Some(res));
                                         }
                                     }
@@ -731,8 +734,8 @@ impl FuzzyCdApp {
                         .unwrap_or("")
                         .to_lowercase();
                     match ext.as_str() {
-                        "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" | "m4v"
-                        | "ogv" | "m2ts" | "rmvb" | "3gp" => "🎬 ",
+                        "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" | "m4v" | "ogv"
+                        | "m2ts" | "rmvb" | "3gp" => "🎬 ",
                         "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg" | "avif"
                         | "heic" | "tiff" | "ico" => "🖼️  ",
                         "mp3" | "flac" | "ogg" | "wav" | "aac" | "m4a" | "opus" | "wma" => "🎵 ",
@@ -758,7 +761,8 @@ impl FuzzyCdApp {
                     item.name.clone()
                 };
 
-                let parent_hint = if !self.query.is_empty() && item.name != "." && item.name != ".." {
+                let parent_hint = if !self.query.is_empty() && item.name != "." && item.name != ".."
+                {
                     format!("  ({})", item.rel_path)
                 } else {
                     String::new()
@@ -825,25 +829,46 @@ impl FuzzyCdApp {
 
         // ── 4. Bottom Status Bar ────────────────────────────────────────────────
         let status_line = Line::from(vec![
-            Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ↑↓ ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Nav", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("↵ ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "↵ ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Enter Dir", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("Ctrl+↵ ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+↵ ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cd Here", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("Ctrl+O ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+O ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Exp", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("F10 ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "F10 ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("⇥ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "⇥ ",
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Back", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_DIM)),
-            Span::styled("⎋ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "⎋ ",
+                Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Quit", Style::default().fg(C_DIM)),
         ]);
 
@@ -890,15 +915,24 @@ fn render_preview_panel(frame: &mut Frame, area: Rect, entry: Option<&FileEntry>
         if item.is_dir {
             let (children, size_str) = get_dir_preview(&item.path);
             lines.push(Line::from(vec![
-                Span::styled("📊 Total Size: ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(size_str, Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "📊 Total Size: ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    size_str,
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
             ]));
             lines.push(Line::from(Span::styled(
                 "─".repeat(inner.width as usize),
                 Style::default().fg(C_DIM),
             )));
             if children.is_empty() {
-                lines.push(Line::from(Span::styled("  (empty directory)", Style::default().fg(C_DIM))));
+                lines.push(Line::from(Span::styled(
+                    "  (empty directory)",
+                    Style::default().fg(C_DIM),
+                )));
             } else {
                 for child in children
                     .into_iter()
@@ -918,8 +952,14 @@ fn render_preview_panel(frame: &mut Frame, area: Rect, entry: Option<&FileEntry>
         } else {
             let (file_lines, size_str) = get_file_preview(&item.path);
             lines.push(Line::from(vec![
-                Span::styled("📊 File Size: ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(size_str, Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "📊 File Size: ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    size_str,
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
             ]));
             lines.push(Line::from(Span::styled(
                 "─".repeat(inner.width as usize),
@@ -933,7 +973,10 @@ fn render_preview_panel(frame: &mut Frame, area: Rect, entry: Option<&FileEntry>
             }
         }
     } else {
-        lines.push(Line::from(Span::styled("No item selected", Style::default().fg(C_DIM))));
+        lines.push(Line::from(Span::styled(
+            "No item selected",
+            Style::default().fg(C_DIM),
+        )));
     }
 
     frame.render_widget(Paragraph::new(lines), inner);
@@ -1008,13 +1051,21 @@ fn dirs_home() -> Option<PathBuf> {
 fn open_tty() -> Box<dyn io::Write + Send> {
     #[cfg(unix)]
     {
-        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("/dev/tty") {
+        if let Ok(file) = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/tty")
+        {
             return Box::new(file);
         }
     }
     #[cfg(windows)]
     {
-        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("CONOUT$") {
+        if let Ok(file) = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("CONOUT$")
+        {
             return Box::new(file);
         }
     }
@@ -1035,14 +1086,18 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let res = app.run_loop(&mut terminal);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
 
     if let Ok(Some((selected_path, action))) = res {
         let tag = match action {
-            CfAction::CdInto       => "CD",
-            CfAction::OpenCode     => "CODE",
-            CfAction::OpenFile     => "OPEN",
+            CfAction::CdInto => "CD",
+            CfAction::OpenCode => "CODE",
+            CfAction::OpenFile => "OPEN",
             CfAction::OpenExplorer => "EXPLORE",
         };
         println!("{}:{}", tag, selected_path);

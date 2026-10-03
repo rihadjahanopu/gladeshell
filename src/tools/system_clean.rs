@@ -14,7 +14,10 @@
 // =============================================================================
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers, MouseEventKind, EnableMouseCapture, DisableMouseCapture},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+        MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -71,18 +74,33 @@ struct CleanTaskSpec {
     needs_sudo: bool,
 }
 
-fn always() -> bool { true }
-fn has_apt() -> bool { crate::core::utils::cmd_exists("apt-get") }
-fn has_pacman() -> bool { crate::core::utils::cmd_exists("pacman") }
-fn has_dnf() -> bool { crate::core::utils::cmd_exists("dnf") }
-fn has_brew() -> bool { crate::core::utils::cmd_exists("brew") }
-fn has_flatpak() -> bool { crate::core::utils::cmd_exists("flatpak") }
+fn always() -> bool {
+    true
+}
+fn has_apt() -> bool {
+    crate::core::utils::cmd_exists("apt-get")
+}
+fn has_pacman() -> bool {
+    crate::core::utils::cmd_exists("pacman")
+}
+fn has_dnf() -> bool {
+    crate::core::utils::cmd_exists("dnf")
+}
+fn has_brew() -> bool {
+    crate::core::utils::cmd_exists("brew")
+}
+fn has_flatpak() -> bool {
+    crate::core::utils::cmd_exists("flatpak")
+}
 
 fn clean_temp_dirs(tx: &Sender<Msg>) -> bool {
     let mut cleaned_bytes: u64 = 0;
     let temp_dir = std::env::temp_dir();
-    let _ = tx.send(Msg::Log(format!("🧹 Cleaning temporary directory: {}", temp_dir.display())));
-    
+    let _ = tx.send(Msg::Log(format!(
+        "🧹 Cleaning temporary directory: {}",
+        temp_dir.display()
+    )));
+
     if let Ok(entries) = fs::read_dir(&temp_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -109,7 +127,10 @@ fn clean_temp_dirs(tx: &Sender<Msg>) -> bool {
             }
         }
     }
-    let _ = tx.send(Msg::Log(format!("💾 Cleared ~{} KB of temporary files.", cleaned_bytes / 1024)));
+    let _ = tx.send(Msg::Log(format!(
+        "💾 Cleared ~{} KB of temporary files.",
+        cleaned_bytes / 1024
+    )));
     true
 }
 
@@ -117,7 +138,10 @@ fn clean_user_cache_dirs(tx: &Sender<Msg>) -> bool {
     let mut cleaned_bytes: u64 = 0;
     if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
         let cache_base = std::path::PathBuf::from(home).join(".cache");
-        let _ = tx.send(Msg::Log(format!("🧹 Scanning user cache: {}", cache_base.display())));
+        let _ = tx.send(Msg::Log(format!(
+            "🧹 Scanning user cache: {}",
+            cache_base.display()
+        )));
 
         // Target safe temporary, thumbnail, and package manager cache directories
         let targets = [
@@ -133,7 +157,10 @@ fn clean_user_cache_dirs(tx: &Sender<Msg>) -> bool {
 
         for target in &targets {
             if target.is_dir() {
-                for entry in walkdir::WalkDir::new(target).into_iter().filter_map(|e| e.ok()) {
+                for entry in walkdir::WalkDir::new(target)
+                    .into_iter()
+                    .filter_map(|e| e.ok())
+                {
                     let p = entry.path();
                     if p.is_file() {
                         if let Ok(meta) = fs::metadata(p) {
@@ -145,7 +172,10 @@ fn clean_user_cache_dirs(tx: &Sender<Msg>) -> bool {
             }
         }
     }
-    let _ = tx.send(Msg::Log(format!("💾 Freed ~{} KB of user cache safely.", cleaned_bytes / 1024)));
+    let _ = tx.send(Msg::Log(format!(
+        "💾 Freed ~{} KB of user cache safely.",
+        cleaned_bytes / 1024
+    )));
     true
 }
 
@@ -320,7 +350,8 @@ impl App {
                     self.state = AppState::Done;
                     self.running_idx = None;
                     self.log_lines.push("".to_string());
-                    self.log_lines.push("✨ System cache cleanup completed!".to_string());
+                    self.log_lines
+                        .push("✨ System cache cleanup completed!".to_string());
                 }
             }
         }
@@ -429,7 +460,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
                 let success = (spec.run_fn)(&tx);
                 if success {
-                    let _ = tx.send(Msg::Log(format!("✅ Finished cleaning {} successfully.", spec.name)));
+                    let _ = tx.send(Msg::Log(format!(
+                        "✅ Finished cleaning {} successfully.",
+                        spec.name
+                    )));
                     let _ = tx.send(Msg::ToolFinished(idx, true, "Completed".to_string()));
                 } else {
                     let _ = tx.send(Msg::Log(format!("❌ Cleaning failed for {}.", spec.name)));
@@ -520,20 +554,39 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         0
     };
     let is_done = app.state == AppState::Done;
-    let tick_spin = if is_done { "✨" } else { spinner_frame(app.tick) };
+    let tick_spin = if is_done {
+        "✨"
+    } else {
+        spinner_frame(app.tick)
+    };
     let border_color = if is_done { C_GREEN } else { C_BORDER };
 
     // 1. Header Banner
     let state_text = if is_done {
-        Span::styled("[COMPLETED]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+        Span::styled(
+            "[COMPLETED]",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )
     } else {
-        Span::styled(format!("[{} CLEANING]", tick_spin), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))
+        Span::styled(
+            format!("[{} CLEANING]", tick_spin),
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )
     };
 
     let header_spans = Line::from(vec![
-        Span::styled("🧹 SYSTEM CACHE CLEANER — ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-        Span::styled("Maintenance Engine ", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" [Tasks: {}] ", total_count), Style::default().fg(C_DIM)),
+        Span::styled(
+            "🧹 SYSTEM CACHE CLEANER — ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "Maintenance Engine ",
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" [Tasks: {}] ", total_count),
+            Style::default().fg(C_DIM),
+        ),
         state_text,
     ]);
 
@@ -555,12 +608,22 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(border_color))
-                .title(Span::styled(" Overall Cleanup Progress ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " Overall Cleanup Progress ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ))
                 .style(Style::default().bg(C_BG)),
         )
-        .gauge_style(Style::default().fg(if is_done { C_GREEN } else { C_ACCENT }).bg(Color::Rgb(15, 30, 25)))
+        .gauge_style(
+            Style::default()
+                .fg(if is_done { C_GREEN } else { C_ACCENT })
+                .bg(Color::Rgb(15, 30, 25)),
+        )
         .percent(percent as u16)
-        .label(format!("{}%  ({}/{} completed)", percent, completed_count, total_count));
+        .label(format!(
+            "{}%  ({}/{} completed)",
+            percent, completed_count, total_count
+        ));
     f.render_widget(gauge, outer[1]);
 
     // 3. Middle Dual Pane
@@ -577,21 +640,36 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .map(|(idx, task)| {
             let is_running = app.running_idx == Some(idx);
             let pointer = if is_running {
-                Span::styled("❯ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "❯ ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("  ")
             };
 
             let (badge, badge_style) = match task.status {
                 StatusKind::Pending => (" [PENDING] ", Style::default().fg(C_DIM)),
-                StatusKind::Running => (" [RUNNING] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                StatusKind::Success => (" [SUCCESS] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                StatusKind::Failed => (" [FAILED]  ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+                StatusKind::Running => (
+                    " [RUNNING] ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Success => (
+                    " [SUCCESS] ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Failed => (
+                    " [FAILED]  ",
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                ),
             };
 
             let line = Line::from(vec![
                 pointer,
-                Span::styled(format!("{:<22}", task.name), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{:<22}", task.name),
+                    Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(badge, badge_style),
             ]);
             ListItem::new(line)
@@ -602,7 +680,10 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_BORDER))
-        .title(Span::styled(" 🧹 Cleanup Targets ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+        .title(Span::styled(
+            " 🧹 Cleanup Targets ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(C_BG));
     f.render_widget(List::new(queue_items).block(queue_block), middle_chunks[0]);
 
@@ -612,7 +693,8 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
     let start_idx = if app.auto_scroll {
         total_lines.saturating_sub(visible_capacity)
     } else {
-        app.log_scroll.min(total_lines.saturating_sub(visible_capacity))
+        app.log_scroll
+            .min(total_lines.saturating_sub(visible_capacity))
     };
 
     let display_items: Vec<ListItem> = app
@@ -640,25 +722,46 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_ACCENT))
-        .title(Span::styled(format!(" 📜 Live Output Log ({}) ", total_lines), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+        .title(Span::styled(
+            format!(" 📜 Live Output Log ({}) ", total_lines),
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(C_BG));
     f.render_widget(List::new(display_items).block(log_block), middle_chunks[1]);
 
     // 4. Footer Bar
     let footer_spans = if is_done {
         Line::from(vec![
-            Span::styled(" ✅ System Caches Cleaned! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("⚡ Auto-exiting in 2m... ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ✅ System Caches Cleaned! ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "⚡ Auto-exiting in 2m... ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Press ", Style::default().fg(C_DIM)),
-            Span::styled("[ENTER / Q / ESC]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[ENTER / Q / ESC]",
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" to exit immediately ", Style::default().fg(C_DIM)),
         ])
     } else {
         Line::from(vec![
-            Span::styled(" ⚙️ Cleaning system caches... ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled("[↑/↓] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ⚙️ Cleaning system caches... ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "[↑/↓] ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Scroll Log  ", Style::default().fg(C_DIM)),
-            Span::styled("[Ctrl+C] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[Ctrl+C] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cancel", Style::default().fg(C_DIM)),
         ])
     };

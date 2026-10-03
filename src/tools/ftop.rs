@@ -20,7 +20,8 @@ use ratatui::{
     text::{Line, Span},
     widgets::{
         canvas::{Canvas, Circle},
-        Block, BorderType, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Row, Sparkline, Table, TableState,
+        Block, BorderType, Borders, Clear, Gauge, List, ListItem, ListState, Paragraph, Row,
+        Sparkline, Table, TableState,
     },
     Frame, Terminal,
 };
@@ -31,17 +32,17 @@ use std::time::{Duration, Instant};
 use sysinfo::System;
 
 // ── Color Palette ─────────────────────────────────────────────────────────────
-const C_BG: Color = Color::Rgb(10, 14, 26);            // Dark navy background
-const C_HEADER_BG: Color = Color::Rgb(66, 230, 169);    // Bright turquoise header
-const C_HEADER_FG: Color = Color::Rgb(10, 14, 26);      // Dark text on header
-const C_CYAN: Color = Color::Rgb(0, 229, 255);          // Cyan accent
-const C_GREEN: Color = Color::Rgb(34, 197, 94);         // Neon green
-const C_PURPLE: Color = Color::Rgb(192, 132, 252);      // Neon purple
-const C_YELLOW: Color = Color::Rgb(250, 204, 21);       // Yellow accent
-const C_TEXT: Color = Color::Rgb(215, 225, 240);       // Light text
-const C_DIM: Color = Color::Rgb(100, 115, 140);        // Muted text
-const C_SELECTED_BG: Color = Color::Rgb(30, 58, 95);    // Process row selection
-const C_POPUP_BG: Color = Color::Rgb(22, 28, 48);       // Context popup background
+const C_BG: Color = Color::Rgb(10, 14, 26); // Dark navy background
+const C_HEADER_BG: Color = Color::Rgb(66, 230, 169); // Bright turquoise header
+const C_HEADER_FG: Color = Color::Rgb(10, 14, 26); // Dark text on header
+const C_CYAN: Color = Color::Rgb(0, 229, 255); // Cyan accent
+const C_GREEN: Color = Color::Rgb(34, 197, 94); // Neon green
+const C_PURPLE: Color = Color::Rgb(192, 132, 252); // Neon purple
+const C_YELLOW: Color = Color::Rgb(250, 204, 21); // Yellow accent
+const C_TEXT: Color = Color::Rgb(215, 225, 240); // Light text
+const C_DIM: Color = Color::Rgb(100, 115, 140); // Muted text
+const C_SELECTED_BG: Color = Color::Rgb(30, 58, 95); // Process row selection
+const C_POPUP_BG: Color = Color::Rgb(22, 28, 48); // Context popup background
 
 pub struct ProcessItem {
     pub pid: u32,
@@ -147,12 +148,18 @@ impl App {
             });
         }
 
-        new_procs.sort_by(|a, b| b.cpu_usage.partial_cmp(&a.cpu_usage).unwrap_or(std::cmp::Ordering::Equal));
+        new_procs.sort_by(|a, b| {
+            b.cpu_usage
+                .partial_cmp(&a.cpu_usage)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         self.processes = new_procs;
     }
 
     pub fn next_process(&mut self) {
-        if self.processes.is_empty() { return; }
+        if self.processes.is_empty() {
+            return;
+        }
         let i = match self.table_state.selected() {
             Some(i) => (i + 1) % self.processes.len(),
             None => 0,
@@ -161,9 +168,17 @@ impl App {
     }
 
     pub fn previous_process(&mut self) {
-        if self.processes.is_empty() { return; }
+        if self.processes.is_empty() {
+            return;
+        }
         let i = match self.table_state.selected() {
-            Some(i) => if i == 0 { self.processes.len() - 1 } else { i - 1 },
+            Some(i) => {
+                if i == 0 {
+                    self.processes.len() - 1
+                } else {
+                    i - 1
+                }
+            }
             None => 0,
         };
         self.table_state.select(Some(i));
@@ -216,10 +231,10 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Length(12),// Top Metrics Grid
-            Constraint::Min(8),   // Process Table
-            Constraint::Length(2), // Footer Keybindings
+            Constraint::Length(3),  // Header
+            Constraint::Length(12), // Top Metrics Grid
+            Constraint::Min(8),     // Process Table
+            Constraint::Length(2),  // Footer Keybindings
         ])
         .split(area);
 
@@ -241,14 +256,28 @@ fn draw_header(f: &mut Frame, _app: &App, area: Rect) {
     let secs = uptime % 60;
 
     let header_text = Line::from(vec![
-        Span::styled(">_ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
-        Span::styled("GLADESHELL ", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            ">_ ",
+            Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "GLADESHELL ",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("       "),
         Span::styled("Hostname: ", Style::default().fg(C_DIM)),
-        Span::styled(System::host_name().unwrap_or_else(|| "GLADE-DEV-SRV".into()), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            System::host_name().unwrap_or_else(|| "GLADE-DEV-SRV".into()),
+            Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+        ),
         Span::raw("   "),
         Span::styled("Uptime: ", Style::default().fg(C_DIM)),
-        Span::styled(format!("{days} days, {hours:02}:{mins:02}:{secs:02}"), Style::default().fg(C_TEXT)),
+        Span::styled(
+            format!("{days} days, {hours:02}:{mins:02}:{secs:02}"),
+            Style::default().fg(C_TEXT),
+        ),
         Span::raw("   "),
         Span::styled("Load average: ", Style::default().fg(C_DIM)),
         Span::styled("1.25, 0.98, 0.75", Style::default().fg(C_CYAN)),
@@ -286,7 +315,14 @@ fn draw_top_grid(f: &mut Frame, app: &App, area: Rect) {
     let cpu_inner = cpu_block.inner(grid_chunks[0]);
     f.render_widget(cpu_block, grid_chunks[0]);
 
-    let core_colors = [C_CYAN, C_GREEN, C_YELLOW, C_PURPLE, Color::LightBlue, Color::LightMagenta];
+    let core_colors = [
+        C_CYAN,
+        C_GREEN,
+        C_YELLOW,
+        C_PURPLE,
+        Color::LightBlue,
+        Color::LightMagenta,
+    ];
     let num_cpus = app.sys.cpus().len().min(4).max(1);
 
     let cpu_rows = Layout::default()
@@ -314,7 +350,14 @@ fn draw_top_grid(f: &mut Frame, app: &App, area: Rect) {
 
     let total_mem = app.sys.total_memory().max(1);
     let mem_pct = ((app.sys.used_memory() as f64 / total_mem as f64) * 100.0) as u16;
-    draw_ring_gauge(f, gauges_layout[0], "Memory", mem_pct, C_GREEN, "Used vs 512%");
+    draw_ring_gauge(
+        f,
+        gauges_layout[0],
+        "Memory",
+        mem_pct,
+        C_GREEN,
+        "Used vs 512%",
+    );
 
     let total_swap = app.sys.total_swap();
     let swap_pct = if total_swap > 0 {
@@ -322,7 +365,14 @@ fn draw_top_grid(f: &mut Frame, app: &App, area: Rect) {
     } else {
         20
     };
-    draw_ring_gauge(f, gauges_layout[1], "Swap", swap_pct, C_PURPLE, "Used vs 332%");
+    draw_ring_gauge(
+        f,
+        gauges_layout[1],
+        "Swap",
+        swap_pct,
+        C_PURPLE,
+        "Used vs 332%",
+    );
 
     // ── Col 3: Network, Disk & Temperature
     let right_chunks = Layout::default()
@@ -398,7 +448,12 @@ fn draw_ring_gauge(f: &mut Frame, area: Rect, title: &str, pct: u16, color: Colo
     f.render_widget(canvas, inner);
 
     let center_text = Paragraph::new(vec![
-        Line::from(Span::styled(format!("{pct}%"), Style::default().fg(Color::White).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            format!("{pct}%"),
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )),
         Line::from(Span::styled(sub, Style::default().fg(C_DIM))),
     ])
     .alignment(Alignment::Center);
@@ -411,7 +466,14 @@ fn draw_process_table(f: &mut Frame, app: &mut App, area: Rect) {
         "PID", "USER", "PRI", "NI", "VIRT", "RES", "SHR", "S", "CPU%", "MEM%", "TIME+", "Command",
     ]
     .iter()
-    .map(|h| Span::styled(*h, Style::default().fg(C_HEADER_FG).add_modifier(Modifier::BOLD)));
+    .map(|h| {
+        Span::styled(
+            *h,
+            Style::default()
+                .fg(C_HEADER_FG)
+                .add_modifier(Modifier::BOLD),
+        )
+    });
 
     let header = Row::new(header_cells)
         .style(Style::default().bg(C_HEADER_BG))
@@ -459,7 +521,11 @@ fn draw_process_table(f: &mut Frame, app: &mut App, area: Rect) {
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_CYAN)),
     )
-    .row_highlight_style(Style::default().bg(C_SELECTED_BG).add_modifier(Modifier::BOLD));
+    .row_highlight_style(
+        Style::default()
+            .bg(C_SELECTED_BG)
+            .add_modifier(Modifier::BOLD),
+    );
 
     f.render_stateful_widget(table, area, &mut app.table_state);
 }
@@ -488,7 +554,12 @@ fn draw_popup_overlay(f: &mut Frame, app: &mut App, parent_area: Rect) {
                 .border_style(Style::default().fg(C_CYAN))
                 .style(Style::default().bg(C_POPUP_BG)),
         )
-        .highlight_style(Style::default().bg(C_SELECTED_BG).fg(Color::Yellow).add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .bg(C_SELECTED_BG)
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        );
 
     f.render_stateful_widget(list, popup_area, &mut app.popup_menu_state);
 }
@@ -507,8 +578,17 @@ fn draw_footer(f: &mut Frame, area: Rect) {
 
     let mut spans = Vec::new();
     for (k, label) in keys {
-        spans.push(Span::styled(format!(" {k} "), Style::default().bg(C_HEADER_BG).fg(C_HEADER_FG).add_modifier(Modifier::BOLD)));
-        spans.push(Span::styled(format!("{label} "), Style::default().fg(C_TEXT)));
+        spans.push(Span::styled(
+            format!(" {k} "),
+            Style::default()
+                .bg(C_HEADER_BG)
+                .fg(C_HEADER_FG)
+                .add_modifier(Modifier::BOLD),
+        ));
+        spans.push(Span::styled(
+            format!("{label} "),
+            Style::default().fg(C_TEXT),
+        ));
         spans.push(Span::raw(" "));
     }
 

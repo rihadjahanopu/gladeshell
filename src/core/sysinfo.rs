@@ -43,35 +43,34 @@ static METRICS_CACHE: OnceLock<RwLock<SystemMetrics>> = OnceLock::new();
 static TOOL_VERSIONS_CACHE: OnceLock<RwLock<ToolVersions>> = OnceLock::new();
 static FOLDER_SIZE_CACHE: OnceLock<RwLock<HashMap<PathBuf, String>>> = OnceLock::new();
 
-
 // ── Primary metrics struct ────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Default)]
 pub struct SystemMetrics {
     /// Memory used in MB
-    pub mem_used_mb:      u64,
+    pub mem_used_mb: u64,
     /// Total memory in MB
-    pub mem_total_mb:     u64,
+    pub mem_total_mb: u64,
     /// Memory usage percentage (0-100)
-    pub mem_percent:      u8,
+    pub mem_percent: u8,
     /// 1-minute load average * 100 (e.g. 1.25 → 125)
-    pub load_avg_1m:      u32,
+    pub load_avg_1m: u32,
     /// Battery capacity percentage (0-100), None if no battery
-    pub battery_percent:  Option<u8>,
+    pub battery_percent: Option<u8>,
     /// Battery status: true if charging
     pub battery_charging: bool,
     /// CPU temperature in °C, None if unavailable
-    pub cpu_temp_c:       Option<u32>,
+    pub cpu_temp_c: Option<u32>,
     /// Kernel version string (e.g. "6.8.0")
-    pub kernel_version:   String,
+    pub kernel_version: String,
     /// Disk free on "/" in GiB (rounded to 1 decimal)
-    pub disk_free_gib:    f32,
+    pub disk_free_gib: f32,
     /// Current directory size in human-readable form (e.g. "4.2M")
-    pub folder_size:      String,
+    pub folder_size: String,
     /// Whether current directory is read-only
-    pub is_readonly:      bool,
+    pub is_readonly: bool,
     /// Number of pending OS package updates (0 if unknown / unavailable)
-    pub pending_updates:  u32,
+    pub pending_updates: u32,
 }
 
 impl SystemMetrics {
@@ -142,16 +141,16 @@ impl SystemMetrics {
                 m.read_disk_free();
                 m.check_readonly();
                 let mut lock = s1.lock().unwrap();
-                lock.mem_used_mb      = m.mem_used_mb;
-                lock.mem_total_mb     = m.mem_total_mb;
-                lock.mem_percent      = m.mem_percent;
-                lock.load_avg_1m      = m.load_avg_1m;
-                lock.battery_percent  = m.battery_percent;
+                lock.mem_used_mb = m.mem_used_mb;
+                lock.mem_total_mb = m.mem_total_mb;
+                lock.mem_percent = m.mem_percent;
+                lock.load_avg_1m = m.load_avg_1m;
+                lock.battery_percent = m.battery_percent;
                 lock.battery_charging = m.battery_charging;
-                lock.cpu_temp_c       = m.cpu_temp_c;
-                lock.kernel_version   = m.kernel_version;
-                lock.disk_free_gib    = m.disk_free_gib;
-                lock.is_readonly      = m.is_readonly;
+                lock.cpu_temp_c = m.cpu_temp_c;
+                lock.kernel_version = m.kernel_version;
+                lock.disk_free_gib = m.disk_free_gib;
+                lock.is_readonly = m.is_readonly;
             },
             // Slow group: recursive folder size (independent, runs in parallel)
             move || {
@@ -238,7 +237,10 @@ impl SystemMetrics {
     // ── Battery ───────────────────────────────────────────────────────────────
 
     fn read_battery(&mut self) {
-        for path in &["/sys/class/power_supply/BAT0", "/sys/class/power_supply/BAT1"] {
+        for path in &[
+            "/sys/class/power_supply/BAT0",
+            "/sys/class/power_supply/BAT1",
+        ] {
             if let Ok(cap_str) = fs::read_to_string(format!("{path}/capacity")) {
                 if let Ok(cap) = cap_str.trim().parse::<u8>() {
                     self.battery_percent = Some(cap);
@@ -276,13 +278,20 @@ impl SystemMetrics {
             }
         }
         // Fallback: try reading from /sys/class/hwmon (lm-sensors data without binary)
-        for entry in fs::read_dir("/sys/class/hwmon").into_iter().flatten().flatten() {
+        for entry in fs::read_dir("/sys/class/hwmon")
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
             let base = entry.path();
             // Read name to find the right chip (e.g. "coretemp", "k10temp")
             let name_path = base.join("name");
             let chip_name = fs::read_to_string(&name_path).unwrap_or_default();
             let chip_name = chip_name.trim();
-            if chip_name.contains("core") || chip_name.contains("k10temp") || chip_name.contains("acpitz") {
+            if chip_name.contains("core")
+                || chip_name.contains("k10temp")
+                || chip_name.contains("acpitz")
+            {
                 // Try temp1_input, temp2_input ...
                 for i in 1..=8u8 {
                     let temp_path = base.join(format!("temp{}_input", i));
@@ -305,11 +314,11 @@ impl SystemMetrics {
             None => String::new(),
             Some(t) => {
                 let color = if t > 70 {
-                    "\x1b[91m"  // bright red
+                    "\x1b[91m" // bright red
                 } else if t > 55 {
-                    "\x1b[93m"  // bright yellow
+                    "\x1b[93m" // bright yellow
                 } else {
-                    "\x1b[92m"  // bright green
+                    "\x1b[92m" // bright green
                 };
                 format!(" {color}🌡️ {t}°C\x1b[0m")
             }
@@ -381,14 +390,19 @@ impl SystemMetrics {
 
     fn check_readonly(&mut self) {
         // Check if the current directory is writable
-        self.is_readonly = !Path::new(".").metadata()
+        self.is_readonly = !Path::new(".")
+            .metadata()
             .map(|m| !m.permissions().readonly())
             .unwrap_or(false);
     }
 
     /// Formatted like shell `check_readonly`: " 🔒" or ""
     pub fn readonly_display(&self) -> &'static str {
-        if self.is_readonly { " 🔒" } else { "" }
+        if self.is_readonly {
+            " 🔒"
+        } else {
+            ""
+        }
     }
 }
 
@@ -397,8 +411,9 @@ impl SystemMetrics {
 /// Port of: `time_date()` — "📅 Sep 07"
 pub fn time_date() -> String {
     // Native: use SystemTime + manual month/day formatting — no `date` binary
-    let months = ["Jan","Feb","Mar","Apr","May","Jun",
-                  "Jul","Aug","Sep","Oct","Nov","Dec"];
+    let months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
     if let Ok(dur) = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
         let secs = dur.as_secs();
         // Simple Julian day calculation to get month & day
@@ -411,13 +426,16 @@ pub fn time_date() -> String {
         let rem = rem % 1461;
         let year_1 = rem.min(1460) / 365;
         let doy = rem - year_1 * 365; // 0-based day of year
-        // Approx month from doy (non-leap accurate enough for display)
-        let month_days = [31u64,28,31,30,31,30,31,31,30,31,30,31];
+                                      // Approx month from doy (non-leap accurate enough for display)
+        let month_days = [31u64, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         let _ = (year_400, year_100, year_4, year_1); // suppress unused
         let mut month = 0usize;
         let mut rem_days = doy;
         for (i, &md) in month_days.iter().enumerate() {
-            if rem_days < md { month = i; break; }
+            if rem_days < md {
+                month = i;
+                break;
+            }
             rem_days -= md;
         }
         let day = rem_days + 1;
@@ -477,7 +495,12 @@ pub fn pending_updates_count() -> u32 {
         {
             let count = String::from_utf8_lossy(&out.stdout)
                 .lines()
-                .filter(|l| l.chars().next().map(|c| c.is_alphanumeric()).unwrap_or(false))
+                .filter(|l| {
+                    l.chars()
+                        .next()
+                        .map(|c| c.is_alphanumeric())
+                        .unwrap_or(false)
+                })
                 .count();
             return count as u32;
         }
@@ -532,15 +555,17 @@ impl ToolVersions {
     pub fn collect() -> Self {
         let (node, (npm, bun)) = rayon::join(
             || run_version(&["node", "-v"]),
-            || rayon::join(
-                || run_version(&["npm", "-v"]),
-                || run_version(&["bun", "-v"]),
-            ),
+            || {
+                rayon::join(
+                    || run_version(&["npm", "-v"]),
+                    || run_version(&["bun", "-v"]),
+                )
+            },
         );
         ToolVersions {
             node: node.map(|v| format!("\u{1F7E2} {v}")).unwrap_or_default(),
-            npm:  npm .map(|v| format!("\u{1F4E6} v{v}")).unwrap_or_default(),
-            bun:  bun .map(|v| format!("\u{1F950} v{v}")).unwrap_or_default(),
+            npm: npm.map(|v| format!("\u{1F4E6} v{v}")).unwrap_or_default(),
+            bun: bun.map(|v| format!("\u{1F950} v{v}")).unwrap_or_default(),
         }
     }
 
@@ -632,7 +657,9 @@ fn cmd_available(name: &str) -> bool {
 }
 
 fn run_count(args: &[&str]) -> u32 {
-    if args.is_empty() { return 0; }
+    if args.is_empty() {
+        return 0;
+    }
     Command::new(args[0])
         .args(&args[1..])
         .stdout(Stdio::piped())
@@ -643,12 +670,14 @@ fn run_count(args: &[&str]) -> u32 {
 }
 
 fn run_version(args: &[&str]) -> Option<String> {
-    if args.is_empty() { return None; }
+    if args.is_empty() {
+        return None;
+    }
     let cmd_name = args[0];
     let mut cmd = Command::new(cmd_name);
     cmd.args(&args[1..])
-       .stdout(Stdio::piped())
-       .stderr(Stdio::null());
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
 
     let out = match cmd.output() {
         Ok(o) if o.status.success() && !o.stdout.is_empty() => o,
@@ -657,7 +686,11 @@ fn run_version(args: &[&str]) -> Option<String> {
                 let fallback = match cmd_name {
                     "bun" => {
                         let p = format!("{home}/.bun/bin/bun");
-                        if Path::new(&p).exists() { Some(p) } else { None }
+                        if Path::new(&p).exists() {
+                            Some(p)
+                        } else {
+                            None
+                        }
                     }
                     "node" | "npm" => {
                         let nvm_dirs = [
@@ -701,7 +734,11 @@ fn run_version(args: &[&str]) -> Option<String> {
     };
 
     let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    if s.is_empty() { None } else { Some(s) }
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
 }
 
 // =============================================================================
@@ -775,8 +812,6 @@ mod tests {
         assert_eq!(cmd_duration_display(3665), " ⏱️ 1h1m");
     }
 
-
-
     #[test]
     fn test_tool_versions_does_not_panic() {
         // Just ensure it doesn't crash, versions may or may not be installed
@@ -820,8 +855,8 @@ fn read_disk_free_native() -> f32 {
     // call the statfs(2) syscall. We can do this via std::os::unix.
     #[cfg(unix)]
     {
-        use std::mem::MaybeUninit;
         use std::ffi::CString;
+        use std::mem::MaybeUninit;
         use std::os::raw::c_char;
 
         let path = CString::new("/").unwrap_or_default();
@@ -865,9 +900,14 @@ unsafe fn raw_statfs(path: *const std::os::raw::c_char, buf: *mut libc_statfs) -
 
 #[cfg(not(target_os = "linux"))]
 #[repr(C)]
-struct libc_statfs { f_bsize: i64, f_bavail: u64 }
+struct libc_statfs {
+    f_bsize: i64,
+    f_bavail: u64,
+}
 #[cfg(not(target_os = "linux"))]
-unsafe fn raw_statfs(_path: *const std::os::raw::c_char, _buf: *mut libc_statfs) -> i32 { -1 }
+unsafe fn raw_statfs(_path: *const std::os::raw::c_char, _buf: *mut libc_statfs) -> i32 {
+    -1
+}
 
 // ── Native dir size — no `du` binary ─────────────────────────────────────────
 
@@ -875,7 +915,9 @@ unsafe fn raw_statfs(_path: *const std::os::raw::c_char, _buf: *mut libc_statfs)
 /// Single-threaded fallback used when rayon is not available.
 #[cfg(not(feature = "rayon"))]
 fn dir_size_bytes(path: &Path, depth: u8) -> u64 {
-    if depth > 4 { return 0; }
+    if depth > 4 {
+        return 0;
+    }
     let Ok(rd) = fs::read_dir(path) else { return 0 };
     let mut total = 0u64;
     for entry in rd.flatten() {
@@ -899,12 +941,16 @@ fn dir_size_bytes_parallel(path: &Path) -> u64 {
 
 #[cfg(feature = "rayon")]
 fn dir_size_par_inner(path: &Path, depth: u8) -> u64 {
-    if depth > 4 { return 0; }
+    if depth > 4 {
+        return 0;
+    }
     let Ok(rd) = fs::read_dir(path) else { return 0 };
     rd.flatten()
         .par_bridge()
         .map(|entry| {
-            let Ok(meta) = entry.metadata() else { return 0u64 };
+            let Ok(meta) = entry.metadata() else {
+                return 0u64;
+            };
             if meta.is_file() {
                 meta.len()
             } else if meta.is_dir() {

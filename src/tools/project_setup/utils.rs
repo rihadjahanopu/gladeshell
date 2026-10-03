@@ -75,7 +75,9 @@ pub fn prompt_select(msg: &str, options: &[&str]) -> Result<String, Box<dyn std:
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     let choice: usize = input.trim().parse().unwrap_or(1);
-    let idx = choice.saturating_sub(1).min(options.len().saturating_sub(1));
+    let idx = choice
+        .saturating_sub(1)
+        .min(options.len().saturating_sub(1));
     Ok(options[idx].to_string())
 }
 
@@ -88,8 +90,8 @@ pub fn patch_tsconfig() {
         Some(p) => {
             match p {
                 "tsconfig.app.json" => println!("  info: Vite (TS) detected -> patching {p}"),
-                "tsconfig.json"     => println!("  info: TypeScript project -> patching {p}"),
-                _                   => println!("  info: JavaScript project -> patching {p}"),
+                "tsconfig.json" => println!("  info: TypeScript project -> patching {p}"),
+                _ => println!("  info: JavaScript project -> patching {p}"),
             }
             p.to_string()
         }
@@ -116,7 +118,10 @@ pub fn patch_tsconfig() {
 
     let raw = match fs::read_to_string(&target) {
         Ok(r) => r,
-        Err(e) => { eprintln!("  Cannot read {target}: {e}"); return; }
+        Err(e) => {
+            eprintln!("  Cannot read {target}: {e}");
+            return;
+        }
     };
 
     if raw.contains("\"@/*\"") {
@@ -128,7 +133,7 @@ pub fn patch_tsconfig() {
 
     let patched = inject_ts_paths(&raw);
     match fs::write(&target, &patched) {
-        Ok(_)  => println!("  -> baseUrl & paths written to {target}"),
+        Ok(_) => println!("  -> baseUrl & paths written to {target}"),
         Err(e) => eprintln!("  Failed to write {target}: {e}"),
     }
 }
@@ -164,7 +169,10 @@ pub fn patch_viteconfig() {
 
     let mut content = match fs::read_to_string(path) {
         Ok(c) => c,
-        Err(e) => { eprintln!("  Cannot read {path}: {e}"); return; }
+        Err(e) => {
+            eprintln!("  Cannot read {path}: {e}");
+            return;
+        }
     };
 
     if !content.contains("import path from") {
@@ -199,7 +207,7 @@ pub fn patch_viteconfig() {
     }
 
     match fs::write(path, &content) {
-        Ok(_)  => println!("  [OK] {path} patched."),
+        Ok(_) => println!("  [OK] {path} patched."),
         Err(e) => eprintln!("  Failed to write {path}: {e}"),
     }
 }

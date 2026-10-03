@@ -34,27 +34,144 @@ fn get_builtins() -> &'static HashSet<&'static str> {
     SHELL_BUILTINS.get_or_init(|| {
         [
             // POSIX / Bash / Zsh builtins
-            ".", ":", "[", "[[", "alias", "autoload", "bg", "bind", "break",
-            "builtin", "caller", "cd", "command", "complete", "compdef",
-            "compgen", "continue", "declare", "dirs", "disown", "echo",
-            "enable", "eval", "exec", "exit", "export", "false", "fc",
-            "fg", "getopts", "hash", "help", "history", "jobs", "kill",
-            "let", "local", "logout", "mapfile", "popd", "printf", "pushd",
-            "pwd", "read", "readarray", "readonly", "return", "set",
-            "setopt", "shift", "shopt", "source", "suspend", "test",
-            "times", "trap", "true", "type", "typeset", "ulimit", "umask",
-            "unalias", "unfunction", "unset", "unsetopt", "wait",
-            "zstyle", "zmodload", "zle", "autoload", "gladeshell",
+            ".",
+            ":",
+            "[",
+            "[[",
+            "alias",
+            "autoload",
+            "bg",
+            "bind",
+            "break",
+            "builtin",
+            "caller",
+            "cd",
+            "command",
+            "complete",
+            "compdef",
+            "compgen",
+            "continue",
+            "declare",
+            "dirs",
+            "disown",
+            "echo",
+            "enable",
+            "eval",
+            "exec",
+            "exit",
+            "export",
+            "false",
+            "fc",
+            "fg",
+            "getopts",
+            "hash",
+            "help",
+            "history",
+            "jobs",
+            "kill",
+            "let",
+            "local",
+            "logout",
+            "mapfile",
+            "popd",
+            "printf",
+            "pushd",
+            "pwd",
+            "read",
+            "readarray",
+            "readonly",
+            "return",
+            "set",
+            "setopt",
+            "shift",
+            "shopt",
+            "source",
+            "suspend",
+            "test",
+            "times",
+            "trap",
+            "true",
+            "type",
+            "typeset",
+            "ulimit",
+            "umask",
+            "unalias",
+            "unfunction",
+            "unset",
+            "unsetopt",
+            "wait",
+            "zstyle",
+            "zmodload",
+            "zle",
+            "autoload",
+            "gladeshell",
             // Common CLI tools always treated as valid commands
-            "bun", "cargo", "cat", "chmod", "chown", "clang", "cp",
-            "curl", "cut", "diff", "docker", "env", "find", "g++", "gcc",
-            "git", "go", "grep", "head", "install", "kubectl", "la", "less",
-            "ll", "ln", "ls", "make", "man", "mkdir", "mv", "node", "npm",
-            "npx", "nvim", "pnpm", "podman", "python", "python3", "rm",
-            "rmdir", "rsync", "rustc", "sed", "sort", "ssh", "su", "sudo",
-            "tail", "tar", "tee", "touch", "tr", "uname", "unzip", "vim",
-            "wc", "wget", "which", "xargs", "yarn", "zip", "zsh", "bash",
-            "fish", "nu", "pwsh",
+            "bun",
+            "cargo",
+            "cat",
+            "chmod",
+            "chown",
+            "clang",
+            "cp",
+            "curl",
+            "cut",
+            "diff",
+            "docker",
+            "env",
+            "find",
+            "g++",
+            "gcc",
+            "git",
+            "go",
+            "grep",
+            "head",
+            "install",
+            "kubectl",
+            "la",
+            "less",
+            "ll",
+            "ln",
+            "ls",
+            "make",
+            "man",
+            "mkdir",
+            "mv",
+            "node",
+            "npm",
+            "npx",
+            "nvim",
+            "pnpm",
+            "podman",
+            "python",
+            "python3",
+            "rm",
+            "rmdir",
+            "rsync",
+            "rustc",
+            "sed",
+            "sort",
+            "ssh",
+            "su",
+            "sudo",
+            "tail",
+            "tar",
+            "tee",
+            "touch",
+            "tr",
+            "uname",
+            "unzip",
+            "vim",
+            "wc",
+            "wget",
+            "which",
+            "xargs",
+            "yarn",
+            "zip",
+            "zsh",
+            "bash",
+            "fish",
+            "nu",
+            "pwsh",
         ]
         .into_iter()
         .collect()
@@ -187,9 +304,7 @@ pub fn highlight(buffer: &str) -> String {
         // ── Pipe, Semicolon, Ampersand ───────────────────────────────────────
         if ch == '|' || ch == ';' || ch == '&' {
             let mut end = i + 1;
-            if end < total
-                && (chars[end] == '|' || chars[end] == '&' || chars[end] == '>')
-            {
+            if end < total && (chars[end] == '|' || chars[end] == '&' || chars[end] == '>') {
                 end += 1;
             }
             spans.push(TokenSpan {
@@ -265,9 +380,7 @@ pub fn highlight(buffer: &str) -> String {
                 }
             } else {
                 // Plain variable: $VARNAME
-                while i < total
-                    && (chars[i].is_alphanumeric() || chars[i] == '_')
-                {
+                while i < total && (chars[i].is_alphanumeric() || chars[i] == '_') {
                     i += 1;
                 }
             }
@@ -342,7 +455,10 @@ pub fn highlight(buffer: &str) -> String {
         if idx > 0 {
             out.push('\n');
         }
-        out.push_str(&format!("{} {} {}", span.char_start, span.char_end, span.style));
+        out.push_str(&format!(
+            "{} {} {}",
+            span.char_start, span.char_end, span.style
+        ));
     }
     out
 }
@@ -366,7 +482,10 @@ mod tests {
     fn test_builtin_command_highlighted_green() {
         let result = highlight("echo hello");
         // "echo" at chars 0..4 should be fg=green,bold
-        assert!(result.contains("0 4 fg=green,bold"), "expected echo highlighted green, got: {result}");
+        assert!(
+            result.contains("0 4 fg=green,bold"),
+            "expected echo highlighted green, got: {result}"
+        );
     }
 
     #[test]
@@ -381,25 +500,37 @@ mod tests {
     #[test]
     fn test_quoted_string_cyan() {
         let result = highlight("echo \"hello world\"");
-        assert!(result.contains("fg=cyan"), "expected quoted string highlighted cyan, got: {result}");
+        assert!(
+            result.contains("fg=cyan"),
+            "expected quoted string highlighted cyan, got: {result}"
+        );
     }
 
     #[test]
     fn test_flag_highlighted_magenta() {
         let result = highlight("ls -la");
-        assert!(result.contains("fg=magenta"), "expected flag -la highlighted magenta, got: {result}");
+        assert!(
+            result.contains("fg=magenta"),
+            "expected flag -la highlighted magenta, got: {result}"
+        );
     }
 
     #[test]
     fn test_pipe_highlighted_yellow_bold() {
         let result = highlight("ls | grep foo");
-        assert!(result.contains("fg=yellow,bold"), "expected pipe highlighted yellow,bold, got: {result}");
+        assert!(
+            result.contains("fg=yellow,bold"),
+            "expected pipe highlighted yellow,bold, got: {result}"
+        );
     }
 
     #[test]
     fn test_variable_highlighted_magenta_bold() {
         let result = highlight("echo $HOME");
-        assert!(result.contains("fg=magenta,bold"), "expected $HOME highlighted magenta,bold");
+        assert!(
+            result.contains("fg=magenta,bold"),
+            "expected $HOME highlighted magenta,bold"
+        );
     }
 
     #[test]
@@ -440,7 +571,10 @@ mod tests {
         // "ls 日本" — 日 is at char index 3, 本 at 4
         let result = highlight("ls 日本");
         // "ls" is at 0..2, "日本" is at 3..5
-        assert!(result.contains("3 5"), "CJK token must use char offsets, got: {result}");
+        assert!(
+            result.contains("3 5"),
+            "CJK token must use char offsets, got: {result}"
+        );
     }
 
     #[test]
@@ -453,6 +587,9 @@ mod tests {
     #[test]
     fn test_output_has_no_trailing_newline() {
         let result = highlight("echo hello");
-        assert!(!result.ends_with('\n'), "output should not have trailing newline");
+        assert!(
+            !result.ends_with('\n'),
+            "output should not have trailing newline"
+        );
     }
 }

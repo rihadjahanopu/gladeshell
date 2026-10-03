@@ -53,7 +53,12 @@ pub fn run(action_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
         } else if action.contains("Stats") || action.starts_with("6.") {
             Command::new("docker").arg("stats").status()?;
         } else if action.contains("Clean") || action.starts_with("7.") {
-            Command::new("docker").arg("system").arg("prune").arg("-a").arg("-f").status()?;
+            Command::new("docker")
+                .arg("system")
+                .arg("prune")
+                .arg("-a")
+                .arg("-f")
+                .status()?;
             println!("✅ Docker system pruned cleanly!");
         }
         return Ok(());
@@ -188,7 +193,12 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
     let image_actions = vec!["Remove Image", "Inspect", "History"];
     let volume_actions = vec!["Inspect", "Remove Volume"];
     let network_actions = vec!["Inspect", "Remove Network"];
-    let compose_actions = vec!["docker compose up -d", "docker compose down", "docker compose ps", "docker compose logs -f"];
+    let compose_actions = vec![
+        "docker compose up -d",
+        "docker compose down",
+        "docker compose ps",
+        "docker compose logs -f",
+    ];
 
     loop {
         terminal.draw(|f| {
@@ -576,8 +586,10 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                 app.pending_command = Some(("docker".into(), vec!["stats".into()]));
                             }
                             6 => {
-                                app.pending_command =
-                                    Some(("docker".into(), vec!["system".into(), "prune".into(), "-a".into(), "-f".into()]));
+                                app.pending_command = Some((
+                                    "docker".into(),
+                                    vec!["system".into(), "prune".into(), "-a".into(), "-f".into()],
+                                ));
                             }
                             7 => break,
                             _ => {}
@@ -588,7 +600,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                     DmanScreen::Containers => {
                         if app.show_container_actions {
                             match key.code {
-                                KeyCode::Esc | KeyCode::Char('b') => app.show_container_actions = false,
+                                KeyCode::Esc | KeyCode::Char('b') => {
+                                    app.show_container_actions = false
+                                }
                                 KeyCode::Up | KeyCode::Char('k') => {
                                     if app.container_action_cursor > 0 {
                                         app.container_action_cursor -= 1;
@@ -609,27 +623,54 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                             .to_string();
                                         match container_actions[app.container_action_cursor] {
                                             "Start" => {
-                                                let _ = Command::new("docker").arg("start").arg(&cid).status();
-                                                app.status_msg = format!("Started container {}", cid);
+                                                let _ = Command::new("docker")
+                                                    .arg("start")
+                                                    .arg(&cid)
+                                                    .status();
+                                                app.status_msg =
+                                                    format!("Started container {}", cid);
                                             }
                                             "Stop" => {
-                                                let _ = Command::new("docker").arg("stop").arg(&cid).status();
-                                                app.status_msg = format!("Stopped container {}", cid);
+                                                let _ = Command::new("docker")
+                                                    .arg("stop")
+                                                    .arg(&cid)
+                                                    .status();
+                                                app.status_msg =
+                                                    format!("Stopped container {}", cid);
                                             }
                                             "Restart" => {
-                                                let _ = Command::new("docker").arg("restart").arg(&cid).status();
-                                                app.status_msg = format!("Restarted container {}", cid);
+                                                let _ = Command::new("docker")
+                                                    .arg("restart")
+                                                    .arg(&cid)
+                                                    .status();
+                                                app.status_msg =
+                                                    format!("Restarted container {}", cid);
                                             }
                                             "Logs" => {
-                                                app.pending_command = Some(("docker".into(), vec!["logs".into(), "-f".into(), cid]));
+                                                app.pending_command = Some((
+                                                    "docker".into(),
+                                                    vec!["logs".into(), "-f".into(), cid],
+                                                ));
                                             }
                                             "Exec Bash" => {
-                                                app.pending_command =
-                                                    Some(("docker".into(), vec!["exec".into(), "-it".into(), cid, "bash".into()]));
+                                                app.pending_command = Some((
+                                                    "docker".into(),
+                                                    vec![
+                                                        "exec".into(),
+                                                        "-it".into(),
+                                                        cid,
+                                                        "bash".into(),
+                                                    ],
+                                                ));
                                             }
                                             "Remove" => {
-                                                let _ = Command::new("docker").arg("rm").arg("-f").arg(&cid).status();
-                                                app.status_msg = format!("Removed container {}", cid);
+                                                let _ = Command::new("docker")
+                                                    .arg("rm")
+                                                    .arg("-f")
+                                                    .arg(&cid)
+                                                    .status();
+                                                app.status_msg =
+                                                    format!("Removed container {}", cid);
                                             }
                                             _ => {}
                                         }
@@ -648,7 +689,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                     }
                                 }
                                 KeyCode::Down | KeyCode::Char('j') => {
-                                    if !app.containers.is_empty() && app.container_cursor < app.containers.len() - 1 {
+                                    if !app.containers.is_empty()
+                                        && app.container_cursor < app.containers.len() - 1
+                                    {
                                         app.container_cursor += 1;
                                     }
                                 }
@@ -687,15 +730,25 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                             .to_string();
                                         match image_actions[app.image_action_cursor] {
                                             "Remove Image" => {
-                                                let _ = Command::new("docker").arg("rmi").arg("-f").arg(&img_id).status();
-                                                app.status_msg = format!("Removed image {}", img_id);
+                                                let _ = Command::new("docker")
+                                                    .arg("rmi")
+                                                    .arg("-f")
+                                                    .arg(&img_id)
+                                                    .status();
+                                                app.status_msg =
+                                                    format!("Removed image {}", img_id);
                                             }
                                             "Inspect" => {
-                                                app.pending_command =
-                                                    Some(("docker".into(), vec!["image".into(), "inspect".into(), img_id]));
+                                                app.pending_command = Some((
+                                                    "docker".into(),
+                                                    vec!["image".into(), "inspect".into(), img_id],
+                                                ));
                                             }
                                             "History" => {
-                                                app.pending_command = Some(("docker".into(), vec!["history".into(), img_id]));
+                                                app.pending_command = Some((
+                                                    "docker".into(),
+                                                    vec!["history".into(), img_id],
+                                                ));
                                             }
                                             _ => {}
                                         }
@@ -714,7 +767,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                     }
                                 }
                                 KeyCode::Down | KeyCode::Char('j') => {
-                                    if !app.images.is_empty() && app.image_cursor < app.images.len() - 1 {
+                                    if !app.images.is_empty()
+                                        && app.image_cursor < app.images.len() - 1
+                                    {
                                         app.image_cursor += 1;
                                     }
                                 }
@@ -732,7 +787,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                     DmanScreen::Volumes => {
                         if app.show_volume_actions {
                             match key.code {
-                                KeyCode::Esc | KeyCode::Char('b') => app.show_volume_actions = false,
+                                KeyCode::Esc | KeyCode::Char('b') => {
+                                    app.show_volume_actions = false
+                                }
                                 KeyCode::Up | KeyCode::Char('k') => {
                                     if app.volume_action_cursor > 0 {
                                         app.volume_action_cursor -= 1;
@@ -753,11 +810,17 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                             .to_string();
                                         match volume_actions[app.volume_action_cursor] {
                                             "Inspect" => {
-                                                app.pending_command =
-                                                    Some(("docker".into(), vec!["volume".into(), "inspect".into(), vol]));
+                                                app.pending_command = Some((
+                                                    "docker".into(),
+                                                    vec!["volume".into(), "inspect".into(), vol],
+                                                ));
                                             }
                                             "Remove Volume" => {
-                                                let _ = Command::new("docker").arg("volume").arg("rm").arg(&vol).status();
+                                                let _ = Command::new("docker")
+                                                    .arg("volume")
+                                                    .arg("rm")
+                                                    .arg(&vol)
+                                                    .status();
                                                 app.status_msg = format!("Removed volume {}", vol);
                                             }
                                             _ => {}
@@ -777,7 +840,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                     }
                                 }
                                 KeyCode::Down | KeyCode::Char('j') => {
-                                    if !app.volumes.is_empty() && app.volume_cursor < app.volumes.len() - 1 {
+                                    if !app.volumes.is_empty()
+                                        && app.volume_cursor < app.volumes.len() - 1
+                                    {
                                         app.volume_cursor += 1;
                                     }
                                 }
@@ -795,7 +860,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                     DmanScreen::Networks => {
                         if app.show_network_actions {
                             match key.code {
-                                KeyCode::Esc | KeyCode::Char('b') => app.show_network_actions = false,
+                                KeyCode::Esc | KeyCode::Char('b') => {
+                                    app.show_network_actions = false
+                                }
                                 KeyCode::Up | KeyCode::Char('k') => {
                                     if app.network_action_cursor > 0 {
                                         app.network_action_cursor -= 1;
@@ -816,11 +883,17 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                             .to_string();
                                         match network_actions[app.network_action_cursor] {
                                             "Inspect" => {
-                                                app.pending_command =
-                                                    Some(("docker".into(), vec!["network".into(), "inspect".into(), net]));
+                                                app.pending_command = Some((
+                                                    "docker".into(),
+                                                    vec!["network".into(), "inspect".into(), net],
+                                                ));
                                             }
                                             "Remove Network" => {
-                                                let _ = Command::new("docker").arg("network").arg("rm").arg(&net).status();
+                                                let _ = Command::new("docker")
+                                                    .arg("network")
+                                                    .arg("rm")
+                                                    .arg(&net)
+                                                    .status();
                                                 app.status_msg = format!("Removed network {}", net);
                                             }
                                             _ => {}
@@ -840,7 +913,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                                     }
                                 }
                                 KeyCode::Down | KeyCode::Char('j') => {
-                                    if !app.networks.is_empty() && app.network_cursor < app.networks.len() - 1 {
+                                    if !app.networks.is_empty()
+                                        && app.network_cursor < app.networks.len() - 1
+                                    {
                                         app.network_cursor += 1;
                                     }
                                 }
@@ -869,7 +944,8 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         KeyCode::Enter => {
                             let act = compose_actions[app.compose_cursor];
-                            let parts: Vec<String> = act.split_whitespace().map(|s| s.to_string()).collect();
+                            let parts: Vec<String> =
+                                act.split_whitespace().map(|s| s.to_string()).collect();
                             if parts.len() >= 3 {
                                 app.pending_command = Some((parts[0].clone(), parts[1..].to_vec()));
                             }
@@ -914,7 +990,12 @@ fn fetch_containers() -> Vec<String> {
         .arg("--format")
         .arg("{{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}")
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).lines().map(|s| s.to_string()).collect())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|s| s.to_string())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -924,7 +1005,12 @@ fn fetch_images() -> Vec<String> {
         .arg("--format")
         .arg("{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}")
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).lines().map(|s| s.to_string()).collect())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|s| s.to_string())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -935,7 +1021,12 @@ fn fetch_volumes() -> Vec<String> {
         .arg("--format")
         .arg("{{.Name}}\t{{.Driver}}")
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).lines().map(|s| s.to_string()).collect())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|s| s.to_string())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -946,7 +1037,12 @@ fn fetch_networks() -> Vec<String> {
         .arg("--format")
         .arg("{{.ID}}\t{{.Name}}\t{{.Driver}}")
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).lines().map(|s| s.to_string()).collect())
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|s| s.to_string())
+                .collect()
+        })
         .unwrap_or_default()
 }
 

@@ -9,7 +9,9 @@
 // =============================================================================
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -126,7 +128,10 @@ impl App {
                 .args(["log", "--oneline", "-100", branch])
                 .output();
             self.log_preview = match out {
-                Ok(o) => String::from_utf8_lossy(&o.stdout).lines().map(|l| l.to_string()).collect(),
+                Ok(o) => String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .map(|l| l.to_string())
+                    .collect(),
                 Err(_) => vec!["(no log available)".into()],
             };
             if self.log_preview.is_empty() {
@@ -136,23 +141,36 @@ impl App {
     }
 
     fn move_branch_up(&mut self) {
-        if self.filtered.is_empty() { return; }
+        if self.filtered.is_empty() {
+            return;
+        }
         let i = self.branch_state.selected().unwrap_or(0);
         let max_idx = self.filtered.len().saturating_sub(1);
-        self.branch_state.select(Some(if i == 0 { max_idx } else { (i - 1).min(max_idx) }));
+        self.branch_state.select(Some(if i == 0 {
+            max_idx
+        } else {
+            (i - 1).min(max_idx)
+        }));
         self.fetch_log();
     }
 
     fn move_branch_down(&mut self) {
-        if self.filtered.is_empty() { return; }
+        if self.filtered.is_empty() {
+            return;
+        }
         let i = self.branch_state.selected().unwrap_or(0);
-        self.branch_state.select(Some((i + 1) % self.filtered.len()));
+        self.branch_state
+            .select(Some((i + 1) % self.filtered.len()));
         self.fetch_log();
     }
 
     fn move_action_up(&mut self) {
         let i = self.action_state.selected().unwrap_or(0);
-        self.action_state.select(Some(if i == 0 { ACTIONS.len().saturating_sub(1) } else { i - 1 }));
+        self.action_state.select(Some(if i == 0 {
+            ACTIONS.len().saturating_sub(1)
+        } else {
+            i - 1
+        }));
     }
 
     fn move_action_down(&mut self) {
@@ -221,10 +239,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                             (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('c')) => {
                                 should_quit = true;
                             }
-                            (_, KeyCode::PageUp) | (KeyModifiers::SHIFT, KeyCode::Up) | (KeyModifiers::CONTROL, KeyCode::Char('u')) | (KeyModifiers::CONTROL, KeyCode::Char('k')) => {
+                            (_, KeyCode::PageUp)
+                            | (KeyModifiers::SHIFT, KeyCode::Up)
+                            | (KeyModifiers::CONTROL, KeyCode::Char('u'))
+                            | (KeyModifiers::CONTROL, KeyCode::Char('k')) => {
                                 app.scroll_log_up(3);
                             }
-                            (_, KeyCode::PageDown) | (KeyModifiers::SHIFT, KeyCode::Down) | (KeyModifiers::CONTROL, KeyCode::Char('d')) | (KeyModifiers::CONTROL, KeyCode::Char('j')) => {
+                            (_, KeyCode::PageDown)
+                            | (KeyModifiers::SHIFT, KeyCode::Down)
+                            | (KeyModifiers::CONTROL, KeyCode::Char('d'))
+                            | (KeyModifiers::CONTROL, KeyCode::Char('j')) => {
                                 app.scroll_log_down(3);
                             }
                             (_, KeyCode::Up) => app.move_branch_up(),
@@ -259,31 +283,50 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                                 let branch = app.selected_branch().unwrap_or("").to_string();
                                 let action_idx = app.action_state.selected().unwrap_or(0);
                                 match action_idx {
-                                    0 => { // Checkout
+                                    0 => {
+                                        // Checkout
                                         if checkout_branch(&branch) {
-                                            app.status_msg = Some((format!("✅ Switched to '{}'", branch), false));
+                                            app.status_msg = Some((
+                                                format!("✅ Switched to '{}'", branch),
+                                                false,
+                                            ));
                                             app.refresh_branches();
                                         } else {
-                                            app.status_msg = Some((format!("❌ Failed to checkout '{}'", branch), true));
+                                            app.status_msg = Some((
+                                                format!("❌ Failed to checkout '{}'", branch),
+                                                true,
+                                            ));
                                         }
                                         app.mode = Mode::BranchList;
                                     }
-                                    1 => { // Delete
-                                        app.mode = Mode::Confirm(format!("Delete branch '{}'? [Y/n]", branch));
+                                    1 => {
+                                        // Delete
+                                        app.mode = Mode::Confirm(format!(
+                                            "Delete branch '{}'? [Y/n]",
+                                            branch
+                                        ));
                                     }
-                                    2 => { // Pull Latest
+                                    2 => {
+                                        // Pull Latest
                                         let _ = checkout_branch(&branch);
                                         let status = Command::new("git").arg("pull").status();
                                         match status {
                                             Ok(s) if s.success() => {
-                                                app.status_msg = Some((format!("✅ '{}' is up to date", branch), false));
+                                                app.status_msg = Some((
+                                                    format!("✅ '{}' is up to date", branch),
+                                                    false,
+                                                ));
                                                 app.refresh_branches();
                                             }
-                                            _ => app.status_msg = Some(("❌ Pull failed".into(), true)),
+                                            _ => {
+                                                app.status_msg =
+                                                    Some(("❌ Pull failed".into(), true))
+                                            }
                                         }
                                         app.mode = Mode::BranchList;
                                     }
-                                    3 => { // New branch from here
+                                    3 => {
+                                        // New branch from here
                                         app.new_branch_name.clear();
                                         app.mode = Mode::NewBranch;
                                     }
@@ -298,17 +341,26 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                             (_, KeyCode::Enter) => {
                                 let name = app.new_branch_name.trim().replace(' ', "-");
                                 if name.is_empty() {
-                                    app.status_msg = Some(("❌ Branch name cannot be empty".into(), true));
+                                    app.status_msg =
+                                        Some(("❌ Branch name cannot be empty".into(), true));
                                 } else if create_and_checkout_branch(&name) {
-                                    app.status_msg = Some((format!("✅ Created and switched to '{}'", name), false));
+                                    app.status_msg = Some((
+                                        format!("✅ Created and switched to '{}'", name),
+                                        false,
+                                    ));
                                     app.refresh_branches();
                                 } else {
-                                    app.status_msg = Some((format!("❌ Failed to create '{}'", name), true));
+                                    app.status_msg =
+                                        Some((format!("❌ Failed to create '{}'", name), true));
                                 }
                                 app.mode = Mode::BranchList;
                             }
-                            (_, KeyCode::Backspace) => { app.new_branch_name.pop(); }
-                            (_, KeyCode::Char(c)) => { app.new_branch_name.push(c); }
+                            (_, KeyCode::Backspace) => {
+                                app.new_branch_name.pop();
+                            }
+                            (_, KeyCode::Char(c)) => {
+                                app.new_branch_name.push(c);
+                            }
                             _ => {}
                         },
 
@@ -317,14 +369,22 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                             match key.code {
                                 KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
                                     if delete_branch(&branch) {
-                                        app.status_msg = Some((format!("🗑️ Deleted branch '{}'", branch), false));
+                                        app.status_msg = Some((
+                                            format!("🗑️ Deleted branch '{}'", branch),
+                                            false,
+                                        ));
                                         app.refresh_branches();
                                     } else {
-                                        app.status_msg = Some((format!("❌ Failed to delete '{}'", branch), true));
+                                        app.status_msg = Some((
+                                            format!("❌ Failed to delete '{}'", branch),
+                                            true,
+                                        ));
                                     }
                                     app.mode = Mode::BranchList;
                                 }
-                                _ => { app.mode = Mode::BranchList; }
+                                _ => {
+                                    app.mode = Mode::BranchList;
+                                }
                             }
                         }
                     }
@@ -346,11 +406,17 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if should_quit { break; }
+        if should_quit {
+            break;
+        }
     }
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     Ok(())
 }
 
@@ -371,9 +437,15 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
     // ── Banner ──────────────────────────────────────────────────────────────
     let banner = Paragraph::new(Line::from(vec![
         Span::styled("🌿  ", Style::default().fg(C_ACCENT)),
-        Span::styled("GBRANCH", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "GBRANCH",
+            Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" — Git Branch Manager", Style::default().fg(C_TEXT)),
-        Span::styled(format!("  ({})", app.current_branch), Style::default().fg(C_CURRENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("  ({})", app.current_branch),
+            Style::default().fg(C_CURRENT).add_modifier(Modifier::BOLD),
+        ),
     ]))
     .alignment(Alignment::Center)
     .block(
@@ -388,16 +460,25 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
     // ── Search Bar ──────────────────────────────────────────────────────────
     let search_text = Line::from(vec![
         Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
-        Span::styled(&app.query, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            &app.query,
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("█", Style::default().fg(C_BORDER)),
-        Span::styled(format!("  ({} branches)", app.filtered.len()), Style::default().fg(C_DIM)),
+        Span::styled(
+            format!("  ({} branches)", app.filtered.len()),
+            Style::default().fg(C_DIM),
+        ),
     ]);
     let search_bar = Paragraph::new(search_text).block(
         Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_ACCENT))
-            .title(Span::styled(" Filter Branches ", Style::default().fg(C_ACCENT)))
+            .title(Span::styled(
+                " Filter Branches ",
+                Style::default().fg(C_ACCENT),
+            ))
             .style(Style::default().bg(C_BG)),
     );
     f.render_widget(search_bar, main[1]);
@@ -409,33 +490,62 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
         .split(main[2]);
 
     // Branch list
-    let branch_items: Vec<ListItem> = app.filtered.iter().enumerate().map(|(di, &bi)| {
-        let b = &app.branches[bi];
-        let is_cur = b == &app.current_branch;
-        let is_sel = app.branch_state.selected() == Some(di);
-        let is_remote = b.starts_with("remotes/");
-        let color = if is_cur { C_CURRENT } else if is_remote { C_REMOTE } else { C_TEXT };
-        let icon = if is_cur { "★ " } else if is_remote { "↳ " } else { "  " };
+    let branch_items: Vec<ListItem> = app
+        .filtered
+        .iter()
+        .enumerate()
+        .map(|(di, &bi)| {
+            let b = &app.branches[bi];
+            let is_cur = b == &app.current_branch;
+            let is_sel = app.branch_state.selected() == Some(di);
+            let is_remote = b.starts_with("remotes/");
+            let color = if is_cur {
+                C_CURRENT
+            } else if is_remote {
+                C_REMOTE
+            } else {
+                C_TEXT
+            };
+            let icon = if is_cur {
+                "★ "
+            } else if is_remote {
+                "↳ "
+            } else {
+                "  "
+            };
 
-        if is_sel {
-            ListItem::new(Line::from(vec![
-                Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                Span::styled(format!("{}{}", icon, b), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(10, 40, 20))),
-            ]))
-        } else {
-            ListItem::new(Line::from(vec![
-                Span::styled("   ", Style::default()),
-                Span::styled(format!("{}{}", icon, b), Style::default().fg(color)),
-            ]))
-        }
-    }).collect();
+            if is_sel {
+                ListItem::new(Line::from(vec![
+                    Span::styled(
+                        " ▶ ",
+                        Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("{}{}", icon, b),
+                        Style::default()
+                            .fg(C_WHITE)
+                            .add_modifier(Modifier::BOLD)
+                            .bg(Color::Rgb(10, 40, 20)),
+                    ),
+                ]))
+            } else {
+                ListItem::new(Line::from(vec![
+                    Span::styled("   ", Style::default()),
+                    Span::styled(format!("{}{}", icon, b), Style::default().fg(color)),
+                ]))
+            }
+        })
+        .collect();
 
     let branch_list = List::new(branch_items).block(
         Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
-            .title(Span::styled(" Branches ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                " Branches ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ))
             .style(Style::default().bg(C_BG)),
     );
     f.render_stateful_widget(branch_list, body[0], &mut app.branch_state.clone());
@@ -443,20 +553,33 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
     // Right pane: action menu or log preview
     match &app.mode {
         Mode::ActionMenu => {
-            let action_items: Vec<ListItem> = ACTIONS.iter().enumerate().map(|(i, a)| {
-                let is_sel = app.action_state.selected() == Some(i);
-                if is_sel {
-                    ListItem::new(Line::from(vec![
-                        Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                        Span::styled(a.trim(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(10, 40, 20))),
-                    ]))
-                } else {
-                    ListItem::new(Line::from(vec![
-                        Span::styled("   ", Style::default()),
-                        Span::styled(a.trim(), Style::default().fg(C_TEXT)),
-                    ]))
-                }
-            }).collect();
+            let action_items: Vec<ListItem> = ACTIONS
+                .iter()
+                .enumerate()
+                .map(|(i, a)| {
+                    let is_sel = app.action_state.selected() == Some(i);
+                    if is_sel {
+                        ListItem::new(Line::from(vec![
+                            Span::styled(
+                                " ▶ ",
+                                Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                a.trim(),
+                                Style::default()
+                                    .fg(C_WHITE)
+                                    .add_modifier(Modifier::BOLD)
+                                    .bg(Color::Rgb(10, 40, 20)),
+                            ),
+                        ]))
+                    } else {
+                        ListItem::new(Line::from(vec![
+                            Span::styled("   ", Style::default()),
+                            Span::styled(a.trim(), Style::default().fg(C_TEXT)),
+                        ]))
+                    }
+                })
+                .collect();
 
             let branch_name = app.selected_branch().unwrap_or("");
             let action_list = List::new(action_items).block(
@@ -464,7 +587,10 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(format!(" Actions for '{}' ", branch_name), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        format!(" Actions for '{}' ", branch_name),
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_stateful_widget(action_list, body[1], &mut app.action_state.clone());
@@ -472,23 +598,33 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
         Mode::NewBranch => {
             let input = Paragraph::new(vec![
                 Line::from(""),
-                Line::from(vec![
-                    Span::styled(" New branch name: ", Style::default().fg(C_DIM)),
-                ]),
+                Line::from(vec![Span::styled(
+                    " New branch name: ",
+                    Style::default().fg(C_DIM),
+                )]),
                 Line::from(vec![
                     Span::styled("  ", Style::default()),
-                    Span::styled(&app.new_branch_name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &app.new_branch_name,
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("█", Style::default().fg(C_BORDER)),
                 ]),
                 Line::from(""),
-                Line::from(vec![Span::styled(" Enter to create  Esc to cancel", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    " Enter to create  Esc to cancel",
+                    Style::default().fg(C_DIM),
+                )]),
             ])
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(" ✨ New Branch ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        " ✨ New Branch ",
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_widget(input, body[1]);
@@ -496,31 +632,50 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
         Mode::Confirm(msg) => {
             let dialog = Paragraph::new(vec![
                 Line::from(""),
-                Line::from(vec![Span::styled(format!("  {}", msg), Style::default().fg(C_RED).add_modifier(Modifier::BOLD))]),
+                Line::from(vec![Span::styled(
+                    format!("  {}", msg),
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                )]),
                 Line::from(""),
-                Line::from(vec![Span::styled("  [Y] Confirm  [any] Cancel", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    "  [Y] Confirm  [any] Cancel",
+                    Style::default().fg(C_DIM),
+                )]),
             ])
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Double)
                     .border_style(Style::default().fg(C_RED))
-                    .title(Span::styled(" ⚠ Confirm ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        " ⚠ Confirm ",
+                        Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(Color::Rgb(25, 8, 8))),
             );
             f.render_widget(dialog, body[1]);
         }
         Mode::BranchList => {
             // Log preview
-            let log_lines: Vec<Line> = app.log_preview.iter().map(|l| {
-                let (hash, rest) = l.split_once(' ').unwrap_or(("", l));
-                Line::from(vec![
-                    Span::styled(format!(" {} ", hash), Style::default().fg(C_CURRENT).add_modifier(Modifier::BOLD)),
-                    Span::styled(rest, Style::default().fg(C_TEXT)),
-                ])
-            }).collect();
+            let log_lines: Vec<Line> = app
+                .log_preview
+                .iter()
+                .map(|l| {
+                    let (hash, rest) = l.split_once(' ').unwrap_or(("", l));
+                    Line::from(vec![
+                        Span::styled(
+                            format!(" {} ", hash),
+                            Style::default().fg(C_CURRENT).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(rest, Style::default().fg(C_TEXT)),
+                    ])
+                })
+                .collect();
             let title_text = if app.log_scroll > 0 {
-                format!(" Git Log Preview (100 Commits) [Scroll: {}] ", app.log_scroll)
+                format!(
+                    " Git Log Preview (100 Commits) [Scroll: {}] ",
+                    app.log_scroll
+                )
             } else {
                 format!(" Git Log Preview (100 Commits) ")
             };
@@ -532,7 +687,10 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(C_DIM))
-                        .title(Span::styled(title_text, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                        .title(Span::styled(
+                            title_text,
+                            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                        ))
                         .style(Style::default().bg(C_BG)),
                 );
             f.render_widget(preview, body[1]);
@@ -541,13 +699,20 @@ fn draw_gbranch(f: &mut Frame, app: &mut App) {
 
     // ── Status Bar ──────────────────────────────────────────────────────────
     let status_text = if let Some((ref msg, is_err)) = app.status_msg {
-        let color = if is_err { C_RED } else { Color::Rgb(80, 220, 120) };
-        Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
+        let color = if is_err {
+            C_RED
+        } else {
+            Color::Rgb(80, 220, 120)
+        };
+        Line::from(vec![Span::styled(
+            msg.clone(),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        )])
     } else {
         let hints = match app.mode {
             Mode::BranchList => " ↑↓ Navigate  ·  ↵ Select  ·  Shift+↑↓ Scroll Log  ·  ⎋ Quit",
             Mode::ActionMenu => " ↑↓ Navigate  ·  ↵ Run Action  ·  ⎋ Back",
-            Mode::NewBranch  => " Type name  ·  ↵ Create  ·  ⎋ Cancel",
+            Mode::NewBranch => " Type name  ·  ↵ Create  ·  ⎋ Cancel",
             Mode::Confirm(_) => " y Confirm  ·  ⎋ Cancel",
         };
         Line::from(vec![Span::styled(hints, Style::default().fg(C_DIM))])

@@ -77,7 +77,14 @@ impl PkgManager {
     fn install_cmd(&self) -> Vec<String> {
         match self {
             PkgManager::Apt | PkgManager::Unknown => {
-                vec!["sudo".into(), "apt-get".into(), "install".into(), "-y".into(), "-o".into(), "Dpkg::Use-Pty=0".into()]
+                vec![
+                    "sudo".into(),
+                    "apt-get".into(),
+                    "install".into(),
+                    "-y".into(),
+                    "-o".into(),
+                    "Dpkg::Use-Pty=0".into(),
+                ]
             }
             PkgManager::Dnf => vec!["sudo".into(), "dnf".into(), "install".into(), "-y".into()],
             PkgManager::Yum => vec!["sudo".into(), "yum".into(), "install".into(), "-y".into()],
@@ -89,7 +96,12 @@ impl PkgManager {
                 "--needed".into(),
             ],
             PkgManager::Zypper => {
-                vec!["sudo".into(), "zypper".into(), "install".into(), "-y".into()]
+                vec![
+                    "sudo".into(),
+                    "zypper".into(),
+                    "install".into(),
+                    "-y".into(),
+                ]
             }
             PkgManager::Apk => vec!["sudo".into(), "apk".into(), "add".into()],
             PkgManager::Xbps => vec!["sudo".into(), "xbps-install".into(), "-y".into()],
@@ -98,15 +110,16 @@ impl PkgManager {
 
     fn update_cmd(&self) -> Option<Vec<String>> {
         match self {
-            PkgManager::Apt | PkgManager::Unknown => {
-                Some(vec!["sudo".into(), "apt-get".into(), "update".into(), "-qq".into()])
-            }
+            PkgManager::Apt | PkgManager::Unknown => Some(vec![
+                "sudo".into(),
+                "apt-get".into(),
+                "update".into(),
+                "-qq".into(),
+            ]),
             PkgManager::Dnf => Some(vec!["sudo".into(), "dnf".into(), "check-update".into()]),
             PkgManager::Yum => Some(vec!["sudo".into(), "yum".into(), "check-update".into()]),
             PkgManager::Pacman => Some(vec!["sudo".into(), "pacman".into(), "-Sy".into()]),
-            PkgManager::Zypper => {
-                Some(vec!["sudo".into(), "zypper".into(), "refresh".into()])
-            }
+            PkgManager::Zypper => Some(vec!["sudo".into(), "zypper".into(), "refresh".into()]),
             PkgManager::Apk => Some(vec!["sudo".into(), "apk".into(), "update".into()]),
             PkgManager::Xbps => Some(vec!["sudo".into(), "xbps-install".into(), "-Su".into()]),
         }
@@ -114,18 +127,30 @@ impl PkgManager {
 
     fn cleanup_cmd(&self) -> Option<Vec<String>> {
         match self {
-            PkgManager::Apt | PkgManager::Unknown => {
-                Some(vec!["sudo".into(), "apt-get".into(), "autoremove".into(), "-y".into()])
-            }
-            PkgManager::Dnf => {
-                Some(vec!["sudo".into(), "dnf".into(), "autoremove".into(), "-y".into()])
-            }
-            PkgManager::Yum => {
-                Some(vec!["sudo".into(), "yum".into(), "autoremove".into(), "-y".into()])
-            }
-            PkgManager::Pacman => {
-                Some(vec!["sudo".into(), "pacman".into(), "-Sc".into(), "--noconfirm".into()])
-            }
+            PkgManager::Apt | PkgManager::Unknown => Some(vec![
+                "sudo".into(),
+                "apt-get".into(),
+                "autoremove".into(),
+                "-y".into(),
+            ]),
+            PkgManager::Dnf => Some(vec![
+                "sudo".into(),
+                "dnf".into(),
+                "autoremove".into(),
+                "-y".into(),
+            ]),
+            PkgManager::Yum => Some(vec![
+                "sudo".into(),
+                "yum".into(),
+                "autoremove".into(),
+                "-y".into(),
+            ]),
+            PkgManager::Pacman => Some(vec![
+                "sudo".into(),
+                "pacman".into(),
+                "-Sc".into(),
+                "--noconfirm".into(),
+            ]),
             _ => None,
         }
     }
@@ -243,184 +268,502 @@ fn cat_ansi(cat: &str) -> &'static str {
         "NET " => "\x1b[1;36m",
         "DEV " => "\x1b[1;34m",
         "MOD " => "\x1b[1;33m",
-        _      => "\x1b[2m",
+        _ => "\x1b[2m",
     }
 }
 
 /// `(category_4chars, generic_key, description, pkg_map_apt|dnf|pacman|zypper|apk|xbps)`
 const TOOLS: &[(&str, &str, &str, &str)] = &[
     // ── PERF ─────────────────────────────────────────────────────────────────
-    ("PERF", "zram-tools",    "RAM optimization using zRAM",
-     "zram-tools|zram-generator-defaults|zram-generator|zram-generator|zram-tools|zramctl"),
-    ("PERF", "earlyoom",      "Prevent system freeze when RAM is low",
-     "earlyoom|earlyoom|earlyoom|earlyoom|earlyoom|earlyoom"),
-    ("PERF", "htop",          "Classic interactive process monitor",
-     "htop|htop|htop|htop|htop|htop"),
-    ("PERF", "btop",          "Modern & beautiful resource dashboard",
-     "btop|btop|btop|btop|btop|btop"),
-    ("PERF", "glances",       "Full system statistics at a glance",
-     "glances|glances|glances|glances|glances|glances"),
-    ("PERF", "atop",          "Advanced system & process monitor",
-     "atop|atop|atop|atop|atop|atop"),
-    ("PERF", "sysstat",       "System performance tools (sar, iostat)",
-     "sysstat|sysstat|sysstat|sysstat|sysstat|sysstat"),
-    ("PERF", "stress-ng",     "Stress test CPU / RAM / IO",
-     "stress-ng|stress-ng|stress-ng|stress-ng|stress-ng|stress-ng"),
-    ("PERF", "smem",          "Report memory usage with PSS/USS",
-     "smem|smem|smem|smem|smem|smem"),
-    ("PERF", "preload",       "Adaptive readahead daemon (speed up apps)",
-     "preload|preloader|preload|preloader|preload|preload"),
-    ("PERF", "cpufrequtils",  "CPU frequency scaling utilities",
-     "cpufrequtils|cpufrequtils|cpupower|cpufrequtils|cpufrequtils|cpufrequtils"),
+    (
+        "PERF",
+        "zram-tools",
+        "RAM optimization using zRAM",
+        "zram-tools|zram-generator-defaults|zram-generator|zram-generator|zram-tools|zramctl",
+    ),
+    (
+        "PERF",
+        "earlyoom",
+        "Prevent system freeze when RAM is low",
+        "earlyoom|earlyoom|earlyoom|earlyoom|earlyoom|earlyoom",
+    ),
+    (
+        "PERF",
+        "htop",
+        "Classic interactive process monitor",
+        "htop|htop|htop|htop|htop|htop",
+    ),
+    (
+        "PERF",
+        "btop",
+        "Modern & beautiful resource dashboard",
+        "btop|btop|btop|btop|btop|btop",
+    ),
+    (
+        "PERF",
+        "glances",
+        "Full system statistics at a glance",
+        "glances|glances|glances|glances|glances|glances",
+    ),
+    (
+        "PERF",
+        "atop",
+        "Advanced system & process monitor",
+        "atop|atop|atop|atop|atop|atop",
+    ),
+    (
+        "PERF",
+        "sysstat",
+        "System performance tools (sar, iostat)",
+        "sysstat|sysstat|sysstat|sysstat|sysstat|sysstat",
+    ),
+    (
+        "PERF",
+        "stress-ng",
+        "Stress test CPU / RAM / IO",
+        "stress-ng|stress-ng|stress-ng|stress-ng|stress-ng|stress-ng",
+    ),
+    (
+        "PERF",
+        "smem",
+        "Report memory usage with PSS/USS",
+        "smem|smem|smem|smem|smem|smem",
+    ),
+    (
+        "PERF",
+        "preload",
+        "Adaptive readahead daemon (speed up apps)",
+        "preload|preloader|preload|preloader|preload|preload",
+    ),
+    (
+        "PERF",
+        "cpufrequtils",
+        "CPU frequency scaling utilities",
+        "cpufrequtils|cpufrequtils|cpupower|cpufrequtils|cpufrequtils|cpufrequtils",
+    ),
     // ── DISK ─────────────────────────────────────────────────────────────────
-    ("DISK", "ncdu",          "Disk usage analyzer (NCurses)",
-     "ncdu|ncdu|ncdu|ncdu|ncdu|ncdu"),
-    ("DISK", "gdu",           "Fast disk usage analyzer (Go based)",
-     "gdu|gdu-disk-usage-analyzer|gdu|gdu|gdu|gdu"),
-    ("DISK", "duf",           "Visual Disk Usage/Free utility",
-     "duf|duf|duf|duf|duf|duf"),
-    ("DISK", "dust",          "A more intuitive 'du' in Rust",
-     "dust|dust|dust|du-dust|dust|dust"),
-    ("DISK", "bleachbit",     "Clean system junk & maintain privacy",
-     "bleachbit|bleachbit|bleachbit|bleachbit|bleachbit|bleachbit"),
-    ("DISK", "gparted",       "GNOME Partition Editor",
-     "gparted|gparted|gparted|gparted|gparted|gparted"),
-    ("DISK", "smartmontools", "Control & monitor SMART storage",
-     "smartmontools|smartmontools|smartmontools|smartmontools|smartmontools|smartmontools"),
-    ("DISK", "tree",          "List directories in a tree-like format",
-     "tree|tree|tree|tree|tree|tree"),
-    ("DISK", "ranger",        "VIM-inspired file manager for terminal",
-     "ranger|ranger|ranger|ranger|ranger|ranger"),
-    ("DISK", "mc",            "Midnight Commander twin-panel file manager",
-     "mc|mc|mc|mc|mc|mc"),
+    (
+        "DISK",
+        "ncdu",
+        "Disk usage analyzer (NCurses)",
+        "ncdu|ncdu|ncdu|ncdu|ncdu|ncdu",
+    ),
+    (
+        "DISK",
+        "gdu",
+        "Fast disk usage analyzer (Go based)",
+        "gdu|gdu-disk-usage-analyzer|gdu|gdu|gdu|gdu",
+    ),
+    (
+        "DISK",
+        "duf",
+        "Visual Disk Usage/Free utility",
+        "duf|duf|duf|duf|duf|duf",
+    ),
+    (
+        "DISK",
+        "dust",
+        "A more intuitive 'du' in Rust",
+        "dust|dust|dust|du-dust|dust|dust",
+    ),
+    (
+        "DISK",
+        "bleachbit",
+        "Clean system junk & maintain privacy",
+        "bleachbit|bleachbit|bleachbit|bleachbit|bleachbit|bleachbit",
+    ),
+    (
+        "DISK",
+        "gparted",
+        "GNOME Partition Editor",
+        "gparted|gparted|gparted|gparted|gparted|gparted",
+    ),
+    (
+        "DISK",
+        "smartmontools",
+        "Control & monitor SMART storage",
+        "smartmontools|smartmontools|smartmontools|smartmontools|smartmontools|smartmontools",
+    ),
+    (
+        "DISK",
+        "tree",
+        "List directories in a tree-like format",
+        "tree|tree|tree|tree|tree|tree",
+    ),
+    (
+        "DISK",
+        "ranger",
+        "VIM-inspired file manager for terminal",
+        "ranger|ranger|ranger|ranger|ranger|ranger",
+    ),
+    (
+        "DISK",
+        "mc",
+        "Midnight Commander twin-panel file manager",
+        "mc|mc|mc|mc|mc|mc",
+    ),
     // ── SECU ─────────────────────────────────────────────────────────────────
-    ("SECU", "ufw",           "Uncomplicated Firewall",
-     "ufw|ufw|ufw|ufw|ufw|ufw"),
-    ("SECU", "fail2ban",      "Protect against brute-force attacks",
-     "fail2ban|fail2ban|fail2ban|fail2ban|fail2ban|fail2ban"),
-    ("SECU", "rkhunter",      "Rootkit and exploit scanner",
-     "rkhunter|rkhunter|rkhunter|rkhunter|rkhunter|rkhunter"),
-    ("SECU", "lynis",         "Security auditing tool for Linux",
-     "lynis|lynis|lynis|lynis|lynis|lynis"),
-    ("SECU", "clamav",        "Open source antivirus engine",
-     "clamav|clamav|clamav|clamav|clamav|clamav"),
-    ("SECU", "firejail",      "Sandbox security for applications",
-     "firejail|firejail|firejail|firejail|firejail|firejail"),
-    ("SECU", "gnupg",         "GNU Privacy Guard for encryption",
-     "gnupg2|gnupg2|gnupg|gpg2|gnupg|gnupg"),
+    (
+        "SECU",
+        "ufw",
+        "Uncomplicated Firewall",
+        "ufw|ufw|ufw|ufw|ufw|ufw",
+    ),
+    (
+        "SECU",
+        "fail2ban",
+        "Protect against brute-force attacks",
+        "fail2ban|fail2ban|fail2ban|fail2ban|fail2ban|fail2ban",
+    ),
+    (
+        "SECU",
+        "rkhunter",
+        "Rootkit and exploit scanner",
+        "rkhunter|rkhunter|rkhunter|rkhunter|rkhunter|rkhunter",
+    ),
+    (
+        "SECU",
+        "lynis",
+        "Security auditing tool for Linux",
+        "lynis|lynis|lynis|lynis|lynis|lynis",
+    ),
+    (
+        "SECU",
+        "clamav",
+        "Open source antivirus engine",
+        "clamav|clamav|clamav|clamav|clamav|clamav",
+    ),
+    (
+        "SECU",
+        "firejail",
+        "Sandbox security for applications",
+        "firejail|firejail|firejail|firejail|firejail|firejail",
+    ),
+    (
+        "SECU",
+        "gnupg",
+        "GNU Privacy Guard for encryption",
+        "gnupg2|gnupg2|gnupg|gpg2|gnupg|gnupg",
+    ),
     // ── NET ──────────────────────────────────────────────────────────────────
-    ("NET ", "speedtest-cli", "Test internet bandwidth via CLI",
-     "speedtest-cli|speedtest-cli|speedtest-cli|speedtest|speedtest-cli|speedtest-cli"),
-    ("NET ", "vnstat",        "Console-based network traffic monitor",
-     "vnstat|vnstat|vnstat|vnstat|vnstat|vnstat"),
-    ("NET ", "nmap",          "Network exploration & security auditing",
-     "nmap|nmap|nmap|nmap|nmap|nmap"),
-    ("NET ", "iftop",         "Display bandwidth usage on an interface",
-     "iftop|iftop|iftop|iftop|iftop|iftop"),
-    ("NET ", "nload",         "Real-time network traffic visualization",
-     "nload|nload|nload|nload|nload|nload"),
-    ("NET ", "nethogs",       "Net usage per process (top for network)",
-     "nethogs|nethogs|nethogs|nethogs|nethogs|nethogs"),
-    ("NET ", "curl",          "CLI tool for transferring data",
-     "curl|curl|curl|curl|curl|curl"),
-    ("NET ", "wget",          "Retrieve files using HTTP/HTTPS/FTP",
-     "wget|wget|wget|wget|wget|wget"),
-    ("NET ", "aria2",         "High-speed multi-source download utility",
-     "aria2|aria2|aria2|aria2|aria2|aria2"),
-    ("NET ", "wireguard",     "Fast, modern, secure VPN tunnel",
-     "wireguard|wireguard-tools|wireguard-tools|wireguard-tools|wireguard-tools|wireguard"),
-    ("NET ", "mtr-tiny",      "Combined ping and traceroute tool",
-     "mtr-tiny|mtr|mtr|mtr|mtr|mtr"),
-    ("NET ", "tcpdump",       "Powerful command-line packet analyzer",
-     "tcpdump|tcpdump|tcpdump|tcpdump|tcpdump|tcpdump"),
+    (
+        "NET ",
+        "speedtest-cli",
+        "Test internet bandwidth via CLI",
+        "speedtest-cli|speedtest-cli|speedtest-cli|speedtest|speedtest-cli|speedtest-cli",
+    ),
+    (
+        "NET ",
+        "vnstat",
+        "Console-based network traffic monitor",
+        "vnstat|vnstat|vnstat|vnstat|vnstat|vnstat",
+    ),
+    (
+        "NET ",
+        "nmap",
+        "Network exploration & security auditing",
+        "nmap|nmap|nmap|nmap|nmap|nmap",
+    ),
+    (
+        "NET ",
+        "iftop",
+        "Display bandwidth usage on an interface",
+        "iftop|iftop|iftop|iftop|iftop|iftop",
+    ),
+    (
+        "NET ",
+        "nload",
+        "Real-time network traffic visualization",
+        "nload|nload|nload|nload|nload|nload",
+    ),
+    (
+        "NET ",
+        "nethogs",
+        "Net usage per process (top for network)",
+        "nethogs|nethogs|nethogs|nethogs|nethogs|nethogs",
+    ),
+    (
+        "NET ",
+        "curl",
+        "CLI tool for transferring data",
+        "curl|curl|curl|curl|curl|curl",
+    ),
+    (
+        "NET ",
+        "wget",
+        "Retrieve files using HTTP/HTTPS/FTP",
+        "wget|wget|wget|wget|wget|wget",
+    ),
+    (
+        "NET ",
+        "aria2",
+        "High-speed multi-source download utility",
+        "aria2|aria2|aria2|aria2|aria2|aria2",
+    ),
+    (
+        "NET ",
+        "wireguard",
+        "Fast, modern, secure VPN tunnel",
+        "wireguard|wireguard-tools|wireguard-tools|wireguard-tools|wireguard-tools|wireguard",
+    ),
+    (
+        "NET ",
+        "mtr-tiny",
+        "Combined ping and traceroute tool",
+        "mtr-tiny|mtr|mtr|mtr|mtr|mtr",
+    ),
+    (
+        "NET ",
+        "tcpdump",
+        "Powerful command-line packet analyzer",
+        "tcpdump|tcpdump|tcpdump|tcpdump|tcpdump|tcpdump",
+    ),
     // ── DEV ──────────────────────────────────────────────────────────────────
-    ("DEV ", "git",           "Distributed version control system",
-     "git|git|git|git|git|git"),
-    ("DEV ", "docker.io",     "OS-level virtualization (Docker)",
-     "docker.io|docker|docker|docker|docker|docker"),
-    ("DEV ", "docker-compose","Define & run multi-container apps",
-     "docker-compose|docker-compose|docker-compose|docker-compose|docker-compose|docker-compose"),
-    ("DEV ", "build-essential","Essential packages for compiling code",
-     "build-essential|gcc-c++|base-devel|patterns-devel-base-devel|build-base|base-devel"),
-    ("DEV ", "micro",         "Modern intuitive terminal-based editor",
-     "micro|micro|micro|micro|micro|micro"),
-    ("DEV ", "neovim",        "Extensible text editor (Vim 2.0)",
-     "neovim|neovim|neovim|neovim|neovim|neovim"),
-    ("DEV ", "tmux",          "Terminal multiplexer for managing sessions",
-     "tmux|tmux|tmux|tmux|tmux|tmux"),
-    ("DEV ", "screen",        "Full-screen window manager / multiplexer",
-     "screen|screen|screen|screen|screen|screen"),
-    ("DEV ", "python3-pip",   "The Python package installer",
-     "python3-pip|python3-pip|python-pip|python3-pip|py3-pip|python3-pip"),
-    ("DEV ", "nodejs",        "JavaScript runtime environment",
-     "nodejs|nodejs|nodejs|nodejs|nodejs|nodejs"),
-    ("DEV ", "golang-go",     "The Go programming language",
-     "golang-go|golang|go|go|go|go"),
-    ("DEV ", "rsync",         "Fast, versatile remote/local file-copy",
-     "rsync|rsync|rsync|rsync|rsync|rsync"),
-    ("DEV ", "jq",            "Command-line JSON processor",
-     "jq|jq|jq|jq|jq|jq"),
-    ("DEV ", "yq",            "Command-line YAML/XML processor",
-     "yq|yq|yq|yq|yq|yq"),
-    ("DEV ", "gh",            "GitHub CLI",
-     "gh|gh|github-cli|gh|github-cli|github-cli"),
-    ("DEV ", "lazygit",       "Simple terminal UI for git commands",
-     "lazygit|lazygit|lazygit|lazygit|lazygit|lazygit"),
-    ("DEV ", "httpie",        "User-friendly HTTP client",
-     "httpie|httpie|httpie|httpie|httpie|httpie"),
+    (
+        "DEV ",
+        "git",
+        "Distributed version control system",
+        "git|git|git|git|git|git",
+    ),
+    (
+        "DEV ",
+        "docker.io",
+        "OS-level virtualization (Docker)",
+        "docker.io|docker|docker|docker|docker|docker",
+    ),
+    (
+        "DEV ",
+        "docker-compose",
+        "Define & run multi-container apps",
+        "docker-compose|docker-compose|docker-compose|docker-compose|docker-compose|docker-compose",
+    ),
+    (
+        "DEV ",
+        "build-essential",
+        "Essential packages for compiling code",
+        "build-essential|gcc-c++|base-devel|patterns-devel-base-devel|build-base|base-devel",
+    ),
+    (
+        "DEV ",
+        "micro",
+        "Modern intuitive terminal-based editor",
+        "micro|micro|micro|micro|micro|micro",
+    ),
+    (
+        "DEV ",
+        "neovim",
+        "Extensible text editor (Vim 2.0)",
+        "neovim|neovim|neovim|neovim|neovim|neovim",
+    ),
+    (
+        "DEV ",
+        "tmux",
+        "Terminal multiplexer for managing sessions",
+        "tmux|tmux|tmux|tmux|tmux|tmux",
+    ),
+    (
+        "DEV ",
+        "screen",
+        "Full-screen window manager / multiplexer",
+        "screen|screen|screen|screen|screen|screen",
+    ),
+    (
+        "DEV ",
+        "python3-pip",
+        "The Python package installer",
+        "python3-pip|python3-pip|python-pip|python3-pip|py3-pip|python3-pip",
+    ),
+    (
+        "DEV ",
+        "nodejs",
+        "JavaScript runtime environment",
+        "nodejs|nodejs|nodejs|nodejs|nodejs|nodejs",
+    ),
+    (
+        "DEV ",
+        "golang-go",
+        "The Go programming language",
+        "golang-go|golang|go|go|go|go",
+    ),
+    (
+        "DEV ",
+        "rsync",
+        "Fast, versatile remote/local file-copy",
+        "rsync|rsync|rsync|rsync|rsync|rsync",
+    ),
+    (
+        "DEV ",
+        "jq",
+        "Command-line JSON processor",
+        "jq|jq|jq|jq|jq|jq",
+    ),
+    (
+        "DEV ",
+        "yq",
+        "Command-line YAML/XML processor",
+        "yq|yq|yq|yq|yq|yq",
+    ),
+    (
+        "DEV ",
+        "gh",
+        "GitHub CLI",
+        "gh|gh|github-cli|gh|github-cli|github-cli",
+    ),
+    (
+        "DEV ",
+        "lazygit",
+        "Simple terminal UI for git commands",
+        "lazygit|lazygit|lazygit|lazygit|lazygit|lazygit",
+    ),
+    (
+        "DEV ",
+        "httpie",
+        "User-friendly HTTP client",
+        "httpie|httpie|httpie|httpie|httpie|httpie",
+    ),
     // ── MOD (Modern CLI) ─────────────────────────────────────────────────────
-    ("MOD ", "bat",           "Cat clone with syntax highlighting",
-     "bat|bat|bat|bat|bat|bat"),
-    ("MOD ", "eza",           "Modern replacement for 'ls' with icons",
-     "eza|eza|eza|eza|eza|eza"),
-    ("MOD ", "ripgrep",       "Extremely fast grep alternative",
-     "ripgrep|ripgrep|ripgrep|ripgrep|ripgrep|ripgrep"),
-    ("MOD ", "fd-find",       "Simple, fast alternative to 'find'",
-     "fd-find|fd-find|fd|fd|fd|fd"),
-    ("MOD ", "zoxide",        "Smarter cd command (learns your habits)",
-     "zoxide|zoxide|zoxide|zoxide|zoxide|zoxide"),
-    ("MOD ", "procs",         "Modern replacement for 'ps' in Rust",
-     "procs|procs|procs|procs|procs|procs"),
-    ("MOD ", "tldr",          "Simplified community-driven man pages",
-     "tldr|tldr|tldr|tldr|tldr|tldr"),
-    ("MOD ", "chafa",         "Terminal graphics for the 21st century",
-     "chafa|chafa|chafa|chafa|chafa|chafa"),
-    ("MOD ", "fzf",           "General-purpose fuzzy finder",
-     "fzf|fzf|fzf|fzf|fzf|fzf"),
-    ("MOD ", "git-delta",     "Syntax-highlighting pager for git diffs",
-     "git-delta|git-delta|git-delta|git-delta|git-delta|git-delta"),
+    (
+        "MOD ",
+        "bat",
+        "Cat clone with syntax highlighting",
+        "bat|bat|bat|bat|bat|bat",
+    ),
+    (
+        "MOD ",
+        "eza",
+        "Modern replacement for 'ls' with icons",
+        "eza|eza|eza|eza|eza|eza",
+    ),
+    (
+        "MOD ",
+        "ripgrep",
+        "Extremely fast grep alternative",
+        "ripgrep|ripgrep|ripgrep|ripgrep|ripgrep|ripgrep",
+    ),
+    (
+        "MOD ",
+        "fd-find",
+        "Simple, fast alternative to 'find'",
+        "fd-find|fd-find|fd|fd|fd|fd",
+    ),
+    (
+        "MOD ",
+        "zoxide",
+        "Smarter cd command (learns your habits)",
+        "zoxide|zoxide|zoxide|zoxide|zoxide|zoxide",
+    ),
+    (
+        "MOD ",
+        "procs",
+        "Modern replacement for 'ps' in Rust",
+        "procs|procs|procs|procs|procs|procs",
+    ),
+    (
+        "MOD ",
+        "tldr",
+        "Simplified community-driven man pages",
+        "tldr|tldr|tldr|tldr|tldr|tldr",
+    ),
+    (
+        "MOD ",
+        "chafa",
+        "Terminal graphics for the 21st century",
+        "chafa|chafa|chafa|chafa|chafa|chafa",
+    ),
+    (
+        "MOD ",
+        "fzf",
+        "General-purpose fuzzy finder",
+        "fzf|fzf|fzf|fzf|fzf|fzf",
+    ),
+    (
+        "MOD ",
+        "git-delta",
+        "Syntax-highlighting pager for git diffs",
+        "git-delta|git-delta|git-delta|git-delta|git-delta|git-delta",
+    ),
     // ── SYS ──────────────────────────────────────────────────────────────────
-    ("SYS ", "fastfetch",     "High-performance neofetch alternative",
-     "fastfetch|fastfetch|fastfetch|fastfetch|fastfetch|fastfetch"),
-    ("SYS ", "inxi",          "Full-featured system information script",
-     "inxi|inxi|inxi|inxi|inxi|inxi"),
-    ("SYS ", "lm-sensors",    "Read temperature / voltage / fan sensors",
-     "lm-sensors|lm_sensors|lm_sensors|sensors|lm-sensors|lm-sensors"),
-    ("SYS ", "unzip",         "Decompress ZIP files",
-     "unzip|unzip|unzip|unzip|unzip|unzip"),
-    ("SYS ", "p7zip-full",    "7z file archiver with high compression",
-     "p7zip-full|p7zip|p7zip|p7zip|p7zip|p7zip"),
-    ("SYS ", "zsh",           "The Z Shell (advanced bash alternative)",
-     "zsh|zsh|zsh|zsh|zsh|zsh"),
-    ("SYS ", "xclip",         "Command line interface to X selections",
-     "xclip|xclip|xclip|xclip|xclip|xclip"),
-    ("SYS ", "wl-clipboard",  "Command line copy/paste for Wayland",
-     "wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard"),
-    ("SYS ", "acpi",          "Display battery and thermal information",
-     "acpi|acpi|acpi|acpi|acpi|acpi"),
-    ("SYS ", "socat",         "Multipurpose relay for bidirectional data",
-     "socat|socat|socat|socat|socat|socat"),
-    ("SYS ", "lsof",          "List open files and network connections",
-     "lsof|lsof|lsof|lsof|lsof|lsof"),
-    ("SYS ", "strace",        "Trace system calls and signals",
-     "strace|strace|strace|strace|strace|strace"),
+    (
+        "SYS ",
+        "fastfetch",
+        "High-performance neofetch alternative",
+        "fastfetch|fastfetch|fastfetch|fastfetch|fastfetch|fastfetch",
+    ),
+    (
+        "SYS ",
+        "inxi",
+        "Full-featured system information script",
+        "inxi|inxi|inxi|inxi|inxi|inxi",
+    ),
+    (
+        "SYS ",
+        "lm-sensors",
+        "Read temperature / voltage / fan sensors",
+        "lm-sensors|lm_sensors|lm_sensors|sensors|lm-sensors|lm-sensors",
+    ),
+    (
+        "SYS ",
+        "unzip",
+        "Decompress ZIP files",
+        "unzip|unzip|unzip|unzip|unzip|unzip",
+    ),
+    (
+        "SYS ",
+        "p7zip-full",
+        "7z file archiver with high compression",
+        "p7zip-full|p7zip|p7zip|p7zip|p7zip|p7zip",
+    ),
+    (
+        "SYS ",
+        "zsh",
+        "The Z Shell (advanced bash alternative)",
+        "zsh|zsh|zsh|zsh|zsh|zsh",
+    ),
+    (
+        "SYS ",
+        "xclip",
+        "Command line interface to X selections",
+        "xclip|xclip|xclip|xclip|xclip|xclip",
+    ),
+    (
+        "SYS ",
+        "wl-clipboard",
+        "Command line copy/paste for Wayland",
+        "wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard|wl-clipboard",
+    ),
+    (
+        "SYS ",
+        "acpi",
+        "Display battery and thermal information",
+        "acpi|acpi|acpi|acpi|acpi|acpi",
+    ),
+    (
+        "SYS ",
+        "socat",
+        "Multipurpose relay for bidirectional data",
+        "socat|socat|socat|socat|socat|socat",
+    ),
+    (
+        "SYS ",
+        "lsof",
+        "List open files and network connections",
+        "lsof|lsof|lsof|lsof|lsof|lsof",
+    ),
+    (
+        "SYS ",
+        "strace",
+        "Trace system calls and signals",
+        "strace|strace|strace|strace|strace|strace",
+    ),
 ];
 
 // ── Resolve package name for current distro ───────────────────────────────────
 
 fn resolve_pkg<'a>(map: &'a str, pm: &PkgManager) -> &'a str {
     let idx = pm.col_index();
-    map.split('|').nth(idx).unwrap_or(map.split('|').next().unwrap_or(""))
+    map.split('|')
+        .nth(idx)
+        .unwrap_or(map.split('|').next().unwrap_or(""))
 }
 
 // ── Interactive TUI Multi-Select Engine (`ut`) ───────────────────────────────
@@ -462,7 +805,6 @@ impl<'a> UtApp<'a> {
                     is_installed: installed,
                     selected: false,
                 }
-
             })
             .collect();
 
@@ -521,7 +863,9 @@ impl<'a> UtApp<'a> {
                 }
 
                 match (key.code, key.modifiers) {
-                    (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                    (KeyCode::Esc, _)
+                    | (KeyCode::Char('q'), KeyModifiers::NONE)
+                    | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                         return Ok(None);
                     }
                     (KeyCode::Enter, _) => {
@@ -571,7 +915,8 @@ impl<'a> UtApp<'a> {
                         self.query.pop();
                         self.filter_items();
                     }
-                    (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                    (KeyCode::Char(c), KeyModifiers::NONE)
+                    | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                         self.query.push(c);
                         self.filter_items();
                     }
@@ -649,7 +994,10 @@ impl<'a> UtApp<'a> {
             ),
             Span::styled("█", Style::default().fg(C_ACCENT)),
             Span::styled(
-                format!("   ({}/{} matches | {} selected)", match_count, total_count, selected_count),
+                format!(
+                    "   ({}/{} matches | {} selected)",
+                    match_count, total_count, selected_count
+                ),
                 Style::default().fg(C_DIM),
             ),
         ]);
@@ -677,11 +1025,26 @@ impl<'a> UtApp<'a> {
             .split(outer[2]);
 
         let header_line = Line::from(vec![
-            Span::styled("    STAT ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-            Span::styled("[IDX]  ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-            Span::styled("CATEGORY    ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-            Span::styled("PACKAGE           ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-            Span::styled("DESCRIPTION", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "    STAT ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "[IDX]  ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "CATEGORY    ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "PACKAGE           ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "DESCRIPTION",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
         ]);
 
         let list_items: Vec<ListItem> = self
@@ -693,13 +1056,19 @@ impl<'a> UtApp<'a> {
                 let item = &self.items[orig_idx];
 
                 let bar_span = if is_cursor {
-                    Span::styled("❯ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        "❯ ",
+                        Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                    )
                 } else {
                     Span::raw("  ")
                 };
 
                 let status_span = if item.selected {
-                    Span::styled("● ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        "● ",
+                        Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                    )
                 } else if item.is_installed {
                     Span::styled("✔ ", Style::default().fg(C_GREEN))
                 } else {
@@ -718,7 +1087,10 @@ impl<'a> UtApp<'a> {
                     "MOD " => Color::Yellow,
                     _ => Color::Gray,
                 };
-                let cat_span = Span::styled(format!("{:<12}", item.category), Style::default().fg(cat_color).add_modifier(Modifier::BOLD));
+                let cat_span = Span::styled(
+                    format!("{:<12}", item.category),
+                    Style::default().fg(cat_color).add_modifier(Modifier::BOLD),
+                );
 
                 let tag_str = if item.selected {
                     "[INSTALL]"
@@ -732,7 +1104,17 @@ impl<'a> UtApp<'a> {
 
                 let pkg_span = Span::styled(
                     pkg_display,
-                    Style::default().fg(if is_cursor { C_WHITE } else if item.selected { C_SELECTED } else if item.is_installed { C_GREEN } else { C_ACCENT }).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(if is_cursor {
+                            C_WHITE
+                        } else if item.selected {
+                            C_SELECTED
+                        } else if item.is_installed {
+                            C_GREEN
+                        } else {
+                            C_ACCENT
+                        })
+                        .add_modifier(Modifier::BOLD),
                 );
 
                 let desc_span = Span::styled(item.description, Style::default().fg(C_TEXT));
@@ -745,7 +1127,6 @@ impl<'a> UtApp<'a> {
                     pkg_span,
                     desc_span,
                 ]))
-
             })
             .collect();
 
@@ -772,18 +1153,26 @@ impl<'a> UtApp<'a> {
 
         frame.render_widget(Paragraph::new(header_line), inner_chunks[0]);
 
-        let list_widget = List::new(list_items)
-            .block(Block::default().borders(Borders::NONE));
+        let list_widget = List::new(list_items).block(Block::default().borders(Borders::NONE));
 
         frame.render_stateful_widget(list_widget, inner_chunks[1], &mut self.list_state);
 
         // ── 4. Bottom Status Bar ────────────────────────────────────────────────
         let status_line = Line::from(vec![
-            Span::styled(" [ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [ENTER] ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Install  │ ", Style::default().fg(C_TEXT)),
-            Span::styled(" [SPACE / TAB] ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [SPACE / TAB] ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Toggle Multi-select  │ ", Style::default().fg(C_TEXT)),
-            Span::styled(" [Q / ESC] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Q / ESC] ",
+                Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cancel", Style::default().fg(C_TEXT)),
         ]);
 
@@ -867,8 +1256,11 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, _shell_name: &
         "zram-tools" => {
             if pm == &PkgManager::Apt {
                 let _ = Command::new("sudo")
-                    .args(["bash", "-c",
-                        "echo -e 'PERCENT=60\\nALGO=zstd\\nPRIORITY=100' > /etc/default/zramswap"])
+                    .args([
+                        "bash",
+                        "-c",
+                        "echo -e 'PERCENT=60\\nALGO=zstd\\nPRIORITY=100' > /etc/default/zramswap",
+                    ])
                     .stdout(Stdio::null())
                     .stderr(Stdio::null())
                     .status();
@@ -884,9 +1276,12 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, _shell_name: &
                     .stderr(Stdio::null())
                     .status();
                 let _ = Command::new("sudo")
-                    .args(["bash", "-c",
+                    .args([
+                        "bash",
+                        "-c",
                         "echo -e '[zram0]\\nzram-size = ram / 2\\ncompression-algorithm = zstd' \
-                         > /etc/systemd/zram-generator.conf"])
+                         > /etc/systemd/zram-generator.conf",
+                    ])
                     .stdout(Stdio::null())
                     .stderr(Stdio::null())
                     .status();
@@ -938,7 +1333,8 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, _shell_name: &
             if std::path::Path::new("/etc/default/earlyoom").exists() {
                 let _ = Command::new("sudo")
                     .args([
-                        "sed", "-i",
+                        "sed",
+                        "-i",
                         "s/EARLYOOM_ARGS=.*/EARLYOOM_ARGS=\"-m 10 -s 5\"/",
                         "/etc/default/earlyoom",
                     ])
@@ -968,7 +1364,6 @@ fn auto_config(generic: &str, pm: &PkgManager, rc_file: &PathBuf, _shell_name: &
     }
 }
 
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn cmd_exists(name: &str) -> bool {
@@ -990,22 +1385,30 @@ fn detect_shell_name() -> String {
 fn rc_file_for(shell_name: &str) -> PathBuf {
     let home = dirs_home();
     match shell_name {
-        "zsh"  => home.join(".zshrc"),
+        "zsh" => home.join(".zshrc"),
         "fish" => home.join(".config/fish/config.fish"),
-        _      => home.join(".bashrc"),
+        _ => home.join(".bashrc"),
     }
 }
 
 fn open_tty() -> Box<dyn io::Write + Send> {
     #[cfg(unix)]
     {
-        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("/dev/tty") {
+        if let Ok(file) = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/tty")
+        {
             return Box::new(file);
         }
     }
     #[cfg(windows)]
     {
-        if let Ok(file) = fs::OpenOptions::new().read(true).write(true).open("CONOUT$") {
+        if let Ok(file) = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("CONOUT$")
+        {
             return Box::new(file);
         }
     }
@@ -1031,9 +1434,16 @@ pub struct UtInstallProgressItem {
 }
 
 pub enum InstallEvent {
-    StartTool { index: usize },
-    Log { line: String },
-    ToolFinished { index: usize, status: InstallItemStatus },
+    StartTool {
+        index: usize,
+    },
+    Log {
+        line: String,
+    },
+    ToolFinished {
+        index: usize,
+        status: InstallItemStatus,
+    },
     AllDone,
 }
 
@@ -1048,7 +1458,11 @@ pub struct UtInstallProgressApp {
 }
 
 impl UtInstallProgressApp {
-    pub fn new(distro_id: String, pm_label: String, selected_tools: Vec<(&'static str, String)>) -> Self {
+    pub fn new(
+        distro_id: String,
+        pm_label: String,
+        selected_tools: Vec<(&'static str, String)>,
+    ) -> Self {
         let items = selected_tools
             .into_iter()
             .map(|(generic, pkg)| UtInstallProgressItem {
@@ -1086,7 +1500,10 @@ impl UtInstallProgressApp {
         // 1. Top Banner
         let spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let status_badge = if self.is_done {
-            Span::styled("  [✔ COMPLETED]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+            Span::styled(
+                "  [✔ COMPLETED]",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            )
         } else {
             let frame_char = spinner_frames[self.spinner_idx % spinner_frames.len()];
             Span::styled(
@@ -1127,7 +1544,14 @@ impl UtInstallProgressApp {
         let completed_count = self
             .items
             .iter()
-            .filter(|i| matches!(i.status, InstallItemStatus::AlreadyInstalled | InstallItemStatus::Success | InstallItemStatus::Failed(_)))
+            .filter(|i| {
+                matches!(
+                    i.status,
+                    InstallItemStatus::AlreadyInstalled
+                        | InstallItemStatus::Success
+                        | InstallItemStatus::Failed(_)
+                )
+            })
             .count();
         let total_count = self.items.len();
         let percent = if total_count > 0 {
@@ -1150,16 +1574,16 @@ impl UtInstallProgressApp {
             )
             .gauge_style(Style::default().fg(C_ACCENT).bg(Color::Rgb(20, 25, 35)))
             .percent(percent as u16)
-            .label(format!("{}%  ({}/{} completed)", percent, completed_count, total_count));
+            .label(format!(
+                "{}%  ({}/{} completed)",
+                percent, completed_count, total_count
+            ));
         frame.render_widget(gauge, outer[1]);
 
         // 3. Middle split (Left: Tool Status List, Right: Live Logs)
         let middle_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ])
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(outer[2]);
 
         // ── Left: Tool List ──
@@ -1171,15 +1595,16 @@ impl UtInstallProgressApp {
             .map(|(idx, item)| {
                 let is_active = self.current_tool_idx == Some(idx);
                 let (status_str, status_style) = match &item.status {
-                    InstallItemStatus::Pending => ("⏳ Pending".to_string(), Style::default().fg(C_DIM)),
+                    InstallItemStatus::Pending => {
+                        ("⏳ Pending".to_string(), Style::default().fg(C_DIM))
+                    }
                     InstallItemStatus::Installing => (
                         format!("{} Installing...", spinner),
                         Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
                     ),
-                    InstallItemStatus::AlreadyInstalled => (
-                        "✔ Up to date".to_string(),
-                        Style::default().fg(C_GREEN),
-                    ),
+                    InstallItemStatus::AlreadyInstalled => {
+                        ("✔ Up to date".to_string(), Style::default().fg(C_GREEN))
+                    }
                     InstallItemStatus::Success => (
                         "✨ Installed".to_string(),
                         Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
@@ -1191,7 +1616,10 @@ impl UtInstallProgressApp {
                 };
 
                 let pointer = if is_active {
-                    Span::styled("❯ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        "❯ ",
+                        Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                    )
                 } else {
                     Span::raw("  ")
                 };
@@ -1200,7 +1628,11 @@ impl UtInstallProgressApp {
                     format!("{:<14} ", item.generic_name),
                     Style::default()
                         .fg(if is_active { C_WHITE } else { C_TEXT })
-                        .add_modifier(if is_active { Modifier::BOLD } else { Modifier::empty() }),
+                        .add_modifier(if is_active {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
                 );
 
                 let pkg_span = Span::styled(
@@ -1210,12 +1642,7 @@ impl UtInstallProgressApp {
 
                 let status_span = Span::styled(status_str, status_style);
 
-                ListItem::new(Line::from(vec![
-                    pointer,
-                    name_span,
-                    pkg_span,
-                    status_span,
-                ]))
+                ListItem::new(Line::from(vec![pointer, name_span, pkg_span, status_span]))
             })
             .collect();
 
@@ -1240,7 +1667,8 @@ impl UtInstallProgressApp {
         let log_lines: Vec<Line> = recent_logs
             .iter()
             .map(|l| {
-                let style = if l.contains('✔') || l.contains('✨') || l.contains("successfully") {
+                let style = if l.contains('✔') || l.contains('✨') || l.contains("successfully")
+                {
                     Style::default().fg(C_GREEN)
                 } else if l.contains('❌') || l.contains("Failed") || l.contains("error") {
                     Style::default().fg(Color::Red)
@@ -1269,17 +1697,32 @@ impl UtInstallProgressApp {
         // 4. Status Bar
         let footer_text = if self.is_done {
             Line::from(vec![
-                Span::styled(" ✅ Deployment Completed! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " ✅ Deployment Completed! ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Press ", Style::default().fg(C_DIM)),
-                Span::styled("[ENTER]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[ENTER]",
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(" or ", Style::default().fg(C_DIM)),
-                Span::styled("[Q]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[Q]",
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(" to exit ", Style::default().fg(C_DIM)),
             ])
         } else {
             Line::from(vec![
-                Span::styled(" ⚙️ Installing selected packages... ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled("Please wait for deployment to finish ", Style::default().fg(C_DIM)),
+                Span::styled(
+                    " ⚙️ Installing selected packages... ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Please wait for deployment to finish ",
+                    Style::default().fg(C_DIM),
+                ),
             ])
         };
 
@@ -1289,7 +1732,11 @@ impl UtInstallProgressApp {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(if self.is_done { C_GREEN } else { C_BORDER }))
+                    .border_style(Style::default().fg(if self.is_done {
+                        C_GREEN
+                    } else {
+                        C_BORDER
+                    }))
                     .style(Style::default().bg(C_BG)),
             );
         frame.render_widget(footer, outer[3]);
@@ -1299,11 +1746,11 @@ impl UtInstallProgressApp {
 // ── Main entry point ──────────────────────────────────────────────────────────
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    const GREEN:  &str = "\x1b[1;32m";
+    const GREEN: &str = "\x1b[1;32m";
     const YELLOW: &str = "\x1b[1;33m";
-    const CYAN:   &str = "\x1b[1;36m";
-    const RED:    &str = "\x1b[1;31m";
-    const NC:     &str = "\x1b[0m";
+    const CYAN: &str = "\x1b[1;36m";
+    const RED: &str = "\x1b[1;31m";
+    const NC: &str = "\x1b[0m";
 
     // 1. Distro detection
     let distro = Distro::detect()?;
@@ -1391,11 +1838,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         })
         .collect();
 
-    let mut progress_app = UtInstallProgressApp::new(
-        distro.id.clone(),
-        pm.label().to_string(),
-        selected_tools,
-    );
+    let mut progress_app =
+        UtInstallProgressApp::new(distro.id.clone(), pm.label().to_string(), selected_tools);
 
     // 3. Launch UtInstallProgressApp Ratatui TUI immediately (Installation phase)
     enable_raw_mode()?;
@@ -1463,7 +1907,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 });
             } else {
                 let _ = tx.send(InstallEvent::Log {
-                    line: format!("📦 Installing {} ({}) via {}...", generic, pkg, pm_clone.label()),
+                    line: format!(
+                        "📦 Installing {} ({}) via {}...",
+                        generic,
+                        pkg,
+                        pm_clone.label()
+                    ),
                 });
 
                 let cmd = pm_clone.install_cmd();
@@ -1601,7 +2050,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 if key.kind == event::KeyEventKind::Press {
                     match (key.code, key.modifiers) {
                         (KeyCode::Char('c'), KeyModifiers::CONTROL) => break,
-                        (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::NONE) | (KeyCode::Enter, _) => {
+                        (KeyCode::Esc, _)
+                        | (KeyCode::Char('q'), KeyModifiers::NONE)
+                        | (KeyCode::Enter, _) => {
                             if progress_app.is_done {
                                 break;
                             }
@@ -1621,7 +2072,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let installed_count = progress_app
         .items
         .iter()
-        .filter(|i| matches!(i.status, InstallItemStatus::AlreadyInstalled | InstallItemStatus::Success))
+        .filter(|i| {
+            matches!(
+                i.status,
+                InstallItemStatus::AlreadyInstalled | InstallItemStatus::Success
+            )
+        })
         .count();
     let failed_tools: Vec<String> = progress_app
         .items
@@ -1631,7 +2087,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
 
     println!("\n{GREEN}✅ Deployment Complete on {}!{NC}", distro.id);
-    println!("{GREEN}📦 Installed/confirmed: {} tools{NC}", installed_count);
+    println!(
+        "{GREEN}📦 Installed/confirmed: {} tools{NC}",
+        installed_count
+    );
 
     if !failed_tools.is_empty() {
         println!("{RED}❌ Failed ({}):{NC}", failed_tools.len());
@@ -1640,10 +2099,18 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if progress_app.items.iter().any(|t| t.generic_name == "docker.io") {
+    if progress_app
+        .items
+        .iter()
+        .any(|t| t.generic_name == "docker.io")
+    {
         println!("{YELLOW}⚠️  Log out and back in for Docker group changes.{NC}");
     }
-    if progress_app.items.iter().any(|t| t.generic_name == "zoxide") {
+    if progress_app
+        .items
+        .iter()
+        .any(|t| t.generic_name == "zoxide")
+    {
         println!(
             "{CYAN}💡 Run 'source {}' to enable zoxide.{NC}",
             rc.display()

@@ -6,7 +6,6 @@
 
 // src/core/aliases/categories/prisma.rs
 
-
 use crate::core::aliases::{AliasEntry, AliasGroup};
 
 pub fn npx_group() -> AliasGroup {

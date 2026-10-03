@@ -78,7 +78,10 @@ fn detect_distro() -> DistroInfo {
             "alpine" => "apk",
             _ => "unknown",
         };
-        DistroInfo { name, pkg_mgr: mgr.to_string() }
+        DistroInfo {
+            name,
+            pkg_mgr: mgr.to_string(),
+        }
     } else {
         DistroInfo {
             name: "Linux System".to_string(),
@@ -99,16 +102,36 @@ pub struct CleanTask {
     pub run_cmd: fn(&DistroInfo) -> String,
 }
 
-fn always(_: &DistroInfo) -> bool { true }
-fn has_apt(d: &DistroInfo) -> bool { d.pkg_mgr == "apt" }
-fn has_dnf(d: &DistroInfo) -> bool { d.pkg_mgr == "dnf" }
-fn has_pacman(d: &DistroInfo) -> bool { d.pkg_mgr == "pacman" }
-fn has_zypper(d: &DistroInfo) -> bool { d.pkg_mgr == "zypper" }
-fn has_snap(_: &DistroInfo) -> bool { crate::core::utils::cmd_exists("snap") }
-fn has_flatpak(_: &DistroInfo) -> bool { crate::core::utils::cmd_exists("flatpak") }
-fn has_journal(_: &DistroInfo) -> bool { crate::core::utils::cmd_exists("journalctl") }
-fn has_docker(_: &DistroInfo) -> bool { crate::core::utils::cmd_exists("docker") }
-fn has_cargo(_: &DistroInfo) -> bool { crate::core::utils::cmd_exists("cargo") }
+fn always(_: &DistroInfo) -> bool {
+    true
+}
+fn has_apt(d: &DistroInfo) -> bool {
+    d.pkg_mgr == "apt"
+}
+fn has_dnf(d: &DistroInfo) -> bool {
+    d.pkg_mgr == "dnf"
+}
+fn has_pacman(d: &DistroInfo) -> bool {
+    d.pkg_mgr == "pacman"
+}
+fn has_zypper(d: &DistroInfo) -> bool {
+    d.pkg_mgr == "zypper"
+}
+fn has_snap(_: &DistroInfo) -> bool {
+    crate::core::utils::cmd_exists("snap")
+}
+fn has_flatpak(_: &DistroInfo) -> bool {
+    crate::core::utils::cmd_exists("flatpak")
+}
+fn has_journal(_: &DistroInfo) -> bool {
+    crate::core::utils::cmd_exists("journalctl")
+}
+fn has_docker(_: &DistroInfo) -> bool {
+    crate::core::utils::cmd_exists("docker")
+}
+fn has_cargo(_: &DistroInfo) -> bool {
+    crate::core::utils::cmd_exists("cargo")
+}
 
 fn cmd_apt(_: &DistroInfo) -> String {
     "sudo apt-get autoremove -y && sudo apt-get autoclean".into()
@@ -364,7 +387,8 @@ impl<'a> CleanApp<'a> {
             })
             .collect();
         self.log_lines.clear();
-        self.log_lines.push("🧹 Launching Universal System Cleaner suite...".to_string());
+        self.log_lines
+            .push("🧹 Launching Universal System Cleaner suite...".to_string());
         self.log_scroll = 0;
         self.auto_scroll = true;
     }
@@ -399,7 +423,8 @@ impl<'a> CleanApp<'a> {
                     self.state = AppState::Done;
                     self.running_idx = None;
                     self.log_lines.push(String::new());
-                    self.log_lines.push("✨ All selected system cleanup tasks completed!".to_string());
+                    self.log_lines
+                        .push("✨ All selected system cleanup tasks completed!".to_string());
                 }
             }
         }
@@ -460,10 +485,10 @@ fn clean_lines(s: &str) -> Vec<String> {
 fn category_color(cat: &str) -> Color {
     match cat {
         "System" => C_ORANGE,
-        "Logs"   => C_YELLOW,
-        "Dev"    => C_CYAN,
-        "User"   => C_ACCENT,
-        _        => C_DIM,
+        "Logs" => C_YELLOW,
+        "Dev" => C_CYAN,
+        "User" => C_ACCENT,
+        _ => C_DIM,
     }
 }
 
@@ -540,7 +565,9 @@ fn spawn_cleaner_thread(
                         if let Some(out) = stdout {
                             let reader = BufReader::new(out);
                             for line in reader.lines() {
-                                if cancel_out.load(Ordering::SeqCst) { break; }
+                                if cancel_out.load(Ordering::SeqCst) {
+                                    break;
+                                }
                                 if let Ok(l) = line {
                                     for clean in clean_lines(&l) {
                                         let _ = tx_out.send(CleanMsg::Line(clean));
@@ -554,7 +581,9 @@ fn spawn_cleaner_thread(
                         if let Some(err) = stderr {
                             let reader = BufReader::new(err);
                             for line in reader.lines() {
-                                if cancel_err.load(Ordering::SeqCst) { break; }
+                                if cancel_err.load(Ordering::SeqCst) {
+                                    break;
+                                }
                                 if let Ok(l) = line {
                                     for clean in clean_lines(&l) {
                                         let _ = tx_err.send(CleanMsg::Line(clean));
@@ -569,7 +598,11 @@ fn spawn_cleaner_thread(
                     let _ = handle_err.join();
 
                     let success = matches!(status, Ok(s) if s.success());
-                    let msg = if success { "Done".to_string() } else { "Failed".to_string() };
+                    let msg = if success {
+                        "Done".to_string()
+                    } else {
+                        "Failed".to_string()
+                    };
 
                     let _ = tx.send(CleanMsg::Line(format!(
                         "{} {} {}",
@@ -610,8 +643,14 @@ fn draw_selecting(f: &mut Frame, app: &mut CleanApp) {
     let tick_spin = spinner_frame(app.tick);
     let header_lines = vec![
         Line::from(vec![
-            Span::styled("  🧹  ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled("UNIVERSAL SYSTEM CLEANER & OPTIMIZER", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "  🧹  ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "UNIVERSAL SYSTEM CLEANER & OPTIMIZER",
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("  uc  ", Style::default().fg(C_DIM)),
         ]),
         Line::from(vec![
@@ -619,8 +658,10 @@ fn draw_selecting(f: &mut Frame, app: &mut CleanApp) {
             Span::styled(
                 format!(
                     "  {} ({})  •  {} task(s) available  •  {} selected",
-                    app.distro.name, app.distro.pkg_mgr,
-                    app.tasks.len(), app.selected_count()
+                    app.distro.name,
+                    app.distro.pkg_mgr,
+                    app.tasks.len(),
+                    app.selected_count()
                 ),
                 Style::default().fg(C_DIM),
             ),
@@ -664,7 +705,9 @@ fn draw_selecting(f: &mut Frame, app: &mut CleanApp) {
                 Span::styled(
                     format!("{:<16}", task.name),
                     if is_cursor {
-                        Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(C_SELECTED_FG)
+                            .add_modifier(Modifier::BOLD)
                     } else if app.selected[idx] {
                         Style::default().fg(C_TEXT)
                     } else {
@@ -686,10 +729,17 @@ fn draw_selecting(f: &mut Frame, app: &mut CleanApp) {
         .collect();
 
     let sel_count = app.selected_count();
-    let list_title = format!(" Cleanup Tasks ({}/{} selected) ", sel_count, app.tasks.len());
+    let list_title = format!(
+        " Cleanup Tasks ({}/{} selected) ",
+        sel_count,
+        app.tasks.len()
+    );
     let list_widget = List::new(items).block(
         Block::default()
-            .title(Span::styled(list_title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                list_title,
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
@@ -708,25 +758,38 @@ fn draw_selecting(f: &mut Frame, app: &mut CleanApp) {
         vec![
             Line::from(vec![
                 Span::styled(format!("{} ", task.emoji), Style::default()),
-                Span::styled(task.name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    task.name,
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(root_label),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Category  ", Style::default().fg(C_DIM)),
-                Span::styled(task.category, Style::default().fg(cat_color).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    task.category,
+                    Style::default().fg(cat_color).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "About",
-                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                Style::default()
+                    .fg(C_ACCENT)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             )]),
             Line::from(""),
-            Line::from(vec![Span::styled(task.description, Style::default().fg(C_TEXT))]),
+            Line::from(vec![Span::styled(
+                task.description,
+                Style::default().fg(C_TEXT),
+            )]),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "Command",
-                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                Style::default()
+                    .fg(C_ACCENT)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             )]),
             Line::from(""),
             Line::from(vec![Span::styled(
@@ -735,14 +798,20 @@ fn draw_selecting(f: &mut Frame, app: &mut CleanApp) {
             )]),
         ]
     } else {
-        vec![Line::from(Span::styled("No task selected", Style::default().fg(C_DIM)))]
+        vec![Line::from(Span::styled(
+            "No task selected",
+            Style::default().fg(C_DIM),
+        ))]
     };
 
     let detail = Paragraph::new(detail_lines)
         .wrap(Wrap { trim: false })
         .block(
             Block::default()
-                .title(Span::styled(" 📋 Task Details ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " 📋 Task Details ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_BORDER))
@@ -752,15 +821,30 @@ fn draw_selecting(f: &mut Frame, app: &mut CleanApp) {
 
     // Footer
     let footer_spans = Line::from(vec![
-        Span::styled(" [↑↓/jk] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [↑↓/jk] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Navigate  ", Style::default().fg(C_DIM)),
-        Span::styled("[Space] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Space] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Toggle  ", Style::default().fg(C_DIM)),
-        Span::styled("[a] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[a] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Select All  ", Style::default().fg(C_DIM)),
-        Span::styled("[Enter] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Enter] ",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Run Cleanup  ", Style::default().fg(C_DIM)),
-        Span::styled("[q/Esc] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[q/Esc] ",
+            Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Quit ", Style::default().fg(C_DIM)),
     ]);
     let footer = Paragraph::new(footer_spans)
@@ -796,21 +880,44 @@ fn draw_running_or_done(f: &mut Frame, app: &mut CleanApp) {
         .filter(|s| s.status == StatusKind::Success || s.status == StatusKind::Failed)
         .count();
     let total_count = app.selected_states.len();
-    let percent = if total_count > 0 { (completed_count * 100) / total_count } else { 0 };
+    let percent = if total_count > 0 {
+        (completed_count * 100) / total_count
+    } else {
+        0
+    };
     let is_done = app.state == AppState::Done;
-    let tick_spin = if is_done { "✨" } else { spinner_frame(app.tick) };
+    let tick_spin = if is_done {
+        "✨"
+    } else {
+        spinner_frame(app.tick)
+    };
     let border_color = if is_done { C_GREEN } else { C_BORDER };
 
     // 1. Banner
     let state_label = if is_done {
-        Span::styled("[✔ COMPLETED]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+        Span::styled(
+            "[✔ COMPLETED]",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )
     } else {
-        Span::styled(format!("[{} CLEANING]", tick_spin), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))
+        Span::styled(
+            format!("[{} CLEANING]", tick_spin),
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )
     };
     let header_line = Line::from(vec![
-        Span::styled("⚡ UC CLEANER — ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
-        Span::styled("Live System Optimization Engine ", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" [Tasks: {}] ", total_count), Style::default().fg(C_DIM)),
+        Span::styled(
+            "⚡ UC CLEANER — ",
+            Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "Live System Optimization Engine ",
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" [Tasks: {}] ", total_count),
+            Style::default().fg(C_DIM),
+        ),
         state_label,
     ]);
     let header = Paragraph::new(header_line)
@@ -843,7 +950,10 @@ fn draw_running_or_done(f: &mut Frame, app: &mut CleanApp) {
                 .bg(Color::Rgb(15, 25, 30)),
         )
         .percent(percent as u16)
-        .label(format!("{}%  ({}/{} completed)", percent, completed_count, total_count));
+        .label(format!(
+            "{}%  ({}/{} completed)",
+            percent, completed_count, total_count
+        ));
     f.render_widget(gauge, outer[1]);
 
     // 3. Dual pane
@@ -860,20 +970,31 @@ fn draw_running_or_done(f: &mut Frame, app: &mut CleanApp) {
         .map(|(idx, state)| {
             let is_running = app.running_idx == Some(idx);
             let pointer = if is_running {
-                Span::styled("❯ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "❯ ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("  ")
             };
 
             let (status_str, status_style) = match state.status {
-                StatusKind::Pending   => ("⏳ Pending".to_string(), Style::default().fg(C_DIM)),
-                StatusKind::Running   => (
+                StatusKind::Pending => ("⏳ Pending".to_string(), Style::default().fg(C_DIM)),
+                StatusKind::Running => (
                     format!("{} Cleaning...", spinner_frame(app.tick)),
                     Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
                 ),
-                StatusKind::Success   => ("✅ Done".to_string(),   Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                StatusKind::Failed    => ("❌ Failed".to_string(), Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
-                StatusKind::Cancelled => ("⚠️  Cancelled".to_string(), Style::default().fg(C_ORANGE)),
+                StatusKind::Success => (
+                    "✅ Done".to_string(),
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Failed => (
+                    "❌ Failed".to_string(),
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Cancelled => {
+                    ("⚠️  Cancelled".to_string(), Style::default().fg(C_ORANGE))
+                }
             };
 
             let line = Line::from(vec![
@@ -883,11 +1004,17 @@ fn draw_running_or_done(f: &mut Frame, app: &mut CleanApp) {
                     format!("{:<15} ", state.task.name),
                     Style::default()
                         .fg(if is_running { C_WHITE } else { C_TEXT })
-                        .add_modifier(if is_running { Modifier::BOLD } else { Modifier::empty() }),
+                        .add_modifier(if is_running {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
                 ),
                 Span::styled(
                     format!("[{:<6}] ", state.task.category),
-                    Style::default().fg(category_color(state.task.category)).add_modifier(Modifier::DIM),
+                    Style::default()
+                        .fg(category_color(state.task.category))
+                        .add_modifier(Modifier::DIM),
                 ),
                 Span::styled(status_str, status_style),
             ]);
@@ -941,35 +1068,62 @@ fn draw_running_or_done(f: &mut Frame, app: &mut CleanApp) {
         .collect();
 
     let log_title = if app.auto_scroll {
-        format!(" 📜 Live Activity Log ({} lines) [Auto-scroll] ", total_lines)
+        format!(
+            " 📜 Live Activity Log ({} lines) [Auto-scroll] ",
+            total_lines
+        )
     } else {
-        format!(" 📜 Live Activity Log ({} lines) [Scroll: {}] ", total_lines, start_idx)
+        format!(
+            " 📜 Live Activity Log ({} lines) [Scroll: {}] ",
+            total_lines, start_idx
+        )
     };
 
     let log_block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_ACCENT))
-        .title(Span::styled(log_title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+        .title(Span::styled(
+            log_title,
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(C_BG));
     f.render_widget(List::new(log_items).block(log_block), middle[1]);
 
     // 4. Footer
     let footer_line = if is_done {
         Line::from(vec![
-            Span::styled(" ✅ System Cleanup Completed! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("⚡ Auto-exiting in 2m... ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ✅ System Cleanup Completed! ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "⚡ Auto-exiting in 2m... ",
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Press ", Style::default().fg(C_DIM)),
-            Span::styled("[ENTER / Q / ESC]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[ENTER / Q / ESC]",
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" to exit immediately ", Style::default().fg(C_DIM)),
         ])
     } else {
         Line::from(vec![
-            Span::styled(" ⚙️  Cleaning system caches... ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ⚙️  Cleaning system caches... ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Please wait  ", Style::default().fg(C_DIM)),
-            Span::styled("[↑/↓] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[↑/↓] ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Scroll Log  ", Style::default().fg(C_DIM)),
-            Span::styled("[Ctrl+C] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[Ctrl+C] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cancel", Style::default().fg(C_DIM)),
         ])
     };
@@ -1014,12 +1168,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') => break vec![],
-                    KeyCode::Char('c') if ctrl        => break vec![],
-                    KeyCode::Up   | KeyCode::Char('k') => app.move_up(),
-                    KeyCode::Char('p') if ctrl         => app.move_up(),
+                    KeyCode::Char('c') if ctrl => break vec![],
+                    KeyCode::Up | KeyCode::Char('k') => app.move_up(),
+                    KeyCode::Char('p') if ctrl => app.move_up(),
                     KeyCode::Down | KeyCode::Char('j') => app.move_down(),
-                    KeyCode::Char('n') if ctrl         => app.move_down(),
-                    KeyCode::Char(' ')                 => app.toggle_current(),
+                    KeyCode::Char('n') if ctrl => app.move_down(),
+                    KeyCode::Char(' ') => app.toggle_current(),
                     KeyCode::Char('a') | KeyCode::Char('A') => app.toggle_all(),
                     KeyCode::Enter => {
                         let mut tasks: Vec<&'static CleanTask> = app
@@ -1104,9 +1258,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                             break;
                         }
                     }
-                    KeyCode::Up    | KeyCode::Char('k') => app.scroll_log_up(3),
-                    KeyCode::Down  | KeyCode::Char('j') => app.scroll_log_down(3),
-                    KeyCode::PageUp   => app.scroll_log_up(10),
+                    KeyCode::Up | KeyCode::Char('k') => app.scroll_log_up(3),
+                    KeyCode::Down | KeyCode::Char('j') => app.scroll_log_down(3),
+                    KeyCode::PageUp => app.scroll_log_up(10),
                     KeyCode::PageDown => app.scroll_log_down(10),
                     _ => {}
                 }
@@ -1134,7 +1288,11 @@ mod tests {
     #[test]
     fn test_all_tasks_have_description() {
         for t in ALL_TASKS {
-            assert!(!t.description.is_empty(), "Task {} missing description", t.name);
+            assert!(
+                !t.description.is_empty(),
+                "Task {} missing description",
+                t.name
+            );
             assert!(!t.category.is_empty(), "Task {} missing category", t.name);
         }
     }

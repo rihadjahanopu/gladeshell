@@ -15,10 +15,20 @@ use std::process::Command;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     let is_windows = cfg!(target_os = "windows");
-    let script_ext = if is_windows { "install.ps1" } else { "install.sh" };
+    let script_ext = if is_windows {
+        "install.ps1"
+    } else {
+        "install.sh"
+    };
 
-    let gh_rs_url = format!("https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}", script_ext);
-    let gh_url = format!("https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}", script_ext);
+    let gh_rs_url = format!(
+        "https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}",
+        script_ext
+    );
+    let gh_url = format!(
+        "https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}",
+        script_ext
+    );
     let cdn_url = format!("https://gladeshell.netlify.app/{}", script_ext);
 
     println!("\x1b[1;35m⚡ Upgrading gladeshell to latest version...\x1b[0m");
@@ -41,14 +51,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     }
 
     if !fetched {
-        let local_candidates = [
-            format!("./{}", script_ext),
-            format!("../{}", script_ext),
-        ];
+        let local_candidates = [format!("./{}", script_ext), format!("../{}", script_ext)];
         for candidate in &local_candidates {
             let p = Path::new(candidate);
             if p.exists() {
-                println!("\x1b[1;36m💡 Found local {} script — utilizing...\x1b[0m", script_ext);
+                println!(
+                    "\x1b[1;36m💡 Found local {} script — utilizing...\x1b[0m",
+                    script_ext
+                );
                 if let Ok(content) = fs::read_to_string(p) {
                     let _ = fs::write(&script_path, content);
                     fetched = true;
@@ -69,7 +79,12 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     if is_windows {
         if crate::core::utils::cmd_exists("powershell") {
             if let Ok(status) = Command::new("powershell")
-                .args(["-ExecutionPolicy", "Bypass", "-File", script_path.to_str().unwrap_or_default()])
+                .args([
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    script_path.to_str().unwrap_or_default(),
+                ])
                 .status()
             {
                 executed_installer = status.success();
@@ -103,9 +118,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     upgrade_res?;
 
     println!("\x1b[1;32m✨ gladeshell upgraded successfully via Pure Rust engine!\x1b[0m");
-    println!(
-        "\x1b[1;36m💡 Restart your shell or run: eval \"$(gladeshell init <shell>)\"\x1b[0m"
-    );
+    println!("\x1b[1;36m💡 Restart your shell or run: eval \"$(gladeshell init <shell>)\"\x1b[0m");
 
     Ok(())
 }
@@ -124,7 +137,10 @@ fn apply_pure_rust_upgrade(script_path: &Path) -> Result<(), Box<dyn Error>> {
         let targets = vec![
             (home.join(".bashrc"), "eval \"$(gladeshell init bash)\"\n"),
             (home.join(".zshrc"), "eval \"$(gladeshell init zsh)\"\n"),
-            (home.join(".config/fish/config.fish"), "gladeshell init fish | source\n"),
+            (
+                home.join(".config/fish/config.fish"),
+                "gladeshell init fish | source\n",
+            ),
             (
                 home.join("Documents/PowerShell/Microsoft.PowerShell_profile.ps1"),
                 "Invoke-Expression (&gladeshell init pwsh | Out-String)\n",

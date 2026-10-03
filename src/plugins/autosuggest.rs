@@ -181,7 +181,10 @@ fn is_junk(cmd: &str) -> bool {
     }
 
     // Bare shell syntax noise
-    if matches!(cmd, "}" | "});" | "};" | ")" | "];" | ">" | ">>" | "{" | "(") {
+    if matches!(
+        cmd,
+        "}" | "});" | "};" | ")" | "];" | ">" | ">>" | "{" | "("
+    ) {
         return true;
     }
 
@@ -311,7 +314,8 @@ mod tests {
     #[test]
     fn test_zsh_extended_history_parsing() {
         // Simulate the zsh extended history format
-        let fake_content = b": 1720000000:0;git status\n: 1720000001:0;cargo build\nplain command\n";
+        let fake_content =
+            b": 1720000000:0;git status\n: 1720000001:0;cargo build\nplain command\n";
         let path = PathBuf::from("/does/not/exist/zsh_history");
         // Parse directly using internal logic
         let content = String::from_utf8_lossy(fake_content);
@@ -339,7 +343,8 @@ mod tests {
 
     #[test]
     fn test_fish_history_parsing() {
-        let fake_content = b"- cmd: echo hello\n  when: 1720000000\n- cmd: ls -la\n  when: 1720000001\n";
+        let fake_content =
+            b"- cmd: echo hello\n  when: 1720000000\n- cmd: ls -la\n  when: 1720000001\n";
         let content = String::from_utf8_lossy(fake_content);
         let mut cmds = Vec::new();
         for raw_line in content.lines() {
@@ -377,6 +382,9 @@ mod tests {
     fn test_add_history_entry_live_sync() {
         add_history_entry("gladeshell_test_live_command --sync");
         let suggestion = suggest("gladeshell_test_live_");
-        assert_eq!(suggestion, Some("gladeshell_test_live_command --sync".to_string()));
+        assert_eq!(
+            suggestion,
+            Some("gladeshell_test_live_command --sync".to_string())
+        );
     }
 }

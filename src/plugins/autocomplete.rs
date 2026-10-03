@@ -37,11 +37,7 @@ fn collect_path_completions(last_word: &str, candidates: &mut Vec<String>) {
             let name = entry.file_name().to_string_lossy().into_owned();
             if name.starts_with(prefix) {
                 let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
-                let formatted = if is_dir {
-                    format!("{}/", name)
-                } else {
-                    name
-                };
+                let formatted = if is_dir { format!("{}/", name) } else { name };
                 candidates.push(formatted);
             }
         }
@@ -66,7 +62,8 @@ pub fn complete(buffer: &str) -> String {
     let mut candidates: Vec<String> = Vec::new();
 
     // ── 1. Path & File completions (explicit path syntax) ─────────────────────
-    let has_path_prefix = last_word.contains('/') || last_word.starts_with('.') || last_word.starts_with('~');
+    let has_path_prefix =
+        last_word.contains('/') || last_word.starts_with('.') || last_word.starts_with('~');
     if has_path_prefix {
         collect_path_completions(last_word, &mut candidates);
     }
@@ -74,8 +71,20 @@ pub fn complete(buffer: &str) -> String {
     // ── 2. Common CLI Flags ───────────────────────────────────────────────────
     if last_word.starts_with('-') {
         const COMMON_FLAGS: &[&str] = &[
-            "--help", "--version", "--verbose", "--all", "--force", "--quiet",
-            "-h", "-v", "-a", "-f", "-q", "-y", "-j", "-o",
+            "--help",
+            "--version",
+            "--verbose",
+            "--all",
+            "--force",
+            "--quiet",
+            "-h",
+            "-v",
+            "-a",
+            "-f",
+            "-q",
+            "-y",
+            "-j",
+            "-o",
         ];
         for &flag in COMMON_FLAGS {
             if flag.starts_with(last_word) {
@@ -87,12 +96,44 @@ pub fn complete(buffer: &str) -> String {
     // ── 3. Git subcommand completions ─────────────────────────────────────────
     if trimmed.starts_with("git ") {
         const GIT_CMDS: &[&str] = &[
-            "add", "bisect", "blame", "branch", "checkout", "cherry-pick",
-            "clean", "clone", "commit", "config", "describe", "diff", "fetch",
-            "format-patch", "gc", "grep", "init", "log", "merge", "mv",
-            "notes", "pull", "push", "rebase", "reflog", "remote", "reset",
-            "restore", "revert", "rm", "shortlog", "show", "stash", "status",
-            "submodule", "switch", "tag", "worktree",
+            "add",
+            "bisect",
+            "blame",
+            "branch",
+            "checkout",
+            "cherry-pick",
+            "clean",
+            "clone",
+            "commit",
+            "config",
+            "describe",
+            "diff",
+            "fetch",
+            "format-patch",
+            "gc",
+            "grep",
+            "init",
+            "log",
+            "merge",
+            "mv",
+            "notes",
+            "pull",
+            "push",
+            "rebase",
+            "reflog",
+            "remote",
+            "reset",
+            "restore",
+            "revert",
+            "rm",
+            "shortlog",
+            "show",
+            "stash",
+            "status",
+            "submodule",
+            "switch",
+            "tag",
+            "worktree",
         ];
         for &cmd in GIT_CMDS {
             if cmd.starts_with(last_word) {
@@ -104,10 +145,32 @@ pub fn complete(buffer: &str) -> String {
     // ── 4. Cargo subcommand completions ───────────────────────────────────────
     if trimmed.starts_with("cargo ") {
         const CARGO_CMDS: &[&str] = &[
-            "add", "bench", "build", "check", "clean", "clippy", "doc",
-            "fix", "fmt", "generate-lockfile", "init", "install", "metadata",
-            "new", "package", "publish", "remove", "run", "rustc", "rustdoc",
-            "search", "test", "tree", "uninstall", "update", "vendor",
+            "add",
+            "bench",
+            "build",
+            "check",
+            "clean",
+            "clippy",
+            "doc",
+            "fix",
+            "fmt",
+            "generate-lockfile",
+            "init",
+            "install",
+            "metadata",
+            "new",
+            "package",
+            "publish",
+            "remove",
+            "run",
+            "rustc",
+            "rustdoc",
+            "search",
+            "test",
+            "tree",
+            "uninstall",
+            "update",
+            "vendor",
         ];
         for &cmd in CARGO_CMDS {
             if cmd.starts_with(last_word) {
@@ -117,14 +180,27 @@ pub fn complete(buffer: &str) -> String {
     }
 
     // ── 5. npm / pnpm / bun subcommand completions ────────────────────────────
-    let is_npm_like = trimmed.starts_with("npm ")
-        || trimmed.starts_with("pnpm ")
-        || trimmed.starts_with("bun ");
+    let is_npm_like =
+        trimmed.starts_with("npm ") || trimmed.starts_with("pnpm ") || trimmed.starts_with("bun ");
     if is_npm_like {
         const NPM_CMDS: &[&str] = &[
-            "install", "uninstall", "update", "run", "start", "test",
-            "build", "publish", "link", "pack", "audit", "outdated", "init",
-            "ci", "exec", "list", "info",
+            "install",
+            "uninstall",
+            "update",
+            "run",
+            "start",
+            "test",
+            "build",
+            "publish",
+            "link",
+            "pack",
+            "audit",
+            "outdated",
+            "init",
+            "ci",
+            "exec",
+            "list",
+            "info",
         ];
         for &cmd in NPM_CMDS {
             if cmd.starts_with(last_word) {
@@ -136,13 +212,50 @@ pub fn complete(buffer: &str) -> String {
     // ── 6. Docker subcommand completions ─────────────────────────────────────
     if trimmed.starts_with("docker ") {
         const DOCKER_CMDS: &[&str] = &[
-            "attach", "build", "commit", "container", "cp", "create",
-            "diff", "events", "exec", "export", "history", "image",
-            "images", "import", "info", "inspect", "kill", "load", "login",
-            "logout", "logs", "network", "pause", "port", "ps", "pull",
-            "push", "rename", "restart", "rm", "rmi", "run", "save",
-            "search", "start", "stats", "stop", "tag", "top", "unpause",
-            "update", "version", "volume", "wait",
+            "attach",
+            "build",
+            "commit",
+            "container",
+            "cp",
+            "create",
+            "diff",
+            "events",
+            "exec",
+            "export",
+            "history",
+            "image",
+            "images",
+            "import",
+            "info",
+            "inspect",
+            "kill",
+            "load",
+            "login",
+            "logout",
+            "logs",
+            "network",
+            "pause",
+            "port",
+            "ps",
+            "pull",
+            "push",
+            "rename",
+            "restart",
+            "rm",
+            "rmi",
+            "run",
+            "save",
+            "search",
+            "start",
+            "stats",
+            "stop",
+            "tag",
+            "top",
+            "unpause",
+            "update",
+            "version",
+            "volume",
+            "wait",
         ];
         for &cmd in DOCKER_CMDS {
             if cmd.starts_with(last_word) {
@@ -154,10 +267,28 @@ pub fn complete(buffer: &str) -> String {
     // ── 7. Kubectl subcommand completions ────────────────────────────────────
     if trimmed.starts_with("kubectl ") {
         const KUBECTL_CMDS: &[&str] = &[
-            "apply", "auth", "cluster-info", "config", "create", "delete",
-            "describe", "diff", "edit", "exec", "explain", "get", "label",
-            "logs", "patch", "port-forward", "replace", "rollout", "run",
-            "scale", "top", "version",
+            "apply",
+            "auth",
+            "cluster-info",
+            "config",
+            "create",
+            "delete",
+            "describe",
+            "diff",
+            "edit",
+            "exec",
+            "explain",
+            "get",
+            "label",
+            "logs",
+            "patch",
+            "port-forward",
+            "replace",
+            "rollout",
+            "run",
+            "scale",
+            "top",
+            "version",
         ];
         for &cmd in KUBECTL_CMDS {
             if cmd.starts_with(last_word) {
@@ -169,10 +300,29 @@ pub fn complete(buffer: &str) -> String {
     // ── 8. GitHub CLI (gh) subcommand completions ────────────────────────────
     if trimmed.starts_with("gh ") {
         const GH_CMDS: &[&str] = &[
-            "actions", "alias", "attestation", "auth", "browse", "codespace",
-            "completion", "config", "extension", "gist", "issue", "org",
-            "project", "pr", "release", "repo", "run", "search", "secret",
-            "ssh-key", "status", "variable", "workflow",
+            "actions",
+            "alias",
+            "attestation",
+            "auth",
+            "browse",
+            "codespace",
+            "completion",
+            "config",
+            "extension",
+            "gist",
+            "issue",
+            "org",
+            "project",
+            "pr",
+            "release",
+            "repo",
+            "run",
+            "search",
+            "secret",
+            "ssh-key",
+            "status",
+            "variable",
+            "workflow",
         ];
         for &cmd in GH_CMDS {
             if cmd.starts_with(last_word) {
@@ -184,9 +334,20 @@ pub fn complete(buffer: &str) -> String {
     // ── 9. Systemctl subcommand completions ──────────────────────────────────
     if trimmed.starts_with("systemctl ") {
         const SYSTEMCTL_CMDS: &[&str] = &[
-            "daemon-reload", "disable", "enable", "is-active", "is-enabled",
-            "is-failed", "list-units", "mask", "reload", "restart", "start",
-            "status", "stop", "unmask",
+            "daemon-reload",
+            "disable",
+            "enable",
+            "is-active",
+            "is-enabled",
+            "is-failed",
+            "list-units",
+            "mask",
+            "reload",
+            "restart",
+            "start",
+            "status",
+            "stop",
+            "unmask",
         ];
         for &cmd in SYSTEMCTL_CMDS {
             if cmd.starts_with(last_word) {
@@ -199,9 +360,21 @@ pub fn complete(buffer: &str) -> String {
     let is_pip_like = trimmed.starts_with("pip ") || trimmed.starts_with("pip3 ");
     if is_pip_like {
         const PIP_CMDS: &[&str] = &[
-            "audit", "cache", "check", "config", "download", "freeze",
-            "hash", "index", "inspect", "install", "list", "search",
-            "show", "uninstall", "wheel",
+            "audit",
+            "cache",
+            "check",
+            "config",
+            "download",
+            "freeze",
+            "hash",
+            "index",
+            "inspect",
+            "install",
+            "list",
+            "search",
+            "show",
+            "uninstall",
+            "wheel",
         ];
         for &cmd in PIP_CMDS {
             if cmd.starts_with(last_word) {
@@ -213,10 +386,30 @@ pub fn complete(buffer: &str) -> String {
     // ── 11. Terraform subcommand completions ─────────────────────────────────
     if trimmed.starts_with("terraform ") {
         const TF_CMDS: &[&str] = &[
-            "apply", "console", "destroy", "fmt", "force-unlock", "get",
-            "graph", "import", "init", "login", "logout", "metadata",
-            "output", "plan", "providers", "refresh", "show", "state",
-            "taint", "test", "untaint", "validate", "version", "workspace",
+            "apply",
+            "console",
+            "destroy",
+            "fmt",
+            "force-unlock",
+            "get",
+            "graph",
+            "import",
+            "init",
+            "login",
+            "logout",
+            "metadata",
+            "output",
+            "plan",
+            "providers",
+            "refresh",
+            "show",
+            "state",
+            "taint",
+            "test",
+            "untaint",
+            "validate",
+            "version",
+            "workspace",
         ];
         for &cmd in TF_CMDS {
             if cmd.starts_with(last_word) {
@@ -253,21 +446,36 @@ mod tests {
     #[test]
     fn test_git_completions() {
         let result = complete("git sta");
-        assert!(result.contains("status"), "should complete 'git sta' → 'status'");
-        assert!(result.contains("stash"), "should complete 'git sta' → 'stash'");
+        assert!(
+            result.contains("status"),
+            "should complete 'git sta' → 'status'"
+        );
+        assert!(
+            result.contains("stash"),
+            "should complete 'git sta' → 'stash'"
+        );
     }
 
     #[test]
     fn test_cargo_completions() {
         let result = complete("cargo b");
-        assert!(result.contains("build"), "should complete 'cargo b' → 'build'");
-        assert!(result.contains("bench"), "should complete 'cargo b' → 'bench'");
+        assert!(
+            result.contains("build"),
+            "should complete 'cargo b' → 'build'"
+        );
+        assert!(
+            result.contains("bench"),
+            "should complete 'cargo b' → 'bench'"
+        );
     }
 
     #[test]
     fn test_kubectl_completions() {
         let result = complete("kubectl g");
-        assert!(result.contains("get"), "should complete 'kubectl g' → 'get'");
+        assert!(
+            result.contains("get"),
+            "should complete 'kubectl g' → 'get'"
+        );
     }
 
     #[test]
@@ -279,19 +487,28 @@ mod tests {
     #[test]
     fn test_systemctl_completions() {
         let result = complete("systemctl res");
-        assert!(result.contains("restart"), "should complete 'systemctl res' → 'restart'");
+        assert!(
+            result.contains("restart"),
+            "should complete 'systemctl res' → 'restart'"
+        );
     }
 
     #[test]
     fn test_pip_completions() {
         let result = complete("pip ins");
-        assert!(result.contains("install"), "should complete 'pip ins' → 'install'");
+        assert!(
+            result.contains("install"),
+            "should complete 'pip ins' → 'install'"
+        );
     }
 
     #[test]
     fn test_terraform_completions() {
         let result = complete("terraform ap");
-        assert!(result.contains("apply"), "should complete 'terraform ap' → 'apply'");
+        assert!(
+            result.contains("apply"),
+            "should complete 'terraform ap' → 'apply'"
+        );
     }
 
     #[test]
@@ -334,6 +551,9 @@ mod tests {
     #[test]
     fn test_docker_completions() {
         let result = complete("docker ru");
-        assert!(result.contains("run"), "should complete 'docker ru' → 'run'");
+        assert!(
+            result.contains("run"),
+            "should complete 'docker ru' → 'run'"
+        );
     }
 }

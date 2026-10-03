@@ -21,14 +21,12 @@ use std::time::{Duration, Instant};
 
 use crossterm::{
     event::{
-        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton,
-        MouseEventKind,
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEventKind,
     },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ignore::WalkBuilder;
-use rayon::prelude::*;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -37,24 +35,25 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Gauge, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
+use rayon::prelude::*;
 
 // ── Color Palette (Modern Dark Slate / Neon Accent) ─────────────────────────
-const C_BG: Color          = Color::Rgb(12, 14, 24);         // Dark slate background
-const C_PANEL_BG: Color    = Color::Rgb(18, 22, 38);         // Dark card background
-const C_BORDER: Color      = Color::Rgb(140, 100, 255);      // Vibrant violet border
-const C_BORDER_DIM: Color  = Color::Rgb(60, 65, 95);         // Inactive border
-const C_ACCENT: Color      = Color::Rgb(0, 230, 210);        // Electric Cyan accent
-const C_SELECTED_BG: Color = Color::Rgb(45, 30, 85);        // Highlight row bg
-const C_SELECTED_FG: Color = Color::Rgb(240, 225, 255);     // Selected row fg
-const C_DIM: Color         = Color::Rgb(110, 115, 145);      // Muted text
-const C_TEXT: Color        = Color::Rgb(220, 225, 245);      // Normal text
-const C_GREEN: Color       = Color::Rgb(80, 230, 140);       // Neon emerald
-const C_YELLOW: Color      = Color::Rgb(255, 210, 80);       // Warm gold
-const C_MAGENTA: Color     = Color::Rgb(240, 110, 220);      // Soft magenta
-const C_BLUE: Color        = Color::Rgb(100, 170, 255);      // Sky blue
-const C_RED: Color         = Color::Rgb(255, 90, 90);        // Soft red
-const C_CYAN: Color        = Color::Rgb(80, 220, 210);       // Electric cyan
-const C_WHITE: Color       = Color::Rgb(255, 255, 255);      // Pure white
+const C_BG: Color = Color::Rgb(12, 14, 24); // Dark slate background
+const C_PANEL_BG: Color = Color::Rgb(18, 22, 38); // Dark card background
+const C_BORDER: Color = Color::Rgb(140, 100, 255); // Vibrant violet border
+const C_BORDER_DIM: Color = Color::Rgb(60, 65, 95); // Inactive border
+const C_ACCENT: Color = Color::Rgb(0, 230, 210); // Electric Cyan accent
+const C_SELECTED_BG: Color = Color::Rgb(45, 30, 85); // Highlight row bg
+const C_SELECTED_FG: Color = Color::Rgb(240, 225, 255); // Selected row fg
+const C_DIM: Color = Color::Rgb(110, 115, 145); // Muted text
+const C_TEXT: Color = Color::Rgb(220, 225, 245); // Normal text
+const C_GREEN: Color = Color::Rgb(80, 230, 140); // Neon emerald
+const C_YELLOW: Color = Color::Rgb(255, 210, 80); // Warm gold
+const C_MAGENTA: Color = Color::Rgb(240, 110, 220); // Soft magenta
+const C_BLUE: Color = Color::Rgb(100, 170, 255); // Sky blue
+const C_RED: Color = Color::Rgb(255, 90, 90); // Soft red
+const C_CYAN: Color = Color::Rgb(80, 220, 210); // Electric cyan
+const C_WHITE: Color = Color::Rgb(255, 255, 255); // Pure white
 
 /// High-throughput disk I/O buffer size (2 MB)
 const IO_BUFFER_SIZE: usize = 2 * 1024 * 1024;
@@ -130,7 +129,11 @@ impl fmt::Display for ExtractionError {
             ExtractionError::InvalidFileName(p) => write!(f, "Invalid file name: {}", p),
             ExtractionError::UnsupportedFormat(fmt) => write!(f, "Unsupported format: {}", fmt),
             ExtractionError::PathTraversal(p) => {
-                write!(f, "Security violation: Path traversal attempt detected '{}'", p)
+                write!(
+                    f,
+                    "Security violation: Path traversal attempt detected '{}'",
+                    p
+                )
             }
             ExtractionError::Io(e) => write!(f, "I/O Error: {}", e),
             ExtractionError::ArchiveError(msg) => write!(f, "Archive decompression error: {}", msg),
@@ -218,10 +221,7 @@ pub fn run(
 // =============================================================================
 
 /// Main extraction dispatcher
-pub fn extract_archive(
-    archive: &Path,
-    output: Option<&Path>,
-) -> Result<usize, ExtractionError> {
+pub fn extract_archive(archive: &Path, output: Option<&Path>) -> Result<usize, ExtractionError> {
     let (tx, _rx) = mpsc::channel();
     let total_bytes = fs::metadata(archive).map(|m| m.len()).unwrap_or(0);
     extract_archive_with_progress(archive, output, 0, total_bytes, tx)
@@ -258,7 +258,13 @@ pub fn extract_archive_with_progress(
     };
 
     // 0. Hybrid Auto-Fallback: Try Native System Binary for 100% Speed -> Pure Rust Engine Fallback
-    if let Ok(Some(extracted_count)) = try_native_system_extract(archive, out_dir, Some(&progress_tx), total_files_hint, total_bytes) {
+    if let Ok(Some(extracted_count)) = try_native_system_extract(
+        archive,
+        out_dir,
+        Some(&progress_tx),
+        total_files_hint,
+        total_bytes,
+    ) {
         return Ok(extracted_count);
     }
 
@@ -269,12 +275,24 @@ pub fn extract_archive_with_progress(
 
     // 2. .7z (Pure Rust via sevenz-rust)
     if lower_name.ends_with(".7z") {
-        return extract_7z(archive, out_dir, Some(&progress_tx), total_files_hint, total_bytes);
+        return extract_7z(
+            archive,
+            out_dir,
+            Some(&progress_tx),
+            total_files_hint,
+            total_bytes,
+        );
     }
 
     // 2b. .rar (System binary fallback: unrar, 7z, unar, bsdtar)
     if lower_name.ends_with(".rar") {
-        return extract_rar(archive, out_dir, Some(&progress_tx), total_files_hint, total_bytes);
+        return extract_rar(
+            archive,
+            out_dir,
+            Some(&progress_tx),
+            total_files_hint,
+            total_bytes,
+        );
     }
 
     // 3. .tar.gz / .tgz (High-throughput GZIP Stream + TAR)
@@ -282,7 +300,13 @@ pub fn extract_archive_with_progress(
         let file = File::open(archive)?;
         let buf_reader = BufReader::with_capacity(IO_BUFFER_SIZE, file);
         let gz = flate2::read::GzDecoder::new(buf_reader);
-        return extract_tar_stream(gz, out_dir, Some(&progress_tx), total_files_hint, total_bytes);
+        return extract_tar_stream(
+            gz,
+            out_dir,
+            Some(&progress_tx),
+            total_files_hint,
+            total_bytes,
+        );
     }
 
     // 4. .tar.bz2 / .tbz2 (BZIP2 Stream + TAR)
@@ -290,7 +314,13 @@ pub fn extract_archive_with_progress(
         let file = File::open(archive)?;
         let buf_reader = BufReader::with_capacity(IO_BUFFER_SIZE, file);
         let bz = bzip2::read::BzDecoder::new(buf_reader);
-        return extract_tar_stream(bz, out_dir, Some(&progress_tx), total_files_hint, total_bytes);
+        return extract_tar_stream(
+            bz,
+            out_dir,
+            Some(&progress_tx),
+            total_files_hint,
+            total_bytes,
+        );
     }
 
     // 5. .tar.xz / .txz (XZ Stream + TAR)
@@ -298,14 +328,26 @@ pub fn extract_archive_with_progress(
         let file = File::open(archive)?;
         let buf_reader = BufReader::with_capacity(IO_BUFFER_SIZE, file);
         let xz = xz2::read::XzDecoder::new(buf_reader);
-        return extract_tar_stream(xz, out_dir, Some(&progress_tx), total_files_hint, total_bytes);
+        return extract_tar_stream(
+            xz,
+            out_dir,
+            Some(&progress_tx),
+            total_files_hint,
+            total_bytes,
+        );
     }
 
     // 6. .tar (TAR Stream)
     if lower_name.ends_with(".tar") {
         let file = File::open(archive)?;
         let buf_reader = BufReader::with_capacity(IO_BUFFER_SIZE, file);
-        return extract_tar_stream(buf_reader, out_dir, Some(&progress_tx), total_files_hint, total_bytes);
+        return extract_tar_stream(
+            buf_reader,
+            out_dir,
+            Some(&progress_tx),
+            total_files_hint,
+            total_bytes,
+        );
     }
 
     // 7. Single Compressed Files (.gz, .bz2, .xz)
@@ -332,7 +374,11 @@ fn find_binary_path(cmd: &str) -> Option<String> {
             return Some(p.to_string_lossy().to_string());
         }
     }
-    let check_cmd = if cfg!(target_os = "windows") { "where" } else { "which" };
+    let check_cmd = if cfg!(target_os = "windows") {
+        "where"
+    } else {
+        "which"
+    };
     if let Ok(out) = Command::new(check_cmd).arg(cmd).output() {
         if out.status.success() {
             let path_str = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -356,11 +402,17 @@ fn try_native_system_extract(
     total_files_hint: usize,
     total_bytes: u64,
 ) -> Result<Option<usize>, ExtractionError> {
-    let lower_name = archive.file_name().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+    let lower_name = archive
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_lowercase();
     let abs_archive = if archive.is_absolute() {
         archive.to_path_buf()
     } else if let Some(parent) = archive.parent() {
-        let parent_abs = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
+        let parent_abs = parent
+            .canonicalize()
+            .unwrap_or_else(|_| parent.to_path_buf());
         if let Some(file_name) = archive.file_name() {
             parent_abs.join(file_name)
         } else {
@@ -397,7 +449,10 @@ fn try_native_system_extract(
                     abs_out.to_string_lossy().to_string(),
                 ],
             )
-        } else if let Some(bin) = find_binary_path("7z").or_else(|| find_binary_path("7za")).or_else(|| find_binary_path("7zz")) {
+        } else if let Some(bin) = find_binary_path("7z")
+            .or_else(|| find_binary_path("7za"))
+            .or_else(|| find_binary_path("7zz"))
+        {
             (
                 bin,
                 vec![
@@ -414,7 +469,10 @@ fn try_native_system_extract(
             return Ok(None);
         }
     } else if lower_name.ends_with(".7z") {
-        if let Some(bin) = find_binary_path("7z").or_else(|| find_binary_path("7za")).or_else(|| find_binary_path("7zz")) {
+        if let Some(bin) = find_binary_path("7z")
+            .or_else(|| find_binary_path("7za"))
+            .or_else(|| find_binary_path("7zz"))
+        {
             (
                 bin,
                 vec![
@@ -539,7 +597,11 @@ fn try_native_system_extract(
     let out_dir_buf = abs_out.clone();
     let total_b = total_bytes;
     let total_f = total_files_hint;
-    let binary_display = Path::new(&binary).file_name().unwrap_or_default().to_string_lossy().to_string();
+    let binary_display = Path::new(&binary)
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
     let bin_disp_clone = binary_display.clone();
 
     let ticker_handle = tx_ticker.as_ref().map(|tx| {
@@ -549,7 +611,7 @@ fn try_native_system_extract(
             while !stop_clone.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(150));
                 let raw_size = calculate_dir_bytes(&out_dir_buf);
-                
+
                 last_max_extracted = last_max_extracted.max(raw_size);
                 let current_bytes = last_max_extracted;
 
@@ -558,15 +620,26 @@ fn try_native_system_extract(
                 } else {
                     current_bytes
                 };
-                let est_ratio = if total_b > 0 { est_bytes as f64 / total_b as f64 } else { 0.0 };
-                let est_files = ((est_ratio * total_f as f64) as usize).max(1).min(total_f.saturating_sub(1).max(1));
+                let est_ratio = if total_b > 0 {
+                    est_bytes as f64 / total_b as f64
+                } else {
+                    0.0
+                };
+                let est_files = ((est_ratio * total_f as f64) as usize)
+                    .max(1)
+                    .min(total_f.saturating_sub(1).max(1));
 
                 let _ = tx.send(ExtractionProgressMsg::Progress {
                     files_extracted: est_files,
                     total_files: total_f,
                     bytes_extracted: est_bytes,
                     total_bytes: total_b,
-                    current_filename: format!("⚡ Extracting via Native '{}' Engine ({} threads)... ({} extracted)", bin_disp_clone, thread_count, format_bytes(est_bytes)),
+                    current_filename: format!(
+                        "⚡ Extracting via Native '{}' Engine ({} threads)... ({} extracted)",
+                        bin_disp_clone,
+                        thread_count,
+                        format_bytes(est_bytes)
+                    ),
                 });
             }
         })
@@ -770,7 +843,9 @@ fn extract_7z(
     let file_len = file.metadata()?.len();
 
     // 1. Multi-threaded Rayon parallel extraction for non-solid / multi-entry 7z archives
-    if let Ok(reader) = sevenz_rust::SevenZReader::new(file, file_len, sevenz_rust::Password::empty()) {
+    if let Ok(reader) =
+        sevenz_rust::SevenZReader::new(file, file_len, sevenz_rust::Password::empty())
+    {
         let entries: Vec<(String, u64, bool)> = reader
             .archive()
             .files
@@ -798,60 +873,71 @@ fn extract_7z(
                 let bytes_counter = Arc::new(AtomicU64::new(0));
                 let tx_clone = progress_tx.cloned();
 
-                file_entries.par_iter().for_each(|(entry_name, entry_size)| {
-                    let target_path = match sanitize_extract_path(out_dir, Path::new(entry_name)) {
-                        Ok(p) => p,
-                        Err(_) => return,
-                    };
+                file_entries
+                    .par_iter()
+                    .for_each(|(entry_name, entry_size)| {
+                        let target_path =
+                            match sanitize_extract_path(out_dir, Path::new(entry_name)) {
+                                Ok(p) => p,
+                                Err(_) => return,
+                            };
 
-                    if let Some(parent) = target_path.parent() {
-                        let _ = fs::create_dir_all(parent);
-                    }
+                        if let Some(parent) = target_path.parent() {
+                            let _ = fs::create_dir_all(parent);
+                        }
 
-                    if let Ok(f_handle) = File::open(archive) {
-                        if let Ok(mut thread_reader) = sevenz_rust::SevenZReader::new(f_handle, file_len, sevenz_rust::Password::empty()) {
-                            let mut buf = vec![0u8; IO_BUFFER_SIZE];
-                            if let Ok(out_file) = File::create(&target_path) {
-                                let mut writer = BufWriter::with_capacity(IO_BUFFER_SIZE, out_file);
-                                let mut written = 0u64;
+                        if let Ok(f_handle) = File::open(archive) {
+                            if let Ok(mut thread_reader) = sevenz_rust::SevenZReader::new(
+                                f_handle,
+                                file_len,
+                                sevenz_rust::Password::empty(),
+                            ) {
+                                let mut buf = vec![0u8; IO_BUFFER_SIZE];
+                                if let Ok(out_file) = File::create(&target_path) {
+                                    let mut writer =
+                                        BufWriter::with_capacity(IO_BUFFER_SIZE, out_file);
+                                    let mut written = 0u64;
 
-                                let _ = thread_reader.for_each_entries(|entry, r| {
-                                    if entry.name() == entry_name {
-                                        loop {
-                                            match r.read(&mut buf) {
-                                                Ok(0) => break,
-                                                Ok(n) => {
-                                                    if writer.write_all(&buf[..n]).is_err() {
-                                                        break;
+                                    let _ = thread_reader.for_each_entries(|entry, r| {
+                                        if entry.name() == entry_name {
+                                            loop {
+                                                match r.read(&mut buf) {
+                                                    Ok(0) => break,
+                                                    Ok(n) => {
+                                                        if writer.write_all(&buf[..n]).is_err() {
+                                                            break;
+                                                        }
+                                                        written += n as u64;
                                                     }
-                                                    written += n as u64;
+                                                    Err(_) => break,
                                                 }
-                                                Err(_) => break,
                                             }
+                                            Ok(false)
+                                        } else {
+                                            Ok(true)
                                         }
-                                        Ok(false)
-                                    } else {
-                                        Ok(true)
-                                    }
-                                });
-
-                                let _ = writer.flush();
-                                let cur_count = count_counter.fetch_add(1, Ordering::Relaxed) + 1;
-                                let cur_bytes = bytes_counter.fetch_add(written.max(*entry_size), Ordering::Relaxed) + written;
-
-                                if let Some(ref tx) = tx_clone {
-                                    let _ = tx.send(ExtractionProgressMsg::Progress {
-                                        files_extracted: cur_count,
-                                        total_files: total_files_hint.max(file_entries.len()),
-                                        bytes_extracted: cur_bytes,
-                                        total_bytes,
-                                        current_filename: entry_name.clone(),
                                     });
+
+                                    let _ = writer.flush();
+                                    let cur_count =
+                                        count_counter.fetch_add(1, Ordering::Relaxed) + 1;
+                                    let cur_bytes = bytes_counter
+                                        .fetch_add(written.max(*entry_size), Ordering::Relaxed)
+                                        + written;
+
+                                    if let Some(ref tx) = tx_clone {
+                                        let _ = tx.send(ExtractionProgressMsg::Progress {
+                                            files_extracted: cur_count,
+                                            total_files: total_files_hint.max(file_entries.len()),
+                                            bytes_extracted: cur_bytes,
+                                            total_bytes,
+                                            current_filename: entry_name.clone(),
+                                        });
+                                    }
                                 }
                             }
                         }
-                    }
-                });
+                    });
 
                 let extracted_count = count_counter.load(Ordering::Relaxed);
                 if extracted_count > 0 {
@@ -867,42 +953,47 @@ fn extract_7z(
     let bytes_extracted = Arc::new(AtomicU64::new(0));
     let bytes_extracted_clone = bytes_extracted.clone();
 
-    let res = sevenz_rust::decompress_file_with_extract_fn(archive, out_dir, move |entry, reader, _dest| {
-        let entry_name = entry.name().to_string();
-        let entry_size = entry.size();
-        let is_dir = entry.is_directory();
-        let target_path = match sanitize_extract_path(out_dir, Path::new(&entry_name)) {
-            Ok(p) => p,
-            Err(_) => return Ok(false),
-        };
+    let res = sevenz_rust::decompress_file_with_extract_fn(
+        archive,
+        out_dir,
+        move |entry, reader, _dest| {
+            let entry_name = entry.name().to_string();
+            let entry_size = entry.size();
+            let is_dir = entry.is_directory();
+            let target_path = match sanitize_extract_path(out_dir, Path::new(&entry_name)) {
+                Ok(p) => p,
+                Err(_) => return Ok(false),
+            };
 
-        if is_dir {
-            let _ = fs::create_dir_all(&target_path);
-        } else {
-            if let Some(parent) = target_path.parent() {
-                let _ = fs::create_dir_all(parent);
+            if is_dir {
+                let _ = fs::create_dir_all(&target_path);
+            } else {
+                if let Some(parent) = target_path.parent() {
+                    let _ = fs::create_dir_all(parent);
+                }
+                let out_file = File::create(&target_path)?;
+                let mut writer = BufWriter::with_capacity(IO_BUFFER_SIZE, out_file);
+                io::copy(reader, &mut writer)?;
+                writer.flush()?;
+                count += 1;
             }
-            let out_file = File::create(&target_path)?;
-            let mut writer = BufWriter::with_capacity(IO_BUFFER_SIZE, out_file);
-            io::copy(reader, &mut writer)?;
-            writer.flush()?;
-            count += 1;
-        }
 
-        let cur_bytes = bytes_extracted_clone.fetch_add(entry_size, Ordering::SeqCst) + entry_size;
+            let cur_bytes =
+                bytes_extracted_clone.fetch_add(entry_size, Ordering::SeqCst) + entry_size;
 
-        if let Some(ref tx) = tx_clone {
-            let _ = tx.send(ExtractionProgressMsg::Progress {
-                files_extracted: count,
-                total_files: total_files_hint,
-                bytes_extracted: cur_bytes,
-                total_bytes,
-                current_filename: entry_name,
-            });
-        }
+            if let Some(ref tx) = tx_clone {
+                let _ = tx.send(ExtractionProgressMsg::Progress {
+                    files_extracted: count,
+                    total_files: total_files_hint,
+                    bytes_extracted: cur_bytes,
+                    total_bytes,
+                    current_filename: entry_name,
+                });
+            }
 
-        Ok(true)
-    });
+            Ok(true)
+        },
+    );
 
     if let Err(_e) = res {
         sevenz_rust::decompress_file(archive, out_dir)
@@ -1016,7 +1107,8 @@ fn extract_rar(
     }
 
     Err(ExtractionError::UnsupportedFormat(
-        "RAR extraction requires 'unrar', '7z', 'unar', or 'bsdtar' installed on your system.".to_string(),
+        "RAR extraction requires 'unrar', '7z', 'unar', or 'bsdtar' installed on your system."
+            .to_string(),
     ))
 }
 
@@ -1192,7 +1284,9 @@ pub fn inspect_archive(archive_path: &Path) -> Result<ArchiveMetadata, String> {
 
     // 1b. 7-Zip (.7z) Inspection
     if lower_name.ends_with(".7z") {
-        if let Ok(sz) = sevenz_rust::SevenZReader::open(archive_path, sevenz_rust::Password::empty()) {
+        if let Ok(sz) =
+            sevenz_rust::SevenZReader::open(archive_path, sevenz_rust::Password::empty())
+        {
             let mut inner_files = Vec::new();
             let mut total_size = 0u64;
             let files_ref = &sz.archive().files;
@@ -1427,7 +1521,11 @@ impl ExtractorApp {
 
         if let Some(arc) = initial_archive {
             if let Ok(canonical) = fs::canonicalize(arc) {
-                if let Some(pos) = app.items.iter().position(|it| it.path == canonical || it.path == arc) {
+                if let Some(pos) = app
+                    .items
+                    .iter()
+                    .position(|it| it.path == canonical || it.path == arc)
+                {
                     let filtered_pos = app.filtered_indices.iter().position(|&idx| idx == pos);
                     if let Some(fp) = filtered_pos {
                         app.list_state.select(Some(fp));
@@ -1454,7 +1552,12 @@ impl ExtractorApp {
         let mut finished = false;
         for msg in msgs {
             match msg {
-                ExtractionProgressMsg::Started { archive_name, target_path, total_files, total_bytes } => {
+                ExtractionProgressMsg::Started {
+                    archive_name,
+                    target_path,
+                    total_files,
+                    total_bytes,
+                } => {
                     self.current_progress = Some(ExtractionProgressState {
                         archive_name,
                         target_path,
@@ -1466,7 +1569,13 @@ impl ExtractorApp {
                         start_time: Instant::now(),
                     });
                 }
-                ExtractionProgressMsg::Progress { files_extracted, total_files, bytes_extracted, total_bytes, current_filename } => {
+                ExtractionProgressMsg::Progress {
+                    files_extracted,
+                    total_files,
+                    bytes_extracted,
+                    total_bytes,
+                    current_filename,
+                } => {
                     if let Some(ref mut st) = self.current_progress {
                         st.files_extracted = files_extracted;
                         if total_files > 0 {
@@ -1487,7 +1596,12 @@ impl ExtractorApp {
                         }
                     }
                 }
-                ExtractionProgressMsg::Completed { files_extracted, total_bytes, target_path, elapsed_ms } => {
+                ExtractionProgressMsg::Completed {
+                    files_extracted,
+                    total_bytes,
+                    target_path,
+                    elapsed_ms,
+                } => {
                     let msg_str = format!(
                         "✨ Extracted {} file(s) ({}) to '{}' in {} ms!",
                         files_extracted,
@@ -1495,7 +1609,11 @@ impl ExtractorApp {
                         target_path.display(),
                         elapsed_ms
                     );
-                    let archive_name = self.current_progress.as_ref().map(|p| p.archive_name.clone()).unwrap_or_default();
+                    let archive_name = self
+                        .current_progress
+                        .as_ref()
+                        .map(|p| p.archive_name.clone())
+                        .unwrap_or_default();
                     self.last_completed = Some(ExtractionCompletedState {
                         archive_name,
                         files_extracted,
@@ -1638,8 +1756,12 @@ impl ExtractorApp {
                 }
             }
             scored.sort_by(|a, b| {
-                b.1.cmp(&a.1)
-                    .then_with(|| self.items[a.0].name.to_lowercase().cmp(&self.items[b.0].name.to_lowercase()))
+                b.1.cmp(&a.1).then_with(|| {
+                    self.items[a.0]
+                        .name
+                        .to_lowercase()
+                        .cmp(&self.items[b.0].name.to_lowercase())
+                })
             });
             self.filtered_indices = scored.into_iter().map(|(idx, _)| idx).collect();
         }
@@ -1740,20 +1862,28 @@ impl ExtractorApp {
         let archive_path = match &self.selected_archive {
             Some(p) => p.clone(),
             None => {
-                self.status_msg = Some(("Please select an archive file to extract!".to_string(), false));
+                self.status_msg = Some((
+                    "Please select an archive file to extract!".to_string(),
+                    false,
+                ));
                 return;
             }
         };
 
         let total_bytes = fs::metadata(&archive_path).map(|m| m.len()).unwrap_or(0);
-        let total_files = self.archive_meta.as_ref().map(|m| m.total_files).unwrap_or(0);
+        let total_files = self
+            .archive_meta
+            .as_ref()
+            .map(|m| m.total_files)
+            .unwrap_or(0);
 
         let archive_dir = archive_path
             .parent()
             .unwrap_or_else(|| Path::new("."))
             .to_path_buf();
 
-        let base_out = if !self.user_custom_dest || self.dest_dir == "." || self.dest_dir.is_empty() {
+        let base_out = if !self.user_custom_dest || self.dest_dir == "." || self.dest_dir.is_empty()
+        {
             archive_dir
         } else {
             PathBuf::from(&self.dest_dir)
@@ -1770,7 +1900,8 @@ impl ExtractorApp {
             archive_stem
         };
 
-        let make_subfolder = should_create_subfolder(self.archive_meta.as_ref(), self.extract_to_subfolder);
+        let make_subfolder =
+            should_create_subfolder(self.archive_meta.as_ref(), self.extract_to_subfolder);
 
         let final_out = if make_subfolder {
             base_out.join(clean_stem)
@@ -1909,7 +2040,11 @@ pub fn score_fuzzy_item(query: &str, relative_path: &str, case_sensitive: bool) 
     let (q, name, path) = if case_sensitive {
         (query.to_string(), file_name, relative_path.to_string())
     } else {
-        (query.to_lowercase(), file_name.to_lowercase(), relative_path.to_lowercase())
+        (
+            query.to_lowercase(),
+            file_name.to_lowercase(),
+            relative_path.to_lowercase(),
+        )
     };
 
     if name == q {
@@ -2197,7 +2332,8 @@ fn main_loop(
                             _ => {}
                         },
                         KeyCode::Backspace | KeyCode::Left | KeyCode::Char('h') => {
-                            if let Some(parent) = app.current_dir.parent().map(|p| p.to_path_buf()) {
+                            if let Some(parent) = app.current_dir.parent().map(|p| p.to_path_buf())
+                            {
                                 app.current_dir = parent;
                                 app.refresh_directory();
                             }
@@ -2297,7 +2433,10 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         .unwrap_or_else(|| app.dest_dir.clone());
 
     let header_title = if app.is_extracting {
-        format!(" 🚀 EXTRACTION OPERATIONS DASHBOARD — {} DECOMPRESSING ", spinner)
+        format!(
+            " 🚀 EXTRACTION OPERATIONS DASHBOARD — {} DECOMPRESSING ",
+            spinner
+        )
     } else {
         " ✨ EXTRACTION OPERATIONS COMPLETE ".to_string()
     };
@@ -2305,7 +2444,9 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
     let header_block = Block::default()
         .title(Span::styled(
             header_title,
-            Style::default().fg(if app.is_extracting { C_ACCENT } else { C_GREEN }).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(if app.is_extracting { C_ACCENT } else { C_GREEN })
+                .add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -2314,54 +2455,83 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
 
     let header_text = Line::from(vec![
         Span::styled("📦 Archive: ", Style::default().fg(C_DIM)),
-        Span::styled(archive_name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            archive_name,
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("  ➔  🎯 Target: ", Style::default().fg(C_DIM)),
         Span::styled(target_path_str, Style::default().fg(C_CYAN)),
     ]);
-    f.render_widget(Paragraph::new(header_text).block(header_block), dashboard_chunks[0]);
+    f.render_widget(
+        Paragraph::new(header_text).block(header_block),
+        dashboard_chunks[0],
+    );
 
     // 2. High-Tech Main Gauge Bar
-    let (ratio, label_str, bytes_ext, bytes_tot, files_ext, files_tot, elapsed_sec) = if let Some(ref prog) = app.current_progress {
-        let files_ext = prog.files_extracted;
-        let files_tot = prog.total_files;
-        let bytes_ext = prog.bytes_extracted;
-        let bytes_tot = prog.total_bytes;
-        let elapsed = prog.start_time.elapsed().as_secs_f64().max(0.001);
+    let (ratio, label_str, bytes_ext, bytes_tot, files_ext, files_tot, elapsed_sec) =
+        if let Some(ref prog) = app.current_progress {
+            let files_ext = prog.files_extracted;
+            let files_tot = prog.total_files;
+            let bytes_ext = prog.bytes_extracted;
+            let bytes_tot = prog.total_bytes;
+            let elapsed = prog.start_time.elapsed().as_secs_f64().max(0.001);
 
-        let ratio = if bytes_tot > 0 {
-            (bytes_ext as f64 / bytes_tot as f64).clamp(0.0, 1.0)
-        } else if files_tot > 0 {
-            (files_ext as f64 / files_tot as f64).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
+            let ratio = if bytes_tot > 0 {
+                (bytes_ext as f64 / bytes_tot as f64).clamp(0.0, 1.0)
+            } else if files_tot > 0 {
+                (files_ext as f64 / files_tot as f64).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
 
-        let speed_mb = (bytes_ext as f64 / (1024.0 * 1024.0)) / elapsed;
-        let ext_mb = bytes_ext as f64 / (1024.0 * 1024.0);
-        let tot_mb = bytes_tot as f64 / (1024.0 * 1024.0);
+            let speed_mb = (bytes_ext as f64 / (1024.0 * 1024.0)) / elapsed;
+            let ext_mb = bytes_ext as f64 / (1024.0 * 1024.0);
+            let tot_mb = bytes_tot as f64 / (1024.0 * 1024.0);
 
-        let label = if bytes_tot > 0 {
-            format!(
-                " {} {:.1}% | {:.1} MB / {:.1} MB @ {:.1} MB/s ",
-                spinner, ratio * 100.0, ext_mb, tot_mb, speed_mb
+            let label = if bytes_tot > 0 {
+                format!(
+                    " {} {:.1}% | {:.1} MB / {:.1} MB @ {:.1} MB/s ",
+                    spinner,
+                    ratio * 100.0,
+                    ext_mb,
+                    tot_mb,
+                    speed_mb
+                )
+            } else {
+                format!(" {} Extracted {} file(s) ", spinner, files_ext)
+            };
+
+            (
+                ratio, label, bytes_ext, bytes_tot, files_ext, files_tot, elapsed,
+            )
+        } else if let Some(ref comp) = app.last_completed {
+            let elapsed = (comp.elapsed_ms as f64 / 1000.0).max(0.001);
+            let ext_mb = comp.total_bytes as f64 / (1024.0 * 1024.0);
+            let speed_mb = ext_mb / elapsed;
+            let label = format!(
+                " ✨ 100.0% COMPLETE | {:.1} MB Unpacked in {:.2}s @ {:.1} MB/s ",
+                ext_mb, elapsed, speed_mb
+            );
+            (
+                1.0,
+                label,
+                comp.total_bytes,
+                comp.total_bytes,
+                comp.files_extracted,
+                comp.files_extracted,
+                elapsed,
             )
         } else {
-            format!(" {} Extracted {} file(s) ", spinner, files_ext)
+            (
+                0.0,
+                " Preparing extraction... ".to_string(),
+                0,
+                0,
+                0,
+                0,
+                0.001,
+            )
         };
-
-        (ratio, label, bytes_ext, bytes_tot, files_ext, files_tot, elapsed)
-    } else if let Some(ref comp) = app.last_completed {
-        let elapsed = (comp.elapsed_ms as f64 / 1000.0).max(0.001);
-        let ext_mb = comp.total_bytes as f64 / (1024.0 * 1024.0);
-        let speed_mb = ext_mb / elapsed;
-        let label = format!(
-            " ✨ 100.0% COMPLETE | {:.1} MB Unpacked in {:.2}s @ {:.1} MB/s ",
-            ext_mb, elapsed, speed_mb
-        );
-        (1.0, label, comp.total_bytes, comp.total_bytes, comp.files_extracted, comp.files_extracted, elapsed)
-    } else {
-        (0.0, " Preparing extraction... ".to_string(), 0, 0, 0, 0, 0.001)
-    };
 
     let gauge_border = if app.is_extracting { C_ACCENT } else { C_GREEN };
     let gauge = Gauge::default()
@@ -2379,7 +2549,10 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .ratio(ratio)
-        .label(Span::styled(label_str, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)));
+        .label(Span::styled(
+            label_str,
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ));
 
     f.render_widget(gauge, dashboard_chunks[1]);
 
@@ -2412,10 +2585,16 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         .style(Style::default().bg(C_PANEL_BG));
     let card1_val = format!("{:.2} MB/s", speed_mb_s);
     let card1_text = vec![
-        Line::from(Span::styled(card1_val, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            card1_val,
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        )),
         Line::from(Span::styled("Throughput Rate", Style::default().fg(C_DIM))),
     ];
-    f.render_widget(Paragraph::new(card1_text).block(card1_block), stat_chunks[0]);
+    f.render_widget(
+        Paragraph::new(card1_text).block(card1_block),
+        stat_chunks[0],
+    );
 
     // Card 2: Payload Unpacked
     let card2_block = Block::default()
@@ -2430,10 +2609,19 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         bytes_tot as f64 / (1024.0 * 1024.0)
     );
     let card2_text = vec![
-        Line::from(Span::styled(card2_val, Style::default().fg(C_MAGENTA).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format_bytes(bytes_ext), Style::default().fg(C_DIM))),
+        Line::from(Span::styled(
+            card2_val,
+            Style::default().fg(C_MAGENTA).add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            format_bytes(bytes_ext),
+            Style::default().fg(C_DIM),
+        )),
     ];
-    f.render_widget(Paragraph::new(card2_text).block(card2_block), stat_chunks[1]);
+    f.render_widget(
+        Paragraph::new(card2_text).block(card2_block),
+        stat_chunks[1],
+    );
 
     // Card 3: ETA & Time
     let card3_block = Block::default()
@@ -2448,10 +2636,23 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         format!("{:.2}s Total", elapsed_sec)
     };
     let card3_text = vec![
-        Line::from(Span::styled(card3_val, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(if app.is_extracting { "Decompressing..." } else { "Finished" }, Style::default().fg(C_DIM))),
+        Line::from(Span::styled(
+            card3_val,
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            if app.is_extracting {
+                "Decompressing..."
+            } else {
+                "Finished"
+            },
+            Style::default().fg(C_DIM),
+        )),
     ];
-    f.render_widget(Paragraph::new(card3_text).block(card3_block), stat_chunks[2]);
+    f.render_widget(
+        Paragraph::new(card3_text).block(card3_block),
+        stat_chunks[2],
+    );
 
     // Card 4: File Count
     let card4_block = Block::default()
@@ -2466,10 +2667,16 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         format!("{} Files", files_ext)
     };
     let card4_text = vec![
-        Line::from(Span::styled(card4_val, Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            card4_val,
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )),
         Line::from(Span::styled("Extracted Count", Style::default().fg(C_DIM))),
     ];
-    f.render_widget(Paragraph::new(card4_text).block(card4_block), stat_chunks[3]);
+    f.render_widget(
+        Paragraph::new(card4_text).block(card4_block),
+        stat_chunks[3],
+    );
 
     // 4. Real-time Log Stream OR Completion Banner
     if app.is_extracting {
@@ -2493,7 +2700,10 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
             })
             .collect();
 
-        f.render_widget(List::new(log_items).block(stream_block), dashboard_chunks[3]);
+        f.render_widget(
+            List::new(log_items).block(stream_block),
+            dashboard_chunks[3],
+        );
     } else if let Some(ref comp) = app.last_completed {
         let celeb_block = Block::default()
             .title(" ✨ EXTRACTION COMPLETED SUCCESSFULLY ")
@@ -2502,22 +2712,32 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
             .border_style(Style::default().fg(C_GREEN))
             .style(Style::default().bg(C_PANEL_BG));
 
-        let avg_speed = (comp.total_bytes as f64 / (1024.0 * 1024.0)) / (comp.elapsed_ms as f64 / 1000.0).max(0.001);
+        let avg_speed = (comp.total_bytes as f64 / (1024.0 * 1024.0))
+            / (comp.elapsed_ms as f64 / 1000.0).max(0.001);
 
         let celeb_lines = vec![
             Line::from(""),
             Line::from(vec![
                 Span::raw("   "),
-                Span::styled("🎉 EXTRACTION COMPLETE! 100% SUCCESS", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "🎉 EXTRACTION COMPLETE! 100% SUCCESS",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("   📦 Archive Name:    "),
-                Span::styled(&comp.archive_name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &comp.archive_name,
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::raw("   📄 Total Files:     "),
-                Span::styled(format!("{} files", comp.files_extracted), Style::default().fg(C_YELLOW)),
+                Span::styled(
+                    format!("{} files", comp.files_extracted),
+                    Style::default().fg(C_YELLOW),
+                ),
             ]),
             Line::from(vec![
                 Span::raw("   💾 Total Size:      "),
@@ -2525,20 +2745,39 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
             ]),
             Line::from(vec![
                 Span::raw("   ⏱️ Total Elapsed:   "),
-                Span::styled(format!("{} ms ({:.2}s)", comp.elapsed_ms, comp.elapsed_ms as f64 / 1000.0), Style::default().fg(C_CYAN)),
+                Span::styled(
+                    format!(
+                        "{} ms ({:.2}s)",
+                        comp.elapsed_ms,
+                        comp.elapsed_ms as f64 / 1000.0
+                    ),
+                    Style::default().fg(C_CYAN),
+                ),
             ]),
             Line::from(vec![
                 Span::raw("   ⚡ Average Speed:   "),
-                Span::styled(format!("{:.2} MB/s", avg_speed), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{:.2} MB/s", avg_speed),
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("   "),
-                Span::styled("[ PRESS ENTER / SPACE / ESC TO RETURN TO EXPLORER ]", Style::default().bg(C_GREEN).fg(C_BG).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[ PRESS ENTER / SPACE / ESC TO RETURN TO EXPLORER ]",
+                    Style::default()
+                        .bg(C_GREEN)
+                        .fg(C_BG)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
         ];
 
-        f.render_widget(Paragraph::new(celeb_lines).block(celeb_block), dashboard_chunks[3]);
+        f.render_widget(
+            Paragraph::new(celeb_lines).block(celeb_block),
+            dashboard_chunks[3],
+        );
     } else {
         let stream_block = Block::default()
             .title(" 📜 EXTRACTION LOG ")
@@ -2554,26 +2793,47 @@ fn render_extraction_dashboard(f: &mut Frame, app: &ExtractorApp, area: Rect) {
             .map(|line| ListItem::new(Line::from(Span::styled(line, Style::default().fg(C_TEXT)))))
             .collect();
 
-        f.render_widget(List::new(log_items).block(stream_block), dashboard_chunks[3]);
+        f.render_widget(
+            List::new(log_items).block(stream_block),
+            dashboard_chunks[3],
+        );
     }
 
     // 5. Footer
     let footer_text = if app.is_extracting {
         Line::from(vec![
-            Span::styled(" [Esc] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled("Back to Explorer (Extraction continues in background)  ", Style::default().fg(C_TEXT)),
-            Span::styled(" [q] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Esc] ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "Back to Explorer (Extraction continues in background)  ",
+                Style::default().fg(C_TEXT),
+            ),
+            Span::styled(
+                " [q] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Explorer View", Style::default().fg(C_TEXT)),
         ])
     } else {
         Line::from(vec![
-            Span::styled(" [Enter/Space/Esc] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Enter/Space/Esc] ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Return to Archive Explorer  ", Style::default().fg(C_TEXT)),
-            Span::styled(" [q] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [q] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Quit Extractor", Style::default().fg(C_TEXT)),
         ])
     };
-    f.render_widget(Paragraph::new(footer_text).style(Style::default().bg(C_BG)), dashboard_chunks[4]);
+    f.render_widget(
+        Paragraph::new(footer_text).style(Style::default().bg(C_BG)),
+        dashboard_chunks[4],
+    );
 }
 
 fn render_header(f: &mut Frame, app: &ExtractorApp, area: Rect) {
@@ -2583,7 +2843,10 @@ fn render_header(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         .border_style(Style::default().fg(C_BORDER))
         .style(Style::default().bg(C_BG));
 
-    let filter_badge = Span::styled(" [HOME ARCHIVES] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD));
+    let filter_badge = Span::styled(
+        " [HOME ARCHIVES] ",
+        Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+    );
 
     let dir_span = Span::styled(
         format!(" 📂 {}", app.current_dir.display()),
@@ -2594,7 +2857,8 @@ fn render_header(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         let spinner = SPINNER_FRAMES[app.spinner_idx % SPINNER_FRAMES.len()];
         let pct_str = if let Some(ref prog) = app.current_progress {
             if prog.total_files > 0 {
-                let pct = ((prog.files_extracted as f64 / prog.total_files as f64) * 100.0).clamp(0.0, 100.0);
+                let pct = ((prog.files_extracted as f64 / prog.total_files as f64) * 100.0)
+                    .clamp(0.0, 100.0);
                 format!(" {:.0}%", pct)
             } else {
                 String::new()
@@ -2604,24 +2868,39 @@ fn render_header(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         };
         Span::styled(
             format!(" [{} EXTRACTING IN PROGRESS...{}] ", spinner, pct_str),
-            Style::default().fg(C_YELLOW).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(C_YELLOW)
+                .bg(C_SELECTED_BG)
+                .add_modifier(Modifier::BOLD),
         )
     } else if let Some(ref comp) = app.last_completed {
         if comp.finished_at.elapsed().as_secs() < 12 {
             Span::styled(
-                format!(" [✨ EXTRACTION COMPLETE (100%) - {} file(s) in {}ms] ", comp.files_extracted, comp.elapsed_ms),
-                Style::default().fg(C_BG).bg(C_GREEN).add_modifier(Modifier::BOLD),
+                format!(
+                    " [✨ EXTRACTION COMPLETE (100%) - {} file(s) in {}ms] ",
+                    comp.files_extracted, comp.elapsed_ms
+                ),
+                Style::default()
+                    .fg(C_BG)
+                    .bg(C_GREEN)
+                    .add_modifier(Modifier::BOLD),
             )
         } else {
             Span::styled(
                 " 📦 GLADESHELL ARCHIVE EXTRACTOR (RIPGREP ENGINE) ",
-                Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(C_WHITE)
+                    .bg(C_SELECTED_BG)
+                    .add_modifier(Modifier::BOLD),
             )
         }
     } else {
         Span::styled(
             " 📦 GLADESHELL ARCHIVE EXTRACTOR (RIPGREP ENGINE) ",
-            Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(C_WHITE)
+                .bg(C_SELECTED_BG)
+                .add_modifier(Modifier::BOLD),
         )
     };
 
@@ -2640,20 +2919,14 @@ fn render_header(f: &mut Frame, app: &ExtractorApp, area: Rect) {
 fn render_main_split(f: &mut Frame, app: &ExtractorApp, area: Rect) {
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(45),
-            Constraint::Percentage(55),
-        ])
+        .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
         .split(area);
 
     render_explorer_pane(f, app, main_chunks[0]);
 
     let right_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(55),
-            Constraint::Percentage(45),
-        ])
+        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
         .split(main_chunks[1]);
 
     render_inspector_pane(f, app, right_chunks[0]);
@@ -2688,14 +2961,19 @@ fn render_explorer_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
 
     let explorer_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(5),
-        ])
+        .constraints([Constraint::Length(3), Constraint::Min(5)])
         .split(inner_area);
 
-    let search_border = if app.search_active { C_ACCENT } else { C_BORDER_DIM };
-    let search_title = if app.search_active { " 🔍 Searching Archives... (Esc/Enter to finish) " } else { " 🔍 Live Search Archives [/] " };
+    let search_border = if app.search_active {
+        C_ACCENT
+    } else {
+        C_BORDER_DIM
+    };
+    let search_title = if app.search_active {
+        " 🔍 Searching Archives... (Esc/Enter to finish) "
+    } else {
+        " 🔍 Live Search Archives [/] "
+    };
     let search_block = Block::default()
         .title(search_title)
         .borders(Borders::ALL)
@@ -2715,10 +2993,7 @@ fn render_explorer_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
             let line = Line::from(vec![
                 Span::styled(item.icon, Style::default().fg(item.color)),
                 Span::styled(&item.name, Style::default().fg(C_WHITE)),
-                Span::styled(
-                    format!("  {}", size_str),
-                    Style::default().fg(C_DIM),
-                ),
+                Span::styled(format!("  {}", size_str), Style::default().fg(C_DIM)),
             ]);
 
             ListItem::new(line)
@@ -2755,13 +3030,19 @@ fn render_inspector_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         let text_lines = vec![
             Line::from(vec![
                 Span::styled("Archive: ", Style::default().fg(C_DIM)),
-                Span::styled(&meta.file_name, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &meta.file_name,
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Format: ", Style::default().fg(C_DIM)),
                 Span::styled(meta.format_name, Style::default().fg(C_GREEN)),
                 Span::styled(" | Total Files: ", Style::default().fg(C_DIM)),
-                Span::styled(format!("{}", meta.total_files), Style::default().fg(C_YELLOW)),
+                Span::styled(
+                    format!("{}", meta.total_files),
+                    Style::default().fg(C_YELLOW),
+                ),
                 Span::styled(" | Size: ", Style::default().fg(C_DIM)),
                 Span::styled(format_bytes(meta.total_size), Style::default().fg(C_BLUE)),
             ]),
@@ -2776,10 +3057,19 @@ fn render_inspector_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         for (idx, inner) in meta.inner_files.iter().skip(app.preview_scroll).enumerate() {
             let icon = if inner.is_dir { "📁 " } else { "📄 " };
             let line = Line::from(vec![
-                Span::styled(format!(" {:3}. ", idx + 1 + app.preview_scroll), Style::default().fg(C_DIM)),
-                Span::styled(icon, Style::default().fg(if inner.is_dir { C_YELLOW } else { C_TEXT })),
+                Span::styled(
+                    format!(" {:3}. ", idx + 1 + app.preview_scroll),
+                    Style::default().fg(C_DIM),
+                ),
+                Span::styled(
+                    icon,
+                    Style::default().fg(if inner.is_dir { C_YELLOW } else { C_TEXT }),
+                ),
                 Span::styled(&inner.name, Style::default().fg(C_WHITE)),
-                Span::styled(format!(" ({})", format_bytes(inner.size)), Style::default().fg(C_DIM)),
+                Span::styled(
+                    format!(" ({})", format_bytes(inner.size)),
+                    Style::default().fg(C_DIM),
+                ),
             ]);
             file_items.push(ListItem::new(line));
         }
@@ -2787,8 +3077,10 @@ fn render_inspector_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         let list = List::new(file_items);
         f.render_widget(list, inner_area);
     } else {
-        let msg = Paragraph::new("\n  👈 Highlight an archive file in Explorer to inspect payload contents.")
-            .style(Style::default().fg(C_DIM));
+        let msg = Paragraph::new(
+            "\n  👈 Highlight an archive file in Explorer to inspect payload contents.",
+        )
+        .style(Style::default().fg(C_DIM));
         f.render_widget(msg, inner_area);
     }
 }
@@ -2834,7 +3126,11 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         .constraints(constraints)
         .split(inner_area);
 
-    let dest_border = if app.editing_dest { C_ACCENT } else { C_BORDER_DIM };
+    let dest_border = if app.editing_dest {
+        C_ACCENT
+    } else {
+        C_BORDER_DIM
+    };
     let dest_title = if app.editing_dest {
         " 🎯 Destination Path (Editing... Press Enter/Esc) "
     } else {
@@ -2850,7 +3146,10 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
     f.render_widget(dest_p, chunks[0]);
 
     let subfolder_toggle = if app.extract_to_subfolder {
-        Span::styled("[x] Auto Subfolder [S]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+        Span::styled(
+            "[x] Auto Subfolder [S]",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )
     } else {
         Span::styled("[ ] Extract Here [S]", Style::default().fg(C_DIM))
     };
@@ -2859,25 +3158,30 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
         let spinner = SPINNER_FRAMES[app.spinner_idx % SPINNER_FRAMES.len()];
         Span::styled(
             format!(" {} EXTRACTING... [Space/Enter Disabled] ", spinner),
-            Style::default().bg(C_YELLOW).fg(C_BG).add_modifier(Modifier::BOLD),
+            Style::default()
+                .bg(C_YELLOW)
+                .fg(C_BG)
+                .add_modifier(Modifier::BOLD),
         )
     } else if has_recent_completed {
         Span::styled(
             " ✨ COMPLETE (100%) [Press Space to Extract Again] ",
-            Style::default().bg(C_GREEN).fg(C_BG).add_modifier(Modifier::BOLD),
+            Style::default()
+                .bg(C_GREEN)
+                .fg(C_BG)
+                .add_modifier(Modifier::BOLD),
         )
     } else {
         Span::styled(
             " ⚡ EXTRACT NOW [Space/Enter] ",
-            Style::default().bg(C_GREEN).fg(C_BG).add_modifier(Modifier::BOLD),
+            Style::default()
+                .bg(C_GREEN)
+                .fg(C_BG)
+                .add_modifier(Modifier::BOLD),
         )
     };
 
-    let toggle_line = Line::from(vec![
-        subfolder_toggle,
-        Span::raw("    "),
-        extract_btn,
-    ]);
+    let toggle_line = Line::from(vec![subfolder_toggle, Span::raw("    "), extract_btn]);
     let toggle_p = Paragraph::new(toggle_line);
     f.render_widget(toggle_p, chunks[1]);
 
@@ -2895,7 +3199,11 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
 
                 let filename_char_count = prog.current_filename.chars().count();
                 let file_short = if filename_char_count > 32 {
-                    let tail: String = prog.current_filename.chars().skip(filename_char_count.saturating_sub(29)).collect();
+                    let tail: String = prog
+                        .current_filename
+                        .chars()
+                        .skip(filename_char_count.saturating_sub(29))
+                        .collect();
                     format!("...{}", tail)
                 } else if prog.current_filename.is_empty() {
                     "Decompressing payload...".to_string()
@@ -2904,7 +3212,14 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
                 };
 
                 let label_str = if total > 0 {
-                    format!("{} {:.1}% ({}/{} files) - {}", spinner, ratio * 100.0, files, total, file_short)
+                    format!(
+                        "{} {:.1}% ({}/{} files) - {}",
+                        spinner,
+                        ratio * 100.0,
+                        files,
+                        total,
+                        file_short
+                    )
                 } else {
                     format!("{} Extracted {} file(s) - {}", spinner, files, file_short)
                 };
@@ -2919,7 +3234,10 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
                     )
                     .gauge_style(Style::default().fg(C_ACCENT).bg(C_PANEL_BG))
                     .ratio(ratio)
-                    .label(Span::styled(label_str, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)));
+                    .label(Span::styled(
+                        label_str,
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ));
 
                 f.render_widget(gauge, chunks[2]);
             }
@@ -2938,7 +3256,10 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
                 )
                 .gauge_style(Style::default().fg(C_GREEN).bg(C_PANEL_BG))
                 .ratio(1.0)
-                .label(Span::styled(label_str, Style::default().fg(C_BG).add_modifier(Modifier::BOLD)));
+                .label(Span::styled(
+                    label_str,
+                    Style::default().fg(C_BG).add_modifier(Modifier::BOLD),
+                ));
 
             f.render_widget(gauge, chunks[2]);
         }
@@ -2978,24 +3299,44 @@ fn render_settings_pane(f: &mut Frame, app: &ExtractorApp, area: Rect) {
 
 fn render_footer(f: &mut Frame, _app: &ExtractorApp, area: Rect) {
     let footer_line = Line::from(vec![
-        Span::styled(" [Enter/L] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Enter/L] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Extract/Open  ", Style::default().fg(C_TEXT)),
-        Span::styled(" [Space] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Space] ",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Extract  ", Style::default().fg(C_TEXT)),
-        Span::styled(" [/] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [/] ",
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Filter  ", Style::default().fg(C_TEXT)),
-        Span::styled(" [F] ", Style::default().fg(C_MAGENTA).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [F] ",
+            Style::default().fg(C_MAGENTA).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Archives Toggle  ", Style::default().fg(C_TEXT)),
-        Span::styled(" [O] ", Style::default().fg(C_BLUE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [O] ",
+            Style::default().fg(C_BLUE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Dest Dir  ", Style::default().fg(C_TEXT)),
-        Span::styled(" [Tab] ", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [Tab] ",
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Switch Pane  ", Style::default().fg(C_TEXT)),
-        Span::styled(" [q/Esc] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [q/Esc] ",
+            Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Quit", Style::default().fg(C_TEXT)),
     ]);
 
-    let paragraph = Paragraph::new(footer_line)
-        .style(Style::default().bg(C_BG));
+    let paragraph = Paragraph::new(footer_line).style(Style::default().bg(C_BG));
     f.render_widget(paragraph, area);
 }
 
@@ -3053,8 +3394,16 @@ mod tests {
             total_files: 2,
             total_size: 2048,
             inner_files: vec![
-                InnerFileItem { name: "project/file1.txt".into(), size: 1024, is_dir: false },
-                InnerFileItem { name: "project/file2.txt".into(), size: 1024, is_dir: false },
+                InnerFileItem {
+                    name: "project/file1.txt".into(),
+                    size: 1024,
+                    is_dir: false,
+                },
+                InnerFileItem {
+                    name: "project/file2.txt".into(),
+                    size: 1024,
+                    is_dir: false,
+                },
             ],
         };
         assert!(!should_create_subfolder(Some(&meta), true));
@@ -3068,8 +3417,16 @@ mod tests {
             total_files: 2,
             total_size: 2048,
             inner_files: vec![
-                InnerFileItem { name: "video1.mp4".into(), size: 1024, is_dir: false },
-                InnerFileItem { name: "video2.mp4".into(), size: 1024, is_dir: false },
+                InnerFileItem {
+                    name: "video1.mp4".into(),
+                    size: 1024,
+                    is_dir: false,
+                },
+                InnerFileItem {
+                    name: "video2.mp4".into(),
+                    size: 1024,
+                    is_dir: false,
+                },
             ],
         };
         assert!(should_create_subfolder(Some(&meta), true));
@@ -3077,7 +3434,10 @@ mod tests {
 
     #[test]
     fn test_extract_7z_flat_path_structure() {
-        let base_tmp = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("target").join("test_tmp");
+        let base_tmp = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("target")
+            .join("test_tmp");
         let temp_dir = base_tmp.join(format!("unittest_7z_flat_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
@@ -3096,7 +3456,10 @@ mod tests {
 
         // Verify file is extracted directly into out_dir (or wrapped if single top-level), NOT nested inside sample.mp4/sample.mp4
         let nested_wrong = out_dir.join("sample.mp4").join("sample.mp4");
-        assert!(!nested_wrong.exists(), "File should NOT be nested inside sample.mp4 folder!");
+        assert!(
+            !nested_wrong.exists(),
+            "File should NOT be nested inside sample.mp4 folder!"
+        );
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

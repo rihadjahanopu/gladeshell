@@ -21,7 +21,10 @@ pub fn run(name: &str) -> Result<(), Box<dyn Error>> {
 
     let target = Path::new(name);
     if !target.exists() {
-        println!("\x1b[1;31m❌ File or directory does not exist: {}\x1b[0m", name);
+        println!(
+            "\x1b[1;31m❌ File or directory does not exist: {}\x1b[0m",
+            name
+        );
         return Ok(());
     }
 
@@ -72,7 +75,6 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
     }
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {

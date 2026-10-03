@@ -200,7 +200,8 @@ impl App {
                     self.state = AppState::Done;
                     self.running_idx = None;
                     self.log_lines.push("".to_string());
-                    self.log_lines.push("✨ System package updates completed!".to_string());
+                    self.log_lines
+                        .push("✨ System package updates completed!".to_string());
                 }
             }
         }
@@ -419,12 +420,19 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     };
 
                     // Bug 1 fix: join threads BEFORE sending ToolFinished — no lost logs
-                    if let Some(h) = handle_out { let _ = h.join(); }
-                    if let Some(h) = handle_err { let _ = h.join(); }
+                    if let Some(h) = handle_out {
+                        let _ = h.join();
+                    }
+                    if let Some(h) = handle_err {
+                        let _ = h.join();
+                    }
 
                     let success = status.map(|s| s.success()).unwrap_or(false);
                     if success {
-                        let _ = tx.send(Msg::Log(format!("✅ Finished updating {} successfully.", spec.name)));
+                        let _ = tx.send(Msg::Log(format!(
+                            "✅ Finished updating {} successfully.",
+                            spec.name
+                        )));
                         let _ = tx.send(Msg::ToolFinished(idx, true, "Completed".to_string()));
                     } else {
                         let _ = tx.send(Msg::Log(format!("❌ Update failed for {}.", spec.name)));
@@ -516,20 +524,39 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         0
     };
     let is_done = app.state == AppState::Done;
-    let tick_spin = if is_done { "✨" } else { spinner_frame(app.tick) };
+    let tick_spin = if is_done {
+        "✨"
+    } else {
+        spinner_frame(app.tick)
+    };
     let border_color = if is_done { C_GREEN } else { C_BORDER };
 
     // 1. Header Banner
     let state_text = if is_done {
-        Span::styled("[COMPLETED]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+        Span::styled(
+            "[COMPLETED]",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )
     } else {
-        Span::styled(format!("[{} UPDATING]", tick_spin), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))
+        Span::styled(
+            format!("[{} UPDATING]", tick_spin),
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )
     };
 
     let header_spans = Line::from(vec![
-        Span::styled("⚡ SYSTEM PACKAGE UPDATER — ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-        Span::styled("Maintenance Engine ", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" [Tasks: {}] ", total_count), Style::default().fg(C_DIM)),
+        Span::styled(
+            "⚡ SYSTEM PACKAGE UPDATER — ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "Maintenance Engine ",
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" [Tasks: {}] ", total_count),
+            Style::default().fg(C_DIM),
+        ),
         state_text,
     ]);
 
@@ -551,12 +578,22 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(border_color))
-                .title(Span::styled(" Overall Update Progress ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " Overall Update Progress ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ))
                 .style(Style::default().bg(C_BG)),
         )
-        .gauge_style(Style::default().fg(if is_done { C_GREEN } else { C_ACCENT }).bg(Color::Rgb(20, 30, 45)))
+        .gauge_style(
+            Style::default()
+                .fg(if is_done { C_GREEN } else { C_ACCENT })
+                .bg(Color::Rgb(20, 30, 45)),
+        )
         .percent(percent as u16)
-        .label(format!("{}%  ({}/{} completed)", percent, completed_count, total_count));
+        .label(format!(
+            "{}%  ({}/{} completed)",
+            percent, completed_count, total_count
+        ));
     f.render_widget(gauge, outer[1]);
 
     // 3. Middle Dual Pane
@@ -574,16 +611,28 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .map(|(idx, task)| {
             let is_running = app.running_idx == Some(idx);
             let pointer = if is_running {
-                Span::styled("❯ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "❯ ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("  ")
             };
 
             let (badge, badge_style) = match task.status {
                 StatusKind::Pending => (" [PENDING] ", Style::default().fg(C_DIM)),
-                StatusKind::Running => (" [RUNNING] ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                StatusKind::Success => (" [SUCCESS] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                StatusKind::Failed => (" [FAILED]  ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+                StatusKind::Running => (
+                    " [RUNNING] ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Success => (
+                    " [SUCCESS] ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Failed => (
+                    " [FAILED]  ",
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                ),
             };
 
             let pointer_w = 2;
@@ -596,7 +645,10 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
 
             let line = Line::from(vec![
                 pointer,
-                Span::styled(format!("{}{}", truncated_name, padding), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{}{}", truncated_name, padding),
+                    Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(badge, badge_style),
             ]);
             ListItem::new(line)
@@ -607,7 +659,10 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_BORDER))
-        .title(Span::styled(" 📦 Target Managers ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+        .title(Span::styled(
+            " 📦 Target Managers ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(C_BG));
     f.render_widget(List::new(queue_items).block(queue_block), middle_chunks[0]);
 
@@ -618,7 +673,8 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
     let start_idx = if app.auto_scroll {
         total_lines.saturating_sub(visible_capacity)
     } else {
-        app.log_scroll.min(total_lines.saturating_sub(visible_capacity))
+        app.log_scroll
+            .min(total_lines.saturating_sub(visible_capacity))
     };
 
     let display_items: Vec<ListItem> = app
@@ -650,25 +706,46 @@ fn draw_ui(f: &mut Frame, app: &mut App) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_ACCENT))
-        .title(Span::styled(format!(" 📜 Live Output Log ({}) ", total_lines), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+        .title(Span::styled(
+            format!(" 📜 Live Output Log ({}) ", total_lines),
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(C_BG));
     f.render_widget(List::new(display_items).block(log_block), middle_chunks[1]);
 
     // 4. Footer Bar
     let footer_spans = if is_done {
         Line::from(vec![
-            Span::styled(" ✅ System Packages Updated! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("⚡ Auto-exiting in 2m... ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ✅ System Packages Updated! ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "⚡ Auto-exiting in 2m... ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Press ", Style::default().fg(C_DIM)),
-            Span::styled("[ENTER / Q / ESC]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[ENTER / Q / ESC]",
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" to exit immediately ", Style::default().fg(C_DIM)),
         ])
     } else {
         Line::from(vec![
-            Span::styled(" ⚙️ Updating system packages... ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled("[↑/↓] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ⚙️ Updating system packages... ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "[↑/↓] ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Scroll Log  ", Style::default().fg(C_DIM)),
-            Span::styled("[Ctrl+C] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[Ctrl+C] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cancel", Style::default().fg(C_DIM)),
         ])
     };

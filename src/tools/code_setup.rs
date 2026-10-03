@@ -16,15 +16,24 @@ use std::process::Command;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-#[allow(dead_code)] const RED:    &str = "\x1b[38;2;243;139;168m";
-#[allow(dead_code)] const GREEN:  &str = "\x1b[38;2;166;227;161m";
-#[allow(dead_code)] const YELLOW: &str = "\x1b[38;2;249;226;175m";
-#[allow(dead_code)] const BLUE:   &str = "\x1b[38;2;137;180;250m";
-#[allow(dead_code)] const PURPLE: &str = "\x1b[38;2;203;166;247m";
-#[allow(dead_code)] const CYAN:   &str = "\x1b[38;2;148;226;213m";
-#[allow(dead_code)] const GRAY:   &str = "\x1b[38;2;147;153;178m";
-#[allow(dead_code)] const BOLD:   &str = "\x1b[1m";
-#[allow(dead_code)] const NC:     &str = "\x1b[0m";
+#[allow(dead_code)]
+const RED: &str = "\x1b[38;2;243;139;168m";
+#[allow(dead_code)]
+const GREEN: &str = "\x1b[38;2;166;227;161m";
+#[allow(dead_code)]
+const YELLOW: &str = "\x1b[38;2;249;226;175m";
+#[allow(dead_code)]
+const BLUE: &str = "\x1b[38;2;137;180;250m";
+#[allow(dead_code)]
+const PURPLE: &str = "\x1b[38;2;203;166;247m";
+#[allow(dead_code)]
+const CYAN: &str = "\x1b[38;2;148;226;213m";
+#[allow(dead_code)]
+const GRAY: &str = "\x1b[38;2;147;153;178m";
+#[allow(dead_code)]
+const BOLD: &str = "\x1b[1m";
+#[allow(dead_code)]
+const NC: &str = "\x1b[0m";
 
 // ── Extension List ────────────────────────────────────────────
 pub const VSCODE_EXTENSIONS: &[&str] = &[
@@ -1088,25 +1097,51 @@ fn draw_progress_bar(current: usize, total: usize) {
     let percentage = (current * 100) / total;
     let completed = (width * current) / total;
     let remaining = width.saturating_sub(completed);
-    let bar   = "█".repeat(completed);
+    let bar = "█".repeat(completed);
     let empty = "░".repeat(remaining);
     println!();
     println!(
         "{b}Progress:{n} [{g}{bar}{gr}{empty}{n}] {c}{pct}%{n} (Step {cur}/{tot})",
-        b=BLUE, n=NC, g=GREEN, bar=bar, gr=GRAY, empty=empty,
-        c=CYAN, pct=percentage, cur=current, tot=total
+        b = BLUE,
+        n = NC,
+        g = GREEN,
+        bar = bar,
+        gr = GRAY,
+        empty = empty,
+        c = CYAN,
+        pct = percentage,
+        cur = current,
+        tot = total
     );
 }
 
 // ── ASCII Banner ──────────────────────────────────────────────
 fn show_header() {
     println!();
-    println!("{}        ██╗   ██╗███████╗ ██████╗ ██████╗ ██████╗ ███████╗{}", BLUE, NC);
-    println!("{}        ██║   ██║██╔════╝██╔════╝██╔═══██╗██╔══██╗██╔════╝{}", BLUE, NC);
-    println!("{}        ██║   ██║███████╗██║     ██║   ██║██║  ██║█████╗  {}", CYAN, NC);
-    println!("{}        ╚██╗ ██╔╝╚════██║██║     ██║   ██║██║  ██║██╔══╝  {}", CYAN, NC);
-    println!("{}         ╚████╔╝ ███████║╚██████╗╚██████╔╝██████╔╝███████╗{}", PURPLE, NC);
-    println!("{}          ╚═══╝  ╚══════╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝{}", PURPLE, NC);
+    println!(
+        "{}        ██╗   ██╗███████╗ ██████╗ ██████╗ ██████╗ ███████╗{}",
+        BLUE, NC
+    );
+    println!(
+        "{}        ██║   ██║██╔════╝██╔════╝██╔═══██╗██╔══██╗██╔════╝{}",
+        BLUE, NC
+    );
+    println!(
+        "{}        ██║   ██║███████╗██║     ██║   ██║██║  ██║█████╗  {}",
+        CYAN, NC
+    );
+    println!(
+        "{}        ╚██╗ ██╔╝╚════██║██║     ██║   ██║██║  ██║██╔══╝  {}",
+        CYAN, NC
+    );
+    println!(
+        "{}         ╚████╔╝ ███████║╚██████╗╚██████╔╝██████╔╝███████╗{}",
+        PURPLE, NC
+    );
+    println!(
+        "{}          ╚═══╝  ╚══════╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝{}",
+        PURPLE, NC
+    );
     println!();
     println!(
         "   ✨ {}{}F A N C Y B A S H{}  •  {}VS Code Settings & Extensions Installer{}",
@@ -1117,36 +1152,56 @@ fn show_header() {
 
 // ── Environment Helpers ───────────────────────────────────────
 fn get_home_dir() -> PathBuf {
-    if let Ok(h) = env::var("HOME")        { if !h.trim().is_empty() { return PathBuf::from(h); } }
-    if let Ok(p) = env::var("USERPROFILE") { if !p.trim().is_empty() { return PathBuf::from(p); } }
+    if let Ok(h) = env::var("HOME") {
+        if !h.trim().is_empty() {
+            return PathBuf::from(h);
+        }
+    }
+    if let Ok(p) = env::var("USERPROFILE") {
+        if !p.trim().is_empty() {
+            return PathBuf::from(p);
+        }
+    }
     PathBuf::from("~")
 }
 
-fn command_exists(cmd: &str) -> bool { crate::core::utils::cmd_exists(cmd) }
+fn command_exists(cmd: &str) -> bool {
+    crate::core::utils::cmd_exists(cmd)
+}
 
 fn get_uname_s() -> String {
     match env::consts::OS {
-        "macos"   => "Darwin".into(),
+        "macos" => "Darwin".into(),
         "windows" => "Windows_NT".into(),
-        "linux"   => "Linux".into(),
-        o         => o.into(),
+        "linux" => "Linux".into(),
+        o => o.into(),
     }
 }
 
-fn get_arch()  -> String { env::consts::ARCH.to_string() }
+fn get_arch() -> String {
+    env::consts::ARCH.to_string()
+}
 
 fn get_user() -> String {
-    if let Ok(u) = env::var("USER")     { if !u.trim().is_empty() { return u; } }
-    if let Ok(u) = env::var("USERNAME") { if !u.trim().is_empty() { return u; } }
+    if let Ok(u) = env::var("USER") {
+        if !u.trim().is_empty() {
+            return u;
+        }
+    }
+    if let Ok(u) = env::var("USERNAME") {
+        if !u.trim().is_empty() {
+            return u;
+        }
+    }
     "user".into()
 }
 
 // ── Cross-Platform Config Path Detection ──────────────────────
 fn detect_system_and_paths() -> (String, Vec<PathBuf>) {
-    let os   = get_uname_s();
+    let os = get_uname_s();
     let home = get_home_dir();
     let mut distro;
-    let mut dirs   = Vec::new();
+    let mut dirs = Vec::new();
 
     if os.starts_with("Linux") {
         distro = "Linux".into();
@@ -1177,7 +1232,10 @@ fn detect_system_and_paths() -> (String, Vec<PathBuf>) {
                     if let Ok(entries) = fs::read_dir(mnt) {
                         for e in entries.flatten() {
                             let p = e.path().join("AppData/Roaming/Code/User");
-                            if p.exists() { dirs.push(p); break; }
+                            if p.exists() {
+                                dirs.push(p);
+                                break;
+                            }
                         }
                     }
                 }
@@ -1203,34 +1261,66 @@ fn detect_system_and_paths() -> (String, Vec<PathBuf>) {
 }
 
 fn show_sysinfo(distro: &str, count: usize) {
-    println!("{}──────────────────────────────────────────────────{}", BLUE, NC);
+    println!(
+        "{}──────────────────────────────────────────────────{}",
+        BLUE, NC
+    );
     println!(" 🖥️   {}SYSTEM & ENVIRONMENT INFO{}", BOLD, NC);
-    println!("{}──────────────────────────────────────────────────{}", BLUE, NC);
-    println!("  💻  {}OS:{}            {}{}{}", BOLD, NC, CYAN, distro, NC);
-    println!("  👤  {}User:{}          {}{}{}", BOLD, NC, CYAN, get_user(), NC);
-    println!("  ⚙️   {}Arch:{}          {}{}{}", BOLD, NC, CYAN, get_arch(), NC);
-    println!("  📂  {}Paths:{}         {}{} location(s){}", BOLD, NC, CYAN, count, NC);
-    println!("{}──────────────────────────────────────────────────{}\n", BLUE, NC);
+    println!(
+        "{}──────────────────────────────────────────────────{}",
+        BLUE, NC
+    );
+    println!(
+        "  💻  {}OS:{}            {}{}{}",
+        BOLD, NC, CYAN, distro, NC
+    );
+    println!(
+        "  👤  {}User:{}          {}{}{}",
+        BOLD,
+        NC,
+        CYAN,
+        get_user(),
+        NC
+    );
+    println!(
+        "  ⚙️   {}Arch:{}          {}{}{}",
+        BOLD,
+        NC,
+        CYAN,
+        get_arch(),
+        NC
+    );
+    println!(
+        "  📂  {}Paths:{}         {}{} location(s){}",
+        BOLD, NC, CYAN, count, NC
+    );
+    println!(
+        "{}──────────────────────────────────────────────────{}\n",
+        BLUE, NC
+    );
 }
 
 // ── Timestamp for Backups ─────────────────────────────────────
 fn get_timestamp() -> String {
-    let secs  = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
-    let days  = secs / 86400;
-    let rem   = secs % 86400;
-    let h     = rem / 3600;
-    let min   = (rem % 3600) / 60;
-    let sec   = rem % 60;
-    let zd    = days as i64 + 719468;
-    let era   = (if zd >= 0 { zd } else { zd - 146096 }) / 146097;
-    let doe   = (zd - era * 146097) as u64;
-    let yoe   = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
-    let y     = yoe as i64 + era * 400;
-    let doy   = doe - (365*yoe + yoe/4 - yoe/100);
-    let mp    = (5*doy + 2) / 153;
-    let d     = doy - (153*mp + 2)/5 + 1;
-    let m     = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year  = if m <= 2 { y + 1 } else { y };
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let days = secs / 86400;
+    let rem = secs % 86400;
+    let h = rem / 3600;
+    let min = (rem % 3600) / 60;
+    let sec = rem % 60;
+    let zd = days as i64 + 719468;
+    let era = (if zd >= 0 { zd } else { zd - 146096 }) / 146097;
+    let doe = (zd - era * 146097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if m <= 2 { y + 1 } else { y };
     format!("{year:04}{m:02}{d:02}_{h:02}{min:02}{sec:02}")
 }
 
@@ -1270,13 +1360,22 @@ fn install_extensions() -> (usize, Vec<String>) {
         .copied();
 
     let Some(bin) = bin else {
-        println!("\n  {}⚠ `code` not found in PATH — skipping extensions.{}", YELLOW, NC);
-        println!("  {}  Re-run after installing VS Code: gladeshell code-setup{}", GRAY, NC);
+        println!(
+            "\n  {}⚠ `code` not found in PATH — skipping extensions.{}",
+            YELLOW, NC
+        );
+        println!(
+            "  {}  Re-run after installing VS Code: gladeshell code-setup{}",
+            GRAY, NC
+        );
         return (0, vec![]);
     };
 
     let total = VSCODE_EXTENSIONS.len();
-    println!("\n  {}➜ Using `{}` — installing {} extensions...{}\n", CYAN, bin, total, NC);
+    println!(
+        "\n  {}➜ Using `{}` — installing {} extensions...{}\n",
+        CYAN, bin, total, NC
+    );
 
     let mut ok = 0usize;
     let mut failed: Vec<String> = Vec::new();
@@ -1284,11 +1383,21 @@ fn install_extensions() -> (usize, Vec<String>) {
     for (i, ext) in VSCODE_EXTENSIONS.iter().enumerate() {
         print!(
             "  {}[{}/{}]{} {}Installing {}{}{}...",
-            GRAY, i + 1, total, NC, CYAN, BOLD, ext, NC
+            GRAY,
+            i + 1,
+            total,
+            NC,
+            CYAN,
+            BOLD,
+            ext,
+            NC
         );
         let _ = io::stdout().flush();
 
-        match Command::new(bin).args(["--install-extension", ext, "--force"]).output() {
+        match Command::new(bin)
+            .args(["--install-extension", ext, "--force"])
+            .output()
+        {
             Ok(out) if out.status.success() => {
                 println!(" {}✔{}", GREEN, NC);
                 ok += 1;
@@ -1322,7 +1431,12 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     // Step 1: Detect paths
     draw_progress_bar(1, 4);
     spinner("Detecting VS Code configuration paths...", 150);
-    println!("  {}➜ Found {} candidate path(s).{}", CYAN, target_dirs.len(), NC);
+    println!(
+        "  {}➜ Found {} candidate path(s).{}",
+        CYAN,
+        target_dirs.len(),
+        NC
+    );
 
     // Step 2: Backup scan
     draw_progress_bar(2, 4);
@@ -1333,7 +1447,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let mut settings_ok = 0usize;
     for dir in &target_dirs {
         println!("  ▶ Target: {}{}{}", BOLD, dir.display(), NC);
-        if install_settings(dir) { settings_ok += 1; }
+        if install_settings(dir) {
+            settings_ok += 1;
+        }
     }
 
     // Step 4: Install extensions
@@ -1344,23 +1460,64 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     // ── Summary Box ───────────────────────────────────────────
     println!();
     if settings_ok > 0 {
-        println!("{}┌─────────────────────────────────────────────────────────────┐{}", GREEN, NC);
-        println!("{}│ {}✨  VS Code Setup Completed Successfully!                    {}{}", GREEN, BOLD, GREEN, NC);
-        println!("{}├─────────────────────────────────────────────────────────────┤{}", GREEN, NC);
-        println!("{}│{}  ⚙️  Settings applied to {}{}{} location(s).{}                   {}│{}", GREEN, NC, BOLD, settings_ok, NC, NC, GREEN, NC);
-        println!("{}│{}  🧩 Extensions: {}{}{}/{} installed{}                              {}│{}",
-            GREEN, NC, BOLD, ext_ok, VSCODE_EXTENSIONS.len(), NC, NC, GREEN, NC);
+        println!(
+            "{}┌─────────────────────────────────────────────────────────────┐{}",
+            GREEN, NC
+        );
+        println!(
+            "{}│ {}✨  VS Code Setup Completed Successfully!                    {}{}",
+            GREEN, BOLD, GREEN, NC
+        );
+        println!(
+            "{}├─────────────────────────────────────────────────────────────┤{}",
+            GREEN, NC
+        );
+        println!(
+            "{}│{}  ⚙️  Settings applied to {}{}{} location(s).{}                   {}│{}",
+            GREEN, NC, BOLD, settings_ok, NC, NC, GREEN, NC
+        );
+        println!(
+            "{}│{}  🧩 Extensions: {}{}{}/{} installed{}                              {}│{}",
+            GREEN,
+            NC,
+            BOLD,
+            ext_ok,
+            VSCODE_EXTENSIONS.len(),
+            NC,
+            NC,
+            GREEN,
+            NC
+        );
         if !ext_failed.is_empty() {
-            println!("{}├─────────────────────────────────────────────────────────────┤{}", YELLOW, NC);
-            println!("{}│{}  ⚠  {} extension(s) failed:", YELLOW, NC, ext_failed.len());
-            for f in &ext_failed { println!("{}│{}     • {}", YELLOW, NC, f); }
+            println!(
+                "{}├─────────────────────────────────────────────────────────────┤{}",
+                YELLOW, NC
+            );
+            println!(
+                "{}│{}  ⚠  {} extension(s) failed:",
+                YELLOW,
+                NC,
+                ext_failed.len()
+            );
+            for f in &ext_failed {
+                println!("{}│{}     • {}", YELLOW, NC, f);
+            }
         }
-        println!("{}│  💡 Restart VS Code for changes to take effect.            │{}", GREEN, NC);
-        println!("{}└─────────────────────────────────────────────────────────────┘{}", GREEN, NC);
+        println!(
+            "{}│  💡 Restart VS Code for changes to take effect.            │{}",
+            GREEN, NC
+        );
+        println!(
+            "{}└─────────────────────────────────────────────────────────────┘{}",
+            GREEN, NC
+        );
         println!();
         Ok(())
     } else {
-        eprintln!("{}❌ Failed to update any VS Code config paths.{}\n", RED, NC);
+        eprintln!(
+            "{}❌ Failed to update any VS Code config paths.{}\n",
+            RED, NC
+        );
         Err("Failed to update any VS Code configuration paths.".into())
     }
 }
@@ -1370,20 +1527,37 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_vscode_settings_non_empty() {
         // VSCODE_SETTINGS is JSONC (JSON with Comments) — VS Code reads it natively.
         // Full JSON validation is not needed here; VS Code handles JSONC parsing.
         // The install_settings_roundtrip test already verifies write-to-disk.
-        assert!(!VSCODE_SETTINGS.is_empty(), "VSCODE_SETTINGS must not be empty");
-        assert!(VSCODE_SETTINGS.contains("workbench.colorTheme"),   "Missing colorTheme");
-        assert!(VSCODE_SETTINGS.contains("terminal.foreground"),    "Missing terminal colors");
-        assert!(VSCODE_SETTINGS.contains("editor.fontSize"),        "Missing fontSize");
-        assert!(VSCODE_SETTINGS.contains("prettier.semi"),          "Missing prettier config");
-        assert!(VSCODE_SETTINGS.starts_with('{'),                   "Must start with {{");
+        assert!(
+            !VSCODE_SETTINGS.is_empty(),
+            "VSCODE_SETTINGS must not be empty"
+        );
+        assert!(
+            VSCODE_SETTINGS.contains("workbench.colorTheme"),
+            "Missing colorTheme"
+        );
+        assert!(
+            VSCODE_SETTINGS.contains("terminal.foreground"),
+            "Missing terminal colors"
+        );
+        assert!(
+            VSCODE_SETTINGS.contains("editor.fontSize"),
+            "Missing fontSize"
+        );
+        assert!(
+            VSCODE_SETTINGS.contains("prettier.semi"),
+            "Missing prettier config"
+        );
+        assert!(VSCODE_SETTINGS.starts_with('{'), "Must start with {{");
         // Verify it ends with } (ignoring trailing whitespace/newlines)
-        assert!(VSCODE_SETTINGS.trim_end().ends_with('}'),          "Must end with }}");
+        assert!(
+            VSCODE_SETTINGS.trim_end().ends_with('}'),
+            "Must end with }}"
+        );
     }
 
     #[test]
@@ -1404,7 +1578,12 @@ mod tests {
     #[test]
     fn test_timestamp_format() {
         let ts = get_timestamp();
-        assert_eq!(ts.len(), 15, "Expected YYYYMMDD_HHMMSS (15 chars), got: {}", ts);
+        assert_eq!(
+            ts.len(),
+            15,
+            "Expected YYYYMMDD_HHMMSS (15 chars), got: {}",
+            ts
+        );
     }
 
     #[test]
@@ -1417,9 +1596,11 @@ mod tests {
 
         // Second install must create a .bak file
         assert!(install_settings(&tmp));
-        let has_bak = fs::read_dir(&tmp).unwrap()
-            .flatten()
-            .any(|e| e.file_name().to_string_lossy().starts_with("settings.json.bak."));
+        let has_bak = fs::read_dir(&tmp).unwrap().flatten().any(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .starts_with("settings.json.bak.")
+        });
         assert!(has_bak, "No backup file created on second install");
 
         let _ = fs::remove_dir_all(&tmp);

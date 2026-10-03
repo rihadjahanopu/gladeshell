@@ -35,7 +35,6 @@ pub fn cmd_exists(name: &str) -> bool {
     false
 }
 
-
 /// Read a file line by line, returning all lines as a Vec<String>.
 /// Returns empty vec if file doesn't exist or cannot be read.
 pub fn read_lines(path: &str) -> Vec<String> {

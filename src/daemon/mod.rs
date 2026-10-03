@@ -419,6 +419,9 @@ mod tests {
     #[test]
     fn test_socket_path_contains_gladeshell() {
         let path = socket_path_str();
-        assert!(path.contains("gladeshell"), "socket filename must contain 'gladeshell'");
+        assert!(
+            path.contains("gladeshell"),
+            "socket filename must contain 'gladeshell'"
+        );
     }
 }

@@ -34,7 +34,10 @@ fn find_media_player() -> Option<(String, Vec<String>)> {
     if let Ok(out) = Command::new("flatpak").arg("list").output() {
         let stdout = String::from_utf8_lossy(&out.stdout);
         if stdout.contains("org.videolan.VLC") {
-            return Some(("flatpak".into(), vec!["run".into(), "org.videolan.VLC".into()]));
+            return Some((
+                "flatpak".into(),
+                vec!["run".into(), "org.videolan.VLC".into()],
+            ));
         }
     }
     if cmd_exists("vlc") {
@@ -91,7 +94,10 @@ pub fn run(target: Option<&str>) -> Result<(), Box<dyn Error>> {
     let target_path = PathBuf::from(target.unwrap_or("."));
 
     if target_path.is_file() {
-        println!("\x1b[1;35m🎬 Playing video:\x1b[0m {}", target_path.display());
+        println!(
+            "\x1b[1;35m🎬 Playing video:\x1b[0m {}",
+            target_path.display()
+        );
         spawn_player(&player_info, &target_path)?;
         return Ok(());
     }
@@ -275,7 +281,10 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
         terminal.draw(|f| {
             let outer_block = Block::default()
                 .title(Span::styled(
-                    format!(" 🎬 GLADESHELL VIDEO VAULT & PLAYER  |  Engine: {} ", player_name),
+                    format!(
+                        " 🎬 GLADESHELL VIDEO VAULT & PLAYER  |  Engine: {} ",
+                        player_name
+                    ),
                     Style::default().fg(c_magenta).add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
@@ -297,27 +306,41 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
             // 1. Search Bar & Status Header
             let count_str = format!("{}/{}", app.filtered.len(), app.all.len());
             let search_line = Line::from(vec![
-                Span::styled("🔍 Filter: ", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD)),
-                Span::styled(&app.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "🔍 Filter: ",
+                    Style::default().fg(c_cyan).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    &app.query,
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("█ ", Style::default().fg(c_yellow)),
-                Span::styled(format!("({} matched)", count_str), Style::default().fg(c_green)),
+                Span::styled(
+                    format!("({} matched)", count_str),
+                    Style::default().fg(c_green),
+                ),
                 Span::raw("   "),
-                Span::styled("[ENTER] Play  |  [ESC] Exit  |  [↑/↓] Select", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "[ENTER] Play  |  [ESC] Exit  |  [↑/↓] Select",
+                    Style::default().fg(Color::DarkGray),
+                ),
             ]);
             f.render_widget(Paragraph::new(search_line), main_chunks[0]);
 
             // 2. Dual Pane Body (Left: Video List 55%, Right: Video Info Card 45%)
             let body_chunks = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Percentage(55),
-                    Constraint::Percentage(45),
-                ])
+                .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
                 .split(main_chunks[1]);
 
             // Left Pane: Video List
             let list_block = Block::default()
-                .title(Span::styled(" 📁 Available Videos ", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " 📁 Available Videos ",
+                    Style::default().fg(c_cyan).add_modifier(Modifier::BOLD),
+                ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::DarkGray));
@@ -336,13 +359,23 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
                     let size_badge = format!("[{}]", item.size_str);
 
                     let style_base = if is_selected {
-                        Style::default().fg(Color::White).bg(c_card_bg).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(Color::White)
+                            .bg(c_card_bg)
+                            .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default().fg(Color::Gray)
                     };
 
                     let line = Line::from(vec![
-                        Span::styled(pointer, if is_selected { Style::default().fg(c_green).add_modifier(Modifier::BOLD) } else { Style::default().fg(Color::DarkGray) }),
+                        Span::styled(
+                            pointer,
+                            if is_selected {
+                                Style::default().fg(c_green).add_modifier(Modifier::BOLD)
+                            } else {
+                                Style::default().fg(Color::DarkGray)
+                            },
+                        ),
                         Span::styled(idx_str, Style::default().fg(c_cyan)),
                         Span::styled(&item.name, style_base),
                         Span::raw(" "),
@@ -363,7 +396,10 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
 
             // Right Pane: Live Media Preview & Info Card
             let info_block = Block::default()
-                .title(Span::styled(" ℹ️ Media Details ", Style::default().fg(c_yellow).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " ℹ️ Media Details ",
+                    Style::default().fg(c_yellow).add_modifier(Modifier::BOLD),
+                ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::DarkGray));
@@ -374,39 +410,78 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
             if let Some(sel) = app.current_selected() {
                 let info_lines = vec![
                     Line::from(vec![
-                        Span::styled("🎬 Name: ", Style::default().fg(c_magenta).add_modifier(Modifier::BOLD)),
-                        Span::styled(&sel.name, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            "🎬 Name: ",
+                            Style::default().fg(c_magenta).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            &sel.name,
+                            Style::default()
+                                .fg(Color::White)
+                                .add_modifier(Modifier::BOLD),
+                        ),
                     ]),
                     Line::from(vec![
-                        Span::styled("📁 Folder: ", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            "📁 Folder: ",
+                            Style::default().fg(c_cyan).add_modifier(Modifier::BOLD),
+                        ),
                         Span::styled(&sel.folder, Style::default().fg(Color::Yellow)),
                     ]),
                     Line::from(vec![
-                        Span::styled("💾 Size: ", Style::default().fg(c_green).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            "💾 Size: ",
+                            Style::default().fg(c_green).add_modifier(Modifier::BOLD),
+                        ),
                         Span::styled(&sel.size_str, Style::default().fg(Color::White)),
                     ]),
                     Line::from(vec![
-                        Span::styled("🎞️ Format: ", Style::default().fg(c_yellow).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            "🎞️ Format: ",
+                            Style::default().fg(c_yellow).add_modifier(Modifier::BOLD),
+                        ),
                         Span::styled(&sel.ext, Style::default().fg(c_cyan)),
                     ]),
                     Line::from(vec![
                         Span::styled("📍 Path: ", Style::default().fg(Color::DarkGray)),
-                        Span::styled(sel.path.display().to_string(), Style::default().fg(Color::DarkGray)),
+                        Span::styled(
+                            sel.path.display().to_string(),
+                            Style::default().fg(Color::DarkGray),
+                        ),
                     ]),
                     Line::raw(""),
-                    Line::from(Span::styled("┌────────────────────────────────────┐", Style::default().fg(c_violet))),
-                    Line::from(Span::styled("│   🎬  GLADESHELL MEDIA PLAYER       │", Style::default().fg(c_cyan).add_modifier(Modifier::BOLD))),
-                    Line::from(Span::styled("│                                    │", Style::default().fg(c_violet))),
-                    Line::from(Span::styled("│     [▶] PRESS ENTER TO PLAY        │", Style::default().fg(c_green).add_modifier(Modifier::BOLD))),
-                    Line::from(Span::styled("│         VIDEO IN BACKGROUND        │", Style::default().fg(c_yellow))),
-                    Line::from(Span::styled("└────────────────────────────────────┘", Style::default().fg(c_violet))),
+                    Line::from(Span::styled(
+                        "┌────────────────────────────────────┐",
+                        Style::default().fg(c_violet),
+                    )),
+                    Line::from(Span::styled(
+                        "│   🎬  GLADESHELL MEDIA PLAYER       │",
+                        Style::default().fg(c_cyan).add_modifier(Modifier::BOLD),
+                    )),
+                    Line::from(Span::styled(
+                        "│                                    │",
+                        Style::default().fg(c_violet),
+                    )),
+                    Line::from(Span::styled(
+                        "│     [▶] PRESS ENTER TO PLAY        │",
+                        Style::default().fg(c_green).add_modifier(Modifier::BOLD),
+                    )),
+                    Line::from(Span::styled(
+                        "│         VIDEO IN BACKGROUND        │",
+                        Style::default().fg(c_yellow),
+                    )),
+                    Line::from(Span::styled(
+                        "└────────────────────────────────────┘",
+                        Style::default().fg(c_violet),
+                    )),
                 ];
                 let info_paragraph = Paragraph::new(info_lines).wrap(Wrap { trim: true });
                 f.render_widget(info_paragraph, info_inner);
             } else {
-                let empty_para = Paragraph::new(vec![
-                    Line::from(Span::styled("❌ No video selected", Style::default().fg(Color::Red))),
-                ]);
+                let empty_para = Paragraph::new(vec![Line::from(Span::styled(
+                    "❌ No video selected",
+                    Style::default().fg(Color::Red),
+                ))]);
                 f.render_widget(empty_para, info_inner);
             }
         })?;
@@ -449,7 +524,10 @@ fn run_video_tui(videos: &[PathBuf], player_name: &str) -> Result<Option<usize>,
     res
 }
 
-fn spawn_player((bin, base_args): &(String, Vec<String>), file: &Path) -> Result<(), Box<dyn Error>> {
+fn spawn_player(
+    (bin, base_args): &(String, Vec<String>),
+    file: &Path,
+) -> Result<(), Box<dyn Error>> {
     let mut cmd = Command::new(bin);
     for arg in base_args {
         cmd.arg(arg);

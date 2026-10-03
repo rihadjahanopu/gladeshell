@@ -36,7 +36,10 @@ pub enum EnvValue {
     /// Relative to $HOME (e.g. ".bun").
     HomeRelative(&'static str),
     /// Evaluated from another env var (e.g. "$BUN_INSTALL/bin").
-    Derived { base_var: &'static str, suffix: &'static str },
+    Derived {
+        base_var: &'static str,
+        suffix: &'static str,
+    },
 }
 
 // ── Canonical PATH entries (in priority order, highest first) ─────────────────
@@ -48,13 +51,34 @@ pub enum EnvValue {
 pub fn canonical_path_entries() -> Vec<PathEntry> {
     // Note: $HOME expansion is done by the shell at init time.
     vec![
-        PathEntry { dir: "$HOME/.bun/bin".into(),         check_exists: true  },
-        PathEntry { dir: "$HOME/.cargo/bin".into(),       check_exists: true  },
-        PathEntry { dir: "$HOME/.local/bin".into(),       check_exists: true  },
-        PathEntry { dir: "$HOME/go/bin".into(),           check_exists: true  },
-        PathEntry { dir: "/usr/local/bin".into(),         check_exists: false },
-        PathEntry { dir: "/usr/bin".into(),               check_exists: false },
-        PathEntry { dir: "/bin".into(),                   check_exists: false },
+        PathEntry {
+            dir: "$HOME/.bun/bin".into(),
+            check_exists: true,
+        },
+        PathEntry {
+            dir: "$HOME/.cargo/bin".into(),
+            check_exists: true,
+        },
+        PathEntry {
+            dir: "$HOME/.local/bin".into(),
+            check_exists: true,
+        },
+        PathEntry {
+            dir: "$HOME/go/bin".into(),
+            check_exists: true,
+        },
+        PathEntry {
+            dir: "/usr/local/bin".into(),
+            check_exists: false,
+        },
+        PathEntry {
+            dir: "/usr/bin".into(),
+            check_exists: false,
+        },
+        PathEntry {
+            dir: "/bin".into(),
+            check_exists: false,
+        },
     ]
 }
 
@@ -188,7 +212,10 @@ mod tests {
 
     #[test]
     fn render_path_bash_check_exists() {
-        let e = PathEntry { dir: "$HOME/.bun/bin".into(), check_exists: true };
+        let e = PathEntry {
+            dir: "$HOME/.bun/bin".into(),
+            check_exists: true,
+        };
         let s = render_path_bash(&e);
         assert!(s.starts_with("[[ -d"));
         assert!(s.contains("$HOME/.bun/bin"));
@@ -196,13 +223,19 @@ mod tests {
 
     #[test]
     fn render_env_fish_literal() {
-        let v = EnvVar { key: "EDITOR", value: EnvValue::Literal("nvim") };
+        let v = EnvVar {
+            key: "EDITOR",
+            value: EnvValue::Literal("nvim"),
+        };
         assert_eq!(render_env_fish(&v), "set -gx EDITOR \"nvim\"");
     }
 
     #[test]
     fn render_env_pwsh_home_relative() {
-        let v = EnvVar { key: "BUN_INSTALL", value: EnvValue::HomeRelative(".bun") };
+        let v = EnvVar {
+            key: "BUN_INSTALL",
+            value: EnvValue::HomeRelative(".bun"),
+        };
         let s = render_env_pwsh(&v);
         assert!(s.contains("$env:HOME\\.bun"));
     }

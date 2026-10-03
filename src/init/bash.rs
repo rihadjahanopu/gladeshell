@@ -18,8 +18,8 @@
 //    • command_not_found_handle — fires when an unknown command is executed.
 // =============================================================================
 
-use crate::core::aliases::Shell;
 use super::{header_comment, shared};
+use crate::core::aliases::Shell;
 
 pub fn generate() -> String {
     let mut out = String::with_capacity(8192);

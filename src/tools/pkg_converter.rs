@@ -48,13 +48,19 @@ pub fn run(file: &str, install: bool) -> Result<(), Box<dyn Error>> {
         match pkg_mgr {
             "apt" => {
                 Command::new("sudo").args(["apt", "update"]).status()?;
-                Command::new("sudo").args(["apt", "install", "-y", "alien"]).status()?;
+                Command::new("sudo")
+                    .args(["apt", "install", "-y", "alien"])
+                    .status()?;
             }
             "dnf" => {
-                Command::new("sudo").args(["dnf", "install", "-y", "alien"]).status()?;
+                Command::new("sudo")
+                    .args(["dnf", "install", "-y", "alien"])
+                    .status()?;
             }
             "pacman" => {
-                Command::new("sudo").args(["pacman", "-S", "--noconfirm", "alien"]).status()?;
+                Command::new("sudo")
+                    .args(["pacman", "-S", "--noconfirm", "alien"])
+                    .status()?;
             }
             _ => {}
         }
@@ -83,13 +89,24 @@ pub fn run(file: &str, install: bool) -> Result<(), Box<dyn Error>> {
         println!("\x1b[1;36m⚙️ Installing converted package...\x1b[0m");
         match pkg_mgr {
             "apt" => {
-                Command::new("bash").arg("-c").arg(format!("sudo dpkg -i *.{target_ext} && sudo apt install -f -y")).status()?;
+                Command::new("bash")
+                    .arg("-c")
+                    .arg(format!(
+                        "sudo dpkg -i *.{target_ext} && sudo apt install -f -y"
+                    ))
+                    .status()?;
             }
             "dnf" => {
-                Command::new("bash").arg("-c").arg(format!("sudo dnf install -y ./*.{target_ext}")).status()?;
+                Command::new("bash")
+                    .arg("-c")
+                    .arg(format!("sudo dnf install -y ./*.{target_ext}"))
+                    .status()?;
             }
             "pacman" => {
-                Command::new("bash").arg("-c").arg(format!("sudo pacman -U --noconfirm *.{target_ext}")).status()?;
+                Command::new("bash")
+                    .arg("-c")
+                    .arg(format!("sudo pacman -U --noconfirm *.{target_ext}"))
+                    .status()?;
             }
             _ => {}
         }

@@ -15,7 +15,10 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind, EnableMouseCapture, DisableMouseCapture, EnableBracketedPaste, DisableBracketedPaste},
+    event::{
+        self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
+        Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -30,7 +33,11 @@ use ratatui::{
 
 fn is_ctrl_v(key: &KeyEvent) -> bool {
     match key.code {
-        KeyCode::Char('v') | KeyCode::Char('V') if key.modifiers.contains(KeyModifiers::CONTROL) => true,
+        KeyCode::Char('v') | KeyCode::Char('V')
+            if key.modifiers.contains(KeyModifiers::CONTROL) =>
+        {
+            true
+        }
         KeyCode::Char('\x16') => true,
         _ => false,
     }
@@ -53,21 +60,21 @@ fn sanitize_text(text: &str) -> String {
 
 // ── Colour Palette (fkill & gwip consistent dark violet/teal) ───────────────
 const C_BG: Color = Color::Rgb(8, 12, 22);
-const C_BORDER: Color = Color::Rgb(0, 210, 180);       // teal accent
-const C_ACCENT: Color = Color::Rgb(0, 240, 200);       // bright teal
-const C_SELECTED_BG: Color = Color::Rgb(0, 45, 40);    // dark teal row bg
-const C_SELECTED_FG: Color = Color::Rgb(0, 255, 200);  // selected text
+const C_BORDER: Color = Color::Rgb(0, 210, 180); // teal accent
+const C_ACCENT: Color = Color::Rgb(0, 240, 200); // bright teal
+const C_SELECTED_BG: Color = Color::Rgb(0, 45, 40); // dark teal row bg
+const C_SELECTED_FG: Color = Color::Rgb(0, 255, 200); // selected text
 const C_DIM: Color = Color::Rgb(90, 110, 120);
 const C_TEXT: Color = Color::Rgb(210, 225, 235);
 const C_GREEN: Color = Color::Rgb(80, 220, 140);
 const C_YELLOW: Color = Color::Rgb(255, 200, 80);
 const C_PINK: Color = Color::Rgb(255, 80, 160);
 const C_WHITE: Color = Color::Rgb(255, 255, 255);
-const C_CAT: Color = Color::Rgb(130, 200, 255);        // category label blue
-const C_CONTENT: Color = Color::Rgb(195, 230, 215);    // note content text
-const C_VIOLET: Color = Color::Rgb(180, 100, 255);     // gwip-style violet
-const C_CYAN: Color = Color::Rgb(0, 229, 255);       // neon cyan
-const C_CARD: Color = Color::Rgb(16, 22, 34);         // card background
+const C_CAT: Color = Color::Rgb(130, 200, 255); // category label blue
+const C_CONTENT: Color = Color::Rgb(195, 230, 215); // note content text
+const C_VIOLET: Color = Color::Rgb(180, 100, 255); // gwip-style violet
+const C_CYAN: Color = Color::Rgb(0, 229, 255); // neon cyan
+const C_CARD: Color = Color::Rgb(16, 22, 34); // card background
 
 fn notes_dir_path() -> PathBuf {
     let home = std::env::var_os("HOME")
@@ -104,13 +111,48 @@ pub struct ActionItem {
 }
 
 pub const ACTION_ITEMS: &[ActionItem] = &[
-    ActionItem { label: "Edit Content",    desc: "Edit note text in interactive buffer",  emoji: "✏️", shortcut: "Enter / e" },
-    ActionItem { label: "Copy Content",    desc: "Copy note text strictly to clipboard", emoji: "📋", shortcut: "Ctrl+C"    },
-    ActionItem { label: "Open VS Code",    desc: "Open note file in VS Code editor",      emoji: "💻", shortcut: "F10"       },
-    ActionItem { label: "Open Folder",     desc: "Open containing folder in file manager",emoji: "📂", shortcut: "Ctrl+O"    },
-    ActionItem { label: "Note Statistics", desc: "View word, line, and character stats",  emoji: "📊", shortcut: "s"         },
-    ActionItem { label: "Delete Note",     desc: "Delete note file permanently",          emoji: "🗑️", shortcut: "Ctrl+D / Delete" },
-    ActionItem { label: "Back to Catalog", desc: "Return to notes search catalog",        emoji: "🔙", shortcut: "Esc"       },
+    ActionItem {
+        label: "Edit Content",
+        desc: "Edit note text in interactive buffer",
+        emoji: "✏️",
+        shortcut: "Enter / e",
+    },
+    ActionItem {
+        label: "Copy Content",
+        desc: "Copy note text strictly to clipboard",
+        emoji: "📋",
+        shortcut: "Ctrl+C",
+    },
+    ActionItem {
+        label: "Open VS Code",
+        desc: "Open note file in VS Code editor",
+        emoji: "💻",
+        shortcut: "F10",
+    },
+    ActionItem {
+        label: "Open Folder",
+        desc: "Open containing folder in file manager",
+        emoji: "📂",
+        shortcut: "Ctrl+O",
+    },
+    ActionItem {
+        label: "Note Statistics",
+        desc: "View word, line, and character stats",
+        emoji: "📊",
+        shortcut: "s",
+    },
+    ActionItem {
+        label: "Delete Note",
+        desc: "Delete note file permanently",
+        emoji: "🗑️",
+        shortcut: "Ctrl+D / Delete",
+    },
+    ActionItem {
+        label: "Back to Catalog",
+        desc: "Return to notes search catalog",
+        emoji: "🔙",
+        shortcut: "Esc",
+    },
 ];
 
 // ── Modal Mode ───────────────────────────────────────────────────────────────
@@ -118,8 +160,8 @@ pub const ACTION_ITEMS: &[ActionItem] = &[
 #[derive(Debug, Clone, PartialEq)]
 enum Modal {
     None,
-    ConfirmDelete(usize),                    // index into filtered_indices
-    NewNoteField(u8, String, String, String),// active_field (0=cat,1=title,2=content), cat, title, content
+    ConfirmDelete(usize),                     // index into filtered_indices
+    NewNoteField(u8, String, String, String), // active_field (0=cat,1=title,2=content), cat, title, content
 }
 
 // ── App State ────────────────────────────────────────────────────────────────
@@ -194,7 +236,8 @@ impl NotesApp {
                                         .and_then(|m| m.modified())
                                         .map(format_system_time)
                                         .unwrap_or_else(|_| "—".to_string());
-                                    let content = fs::read_to_string(&file_path).unwrap_or_default();
+                                    let content =
+                                        fs::read_to_string(&file_path).unwrap_or_default();
                                     let content = sanitize_text(&content);
                                     self.items.push(NoteItem {
                                         category: cat_name.clone(),
@@ -211,7 +254,11 @@ impl NotesApp {
             }
         }
 
-        self.items.sort_by(|a, b| a.category.cmp(&b.category).then_with(|| a.title.cmp(&b.title)));
+        self.items.sort_by(|a, b| {
+            a.category
+                .cmp(&b.category)
+                .then_with(|| a.title.cmp(&b.title))
+        });
         self.filter_items();
     }
 
@@ -236,7 +283,8 @@ impl NotesApp {
             self.list_state.select(None);
         } else {
             let cur = self.list_state.selected().unwrap_or(0);
-            self.list_state.select(Some(cur.min(self.filtered_indices.len() - 1)));
+            self.list_state
+                .select(Some(cur.min(self.filtered_indices.len() - 1)));
         }
         self.scroll_offset = 0;
     }
@@ -248,7 +296,9 @@ impl NotesApp {
     }
 
     fn move_select(&mut self, delta: i32) {
-        if self.filtered_indices.is_empty() { return; }
+        if self.filtered_indices.is_empty() {
+            return;
+        }
         let cur = self.list_state.selected().unwrap_or(0) as i32;
         let len = self.filtered_indices.len() as i32;
         let next = (cur + delta).rem_euclid(len);
@@ -274,8 +324,16 @@ impl NotesApp {
     }
 
     fn create_note(&mut self, category: &str, title: &str, content: &str) {
-        let cat = if category.trim().is_empty() { "General" } else { category.trim() };
-        let ttl = if title.trim().is_empty() { "Untitled" } else { title.trim() };
+        let cat = if category.trim().is_empty() {
+            "General"
+        } else {
+            category.trim()
+        };
+        let ttl = if title.trim().is_empty() {
+            "Untitled"
+        } else {
+            title.trim()
+        };
         let cat_dir = self.root_dir.join(cat);
         if let Err(e) = fs::create_dir_all(&cat_dir) {
             self.status_msg = Some((format!("❌ {e}"), true));
@@ -312,7 +370,10 @@ impl NotesApp {
         let lines: Vec<String> = if self.edit_buffer.is_empty() {
             vec![String::new()]
         } else {
-            self.edit_buffer.split('\n').map(|s| s.to_string()).collect()
+            self.edit_buffer
+                .split('\n')
+                .map(|s| s.to_string())
+                .collect()
         };
         self.edit_lines = lines;
         self.cursor_line = 0;
@@ -338,7 +399,9 @@ impl NotesApp {
     }
 
     pub fn ensure_cursor_visible(&mut self, viewport_h: usize) {
-        if viewport_h == 0 { return; }
+        if viewport_h == 0 {
+            return;
+        }
         if self.cursor_line < self.editor_scroll_top {
             self.editor_scroll_top = self.cursor_line;
         } else if self.cursor_line >= self.editor_scroll_top + viewport_h {
@@ -444,7 +507,9 @@ impl NotesApp {
 
     pub fn paste_text_to_editor(&mut self, text: &str) {
         let clean = sanitize_text(text);
-        if clean.is_empty() { return; }
+        if clean.is_empty() {
+            return;
+        }
         let parts: Vec<&str> = clean.split('\n').collect();
         self.clamp_cursor();
 
@@ -470,7 +535,8 @@ impl NotesApp {
             self.edit_lines[self.cursor_line] = format!("{}{}", left, parts[0]);
             let n = parts.len();
             for (i, p) in parts[1..n - 1].iter().enumerate() {
-                self.edit_lines.insert(self.cursor_line + 1 + i, p.to_string());
+                self.edit_lines
+                    .insert(self.cursor_line + 1 + i, p.to_string());
             }
             let last_part = parts[n - 1];
             let last_part_len = last_part.chars().count();
@@ -500,12 +566,16 @@ impl NotesApp {
                 return;
             }
             if Command::new("code-insiders").arg(path).spawn().is_ok() {
-                self.status_msg = Some((format!("💻 Opened '{}' in VS Code Insiders", note.title), false));
+                self.status_msg = Some((
+                    format!("💻 Opened '{}' in VS Code Insiders", note.title),
+                    false,
+                ));
                 return;
             }
             if let Ok(editor) = std::env::var("EDITOR") {
                 if Command::new(editor).arg(path).spawn().is_ok() {
-                    self.status_msg = Some((format!("💻 Opened '{}' in $EDITOR", note.title), false));
+                    self.status_msg =
+                        Some((format!("💻 Opened '{}' in $EDITOR", note.title), false));
                     return;
                 }
             }
@@ -519,9 +589,15 @@ impl NotesApp {
             let res = Command::new("xdg-open").arg(path).spawn();
 
             if res.is_ok() {
-                self.status_msg = Some((format!("💻 Opened '{}' with default editor", note.title), false));
+                self.status_msg = Some((
+                    format!("💻 Opened '{}' with default editor", note.title),
+                    false,
+                ));
             } else {
-                self.status_msg = Some(("❌ Could not launch VS Code ('code' command not found in PATH)".to_string(), true));
+                self.status_msg = Some((
+                    "❌ Could not launch VS Code ('code' command not found in PATH)".to_string(),
+                    true,
+                ));
             }
         } else {
             self.status_msg = Some(("⚠ No note selected to open in VS Code".to_string(), true));
@@ -542,7 +618,8 @@ impl NotesApp {
 
                 match res {
                     Ok(_) => {
-                        self.status_msg = Some((format!("📂 Opened folder: {}", parent.display()), false));
+                        self.status_msg =
+                            Some((format!("📂 Opened folder: {}", parent.display()), false));
                     }
                     Err(e) => {
                         self.status_msg = Some((format!("❌ Failed to open folder: {e}"), true));
@@ -563,7 +640,8 @@ impl NotesApp {
                     self.status_msg = Some((format!("❌ Save failed: {e}"), true));
                 } else {
                     self.items[orig].content = new_content;
-                    self.status_msg = Some((format!("✅ Note '{title}' updated successfully"), false));
+                    self.status_msg =
+                        Some((format!("✅ Note '{title}' updated successfully"), false));
                 }
             }
         }
@@ -594,7 +672,8 @@ impl NotesApp {
             };
             if let Ok(mut clipboard) = arboard::Clipboard::new() {
                 if clipboard.set_text(&content).is_ok() {
-                    self.status_msg = Some(("📋 Copied note content to clipboard".to_string(), false));
+                    self.status_msg =
+                        Some(("📋 Copied note content to clipboard".to_string(), false));
                 } else {
                     self.status_msg = Some(("❌ Failed to copy to clipboard".to_string(), true));
                 }
@@ -617,10 +696,15 @@ impl NotesApp {
                     let clean = sanitize_text(&text);
                     match &self.modal.clone() {
                         Modal::NewNoteField(active, cat, title, content) => {
-                            let (active, mut cat, mut title, mut content) = (*active, cat.clone(), title.clone(), content.clone());
-                            if active == 0 { cat.push_str(&clean); }
-                            else if active == 1 { title.push_str(&clean); }
-                            else { content.push_str(&clean); }
+                            let (active, mut cat, mut title, mut content) =
+                                (*active, cat.clone(), title.clone(), content.clone());
+                            if active == 0 {
+                                cat.push_str(&clean);
+                            } else if active == 1 {
+                                title.push_str(&clean);
+                            } else {
+                                content.push_str(&clean);
+                            }
                             self.modal = Modal::NewNoteField(active, cat, title, content);
                         }
                         Modal::ConfirmDelete(_) => {}
@@ -656,7 +740,9 @@ impl NotesApp {
                 },
 
                 Event::Key(key) => {
-                    if key.kind != KeyEventKind::Press { continue; }
+                    if key.kind != KeyEventKind::Press {
+                        continue;
+                    }
 
                     // ── Modal handling ────────────────────────────────────────────
                     match &self.modal.clone() {
@@ -668,23 +754,31 @@ impl NotesApp {
                             continue;
                         }
                         Modal::NewNoteField(active, cat, title, content) => {
-                            let (mut active, mut cat, mut title, mut content) = (*active, cat.clone(), title.clone(), content.clone());
+                            let (mut active, mut cat, mut title, mut content) =
+                                (*active, cat.clone(), title.clone(), content.clone());
 
                             if is_ctrl_v(&key) {
                                 if let Ok(mut clipboard) = arboard::Clipboard::new() {
                                     if let Ok(pasted) = clipboard.get_text() {
                                         let clean = sanitize_text(&pasted);
-                                        if active == 0 { cat.push_str(&clean); }
-                                        else if active == 1 { title.push_str(&clean); }
-                                        else { content.push_str(&clean); }
-                                        self.modal = Modal::NewNoteField(active, cat, title, content);
+                                        if active == 0 {
+                                            cat.push_str(&clean);
+                                        } else if active == 1 {
+                                            title.push_str(&clean);
+                                        } else {
+                                            content.push_str(&clean);
+                                        }
+                                        self.modal =
+                                            Modal::NewNoteField(active, cat, title, content);
                                     }
                                 }
                                 continue;
                             }
 
                             match (key.code, key.modifiers) {
-                                (KeyCode::Esc, _) => { self.modal = Modal::None; }
+                                (KeyCode::Esc, _) => {
+                                    self.modal = Modal::None;
+                                }
                                 (KeyCode::Tab, _) => {
                                     active = (active + 1) % 3;
                                     self.modal = Modal::NewNoteField(active, cat, title, content);
@@ -699,25 +793,37 @@ impl NotesApp {
                                 (KeyCode::Enter, _) => {
                                     if active == 0 {
                                         active = 1;
-                                        self.modal = Modal::NewNoteField(active, cat, title, content);
+                                        self.modal =
+                                            Modal::NewNoteField(active, cat, title, content);
                                     } else if active == 1 {
                                         active = 2;
-                                        self.modal = Modal::NewNoteField(active, cat, title, content);
+                                        self.modal =
+                                            Modal::NewNoteField(active, cat, title, content);
                                     } else {
                                         content.push('\n');
-                                        self.modal = Modal::NewNoteField(active, cat, title, content);
+                                        self.modal =
+                                            Modal::NewNoteField(active, cat, title, content);
                                     }
                                 }
                                 (KeyCode::Backspace, _) => {
-                                    if active == 0 { cat.pop(); }
-                                    else if active == 1 { title.pop(); }
-                                    else { content.pop(); }
+                                    if active == 0 {
+                                        cat.pop();
+                                    } else if active == 1 {
+                                        title.pop();
+                                    } else {
+                                        content.pop();
+                                    }
                                     self.modal = Modal::NewNoteField(active, cat, title, content);
                                 }
-                                (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
-                                    if active == 0 { cat.push(c); }
-                                    else if active == 1 { title.push(c); }
-                                    else { content.push(c); }
+                                (KeyCode::Char(c), KeyModifiers::NONE)
+                                | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                                    if active == 0 {
+                                        cat.push(c);
+                                    } else if active == 1 {
+                                        title.push(c);
+                                    } else {
+                                        content.push(c);
+                                    }
                                     self.modal = Modal::NewNoteField(active, cat, title, content);
                                 }
                                 _ => {}
@@ -758,20 +864,27 @@ impl NotesApp {
                                     (KeyCode::Home, _) => self.cursor_col = 0,
                                     (KeyCode::End, _) => {
                                         if !self.edit_lines.is_empty() {
-                                            self.cursor_col = self.edit_lines[self.cursor_line].chars().count();
+                                            self.cursor_col =
+                                                self.edit_lines[self.cursor_line].chars().count();
                                         }
                                     }
                                     (KeyCode::PageUp, _) => {
-                                        for _ in 0..10 { self.move_cursor_up(); }
+                                        for _ in 0..10 {
+                                            self.move_cursor_up();
+                                        }
                                     }
                                     (KeyCode::PageDown, _) => {
-                                        for _ in 0..10 { self.move_cursor_down(); }
+                                        for _ in 0..10 {
+                                            self.move_cursor_down();
+                                        }
                                     }
                                     (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
-                                        self.editor_scroll_top = self.editor_scroll_top.saturating_sub(5);
+                                        self.editor_scroll_top =
+                                            self.editor_scroll_top.saturating_sub(5);
                                     }
                                     (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
-                                        self.editor_scroll_top = self.editor_scroll_top.saturating_add(5);
+                                        self.editor_scroll_top =
+                                            self.editor_scroll_top.saturating_add(5);
                                     }
                                     (KeyCode::Enter, _) => self.insert_newline(),
                                     (KeyCode::Tab, _) => {
@@ -782,7 +895,8 @@ impl NotesApp {
                                     }
                                     (KeyCode::Backspace, _) => self.backspace(),
                                     (KeyCode::Delete, _) => self.delete_char(),
-                                    (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                                    (KeyCode::Char(c), KeyModifiers::NONE)
+                                    | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                                         self.insert_char(c);
                                     }
                                     _ => {}
@@ -795,46 +909,61 @@ impl NotesApp {
                                 self.paste_clipboard_to_editor();
                             } else {
                                 match (key.code, key.modifiers) {
-                                    (KeyCode::Esc, _) | (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
+                                    (KeyCode::Esc, _)
+                                    | (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
                                         self.page = AppPage::List;
                                     }
                                     (KeyCode::Up, _) => {
-                                        if self.action_cursor > 0 { self.action_cursor -= 1; }
+                                        if self.action_cursor > 0 {
+                                            self.action_cursor -= 1;
+                                        }
                                     }
                                     (KeyCode::Down, _) => {
-                                        if self.action_cursor < ACTION_ITEMS.len() - 1 { self.action_cursor += 1; }
+                                        if self.action_cursor < ACTION_ITEMS.len() - 1 {
+                                            self.action_cursor += 1;
+                                        }
                                     }
                                     (KeyCode::Tab, _) | (KeyCode::Right, _) => {
                                         self.is_editing_content = true;
                                     }
-                                    (KeyCode::Enter, _) => {
-                                        match self.action_cursor {
-                                            0 => self.is_editing_content = true,
-                                            1 => self.copy_selected_note_content(),
-                                            2 => self.open_in_vscode(),
-                                            3 => self.open_folder(),
-                                            4 => {
-                                                let words = self.edit_buffer.split_whitespace().count();
-                                                let chars = self.edit_buffer.chars().count();
-                                                self.status_msg = Some((format!("📊 Note stats: {words} words, {chars} characters"), false));
-                                            }
-                                            5 => {
-                                                if let Some(sel) = self.list_state.selected() {
-                                                    self.modal = Modal::ConfirmDelete(sel);
-                                                }
-                                            }
-                                            6 => self.page = AppPage::List,
-                                            _ => {}
+                                    (KeyCode::Enter, _) => match self.action_cursor {
+                                        0 => self.is_editing_content = true,
+                                        1 => self.copy_selected_note_content(),
+                                        2 => self.open_in_vscode(),
+                                        3 => self.open_folder(),
+                                        4 => {
+                                            let words = self.edit_buffer.split_whitespace().count();
+                                            let chars = self.edit_buffer.chars().count();
+                                            self.status_msg = Some((format!("📊 Note stats: {words} words, {chars} characters"), false));
                                         }
+                                        5 => {
+                                            if let Some(sel) = self.list_state.selected() {
+                                                self.modal = Modal::ConfirmDelete(sel);
+                                            }
+                                        }
+                                        6 => self.page = AppPage::List,
+                                        _ => {}
+                                    },
+                                    (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
+                                        self.is_editing_content = true
                                     }
-                                    (KeyCode::Char('e'), KeyModifiers::CONTROL) => self.is_editing_content = true,
-                                    (KeyCode::Char('c'), KeyModifiers::CONTROL) => self.copy_selected_note_content(),
+                                    (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                                        self.copy_selected_note_content()
+                                    }
                                     (KeyCode::F(10), _) => self.open_in_vscode(),
-                                    (KeyCode::Char('o'), KeyModifiers::CONTROL) => self.open_folder(),
-                                    (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                                        self.modal = Modal::NewNoteField(0, String::new(), String::new(), String::new());
+                                    (KeyCode::Char('o'), KeyModifiers::CONTROL) => {
+                                        self.open_folder()
                                     }
-                                    (KeyCode::Char('d'), KeyModifiers::CONTROL) | (KeyCode::Delete, _) => {
+                                    (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                                        self.modal = Modal::NewNoteField(
+                                            0,
+                                            String::new(),
+                                            String::new(),
+                                            String::new(),
+                                        );
+                                    }
+                                    (KeyCode::Char('d'), KeyModifiers::CONTROL)
+                                    | (KeyCode::Delete, _) => {
                                         if let Some(sel) = self.list_state.selected() {
                                             self.modal = Modal::ConfirmDelete(sel);
                                         }
@@ -884,7 +1013,12 @@ impl NotesApp {
 
                             // New note shortcut (Ctrl+N)
                             (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                                self.modal = Modal::NewNoteField(0, String::new(), String::new(), String::new());
+                                self.modal = Modal::NewNoteField(
+                                    0,
+                                    String::new(),
+                                    String::new(),
+                                    String::new(),
+                                );
                             }
 
                             // Copy shortcut (Ctrl+C)
@@ -903,7 +1037,10 @@ impl NotesApp {
                             (KeyCode::Down, _) => self.move_select(1),
                             (KeyCode::PageUp, _) => self.move_select(-10),
                             (KeyCode::PageDown, _) => self.move_select(10),
-                            (KeyCode::Home, _) => { self.list_state.select(Some(0)); self.scroll_offset = 0; }
+                            (KeyCode::Home, _) => {
+                                self.list_state.select(Some(0));
+                                self.scroll_offset = 0;
+                            }
                             (KeyCode::End, _) => {
                                 let last = self.filtered_indices.len().saturating_sub(1);
                                 self.list_state.select(Some(last));
@@ -919,7 +1056,8 @@ impl NotesApp {
                                 self.query.pop();
                                 self.filter_items();
                             }
-                            (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
+                            (KeyCode::Char(c), KeyModifiers::NONE)
+                            | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                                 self.query.push(c);
                                 self.filter_items();
                             }
@@ -949,10 +1087,7 @@ impl NotesApp {
 
     fn render_list_page(&mut self, f: &mut Frame, area: Rect) {
         // Full background
-        f.render_widget(
-            Block::default().style(Style::default().bg(C_BG)),
-            area,
-        );
+        f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
 
         let outer = Layout::default()
             .direction(Direction::Vertical)
@@ -966,13 +1101,23 @@ impl NotesApp {
 
         // ── Banner ────────────────────────────────────────────────────────────
         let banner_spans = if let Some((ref msg, is_error)) = self.status_msg {
-            let color = if is_error { Color::Rgb(255, 80, 80) } else { C_GREEN };
-            vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))]
+            let color = if is_error {
+                Color::Rgb(255, 80, 80)
+            } else {
+                C_GREEN
+            };
+            vec![Span::styled(
+                msg.clone(),
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            )]
         } else {
             let note_count = self.items.len();
             vec![
                 Span::styled("📝  ", Style::default().fg(C_ACCENT)),
-                Span::styled("NOTES", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "NOTES",
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(" — Gladeshell Note Manager", Style::default().fg(C_TEXT)),
                 Span::styled(
                     format!("  ({note_count} notes)"),
@@ -997,7 +1142,10 @@ impl NotesApp {
         let note_count = self.items.len();
         let search_text = Line::from(vec![
             Span::styled(" 🔍 ", Style::default().fg(C_ACCENT)),
-            Span::styled(&self.query, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &self.query,
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("█", Style::default().fg(C_BORDER)),
             Span::styled(
                 format!("  ({match_count}/{note_count})"),
@@ -1009,7 +1157,10 @@ impl NotesApp {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_ACCENT))
-                .title(Span::styled(" Search Notes ", Style::default().fg(C_ACCENT)))
+                .title(Span::styled(
+                    " Search Notes ",
+                    Style::default().fg(C_ACCENT),
+                ))
                 .style(Style::default().bg(C_BG)),
         );
         f.render_widget(search_bar, outer[1]);
@@ -1017,10 +1168,7 @@ impl NotesApp {
         // ── Main content: left list + right preview ────────────────────────────
         let content_panes = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(40),
-                Constraint::Percentage(60),
-            ])
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
             .split(outer[2]);
 
         self.render_list(f, content_panes[0]);
@@ -1028,31 +1176,60 @@ impl NotesApp {
 
         // ── Status Bar / Shortcuts ────────────────────────────────────────────
         let status_spans = vec![
-            Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ↑↓ ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Navigate", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("↵ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "↵ ",
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Open", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+N ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+N ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("New", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+D ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+D ",
+                Style::default()
+                    .fg(Color::Rgb(255, 100, 100))
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Delete", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+C ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+C ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Copy", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+V ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+V ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Paste", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+O ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+O ",
+                Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Folder", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("F10 ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "F10 ",
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("⎋ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "⎋ ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Quit ", Style::default().fg(C_DIM)),
         ];
 
@@ -1083,26 +1260,60 @@ impl NotesApp {
 
         let sel_note = self.selected_note();
         let (cat, title, created) = sel_note
-            .map(|n| (n.category.as_str(), n.title.as_str(), n.created_time.as_str()))
+            .map(|n| {
+                (
+                    n.category.as_str(),
+                    n.title.as_str(),
+                    n.created_time.as_str(),
+                )
+            })
             .unwrap_or(("General", "Untitled", "—"));
 
         // ── Header Banner ──────────────────────────────────────────────────────
         let header_spans = if let Some((ref msg, is_error)) = self.status_msg {
-            let color = if is_error { Color::Rgb(255, 80, 80) } else { C_GREEN };
-            vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))]
+            let color = if is_error {
+                Color::Rgb(255, 80, 80)
+            } else {
+                C_GREEN
+            };
+            vec![Span::styled(
+                msg.clone(),
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            )]
         } else {
             let mode_pill = if self.is_editing_content {
-                Span::styled(" STEP 2/2: EDIT NOTE ", Style::default().fg(C_BG).bg(C_CYAN).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    " STEP 2/2: EDIT NOTE ",
+                    Style::default()
+                        .fg(C_BG)
+                        .bg(C_CYAN)
+                        .add_modifier(Modifier::BOLD),
+                )
             } else {
-                Span::styled(" STEP 2/2: CHOOSE NOTE ACTION ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    " STEP 2/2: CHOOSE NOTE ACTION ",
+                    Style::default()
+                        .fg(C_BG)
+                        .bg(C_VIOLET)
+                        .add_modifier(Modifier::BOLD),
+                )
             };
 
             vec![
-                Span::styled(" 📝 GLADESHELL NOTES  ", Style::default().fg(C_BG).bg(C_VIOLET).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " 📝 GLADESHELL NOTES  ",
+                    Style::default()
+                        .fg(C_BG)
+                        .bg(C_VIOLET)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("  "),
                 mode_pill,
                 Span::raw("  "),
-                Span::styled(format!("📁 {} / {}", cat, title), Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("📁 {} / {}", cat, title),
+                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+                ),
                 Span::raw("  •  "),
                 Span::styled(format!("🕐 {created}"), Style::default().fg(C_DIM)),
             ]
@@ -1130,31 +1341,60 @@ impl NotesApp {
 
         // ── Footer status bar ──────────────────────────────────────────────────
         let footer_spans = vec![
-            Span::styled(" ↑↓ ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ↑↓ ",
+                Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Navigate", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("↵ ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "↵ ",
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Select", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+N ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+N ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("New", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+D ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+D ",
+                Style::default()
+                    .fg(Color::Rgb(255, 100, 100))
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Delete", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+C ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+C ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Copy", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+V ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+V ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Paste", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("Ctrl+O ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Ctrl+O ",
+                Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Folder", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("F10 ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "F10 ",
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Code", Style::default().fg(C_DIM)),
             Span::styled("  ·  ", Style::default().fg(C_BORDER)),
-            Span::styled("⎋ ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "⎋ ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Back ", Style::default().fg(C_DIM)),
         ];
 
@@ -1174,34 +1414,51 @@ impl NotesApp {
         let active = !self.is_editing_content;
         let border_color = if active { C_VIOLET } else { C_BORDER };
 
-        let items: Vec<ListItem> = ACTION_ITEMS.iter().enumerate().map(|(idx, item)| {
-            let sel = idx == self.action_cursor;
-            if sel {
-                let label_style = if active {
-                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)
+        let items: Vec<ListItem> = ACTION_ITEMS
+            .iter()
+            .enumerate()
+            .map(|(idx, item)| {
+                let sel = idx == self.action_cursor;
+                if sel {
+                    let label_style = if active {
+                        Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)
+                    };
+                    ListItem::new(Line::from(vec![
+                        Span::styled(
+                            "❯ ",
+                            Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(item.emoji, Style::default().fg(C_WHITE)),
+                        Span::raw(" "),
+                        Span::styled(format!("{:<15}", item.label), label_style),
+                        Span::styled(
+                            format!(" [{}]", item.shortcut),
+                            Style::default().fg(C_YELLOW),
+                        ),
+                    ]))
+                    .style(Style::default().bg(C_CARD))
                 } else {
-                    Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)
-                };
-                ListItem::new(Line::from(vec![
-                    Span::styled("❯ ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD)),
-                    Span::styled(item.emoji, Style::default().fg(C_WHITE)),
-                    Span::raw(" "),
-                    Span::styled(format!("{:<15}", item.label), label_style),
-                    Span::styled(format!(" [{}]", item.shortcut), Style::default().fg(C_YELLOW)),
-                ])).style(Style::default().bg(C_CARD))
-            } else {
-                ListItem::new(Line::from(vec![
-                    Span::raw("  "),
-                    Span::styled(item.emoji, Style::default().fg(C_DIM)),
-                    Span::raw(" "),
-                    Span::styled(format!("{:<15}", item.label), Style::default().fg(C_DIM)),
-                    Span::styled(format!(" [{}]", item.shortcut), Style::default().fg(Color::Rgb(70, 78, 100))),
-                ]))
-            }
-        }).collect();
+                    ListItem::new(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(item.emoji, Style::default().fg(C_DIM)),
+                        Span::raw(" "),
+                        Span::styled(format!("{:<15}", item.label), Style::default().fg(C_DIM)),
+                        Span::styled(
+                            format!(" [{}]", item.shortcut),
+                            Style::default().fg(Color::Rgb(70, 78, 100)),
+                        ),
+                    ]))
+                }
+            })
+            .collect();
 
         let title_span = if active {
-            Span::styled(" 📌 NOTE ACTIONS (ACTIVE) ", Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD))
+            Span::styled(
+                " 📌 NOTE ACTIONS (ACTIVE) ",
+                Style::default().fg(C_VIOLET).add_modifier(Modifier::BOLD),
+            )
         } else {
             Span::styled(" 📌 NOTE ACTIONS ", Style::default().fg(C_DIM))
         };
@@ -1236,8 +1493,18 @@ impl NotesApp {
 
         let sel_note = self.selected_note();
         let (cat, title, path_str) = sel_note
-            .map(|n| (n.category.clone(), n.title.clone(), n.file_path.to_string_lossy().to_string()))
-            .unwrap_or(("General".to_string(), "Untitled".to_string(), "—".to_string()));
+            .map(|n| {
+                (
+                    n.category.clone(),
+                    n.title.clone(),
+                    n.file_path.to_string_lossy().to_string(),
+                )
+            })
+            .unwrap_or((
+                "General".to_string(),
+                "Untitled".to_string(),
+                "—".to_string(),
+            ));
 
         let words = self.edit_buffer.split_whitespace().count();
         let chars = self.edit_buffer.chars().count();
@@ -1297,7 +1564,10 @@ impl NotesApp {
             )
         } else {
             Span::styled(
-                format!(" 📄 NOTE CONTENT PREVIEW (Press Enter or e to edit — {} lines) ", self.edit_lines.len()),
+                format!(
+                    " 📄 NOTE CONTENT PREVIEW (Press Enter or e to edit — {} lines) ",
+                    self.edit_lines.len()
+                ),
                 Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
             )
         };
@@ -1310,7 +1580,9 @@ impl NotesApp {
                 Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
             )));
         } else {
-            let start = self.editor_scroll_top.min(self.edit_lines.len().saturating_sub(1));
+            let start = self
+                .editor_scroll_top
+                .min(self.edit_lines.len().saturating_sub(1));
             let end = (start + viewport_h.max(1)).min(self.edit_lines.len());
 
             for line_idx in start..end {
@@ -1338,7 +1610,10 @@ impl NotesApp {
                         let rest = &tail[c.len_utf8()..];
                         spans.push(Span::styled(
                             cursor_char,
-                            Style::default().bg(C_CYAN).fg(C_BG).add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .bg(C_CYAN)
+                                .fg(C_BG)
+                                .add_modifier(Modifier::BOLD),
                         ));
                         spans.push(Span::styled(rest, Style::default().fg(C_WHITE)));
                     } else {
@@ -1394,10 +1669,22 @@ impl NotesApp {
 
             let line = if is_sel {
                 Line::from(vec![
-                    Span::styled(" ▶ ", Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)),
                     Span::styled(
-                        format!("{:<width$}", note.title, width = area.width.saturating_sub(6) as usize),
-                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(C_SELECTED_BG),
+                        " ▶ ",
+                        Style::default()
+                            .fg(C_SELECTED_FG)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(
+                            "{:<width$}",
+                            note.title,
+                            width = area.width.saturating_sub(6) as usize
+                        ),
+                        Style::default()
+                            .fg(C_WHITE)
+                            .add_modifier(Modifier::BOLD)
+                            .bg(C_SELECTED_BG),
                     ),
                 ])
             } else {
@@ -1442,13 +1729,18 @@ impl NotesApp {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
-            .title(Span::styled(title_span, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                title_span,
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ))
             .style(Style::default().bg(C_BG));
 
         let inner = preview_block.inner(area);
         f.render_widget(preview_block, area);
 
-        if inner.height < 3 || inner.width < 5 { return; }
+        if inner.height < 3 || inner.width < 5 {
+            return;
+        }
 
         let mut lines: Vec<Line> = Vec::new();
 
@@ -1456,9 +1748,17 @@ impl NotesApp {
             // Metadata header
             lines.push(Line::from(vec![
                 Span::styled("  📁 ", Style::default().fg(C_YELLOW)),
-                Span::styled(&note.category, Style::default().fg(C_CAT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &note.category,
+                    Style::default().fg(C_CAT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(" / ", Style::default().fg(C_DIM)),
-                Span::styled(&note.title, Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &note.title,
+                    Style::default()
+                        .fg(C_SELECTED_FG)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]));
             lines.push(Line::from(vec![
                 Span::styled("  🕐 ", Style::default().fg(C_DIM)),
@@ -1515,13 +1815,19 @@ impl NotesApp {
                     Line::from(""),
                     Line::from(vec![
                         Span::styled("  Delete note ", Style::default().fg(C_TEXT)),
-                        Span::styled(&note_title, Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            &note_title,
+                            Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+                        ),
                         Span::styled("?", Style::default().fg(C_TEXT)),
                     ]),
                     Line::from(""),
                     Line::from(vec![
                         Span::styled("  Press ", Style::default().fg(C_DIM)),
-                        Span::styled("[Y]", Style::default().fg(C_PINK).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            "[Y]",
+                            Style::default().fg(C_PINK).add_modifier(Modifier::BOLD),
+                        ),
                         Span::styled(" to confirm, any key to cancel", Style::default().fg(C_DIM)),
                     ]),
                     Line::from(""),
@@ -1585,30 +1891,50 @@ impl NotesApp {
                 // Category field
                 let cat_border_color = if *active_field == 0 { C_ACCENT } else { C_DIM };
                 let cat_field = Paragraph::new(Line::from(vec![
-                    Span::styled(cat.as_str(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-                    if *active_field == 0 { Span::styled("█", Style::default().fg(C_BORDER)) } else { Span::raw("") },
+                    Span::styled(
+                        cat.as_str(),
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ),
+                    if *active_field == 0 {
+                        Span::styled("█", Style::default().fg(C_BORDER))
+                    } else {
+                        Span::raw("")
+                    },
                 ]))
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(cat_border_color))
-                        .title(Span::styled(" 1. Category ", Style::default().fg(cat_border_color))),
+                        .title(Span::styled(
+                            " 1. Category ",
+                            Style::default().fg(cat_border_color),
+                        )),
                 );
                 f.render_widget(cat_field, rows[1]);
 
                 // Title field
                 let title_border_color = if *active_field == 1 { C_ACCENT } else { C_DIM };
                 let title_field = Paragraph::new(Line::from(vec![
-                    Span::styled(title.as_str(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-                    if *active_field == 1 { Span::styled("█", Style::default().fg(C_BORDER)) } else { Span::raw("") },
+                    Span::styled(
+                        title.as_str(),
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ),
+                    if *active_field == 1 {
+                        Span::styled("█", Style::default().fg(C_BORDER))
+                    } else {
+                        Span::raw("")
+                    },
                 ]))
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(title_border_color))
-                        .title(Span::styled(" 2. Title ", Style::default().fg(title_border_color))),
+                        .title(Span::styled(
+                            " 2. Title ",
+                            Style::default().fg(title_border_color),
+                        )),
                 );
                 f.render_widget(title_field, rows[2]);
 
@@ -1625,7 +1951,10 @@ impl NotesApp {
                             Span::styled("█", Style::default().fg(C_CYAN)),
                         ]));
                     } else {
-                        content_lines.push(Line::from(Span::styled(*line, Style::default().fg(C_WHITE))));
+                        content_lines.push(Line::from(Span::styled(
+                            *line,
+                            Style::default().fg(C_WHITE),
+                        )));
                     }
                 }
 
@@ -1636,7 +1965,10 @@ impl NotesApp {
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
                             .border_style(Style::default().fg(content_border_color))
-                            .title(Span::styled(" 3. Note Content (Write text here) ", Style::default().fg(content_border_color))),
+                            .title(Span::styled(
+                                " 3. Note Content (Write text here) ",
+                                Style::default().fg(content_border_color),
+                            )),
                     );
                 f.render_widget(content_field, rows[3]);
 
@@ -1694,7 +2026,9 @@ fn seed_sample_notes_if_empty(root_dir: &PathBuf) {
     ];
     for (dir, name, content) in files {
         let p = dir.join(name);
-        if !p.exists() { let _ = fs::write(&p, content); }
+        if !p.exists() {
+            let _ = fs::write(&p, content);
+        }
     }
 }
 
@@ -1712,10 +2046,17 @@ fn format_system_time(st: std::time::SystemTime) -> String {
         let mut month = 0usize;
         let mut rem = doy;
         for (i, &days_in_m) in md.iter().enumerate() {
-            if rem < days_in_m { month = i; break; }
+            if rem < days_in_m {
+                month = i;
+                break;
+            }
             rem -= days_in_m;
         }
-        format!("{year:04}-{:02}-{:02} {h:02}:{m:02}:{s:02}", month + 1, rem + 1)
+        format!(
+            "{year:04}-{:02}-{:02} {h:02}:{m:02}:{s:02}",
+            month + 1,
+            rem + 1
+        )
     } else {
         "—".to_string()
     }
@@ -1735,14 +2076,24 @@ fn print_notes_help(root_dir: &PathBuf) {
 fn run_tui(app: &mut NotesApp) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture, EnableBracketedPaste)?;
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableMouseCapture,
+        EnableBracketedPaste
+    )?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let res = app.run_loop(&mut terminal);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture, DisableBracketedPaste)?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture,
+        DisableBracketedPaste
+    )?;
     terminal.show_cursor()?;
 
     if let Ok(Some(note)) = res {
@@ -1894,7 +2245,10 @@ mod tests {
 
         let read_back = fs::read_to_string(&file_p).unwrap();
         assert_eq!(read_back, "updated content line 1\nupdated line 2");
-        assert_eq!(app.items[0].content, "updated content line 1\nupdated line 2");
+        assert_eq!(
+            app.items[0].content,
+            "updated content line 1\nupdated line 2"
+        );
 
         let _ = fs::remove_dir_all(&dir);
     }
@@ -2031,7 +2385,10 @@ mod tests {
         let mut app = NotesApp::new(dir.clone());
 
         // Create a 100 line note buffer
-        app.edit_buffer = (1..=100).map(|i| format!("Line {i}")).collect::<Vec<_>>().join("\n");
+        app.edit_buffer = (1..=100)
+            .map(|i| format!("Line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
         app.init_editor_state();
 
         assert_eq!(app.edit_lines.len(), 100);

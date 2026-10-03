@@ -6,7 +6,6 @@
 
 // src/core/aliases/categories/rust.rs
 
-
 use crate::core::aliases::{AliasEntry, AliasGroup};
 
 pub fn group() -> AliasGroup {

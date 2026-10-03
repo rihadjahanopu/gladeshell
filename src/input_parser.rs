@@ -95,13 +95,13 @@ impl InputParser {
 
             // Control character mappings
             // These are unambiguous single-byte control sequences
-            0x01 => (KeyEvent::Home, 1),                      // Ctrl+A
-            0x03 => (KeyEvent::Esc, 1),                       // Ctrl+C (cancel line)
-            0x04 => (KeyEvent::Delete, 1),                    // Ctrl+D
-            0x05 => (KeyEvent::End, 1),                       // Ctrl+E
-            0x0b => (KeyEvent::Esc, 1),                       // Ctrl+K (clear line)
-            0x15 => (KeyEvent::Esc, 1),                       // Ctrl+U (clear line)
-            0x17 => (KeyEvent::Left(KeyModifiers::Ctrl), 1),  // Ctrl+W (word-left/delete)
+            0x01 => (KeyEvent::Home, 1),                     // Ctrl+A
+            0x03 => (KeyEvent::Esc, 1),                      // Ctrl+C (cancel line)
+            0x04 => (KeyEvent::Delete, 1),                   // Ctrl+D
+            0x05 => (KeyEvent::End, 1),                      // Ctrl+E
+            0x0b => (KeyEvent::Esc, 1),                      // Ctrl+K (clear line)
+            0x15 => (KeyEvent::Esc, 1),                      // Ctrl+U (clear line)
+            0x17 => (KeyEvent::Left(KeyModifiers::Ctrl), 1), // Ctrl+W (word-left/delete)
 
             // Other unhandled control codes (0x00..=0x1a excluding those above)
             code if code < 0x20 => (KeyEvent::Unknown(vec![code]), 1),
@@ -180,7 +180,12 @@ impl InputParser {
         // Build parameter string from bytes[2..end_idx]
         let param_bytes = match bytes.get(2..end_idx) {
             Some(b) => b,
-            None => return (KeyEvent::Unknown(bytes[..total_len.min(bytes.len())].to_vec()), total_len.min(bytes.len())),
+            None => {
+                return (
+                    KeyEvent::Unknown(bytes[..total_len.min(bytes.len())].to_vec()),
+                    total_len.min(bytes.len()),
+                )
+            }
         };
         let param_str = String::from_utf8_lossy(param_bytes);
         let params: Vec<&str> = param_str.split(';').collect();
@@ -338,11 +343,7 @@ impl Drop for RawModeGuard {
     fn drop(&mut self) {
         // Best-effort restore — ignore errors during drop
         unsafe {
-            let _ = libc::tcsetattr(
-                libc::STDIN_FILENO,
-                libc::TCSADRAIN,
-                &self.original_termios,
-            );
+            let _ = libc::tcsetattr(libc::STDIN_FILENO, libc::TCSADRAIN, &self.original_termios);
         }
     }
 }
@@ -372,7 +373,10 @@ impl RawModeGuard {
             )
         };
         if handle == ptr::null_mut() {
-            return Ok(RawModeGuard { original_mode: 0, handle: ptr::null_mut() });
+            return Ok(RawModeGuard {
+                original_mode: 0,
+                handle: ptr::null_mut(),
+            });
         }
         let mut original_mode = 0u32;
         unsafe {
@@ -384,7 +388,10 @@ impl RawModeGuard {
         unsafe {
             windows_sys::Win32::System::Console::SetConsoleMode(handle, raw_mode);
         }
-        Ok(RawModeGuard { original_mode, handle: handle as *mut std::ffi::c_void })
+        Ok(RawModeGuard {
+            original_mode,
+            handle: handle as *mut std::ffi::c_void,
+        })
     }
 }
 
@@ -434,18 +441,30 @@ mod tests {
     #[test]
     fn test_control_keys() {
         let parser = InputParser::new();
-        assert_eq!(parser.parse_bytes(&[0x01]), vec![KeyEvent::Home]);   // Ctrl+A
-        assert_eq!(parser.parse_bytes(&[0x05]), vec![KeyEvent::End]);    // Ctrl+E
-        assert_eq!(parser.parse_bytes(&[0x03]), vec![KeyEvent::Esc]);    // Ctrl+C
+        assert_eq!(parser.parse_bytes(&[0x01]), vec![KeyEvent::Home]); // Ctrl+A
+        assert_eq!(parser.parse_bytes(&[0x05]), vec![KeyEvent::End]); // Ctrl+E
+        assert_eq!(parser.parse_bytes(&[0x03]), vec![KeyEvent::Esc]); // Ctrl+C
     }
 
     #[test]
     fn test_csi_arrows() {
         let parser = InputParser::new();
-        assert_eq!(parser.parse_bytes(b"\x1b[A"), vec![KeyEvent::Up(KeyModifiers::None)]);
-        assert_eq!(parser.parse_bytes(b"\x1b[B"), vec![KeyEvent::Down(KeyModifiers::None)]);
-        assert_eq!(parser.parse_bytes(b"\x1b[C"), vec![KeyEvent::Right(KeyModifiers::None)]);
-        assert_eq!(parser.parse_bytes(b"\x1b[D"), vec![KeyEvent::Left(KeyModifiers::None)]);
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[A"),
+            vec![KeyEvent::Up(KeyModifiers::None)]
+        );
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[B"),
+            vec![KeyEvent::Down(KeyModifiers::None)]
+        );
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[C"),
+            vec![KeyEvent::Right(KeyModifiers::None)]
+        );
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[D"),
+            vec![KeyEvent::Left(KeyModifiers::None)]
+        );
         assert_eq!(parser.parse_bytes(b"\x1b[H"), vec![KeyEvent::Home]);
         assert_eq!(parser.parse_bytes(b"\x1b[F"), vec![KeyEvent::End]);
     }
@@ -453,10 +472,22 @@ mod tests {
     #[test]
     fn test_ss3_arrows() {
         let parser = InputParser::new();
-        assert_eq!(parser.parse_bytes(b"\x1bOA"), vec![KeyEvent::Up(KeyModifiers::None)]);
-        assert_eq!(parser.parse_bytes(b"\x1bOB"), vec![KeyEvent::Down(KeyModifiers::None)]);
-        assert_eq!(parser.parse_bytes(b"\x1bOC"), vec![KeyEvent::Right(KeyModifiers::None)]);
-        assert_eq!(parser.parse_bytes(b"\x1bOD"), vec![KeyEvent::Left(KeyModifiers::None)]);
+        assert_eq!(
+            parser.parse_bytes(b"\x1bOA"),
+            vec![KeyEvent::Up(KeyModifiers::None)]
+        );
+        assert_eq!(
+            parser.parse_bytes(b"\x1bOB"),
+            vec![KeyEvent::Down(KeyModifiers::None)]
+        );
+        assert_eq!(
+            parser.parse_bytes(b"\x1bOC"),
+            vec![KeyEvent::Right(KeyModifiers::None)]
+        );
+        assert_eq!(
+            parser.parse_bytes(b"\x1bOD"),
+            vec![KeyEvent::Left(KeyModifiers::None)]
+        );
         assert_eq!(parser.parse_bytes(b"\x1bOH"), vec![KeyEvent::Home]);
         assert_eq!(parser.parse_bytes(b"\x1bOF"), vec![KeyEvent::End]);
     }
@@ -465,13 +496,25 @@ mod tests {
     fn test_modified_arrows() {
         let parser = InputParser::new();
         // Ctrl+Right
-        assert_eq!(parser.parse_bytes(b"\x1b[1;5C"), vec![KeyEvent::Right(KeyModifiers::Ctrl)]);
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[1;5C"),
+            vec![KeyEvent::Right(KeyModifiers::Ctrl)]
+        );
         // Alt+Left
-        assert_eq!(parser.parse_bytes(b"\x1b[1;3D"), vec![KeyEvent::Left(KeyModifiers::Alt)]);
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[1;3D"),
+            vec![KeyEvent::Left(KeyModifiers::Alt)]
+        );
         // Shift+Right
-        assert_eq!(parser.parse_bytes(b"\x1b[1;2C"), vec![KeyEvent::Right(KeyModifiers::Shift)]);
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[1;2C"),
+            vec![KeyEvent::Right(KeyModifiers::Shift)]
+        );
         // Ctrl+Up
-        assert_eq!(parser.parse_bytes(b"\x1b[1;5A"), vec![KeyEvent::Up(KeyModifiers::Ctrl)]);
+        assert_eq!(
+            parser.parse_bytes(b"\x1b[1;5A"),
+            vec![KeyEvent::Up(KeyModifiers::Ctrl)]
+        );
     }
 
     #[test]
@@ -494,8 +537,11 @@ mod tests {
         assert_eq!(
             parser.parse_bytes(b"hello"),
             vec![
-                KeyEvent::Char('h'), KeyEvent::Char('e'), KeyEvent::Char('l'),
-                KeyEvent::Char('l'), KeyEvent::Char('o'),
+                KeyEvent::Char('h'),
+                KeyEvent::Char('e'),
+                KeyEvent::Char('l'),
+                KeyEvent::Char('l'),
+                KeyEvent::Char('o'),
             ]
         );
     }
@@ -514,11 +560,14 @@ mod tests {
         let parser = InputParser::new();
         let bytes = "日本語".as_bytes();
         let events = parser.parse_bytes(bytes);
-        assert_eq!(events, vec![
-            KeyEvent::Char('日'),
-            KeyEvent::Char('本'),
-            KeyEvent::Char('語'),
-        ]);
+        assert_eq!(
+            events,
+            vec![
+                KeyEvent::Char('日'),
+                KeyEvent::Char('本'),
+                KeyEvent::Char('語'),
+            ]
+        );
     }
 
     #[test]
@@ -536,7 +585,7 @@ mod tests {
         // Various malformed sequences
         let _ = parser.parse_bytes(&[]);
         let _ = parser.parse_bytes(&[0xff, 0xfe]);
-        let _ = parser.parse_bytes(&[0x1b]);        // bare ESC
+        let _ = parser.parse_bytes(&[0x1b]); // bare ESC
         let _ = parser.parse_bytes(&[0x1b, b'[']); // incomplete CSI
         let _ = parser.parse_bytes(&[0x80, 0x81, 0x82]); // bare continuation bytes
     }

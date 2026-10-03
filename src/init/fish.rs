@@ -18,8 +18,8 @@
 //    • fish_command_not_found — fires when an unknown command is executed.
 // =============================================================================
 
-use crate::core::aliases::Shell;
 use super::{header_comment, shared};
+use crate::core::aliases::Shell;
 
 pub fn generate() -> String {
     let mut out = String::with_capacity(8192);
@@ -36,7 +36,8 @@ pub fn generate() -> String {
     out.push_str(&shared::render_cli_completions(Shell::Fish));
 
     // ── Prompt function (Native Rust Engine) ──────────────────────────────────
-    out.push_str(r#"
+    out.push_str(
+        r#"
 # ── gladeshell Fish Prompt (Native Rust Engine) ──────────────────────────────
 #
 # fish_prompt is called every time a new prompt is needed.
@@ -91,7 +92,8 @@ end
 function fish_command_not_found
     gladeshell correct $argv[1]
 end
-"#);
+"#,
+    );
 
     out.push_str("\n# gladeshell fish init complete\n");
     out

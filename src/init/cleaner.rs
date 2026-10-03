@@ -12,8 +12,14 @@ use std::path::PathBuf;
 /// Return dynamic start and end markers for a given shell name.
 pub fn get_markers_for_shell(shell: &str) -> (String, String) {
     match shell.to_ascii_lowercase().as_str() {
-        "zsh" => ("# >>> glade-zshrc >>>".into(), "# <<< glade-zshrc <<<".into()),
-        "bash" => ("# >>> glade-bashrc >>>".into(), "# <<< glade-bashrc <<<".into()),
+        "zsh" => (
+            "# >>> glade-zshrc >>>".into(),
+            "# <<< glade-zshrc <<<".into(),
+        ),
+        "bash" => (
+            "# >>> glade-bashrc >>>".into(),
+            "# <<< glade-bashrc <<<".into(),
+        ),
         "fish" => ("# >>> glade-fish >>>".into(), "# <<< glade-fish <<<".into()),
         "pwsh" | "powershell" => (
             "# >>> glade-powershell >>>".into(),
@@ -247,7 +253,10 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
             let hook = format!(
                 "{start_marker}\nif command -v gladeshell >/dev/null 2>&1; then\n    gladeshell setup >/dev/null 2>&1\nfi\n{end_marker}\n"
             );
-            let mut file = fs::OpenOptions::new().create(true).append(true).open(&zshenv)?;
+            let mut file = fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&zshenv)?;
             file.write_all(hook.as_bytes())?;
         }
 
@@ -266,7 +275,10 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
                 let hook = format!(
                     "{p_start_marker}\nif command -v gladeshell >/dev/null 2>&1; then\n    gladeshell setup >/dev/null 2>&1\nfi\n{p_end_marker}\n"
                 );
-                let mut file = fs::OpenOptions::new().create(true).append(true).open(&bash_file)?;
+                let mut file = fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&bash_file)?;
                 file.write_all(hook.as_bytes())?;
             }
         }
@@ -307,7 +319,10 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
                 let hook = format!(
                     "{pw_start_marker}\nif (Get-Command gladeshell -ErrorAction SilentlyContinue) {{\n    gladeshell setup | Out-Null\n}}\n{pw_end_marker}\n"
                 );
-                let mut file = fs::OpenOptions::new().create(true).append(true).open(&pwsh_profile)?;
+                let mut file = fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&pwsh_profile)?;
                 file.write_all(hook.as_bytes())?;
             }
         }
@@ -334,4 +349,3 @@ pub fn ensure_all_installed_shells_configured() -> std::io::Result<Vec<String>> 
 
     Ok(configured)
 }
-

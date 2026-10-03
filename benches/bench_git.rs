@@ -49,7 +49,9 @@ fn bench_git2_head_read(c: &mut Criterion) {
     c.bench_function("git/read_head_file", |b| {
         b.iter(|| {
             let content = std::fs::read_to_string(black_box(&head_path)).unwrap_or_default();
-            let branch = content.trim().strip_prefix("ref: refs/heads/")
+            let branch = content
+                .trim()
+                .strip_prefix("ref: refs/heads/")
                 .map(|s| s.to_owned())
                 .unwrap_or_default();
             let _ = black_box(branch);

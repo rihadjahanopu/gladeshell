@@ -6,7 +6,6 @@
 
 // src/core/aliases/categories/mod.rs
 
-
 pub mod bun;
 pub mod developer;
 pub mod docker;

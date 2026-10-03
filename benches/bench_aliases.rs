@@ -10,8 +10,8 @@
 // =============================================================================
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::hint::black_box;
 use gladeshell_core::core::aliases::{AliasFile, Shell};
+use std::hint::black_box;
 
 // ── Minimal inline TOML (no disk I/O) ─────────────────────────────────────────
 

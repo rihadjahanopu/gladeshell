@@ -196,15 +196,27 @@ fn run_project_tui() -> Result<Option<String>, Box<dyn Error>> {
                 ])
                 .split(size);
 
-            let header_text = vec![
-                Line::from(vec![
-                    Span::styled(" 🚀 GLADESHELL PROJECT HUB ", Style::default().fg(Color::Black).bg(Color::Rgb(0, 220, 240)).add_modifier(Modifier::BOLD)),
-                    Span::raw("  "),
-                    Span::styled("Interactive Web & Native Boilerplate Center", Style::default().fg(Color::Rgb(255, 200, 80)).add_modifier(Modifier::BOLD)),
-                ]),
-            ];
-            let header = Paragraph::new(header_text)
-                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Rgb(0, 220, 240))));
+            let header_text = vec![Line::from(vec![
+                Span::styled(
+                    " 🚀 GLADESHELL PROJECT HUB ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(0, 220, 240))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("  "),
+                Span::styled(
+                    "Interactive Web & Native Boilerplate Center",
+                    Style::default()
+                        .fg(Color::Rgb(255, 200, 80))
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ])];
+            let header = Paragraph::new(header_text).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Rgb(0, 220, 240))),
+            );
             f.render_widget(header, chunks[0]);
 
             let main_chunks = Layout::default()
@@ -219,44 +231,88 @@ fn run_project_tui() -> Result<Option<String>, Box<dyn Error>> {
                     let is_sel = idx == selected_idx;
                     let prefix = if is_sel { "▶ " } else { "  " };
                     let style = if is_sel {
-                        Style::default().fg(Color::Rgb(255, 200, 80)).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(Color::Rgb(255, 200, 80))
+                            .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default().fg(Color::Rgb(220, 220, 230))
                     };
                     let line = Line::from(vec![
-                        Span::styled(prefix, if is_sel { Style::default().fg(Color::Rgb(255, 200, 80)) } else { Style::default().fg(Color::Rgb(100, 110, 130)) }),
+                        Span::styled(
+                            prefix,
+                            if is_sel {
+                                Style::default().fg(Color::Rgb(255, 200, 80))
+                            } else {
+                                Style::default().fg(Color::Rgb(100, 110, 130))
+                            },
+                        ),
                         Span::styled(format!("{} ", item.icon), Style::default()),
                         Span::styled(item.title, style),
-                        Span::styled(format!(" ({})", item.key), Style::default().fg(Color::Rgb(100, 110, 130))),
+                        Span::styled(
+                            format!(" ({})", item.key),
+                            Style::default().fg(Color::Rgb(100, 110, 130)),
+                        ),
                     ]);
                     ListItem::new(line)
                 })
                 .collect();
 
             let title_str = format!(" 📦 Available Tools ({}) ", filtered.len());
-            let list_widget = List::new(list_items)
-                .block(Block::default().borders(Borders::ALL).title(title_str).border_style(Style::default().fg(Color::Rgb(100, 110, 130))));
+            let list_widget = List::new(list_items).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(title_str)
+                    .border_style(Style::default().fg(Color::Rgb(100, 110, 130))),
+            );
             f.render_widget(list_widget, main_chunks[0]);
 
             if let Some(selected_item) = filtered.get(selected_idx) {
                 let mut detail_lines = vec![
                     Line::from(vec![
                         Span::styled(format!("{} ", selected_item.icon), Style::default()),
-                        Span::styled(selected_item.title, Style::default().fg(Color::Rgb(0, 220, 240)).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            selected_item.title,
+                            Style::default()
+                                .fg(Color::Rgb(0, 220, 240))
+                                .add_modifier(Modifier::BOLD),
+                        ),
                     ]),
                     Line::from(vec![
                         Span::styled("Category: ", Style::default().fg(Color::Rgb(100, 110, 130))),
-                        Span::styled(selected_item.category, Style::default().fg(Color::Rgb(220, 100, 240)).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            selected_item.category,
+                            Style::default()
+                                .fg(Color::Rgb(220, 100, 240))
+                                .add_modifier(Modifier::BOLD),
+                        ),
                     ]),
                     Line::from(vec![
                         Span::styled("Command:  ", Style::default().fg(Color::Rgb(100, 110, 130))),
-                        Span::styled(selected_item.cmd_hint, Style::default().fg(Color::Rgb(80, 220, 120)).add_modifier(Modifier::BOLD)),
+                        Span::styled(
+                            selected_item.cmd_hint,
+                            Style::default()
+                                .fg(Color::Rgb(80, 220, 120))
+                                .add_modifier(Modifier::BOLD),
+                        ),
                     ]),
                     Line::from(""),
-                    Line::from(Span::styled("Description:", Style::default().fg(Color::Rgb(255, 200, 80)).add_modifier(Modifier::BOLD))),
-                    Line::from(Span::styled(selected_item.description, Style::default().fg(Color::Rgb(220, 220, 230)))),
+                    Line::from(Span::styled(
+                        "Description:",
+                        Style::default()
+                            .fg(Color::Rgb(255, 200, 80))
+                            .add_modifier(Modifier::BOLD),
+                    )),
+                    Line::from(Span::styled(
+                        selected_item.description,
+                        Style::default().fg(Color::Rgb(220, 220, 230)),
+                    )),
                     Line::from(""),
-                    Line::from(Span::styled("Key Features:", Style::default().fg(Color::Rgb(255, 200, 80)).add_modifier(Modifier::BOLD))),
+                    Line::from(Span::styled(
+                        "Key Features:",
+                        Style::default()
+                            .fg(Color::Rgb(255, 200, 80))
+                            .add_modifier(Modifier::BOLD),
+                    )),
                 ];
 
                 for feat in selected_item.features {
@@ -268,29 +324,58 @@ fn run_project_tui() -> Result<Option<String>, Box<dyn Error>> {
 
                 let detail_widget = Paragraph::new(detail_lines)
                     .wrap(Wrap { trim: true })
-                    .block(Block::default().borders(Borders::ALL).title(" ℹ️ Tool Info ").border_style(Style::default().fg(Color::Rgb(0, 220, 240))));
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .title(" ℹ️ Tool Info ")
+                            .border_style(Style::default().fg(Color::Rgb(0, 220, 240))),
+                    );
                 f.render_widget(detail_widget, main_chunks[1]);
             } else {
-                let empty_widget = Paragraph::new("No matching tools found.")
-                    .block(Block::default().borders(Borders::ALL).title(" ℹ️ Tool Info "));
+                let empty_widget = Paragraph::new("No matching tools found.").block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(" ℹ️ Tool Info "),
+                );
                 f.render_widget(empty_widget, main_chunks[1]);
             }
 
             let query_disp = if query.is_empty() { "(none)" } else { &query };
-            let footer_text = vec![
-                Line::from(vec![
-                    Span::styled(" [↑/↓] ", Style::default().fg(Color::Rgb(255, 200, 80)).add_modifier(Modifier::BOLD)),
-                    Span::raw("Navigate  │ "),
-                    Span::styled("[Enter] ", Style::default().fg(Color::Rgb(80, 220, 120)).add_modifier(Modifier::BOLD)),
-                    Span::raw("Launch  │ "),
-                    Span::styled("[Esc/q] ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
-                    Span::raw("Quit  │ "),
-                    Span::styled("Search: ", Style::default().fg(Color::Rgb(100, 110, 130))),
-                    Span::styled(query_disp, Style::default().fg(Color::Rgb(0, 220, 240)).add_modifier(Modifier::BOLD)),
-                ]),
-            ];
-            let footer = Paragraph::new(footer_text)
-                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Rgb(100, 110, 130))));
+            let footer_text = vec![Line::from(vec![
+                Span::styled(
+                    " [↑/↓] ",
+                    Style::default()
+                        .fg(Color::Rgb(255, 200, 80))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("Navigate  │ "),
+                Span::styled(
+                    "[Enter] ",
+                    Style::default()
+                        .fg(Color::Rgb(80, 220, 120))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("Launch  │ "),
+                Span::styled(
+                    "[Esc/q] ",
+                    Style::default()
+                        .fg(Color::Rgb(255, 100, 100))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("Quit  │ "),
+                Span::styled("Search: ", Style::default().fg(Color::Rgb(100, 110, 130))),
+                Span::styled(
+                    query_disp,
+                    Style::default()
+                        .fg(Color::Rgb(0, 220, 240))
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ])];
+            let footer = Paragraph::new(footer_text).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Rgb(100, 110, 130))),
+            );
             f.render_widget(footer, chunks[2]);
         })?;
 

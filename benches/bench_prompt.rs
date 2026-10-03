@@ -9,8 +9,8 @@
 // =============================================================================
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::hint::black_box;
 use gladeshell_core::core::prompt::{render, PromptContext, THEMES};
+use std::hint::black_box;
 
 // ── Helper: build a filled PromptContext from plain &str values ───────────────
 
@@ -45,9 +45,9 @@ fn make_ctx(
     ctx.git_branch[..branch_len].copy_from_slice(&branch_b[..branch_len]);
     ctx.git_branch_len = branch_len;
 
-    ctx.git_dirty  = dirty;
-    ctx.last_exit  = exit;
-    ctx.theme_id   = theme;
+    ctx.git_dirty = dirty;
+    ctx.last_exit = exit;
+    ctx.theme_id = theme;
     ctx
 }
 
@@ -78,8 +78,8 @@ fn bench_render_dirty(c: &mut Criterion) {
         "rihad",
         "arch",
         "feat/modular-refactor",
-        true,  // dirty tree
-        1,     // non-zero exit
+        true, // dirty tree
+        1,    // non-zero exit
         0,
     );
     let mut buf = [0u8; 4096];
@@ -111,15 +111,11 @@ fn bench_render_sample_themes(c: &mut Criterion) {
     for &id in &sample_ids {
         let theme = &THEMES[id];
         let ctx = make_ctx("/home/rihad/project", "rihad", "arch", "main", false, 0, id);
-        group.bench_with_input(
-            BenchmarkId::from_parameter(theme.name),
-            &ctx,
-            |b, ctx| {
-                b.iter(|| {
-                    let _ = render(black_box(ctx), black_box(&mut buf));
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(theme.name), &ctx, |b, ctx| {
+            b.iter(|| {
+                let _ = render(black_box(ctx), black_box(&mut buf));
+            });
+        });
     }
     group.finish();
 }

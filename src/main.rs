@@ -593,7 +593,10 @@ fn main() {
             } else if subcmd == "init" && raw_args.len() >= 3 && !raw_args[2].starts_with('-') {
                 let shell = &raw_args[2];
                 let no_header = raw_args.iter().any(|arg| arg == "--no-header");
-                if let Err(e) = cmd_init(InitArgs { shell: shell.clone(), no_header }) {
+                if let Err(e) = cmd_init(InitArgs {
+                    shell: shell.clone(),
+                    no_header,
+                }) {
                     eprintln!("error: {e}");
                     std::process::exit(1);
                 }
@@ -613,7 +616,10 @@ fn main() {
                 return;
             } else if subcmd == "complete" {
                 let buffer = raw_args.get(2).map(|s| s.as_str()).unwrap_or("");
-                println!("{}", gladeshell_core::plugins::autocomplete::complete(buffer));
+                println!(
+                    "{}",
+                    gladeshell_core::plugins::autocomplete::complete(buffer)
+                );
                 return;
             } else if subcmd == "auto-ls" {
                 let path = raw_args.get(2).map(|s| s.as_str());
@@ -625,19 +631,28 @@ fn main() {
 
     let _prog_name = raw_args
         .get(0)
-        .map(|s| std::path::Path::new(s).file_name().unwrap_or_default().to_string_lossy().to_string())
+        .map(|s| {
+            std::path::Path::new(s)
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        })
         .unwrap_or_default();
 
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(err) => {
-            if err.kind() == clap::error::ErrorKind::DisplayHelp || err.kind() == clap::error::ErrorKind::DisplayVersion {
+            if err.kind() == clap::error::ErrorKind::DisplayHelp
+                || err.kind() == clap::error::ErrorKind::DisplayVersion
+            {
                 err.exit();
             }
             // Check if user ran `gladeshell <unknown_cmd>`
             if raw_args.len() > 1 && !raw_args[1].starts_with('-') {
                 let unknown_subcmd = &raw_args[1];
-                let pretty_msg = gladeshell_core::core::typo_engine::render_pretty_suggestion(unknown_subcmd);
+                let pretty_msg =
+                    gladeshell_core::core::typo_engine::render_pretty_suggestion(unknown_subcmd);
                 eprint!("{}", pretty_msg);
                 std::process::exit(1);
             } else {
@@ -660,8 +675,8 @@ fn main() {
             Commands::Cmp(args) => cmd_cmp(args),
             Commands::Gwip { args } => cmd_gwip(args),
             Commands::Uup => cmd_uup(),
-            Commands::Uu  => cmd_uu(),
-            Commands::Ut  => cmd_ut(),
+            Commands::Uu => cmd_uu(),
+            Commands::Ut => cmd_ut(),
             Commands::Update => gladeshell_core::tools::system_update::run(),
             Commands::Upgrade => gladeshell_core::tools::self_upgrade::run(),
             Commands::Uninstall => gladeshell_core::tools::self_uninstall::run(),
@@ -692,7 +707,9 @@ fn main() {
             Commands::Sysmon => gladeshell_core::tools::ftop::run(),
             Commands::Rt => gladeshell_core::tools::runtime_installer::run(),
             Commands::Rn { target } => gladeshell_core::tools::file_renamer::run(target.as_deref()),
-            Commands::Pg { file, install } => gladeshell_core::tools::pkg_converter::run(&file, install),
+            Commands::Pg { file, install } => {
+                gladeshell_core::tools::pkg_converter::run(&file, install)
+            }
             Commands::Drive { num } => gladeshell_core::tools::drive_jumper::run(num.as_deref()),
             Commands::Cf => gladeshell_core::tools::fuzzy_cd::run(),
             Commands::T { files } => gladeshell_core::tools::touch_tool::run(&files),
@@ -723,7 +740,12 @@ fn main() {
             // When invoked as `glade`, `theme`, or plain `gladeshell` with no
             // subcommand → open the interactive theme picker TUI.
             // Help menu is still available via `gladeshell keep`.
-            cmd_theme(ThemeArgs { name: None, element: None, color: None, val: None })
+            cmd_theme(ThemeArgs {
+                name: None,
+                element: None,
+                color: None,
+                val: None,
+            })
         }
     };
 
@@ -747,10 +769,10 @@ fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     // Auto-inject the eval line into the shell RC file (idempotent).
     let rc_file = match args.shell.to_ascii_lowercase().as_str() {
-        "zsh"  => "~/.zshrc",
+        "zsh" => "~/.zshrc",
         "bash" => "~/.bashrc",
         "fish" => "~/.config/fish/config.fish",
-        _      => "",
+        _ => "",
     };
 
     match init::cleaner::ensure_init_in_rc(&args.shell) {
@@ -817,12 +839,16 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
     let configured = init::cleaner::ensure_all_installed_shells_configured()?;
 
     if configured.is_empty() {
-        eprintln!("\x1b[1;33m✔  All installed shells are already configured — nothing to do.\x1b[0m");
+        eprintln!(
+            "\x1b[1;33m✔  All installed shells are already configured — nothing to do.\x1b[0m"
+        );
     } else {
         for sh in &configured {
             eprintln!("\x1b[1;32m✅ Successfully injected gladeshell into shell: {sh}\x1b[0m");
         }
-        eprintln!("\x1b[1;36m💡 Restart your terminal or source your shell config to activate.\x1b[0m");
+        eprintln!(
+            "\x1b[1;36m💡 Restart your terminal or source your shell config to activate.\x1b[0m"
+        );
     }
 
     Ok(())
@@ -832,20 +858,34 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
 
 fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
     use gladeshell_core::core::prompt::{
-        active_theme_id, get_effective_theme, load_theme_overrides,
-        reset_theme_color_overrides, save_theme_color_override, set_active_theme, THEMES,
+        active_theme_id, get_effective_theme, load_theme_overrides, reset_theme_color_overrides,
+        save_theme_color_override, set_active_theme, THEMES,
     };
 
     match args.name.as_deref() {
         // ── gladeshell theme list  →  styled table ─────────────────────────────
         Some("list") => {
             let active = active_theme_id();
-            println!("\n\x1b[1;35m🎨 Gladeshell Themes ({} total)\x1b[0m\n", THEMES.len());
-            println!("  \x1b[2m{:<4} {:<3} {:<20} {}\x1b[0m", "IDX", "  ", "NAME", "PROMPT");
+            println!(
+                "\n\x1b[1;35m🎨 Gladeshell Themes ({} total)\x1b[0m\n",
+                THEMES.len()
+            );
+            println!(
+                "  \x1b[2m{:<4} {:<3} {:<20} {}\x1b[0m",
+                "IDX", "  ", "NAME", "PROMPT"
+            );
             println!("  \x1b[2m{}\x1b[0m", "─".repeat(48));
             for (i, t) in THEMES.iter().enumerate() {
-                let active_mark = if i == active { "\x1b[1;32m✓\x1b[0m" } else { " " };
-                let name_color  = if i == active { "\x1b[1;36m" } else { "\x1b[0;37m" };
+                let active_mark = if i == active {
+                    "\x1b[1;32m✓\x1b[0m"
+                } else {
+                    " "
+                };
+                let name_color = if i == active {
+                    "\x1b[1;36m"
+                } else {
+                    "\x1b[0;37m"
+                };
                 println!(
                     "  {} \x1b[2m{:02}\x1b[0m  {:<3} {}{:<20}\x1b[0m  \x1b[33m{}\x1b[0m",
                     active_mark, i, t.emoji, name_color, t.name, t.prompt_char
@@ -856,9 +896,18 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
 
         // ── gladeshell theme set-color <theme> <element> <color> ───────────────
         Some("set-color") => {
-            let theme_name = args.element.as_deref().ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
-            let element = args.color.as_deref().ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
-            let color_val = args.val.as_deref().ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
+            let theme_name = args
+                .element
+                .as_deref()
+                .ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
+            let element = args
+                .color
+                .as_deref()
+                .ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
+            let color_val = args
+                .val
+                .as_deref()
+                .ok_or("Usage: gladeshell theme set-color <theme_name> <element> <color>")?;
 
             save_theme_color_override(theme_name, element, color_val)?;
             println!("\x1b[1;32m✅ Color override saved!\x1b[0m Theme: \x1b[1;36m{}\x1b[0m, Element: \x1b[1;33m{}\x1b[0m -> \x1b[1;35m{}\x1b[0m", theme_name, element, color_val);
@@ -869,7 +918,10 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
             let target_theme = args.element.as_deref();
             reset_theme_color_overrides(target_theme)?;
             if let Some(t) = target_theme {
-                println!("\x1b[1;32m✅ Color overrides reset for theme:\x1b[0m \x1b[1;36m{}\x1b[0m", t);
+                println!(
+                    "\x1b[1;32m✅ Color overrides reset for theme:\x1b[0m \x1b[1;36m{}\x1b[0m",
+                    t
+                );
             } else {
                 println!("\x1b[1;32m✅ All theme color overrides reset to defaults.\x1b[0m");
             }
@@ -884,13 +936,27 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
                 println!("\n\x1b[1;35m🎨 Configured Theme Color Overrides:\x1b[0m\n");
                 for (t_name, o) in &overrides {
                     println!("  \x1b[1;36m[{}]\x1b[0m", t_name);
-                    if let Some(ref c) = o.user_color { println!("    user_color   = {}", c); }
-                    if let Some(ref c) = o.path_color { println!("    path_color   = {}", c); }
-                    if let Some(ref c) = o.git_color { println!("    git_color    = {}", c); }
-                    if let Some(ref c) = o.prompt_color { println!("    prompt_color = {}", c); }
-                    if let Some(ref c) = o.prefix_color { println!("    prefix_color = {}", c); }
-                    if let Some(ref c) = o.in_color { println!("    in_color     = {}", c); }
-                    if let Some(ref c) = o.emoji_color { println!("    emoji_color  = {}", c); }
+                    if let Some(ref c) = o.user_color {
+                        println!("    user_color   = {}", c);
+                    }
+                    if let Some(ref c) = o.path_color {
+                        println!("    path_color   = {}", c);
+                    }
+                    if let Some(ref c) = o.git_color {
+                        println!("    git_color    = {}", c);
+                    }
+                    if let Some(ref c) = o.prompt_color {
+                        println!("    prompt_color = {}", c);
+                    }
+                    if let Some(ref c) = o.prefix_color {
+                        println!("    prefix_color = {}", c);
+                    }
+                    if let Some(ref c) = o.in_color {
+                        println!("    in_color     = {}", c);
+                    }
+                    if let Some(ref c) = o.emoji_color {
+                        println!("    emoji_color  = {}", c);
+                    }
                 }
                 println!();
             }
@@ -900,7 +966,10 @@ fn cmd_theme(args: ThemeArgs) -> Result<(), Box<dyn std::error::Error>> {
         Some(name) => {
             let idx = set_active_theme(name)?;
             let t = get_effective_theme(idx);
-            println!("\x1b[1;32m✅ Theme '{}' {} applied!\x1b[0m", t.name, t.emoji);
+            println!(
+                "\x1b[1;32m✅ Theme '{}' {} applied!\x1b[0m",
+                t.name, t.emoji
+            );
             println!("\x1b[2m💡 Run 'source ~/.zshrc' to apply in this session.\x1b[0m");
         }
 
@@ -939,14 +1008,22 @@ fn cmd_gen(args: GenArgs) -> Result<(), Box<dyn std::error::Error>> {
 
 fn cmd_ex(args: ExArgs) -> Result<(), Box<dyn std::error::Error>> {
     use gladeshell_core::tools::extractor;
-    extractor::run(args.file.as_deref(), args.output.as_deref(), args.interactive)
+    extractor::run(
+        args.file.as_deref(),
+        args.output.as_deref(),
+        args.interactive,
+    )
 }
 
 // ── cmp ───────────────────────────────────────────────────────────────────────
 
 fn cmd_cmp(args: CmpArgs) -> Result<(), Box<dyn std::error::Error>> {
     use gladeshell_core::tools::compressor;
-    compressor::run(args.target.as_deref(), args.output.as_deref(), args.format.as_deref())
+    compressor::run(
+        args.target.as_deref(),
+        args.output.as_deref(),
+        args.format.as_deref(),
+    )
 }
 
 // ── gwip ─────────────────────────────────────────────────────────────────────
@@ -976,10 +1053,6 @@ fn cmd_ut() -> Result<(), Box<dyn std::error::Error>> {
     use gladeshell_core::tools::pc_optimizer;
     pc_optimizer::run()
 }
-
-
-
-
 
 // ── makecpp ──────────────────────────────────────────────────────────────────
 

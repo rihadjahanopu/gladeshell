@@ -294,7 +294,8 @@ impl<'a> UpdaterApp<'a> {
             })
             .collect();
         self.log_lines.clear();
-        self.log_lines.push("🚀 Launching Mega System Updater suite...".to_string());
+        self.log_lines
+            .push("🚀 Launching Mega System Updater suite...".to_string());
         self.log_scroll = 0;
         self.auto_scroll = true;
     }
@@ -329,7 +330,8 @@ impl<'a> UpdaterApp<'a> {
                     self.state = AppState::Done;
                     self.running_idx = None;
                     self.log_lines.push("".to_string());
-                    self.log_lines.push("✨ All selected update tasks completed!".to_string());
+                    self.log_lines
+                        .push("✨ All selected update tasks completed!".to_string());
                 }
             }
         }
@@ -437,7 +439,9 @@ fn spawn_updater_thread(
     std::thread::spawn(move || {
         for (idx, tool) in selected_tools.iter().enumerate() {
             if cancel_flag.load(Ordering::SeqCst) {
-                let _ = tx.send(UpdateMsg::Line("⚠️ Update suite cancelled by user.".to_string()));
+                let _ = tx.send(UpdateMsg::Line(
+                    "⚠️ Update suite cancelled by user.".to_string(),
+                ));
                 let _ = tx.send(UpdateMsg::ToolFinished(idx, false, "Cancelled".to_string()));
                 continue;
             }
@@ -523,7 +527,11 @@ fn spawn_updater_thread(
                         "{} {} update {}",
                         if success { "✅" } else { "❌" },
                         tool.name,
-                        if success { "completed successfully!" } else { "failed!" }
+                        if success {
+                            "completed successfully!"
+                        } else {
+                            "failed!"
+                        }
                     )));
                     let _ = tx.send(UpdateMsg::ToolFinished(idx, success, msg));
                 }
@@ -559,14 +567,24 @@ fn draw_selecting(f: &mut Frame, app: &mut UpdaterApp) {
     let tick_spin = spinner_frame(app.tick);
     let header_lines = vec![
         Line::from(vec![
-            Span::styled("  🔄  ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled("MEGA SYSTEM UPDATER", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "  🔄  ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "MEGA SYSTEM UPDATER",
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("  uup  ", Style::default().fg(C_DIM)),
         ]),
         Line::from(vec![
             Span::styled(tick_spin, Style::default().fg(C_BORDER)),
             Span::styled(
-                format!("  {} tool(s) detected  •  {} selected", app.available.len(), app.selected_count()),
+                format!(
+                    "  {} tool(s) detected  •  {} selected",
+                    app.available.len(),
+                    app.selected_count()
+                ),
                 Style::default().fg(C_DIM),
             ),
         ]),
@@ -601,12 +619,17 @@ fn draw_selecting(f: &mut Frame, app: &mut UpdaterApp) {
 
             let line = Line::from(vec![
                 Span::styled(format!(" {} ", arrow), Style::default().fg(C_ACCENT)),
-                Span::styled(format!("{} ", checked), Style::default().fg(if app.selected[idx] { C_GREEN } else { C_DIM })),
+                Span::styled(
+                    format!("{} ", checked),
+                    Style::default().fg(if app.selected[idx] { C_GREEN } else { C_DIM }),
+                ),
                 Span::styled(format!("{} ", tool.emoji), Style::default()),
                 Span::styled(
                     format!("{:<18}", tool.name),
                     if is_cursor {
-                        Style::default().fg(C_SELECTED_FG).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(C_SELECTED_FG)
+                            .add_modifier(Modifier::BOLD)
                     } else if app.selected[idx] {
                         Style::default().fg(C_TEXT)
                     } else {
@@ -630,10 +653,17 @@ fn draw_selecting(f: &mut Frame, app: &mut UpdaterApp) {
         .collect();
 
     let sel_count = app.selected_count();
-    let list_title = format!(" Updaters ({}/{} selected) ", sel_count, app.available.len());
+    let list_title = format!(
+        " Updaters ({}/{} selected) ",
+        sel_count,
+        app.available.len()
+    );
     let list_widget = List::new(items).block(
         Block::default()
-            .title(Span::styled(list_title, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                list_title,
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
@@ -647,40 +677,63 @@ fn draw_selecting(f: &mut Frame, app: &mut UpdaterApp) {
         vec![
             Line::from(vec![
                 Span::styled(format!("{} ", tool.emoji), Style::default()),
-                Span::styled(tool.name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    tool.name,
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Category  ", Style::default().fg(C_DIM)),
-                Span::styled(tool.category, Style::default().fg(cat_color).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    tool.category,
+                    Style::default().fg(cat_color).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Binary    ", Style::default().fg(C_DIM)),
                 Span::styled(tool.check_bin, Style::default().fg(C_CYAN)),
             ]),
             Line::from(""),
-            Line::from(vec![Span::styled("About", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))]),
+            Line::from(vec![Span::styled(
+                "About",
+                Style::default()
+                    .fg(C_ACCENT)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            )]),
             Line::from(""),
-            Line::from(vec![Span::styled(tool.description, Style::default().fg(C_TEXT))]),
+            Line::from(vec![Span::styled(
+                tool.description,
+                Style::default().fg(C_TEXT),
+            )]),
             Line::from(""),
-            Line::from(vec![Span::styled("Command", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD | Modifier::UNDERLINED))]),
+            Line::from(vec![Span::styled(
+                "Command",
+                Style::default()
+                    .fg(C_ACCENT)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            )]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled(
-                    format!("$ {} {}", tool.command, tool.args.join(" ")),
-                    Style::default().fg(C_YELLOW).add_modifier(Modifier::ITALIC),
-                ),
-            ]),
+            Line::from(vec![Span::styled(
+                format!("$ {} {}", tool.command, tool.args.join(" ")),
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::ITALIC),
+            )]),
         ]
     } else {
-        vec![Line::from(Span::styled("No tool selected", Style::default().fg(C_DIM)))]
+        vec![Line::from(Span::styled(
+            "No tool selected",
+            Style::default().fg(C_DIM),
+        ))]
     };
 
     let detail = Paragraph::new(detail_lines)
         .wrap(Wrap { trim: false })
         .block(
             Block::default()
-                .title(Span::styled(" 📋 Tool Details ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                .title(Span::styled(
+                    " 📋 Tool Details ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(C_BORDER))
@@ -690,15 +743,30 @@ fn draw_selecting(f: &mut Frame, app: &mut UpdaterApp) {
 
     // Footer
     let footer_spans = Line::from(vec![
-        Span::styled(" [↑↓/jk] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " [↑↓/jk] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Navigate  ", Style::default().fg(C_DIM)),
-        Span::styled("[Space] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Space] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Toggle  ", Style::default().fg(C_DIM)),
-        Span::styled("[a] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[a] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Select All  ", Style::default().fg(C_DIM)),
-        Span::styled("[Enter] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Enter] ",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Updates  ", Style::default().fg(C_DIM)),
-        Span::styled("[Esc] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Esc] ",
+            Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Quit ", Style::default().fg(C_DIM)),
     ]);
     let footer = Paragraph::new(footer_spans)
@@ -740,20 +808,39 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
         0
     };
     let is_done = app.state == AppState::Done;
-    let tick_spin = if is_done { "✨" } else { spinner_frame(app.tick) };
+    let tick_spin = if is_done {
+        "✨"
+    } else {
+        spinner_frame(app.tick)
+    };
     let border_color = if is_done { C_GREEN } else { C_BORDER };
 
     // 1. Top Banner Header
     let state_text = if is_done {
-        Span::styled("[* COMPLETED]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+        Span::styled(
+            "[* COMPLETED]",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )
     } else {
-        Span::styled(format!("[{} UPDATING]", tick_spin), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))
+        Span::styled(
+            format!("[{} UPDATING]", tick_spin),
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )
     };
 
     let header_spans = Line::from(vec![
-        Span::styled("⚡ UUP UPDATER — ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
-        Span::styled("Live System Update Engine ", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
-        Span::styled(format!(" [Tasks: {}] ", total_count), Style::default().fg(C_DIM)),
+        Span::styled(
+            "⚡ UUP UPDATER — ",
+            Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "Live System Update Engine ",
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!(" [Tasks: {}] ", total_count),
+            Style::default().fg(C_DIM),
+        ),
         state_text,
     ]);
 
@@ -781,9 +868,16 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
                 ))
                 .style(Style::default().bg(C_BG)),
         )
-        .gauge_style(Style::default().fg(if is_done { C_GREEN } else { C_CYAN }).bg(Color::Rgb(20, 25, 35)))
+        .gauge_style(
+            Style::default()
+                .fg(if is_done { C_GREEN } else { C_CYAN })
+                .bg(Color::Rgb(20, 25, 35)),
+        )
         .percent(percent as u16)
-        .label(format!("{}%  ({}/{} completed)", percent, completed_count, total_count));
+        .label(format!(
+            "{}%  ({}/{} completed)",
+            percent, completed_count, total_count
+        ));
     f.render_widget(gauge, outer[1]);
 
     // 3. Middle Dual Pane (Left: Package Queue, Right: Live Installation Log)
@@ -800,7 +894,10 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
         .map(|(idx, state)| {
             let is_running = app.running_idx == Some(idx);
             let pointer = if is_running {
-                Span::styled("❯ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "❯ ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw("  ")
             };
@@ -811,9 +908,17 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
                     format!("{} Updating...", spinner_frame(app.tick)),
                     Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
                 ),
-                StatusKind::Success => ("✅ Done".to_string(), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                StatusKind::Failed => ("❌ Failed".to_string(), Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
-                StatusKind::Cancelled => ("⚠️ Cancelled".to_string(), Style::default().fg(C_ORANGE)),
+                StatusKind::Success => (
+                    "✅ Done".to_string(),
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Failed => (
+                    "❌ Failed".to_string(),
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                ),
+                StatusKind::Cancelled => {
+                    ("⚠️ Cancelled".to_string(), Style::default().fg(C_ORANGE))
+                }
             };
 
             // Emoji glyphs are 2 terminal cells wide, but Rust's {:<N} format
@@ -827,11 +932,17 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
                     format!("{:<10} ", state.tool.name),
                     Style::default()
                         .fg(if is_running { C_WHITE } else { C_TEXT })
-                        .add_modifier(if is_running { Modifier::BOLD } else { Modifier::empty() }),
+                        .add_modifier(if is_running {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
                 ),
                 Span::styled(
                     format!("[{:<5}] ", state.tool.category),
-                    Style::default().fg(category_color(state.tool.category)).add_modifier(Modifier::DIM),
+                    Style::default()
+                        .fg(category_color(state.tool.category))
+                        .add_modifier(Modifier::DIM),
                 ),
                 Span::styled(status_str, status_style),
             ]);
@@ -858,7 +969,8 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
     let start_idx = if app.auto_scroll {
         total_lines.saturating_sub(visible_capacity)
     } else {
-        app.log_scroll.min(total_lines.saturating_sub(visible_capacity))
+        app.log_scroll
+            .min(total_lines.saturating_sub(visible_capacity))
     };
 
     let display_items: Vec<ListItem> = app
@@ -883,9 +995,15 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
         .collect();
 
     let log_title = if app.auto_scroll {
-        format!(" 📜 Live Installation Log ({} lines) [Auto-scroll] ", total_lines)
+        format!(
+            " 📜 Live Installation Log ({} lines) [Auto-scroll] ",
+            total_lines
+        )
     } else {
-        format!(" 📜 Live Installation Log ({} lines) [Scroll: {}] ", total_lines, start_idx)
+        format!(
+            " 📜 Live Installation Log ({} lines) [Scroll: {}] ",
+            total_lines, start_idx
+        )
     };
 
     let log_block = Block::default()
@@ -902,19 +1020,40 @@ fn draw_running_or_done(f: &mut Frame, app: &mut UpdaterApp) {
     // 4. Bottom Footer Status Bar
     let footer_spans = if is_done {
         Line::from(vec![
-            Span::styled(" ✅ Mega Updates Completed! ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-            Span::styled("⚡ Auto-exiting in 2m... ", Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ✅ Mega Updates Completed! ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "⚡ Auto-exiting in 2m... ",
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Press ", Style::default().fg(C_DIM)),
-            Span::styled("[ENTER / Q / ESC]", Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[ENTER / Q / ESC]",
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" to exit immediately ", Style::default().fg(C_DIM)),
         ])
     } else {
         Line::from(vec![
-            Span::styled(" ⚙️ Installing selected packages... ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-            Span::styled("Please wait for deployment to finish  ", Style::default().fg(C_DIM)),
-            Span::styled("[↑/↓] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " ⚙️ Installing selected packages... ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "Please wait for deployment to finish  ",
+                Style::default().fg(C_DIM),
+            ),
+            Span::styled(
+                "[↑/↓] ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Scroll Log  ", Style::default().fg(C_DIM)),
-            Span::styled("[Ctrl+C] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "[Ctrl+C] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cancel", Style::default().fg(C_DIM)),
         ])
     };
@@ -939,7 +1078,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
 
     if available.is_empty() {
-        println!("\x1b[1;33m⚠️  No supported package managers or runtime updaters detected.\x1b[0m");
+        println!(
+            "\x1b[1;33m⚠️  No supported package managers or runtime updaters detected.\x1b[0m"
+        );
         return Ok(());
     }
 
@@ -1106,7 +1247,11 @@ mod tests {
     fn test_all_tools_have_category() {
         for t in UPDATER_REGISTRY {
             assert!(!t.category.is_empty(), "Tool {} has no category", t.name);
-            assert!(!t.description.is_empty(), "Tool {} has no description", t.name);
+            assert!(
+                !t.description.is_empty(),
+                "Tool {} has no description",
+                t.name
+            );
         }
     }
 

@@ -75,13 +75,18 @@ impl App {
     }
 
     fn move_up(&mut self) {
-        if self.tasks.is_empty() { return; }
+        if self.tasks.is_empty() {
+            return;
+        }
         let i = self.list_state.selected().unwrap_or(0);
-        self.list_state.select(Some(if i == 0 { self.tasks.len() - 1 } else { i - 1 }));
+        self.list_state
+            .select(Some(if i == 0 { self.tasks.len() - 1 } else { i - 1 }));
     }
 
     fn move_down(&mut self) {
-        if self.tasks.is_empty() { return; }
+        if self.tasks.is_empty() {
+            return;
+        }
         let i = self.list_state.selected().unwrap_or(0);
         self.list_state.select(Some((i + 1) % self.tasks.len()));
     }
@@ -162,8 +167,11 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                 Mode::List => match (key.modifiers, key.code) {
                     (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('q')) => break,
                     (_, KeyCode::Up) | (KeyModifiers::CONTROL, KeyCode::Char('p')) => app.move_up(),
-                    (_, KeyCode::Down) | (KeyModifiers::CONTROL, KeyCode::Char('n')) => app.move_down(),
-                    (KeyModifiers::CONTROL, KeyCode::Char('a')) | (KeyModifiers::CONTROL, KeyCode::Char('i')) => {
+                    (_, KeyCode::Down) | (KeyModifiers::CONTROL, KeyCode::Char('n')) => {
+                        app.move_down()
+                    }
+                    (KeyModifiers::CONTROL, KeyCode::Char('a'))
+                    | (KeyModifiers::CONTROL, KeyCode::Char('i')) => {
                         app.mode = Mode::Add;
                         app.input.clear();
                     }
@@ -183,13 +191,19 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                         app.input.clear();
                     }
                     (_, KeyCode::Enter) => app.add_task(&todo_file_c),
-                    (_, KeyCode::Backspace) => { app.input.pop(); }
+                    (_, KeyCode::Backspace) => {
+                        app.input.pop();
+                    }
                     (_, KeyCode::Char(c)) => app.input.push(c),
                     _ => {}
                 },
                 Mode::ConfirmClear => match key.code {
-                    KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => app.clear_all(&todo_file_c),
-                    _ => { app.mode = Mode::List; }
+                    KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
+                        app.clear_all(&todo_file_c)
+                    }
+                    _ => {
+                        app.mode = Mode::List;
+                    }
                 },
             }
         }
@@ -218,11 +232,16 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
     let task_count = app.tasks.len();
     let banner = Paragraph::new(Line::from(vec![
         Span::styled("📋  ", Style::default().fg(C_ACCENT)),
-        Span::styled("TODO", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "TODO",
+            Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" — Task Manager", Style::default().fg(C_TEXT)),
         Span::styled(
             format!("  ({} pending)", task_count),
-            Style::default().fg(if task_count == 0 { C_GREEN } else { C_YELLOW }).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(if task_count == 0 { C_GREEN } else { C_YELLOW })
+                .add_modifier(Modifier::BOLD),
         ),
     ]))
     .alignment(Alignment::Center)
@@ -238,28 +257,50 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
     // ── Task List ───────────────────────────────────────────────────────────
     let items: Vec<ListItem> = if app.tasks.is_empty() {
         vec![ListItem::new(Line::from(vec![
-            Span::styled("  ✨ No pending tasks!", Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC)),
+            Span::styled(
+                "  ✨ No pending tasks!",
+                Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+            ),
             Span::styled("  Press [a] to add one", Style::default().fg(C_DIM)),
         ]))]
     } else {
-        app.tasks.iter().enumerate().map(|(i, task)| {
-            let is_sel = app.list_state.selected() == Some(i);
-            if is_sel {
-                ListItem::new(Line::from(vec![
-                    Span::styled(" ▶ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("{:>2}. ", i + 1), Style::default().fg(C_ACCENT).bg(Color::Rgb(20, 15, 40))),
-                    Span::styled("[ ] ", Style::default().fg(C_YELLOW).bg(Color::Rgb(20, 15, 40))),
-                    Span::styled(task.clone(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD).bg(Color::Rgb(20, 15, 40))),
-                ]))
-            } else {
-                ListItem::new(Line::from(vec![
-                    Span::styled("   ", Style::default()),
-                    Span::styled(format!("{:>2}. ", i + 1), Style::default().fg(C_DIM)),
-                    Span::styled("[ ] ", Style::default().fg(C_DIM)),
-                    Span::styled(task.clone(), Style::default().fg(C_TEXT)),
-                ]))
-            }
-        }).collect()
+        app.tasks
+            .iter()
+            .enumerate()
+            .map(|(i, task)| {
+                let is_sel = app.list_state.selected() == Some(i);
+                if is_sel {
+                    ListItem::new(Line::from(vec![
+                        Span::styled(
+                            " ▶ ",
+                            Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            format!("{:>2}. ", i + 1),
+                            Style::default().fg(C_ACCENT).bg(Color::Rgb(20, 15, 40)),
+                        ),
+                        Span::styled(
+                            "[ ] ",
+                            Style::default().fg(C_YELLOW).bg(Color::Rgb(20, 15, 40)),
+                        ),
+                        Span::styled(
+                            task.clone(),
+                            Style::default()
+                                .fg(C_WHITE)
+                                .add_modifier(Modifier::BOLD)
+                                .bg(Color::Rgb(20, 15, 40)),
+                        ),
+                    ]))
+                } else {
+                    ListItem::new(Line::from(vec![
+                        Span::styled("   ", Style::default()),
+                        Span::styled(format!("{:>2}. ", i + 1), Style::default().fg(C_DIM)),
+                        Span::styled("[ ] ", Style::default().fg(C_DIM)),
+                        Span::styled(task.clone(), Style::default().fg(C_TEXT)),
+                    ]))
+                }
+            })
+            .collect()
     };
 
     let list = List::new(items).block(
@@ -267,7 +308,10 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
-            .title(Span::styled(" Tasks ", Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD)))
+            .title(Span::styled(
+                " Tasks ",
+                Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+            ))
             .style(Style::default().bg(C_BG)),
     );
     f.render_stateful_widget(list, main[1], &mut app.list_state.clone());
@@ -279,7 +323,10 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
                 Line::from(""),
                 Line::from(vec![
                     Span::styled("  ✏️  ", Style::default().fg(C_ACCENT)),
-                    Span::styled(&app.input, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &app.input,
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("█", Style::default().fg(C_BORDER)),
                 ]),
             ])
@@ -288,7 +335,10 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(C_ACCENT))
-                    .title(Span::styled(" ✨ Add New Task (Enter to save, Esc to cancel) ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        " ✨ Add New Task (Enter to save, Esc to cancel) ",
+                        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(C_BG)),
             );
             f.render_widget(add_pane, main[2]);
@@ -296,35 +346,61 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
         Mode::ConfirmClear => {
             let confirm = Paragraph::new(vec![
                 Line::from(""),
-                Line::from(vec![Span::styled("  Clear ALL tasks? This cannot be undone.", Style::default().fg(C_RED).add_modifier(Modifier::BOLD))]),
-                Line::from(vec![Span::styled("  [Y] Confirm  [Any] Cancel", Style::default().fg(C_DIM))]),
+                Line::from(vec![Span::styled(
+                    "  Clear ALL tasks? This cannot be undone.",
+                    Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                )]),
+                Line::from(vec![Span::styled(
+                    "  [Y] Confirm  [Any] Cancel",
+                    Style::default().fg(C_DIM),
+                )]),
             ])
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Double)
                     .border_style(Style::default().fg(C_RED))
-                    .title(Span::styled(" ⚠ Confirm Clear ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)))
+                    .title(Span::styled(
+                        " ⚠ Confirm Clear ",
+                        Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+                    ))
                     .style(Style::default().bg(Color::Rgb(25, 8, 8))),
             );
             f.render_widget(confirm, main[2]);
         }
         Mode::List => {
             let hints = Paragraph::new(Line::from(vec![
-                    Span::styled(" ↑↓ ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled("Navigate", Style::default().fg(C_DIM)),
-                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
-                    Span::styled("↵ ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                    Span::styled("Done", Style::default().fg(C_DIM)),
-                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
-                    Span::styled("Ctrl+A ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled("New", Style::default().fg(C_DIM)),
-                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
-                    Span::styled("Ctrl+C ", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD)),
-                    Span::styled("Clear", Style::default().fg(C_DIM)),
-                    Span::styled("  ·  ", Style::default().fg(C_DIM)),
-                    Span::styled("⎋ ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-                    Span::styled("Quit ", Style::default().fg(C_DIM)),
+                Span::styled(
+                    " ↑↓ ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Navigate", Style::default().fg(C_DIM)),
+                Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                Span::styled(
+                    "↵ ",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Done", Style::default().fg(C_DIM)),
+                Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                Span::styled(
+                    "Ctrl+A ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("New", Style::default().fg(C_DIM)),
+                Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                Span::styled(
+                    "Ctrl+C ",
+                    Style::default()
+                        .fg(Color::Rgb(255, 100, 100))
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Clear", Style::default().fg(C_DIM)),
+                Span::styled("  ·  ", Style::default().fg(C_DIM)),
+                Span::styled(
+                    "⎋ ",
+                    Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Quit ", Style::default().fg(C_DIM)),
             ]))
             .block(
                 Block::default()
@@ -340,9 +416,15 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
     // ── Status Bar ──────────────────────────────────────────────────────────
     let status_text = if let Some((ref msg, is_err)) = app.status_msg {
         let color = if is_err { C_RED } else { C_GREEN };
-        Line::from(vec![Span::styled(msg.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD))])
+        Line::from(vec![Span::styled(
+            msg.clone(),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        )])
     } else {
-        Line::from(vec![Span::styled("GLADESHELL TODO", Style::default().fg(C_DIM))])
+        Line::from(vec![Span::styled(
+            "GLADESHELL TODO",
+            Style::default().fg(C_DIM),
+        )])
     };
     let status_bar = Paragraph::new(status_text)
         .alignment(Alignment::Center)
@@ -357,34 +439,68 @@ fn draw_todo(f: &mut Frame, app: &mut App) {
 }
 
 // ── CLI quick-commands (non-TUI) ─────────────────────────────────────────────
-fn run_cli(action: &str, args: &[String], todo_file: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn run_cli(
+    action: &str,
+    args: &[String],
+    todo_file: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         "add" => {
-            let task = if !args.is_empty() { args.join(" ") } else {
-                print!("Task: "); io::stdout().flush()?;
-                let mut s = String::new(); io::stdin().read_line(&mut s)?; s.trim().to_string()
+            let task = if !args.is_empty() {
+                args.join(" ")
+            } else {
+                print!("Task: ");
+                io::stdout().flush()?;
+                let mut s = String::new();
+                io::stdin().read_line(&mut s)?;
+                s.trim().to_string()
             };
             let clean = task.trim();
-            if clean.is_empty() { println!("❌ Task cannot be empty!"); return Ok(()); }
-            let mut f = OpenOptions::new().create(true).append(true).open(todo_file)?;
+            if clean.is_empty() {
+                println!("❌ Task cannot be empty!");
+                return Ok(());
+            }
+            let mut f = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(todo_file)?;
             writeln!(f, "{}", clean)?;
             println!("✔ Added: \"{}\"", clean);
         }
         "list" | "ls" => {
             let tasks = read_tasks(todo_file)?;
-            if tasks.is_empty() { println!("📋 No pending tasks!"); return Ok(()); }
+            if tasks.is_empty() {
+                println!("📋 No pending tasks!");
+                return Ok(());
+            }
             println!("\n📋 PENDING TASKS ({} total):", tasks.len());
             println!("──────────────────────────────────────");
-            for (i, t) in tasks.iter().enumerate() { println!("  {:2}. [ ] {}", i+1, t); }
+            for (i, t) in tasks.iter().enumerate() {
+                println!("  {:2}. [ ] {}", i + 1, t);
+            }
             println!("──────────────────────────────────────\n");
         }
         "done" | "rm" => {
             let tasks = read_tasks(todo_file)?;
-            if tasks.is_empty() { println!("📋 No tasks!"); return Ok(()); }
+            if tasks.is_empty() {
+                println!("📋 No tasks!");
+                return Ok(());
+            }
             if let Some(n) = args.first().and_then(|s| s.parse::<usize>().ok()) {
-                if n < 1 || n > tasks.len() { println!("❌ Invalid task number!"); return Ok(()); }
-                let done = tasks[n-1].clone();
-                save_tasks(todo_file, &tasks.into_iter().enumerate().filter(|(i,_)| *i != n-1).map(|(_,t)| t).collect::<Vec<_>>())?;
+                if n < 1 || n > tasks.len() {
+                    println!("❌ Invalid task number!");
+                    return Ok(());
+                }
+                let done = tasks[n - 1].clone();
+                save_tasks(
+                    todo_file,
+                    &tasks
+                        .into_iter()
+                        .enumerate()
+                        .filter(|(i, _)| *i != n - 1)
+                        .map(|(_, t)| t)
+                        .collect::<Vec<_>>(),
+                )?;
                 println!("🎉 Completed: \"{}\"", done);
             }
         }
@@ -398,13 +514,17 @@ fn run_cli(action: &str, args: &[String], todo_file: &PathBuf) -> Result<(), Box
 }
 
 fn read_tasks(file_path: &PathBuf) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    if !file_path.exists() { return Ok(Vec::new()); }
+    if !file_path.exists() {
+        return Ok(Vec::new());
+    }
     let file = fs::File::open(file_path)?;
     let reader = BufReader::new(file);
     let mut tasks = Vec::new();
     for line in reader.lines() {
         let l = line?;
-        if !l.trim().is_empty() { tasks.push(l); }
+        if !l.trim().is_empty() {
+            tasks.push(l);
+        }
     }
     Ok(tasks)
 }
@@ -412,7 +532,12 @@ fn read_tasks(file_path: &PathBuf) -> Result<Vec<String>, Box<dyn std::error::Er
 #[allow(dead_code)]
 fn remove_task(file_path: &PathBuf, index: usize) -> Result<(), Box<dyn std::error::Error>> {
     let tasks = read_tasks(file_path)?;
-    let new: Vec<String> = tasks.into_iter().enumerate().filter(|(i, _)| *i != index).map(|(_, t)| t).collect();
+    let new: Vec<String> = tasks
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| *i != index)
+        .map(|(_, t)| t)
+        .collect();
     save_tasks(file_path, &new)?;
     Ok(())
 }

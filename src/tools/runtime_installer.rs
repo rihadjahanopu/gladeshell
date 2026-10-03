@@ -43,19 +43,27 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     match chosen {
         "NVM (Node Version Manager)" => {
-            let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_default();
+            let home = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_default();
             let nvm_path = format!("{home}/.nvm");
             if std::path::Path::new(&nvm_path).exists() {
                 println!("\x1b[1;32m✅ NVM is already installed at {nvm_path}\x1b[0m");
             } else {
                 println!("\x1b[1;36m📥 Fetching NVM installer via pure Rust HTTP...\x1b[0m");
-                if let Ok(res) = ureq::get("https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh").call() {
+                if let Ok(res) =
+                    ureq::get("https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh")
+                        .call()
+                {
                     if let Ok(body) = res.into_body().read_to_string() {
                         let script_file = std::env::temp_dir().join("nvm_install.sh");
                         let _ = std::fs::write(&script_file, &body);
                         #[cfg(unix)]
                         let _ = Command::new("bash").arg(&script_file).status();
-                        println!("\x1b[1;32m✨ NVM installer downloaded and prepared at {}\x1b[0m", script_file.display());
+                        println!(
+                            "\x1b[1;32m✨ NVM installer downloaded and prepared at {}\x1b[0m",
+                            script_file.display()
+                        );
                     }
                 }
             }
@@ -75,7 +83,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             if status.as_ref().map(|s| s.success()).unwrap_or(false) {
                 println!("\x1b[1;32m✨ Node.js LTS installed!\x1b[0m");
             } else {
-                println!("\x1b[1;33m💡 Please ensure Node.js / NVM is configured in your PATH.\x1b[0m");
+                println!(
+                    "\x1b[1;33m💡 Please ensure Node.js / NVM is configured in your PATH.\x1b[0m"
+                );
             }
         }
         "Bun (Fast JS Runtime)" => {
@@ -89,7 +99,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         let _ = std::fs::write(&script_file, &body);
                         #[cfg(unix)]
                         let _ = Command::new("bash").arg(&script_file).status();
-                        println!("\x1b[1;32m✨ Bun installer saved to {}\x1b[0m", script_file.display());
+                        println!(
+                            "\x1b[1;32m✨ Bun installer saved to {}\x1b[0m",
+                            script_file.display()
+                        );
                     }
                 }
             }
@@ -105,7 +118,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         let _ = std::fs::write(&script_file, &body);
                         #[cfg(unix)]
                         let _ = Command::new("sh").arg(&script_file).status();
-                        println!("\x1b[1;32m✨ Deno installer saved to {}\x1b[0m", script_file.display());
+                        println!(
+                            "\x1b[1;32m✨ Deno installer saved to {}\x1b[0m",
+                            script_file.display()
+                        );
                     }
                 }
             }
@@ -138,8 +154,17 @@ fn run_runtime_tui() -> Result<Option<&'static str>, Box<dyn Error>> {
                 .split(f.area());
 
             let header = Paragraph::new(" 🚀 ULTIMATE RUNTIME & TOOL INSTALLER (rt) ")
-                .style(Style::default().fg(Color::Black).bg(theme_cyan).add_modifier(Modifier::BOLD))
-                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(theme_cyan)));
+                .style(
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(theme_cyan)
+                        .add_modifier(Modifier::BOLD),
+                )
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(theme_cyan)),
+                );
             f.render_widget(header, chunks[0]);
 
             let items: Vec<ListItem> = RUNTIME_OPTIONS
@@ -149,7 +174,9 @@ fn run_runtime_tui() -> Result<Option<&'static str>, Box<dyn Error>> {
                     let prefix = if idx == cursor { "➔ " } else { "  " };
                     let text = format!("{}{}", prefix, opt);
                     let style = if idx == cursor {
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default().fg(Color::White)
                     };
@@ -168,9 +195,14 @@ fn run_runtime_tui() -> Result<Option<&'static str>, Box<dyn Error>> {
             state.select(Some(cursor));
             f.render_stateful_widget(list, chunks[1], &mut state);
 
-            let footer = Paragraph::new(" [↑/↓] Navigate | [Enter] Select & Install | [Esc/q] Quit ")
-                .style(Style::default().fg(theme_cyan))
-                .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(theme_cyan)));
+            let footer =
+                Paragraph::new(" [↑/↓] Navigate | [Enter] Select & Install | [Esc/q] Quit ")
+                    .style(Style::default().fg(theme_cyan))
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_style(Style::default().fg(theme_cyan)),
+                    );
             f.render_widget(footer, chunks[2]);
         })?;
 

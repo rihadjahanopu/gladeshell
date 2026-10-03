@@ -113,7 +113,9 @@ fn load_shell_history() -> Vec<String> {
 
     // 4. PowerShell history
     let pwsh_paths = [
-        home.join("AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ConsoleHost_history.txt"),
+        home.join(
+            "AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ConsoleHost_history.txt",
+        ),
         home.join(".config/powershell/PSReadLine/ConsoleHost_history.txt"),
     ];
     for pwsh_path in &pwsh_paths {
@@ -295,7 +297,11 @@ impl HistoryApp {
 
         // Input field widget
         let input_widget = Paragraph::new(format!("Search > {}", self.query))
-            .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )
             .block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -336,11 +342,24 @@ impl HistoryApp {
 
         // Help footer widget
         let help_text = Line::from(vec![
-            Span::styled(" [Enter]", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Enter]",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Execute  "),
-            Span::styled(" [Esc/Ctrl+C]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Esc/Ctrl+C]",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Cancel  "),
-            Span::styled(" [↑/↓]", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [↑/↓]",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" Navigate "),
         ]);
         let footer = Paragraph::new(help_text);

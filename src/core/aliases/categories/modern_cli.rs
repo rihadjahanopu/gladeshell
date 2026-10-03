@@ -6,7 +6,6 @@
 
 // src/core/aliases/categories/modern_cli.rs
 
-
 use crate::core::aliases::{AliasEntry, AliasGroup};
 
 pub fn group() -> AliasGroup {
@@ -71,7 +70,8 @@ pub fn group() -> AliasGroup {
             AliasEntry {
                 key: "fh".to_string(),
                 value: "eval \"$(gladeshell fh)\"".to_string(),
-                description: "Native Ratatui interactive command history search and exec".to_string(),
+                description: "Native Ratatui interactive command history search and exec"
+                    .to_string(),
                 only_shells: vec![],
             },
             AliasEntry {

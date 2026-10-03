@@ -179,12 +179,8 @@ impl UuApp {
                         return Ok(None);
                     }
                     (KeyCode::Enter, _) => {
-                        let mut to_purge: Vec<AppItem> = self
-                            .items
-                            .iter()
-                            .filter(|i| i.selected)
-                            .cloned()
-                            .collect();
+                        let mut to_purge: Vec<AppItem> =
+                            self.items.iter().filter(|i| i.selected).cloned().collect();
 
                         if to_purge.is_empty() {
                             if let Some(sel) = self.list_state.selected() {
@@ -299,7 +295,10 @@ impl UuApp {
             ),
             Span::styled("█", Style::default().fg(C_BORDER)),
             Span::styled(
-                format!("   ({}/{} matches | {} selected)", match_count, total_count, selected_count),
+                format!(
+                    "   ({}/{} matches | {} selected)",
+                    match_count, total_count, selected_count
+                ),
                 Style::default().fg(C_DIM),
             ),
         ]);
@@ -328,10 +327,22 @@ impl UuApp {
 
         // Left Pane Header & Table List
         let header_line = Line::from(vec![
-            Span::styled("    STAT ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-            Span::styled("IDX   ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-            Span::styled("NAME                 ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
-            Span::styled("SOURCE", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "    STAT ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "IDX   ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "NAME                 ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "SOURCE",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
         ]);
 
         let list_items: Vec<ListItem> = self
@@ -343,13 +354,19 @@ impl UuApp {
                 let item = &self.items[orig_idx];
 
                 let bar_span = if is_cursor {
-                    Span::styled("❯ ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        "❯ ",
+                        Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                    )
                 } else {
                     Span::raw("  ")
                 };
 
                 let status_span = if item.selected {
-                    Span::styled("● ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))
+                    Span::styled(
+                        "● ",
+                        Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                    )
                 } else {
                     Span::styled("○ ", Style::default().fg(C_DIM))
                 };
@@ -361,7 +378,11 @@ impl UuApp {
                     format!("{:<20}", truncate_str(&item.name, 20)),
                     Style::default()
                         .fg(if is_cursor { C_WHITE } else { C_CYAN })
-                        .add_modifier(if is_cursor { Modifier::BOLD } else { Modifier::empty() }),
+                        .add_modifier(if is_cursor {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
                 );
 
                 let source_span = Span::styled(&item.source, Style::default().fg(C_YELLOW));
@@ -399,8 +420,7 @@ impl UuApp {
 
         frame.render_widget(Paragraph::new(header_line), inner_left_chunks[0]);
 
-        let list_widget = List::new(list_items)
-            .block(Block::default().borders(Borders::NONE));
+        let list_widget = List::new(list_items).block(Block::default().borders(Borders::NONE));
 
         frame.render_stateful_widget(list_widget, inner_left_chunks[1], &mut self.list_state);
 
@@ -415,11 +435,20 @@ impl UuApp {
 
         // ── 4. Bottom Status Bar ────────────────────────────────────────────────
         let status_line = Line::from(vec![
-            Span::styled(" [SPACE / TAB] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [SPACE / TAB] ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Select App  │ ", Style::default().fg(C_TEXT)),
-            Span::styled(" [ENTER] ", Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [ENTER] ",
+                Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Uninstall Selected  │ ", Style::default().fg(C_TEXT)),
-            Span::styled(" [Q / ESC] ", Style::default().fg(C_DIM).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Q / ESC] ",
+                Style::default().fg(C_DIM).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Cancel", Style::default().fg(C_TEXT)),
         ]);
 
@@ -459,23 +488,44 @@ fn render_right_pane(frame: &mut Frame, area: Rect, item: Option<&AppItem>) {
 
         let details_lines = vec![
             Line::from(vec![
-                Span::styled("Name       : ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(&app.name, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Name       : ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    &app.name,
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
-                Span::styled("Source     : ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Source     : ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(&app.source, Style::default().fg(C_GREEN)),
             ]),
             Line::from(vec![
-                Span::styled("Version    : ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Version    : ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(&app.version, Style::default().fg(C_GREEN)),
             ]),
             Line::from(vec![
-                Span::styled("Disk Size  : ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(&app.disk_size, Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Disk Size  : ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    &app.disk_size,
+                    Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
-                Span::styled("Inst. Date : ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Inst. Date : ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(&app.inst_date, Style::default().fg(C_GREEN)),
             ]),
         ];
@@ -497,13 +547,22 @@ fn render_right_pane(frame: &mut Frame, area: Rect, item: Option<&AppItem>) {
         let desc_lines = vec![
             Line::from(vec![
                 Span::styled("Package Manager : ", Style::default().fg(C_TEXT)),
-                Span::styled(&app.source, Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &app.source,
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Reclaim Storage : ", Style::default().fg(C_TEXT)),
-                Span::styled(&app.disk_size, Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &app.disk_size,
+                    Style::default().fg(C_SELECTED).add_modifier(Modifier::BOLD),
+                ),
             ]),
-            Line::from(Span::styled("─".repeat((area.width as usize).saturating_sub(4)), Style::default().fg(C_DIM))),
+            Line::from(Span::styled(
+                "─".repeat((area.width as usize).saturating_sub(4)),
+                Style::default().fg(C_DIM),
+            )),
             Line::from(Span::styled(
                 if app.description.is_empty() {
                     "No additional package description provided."
@@ -581,7 +640,6 @@ fn collect_installed_apps() -> Vec<AppItem> {
                 .output()
         };
 
-
         if let Ok(output) = output_res {
             let text = String::from_utf8_lossy(&output.stdout);
             for line in text.lines() {
@@ -647,7 +705,10 @@ fn collect_installed_apps() -> Vec<AppItem> {
 
     // 3. DNF Packages (Fedora / RHEL)
     if is_cmd_available("dnf") {
-        if let Ok(output) = Command::new("dnf").args(["list", "installed", "--userinstalled"]).output() {
+        if let Ok(output) = Command::new("dnf")
+            .args(["list", "installed", "--userinstalled"])
+            .output()
+        {
             let text = String::from_utf8_lossy(&output.stdout);
             for line in text.lines().skip(1) {
                 let parts: Vec<&str> = line.split_whitespace().collect();
@@ -772,7 +833,10 @@ fn collect_installed_apps() -> Vec<AppItem> {
                     let parts: Vec<&str> = line.split_whitespace().collect();
                     if parts.len() >= 2 {
                         let name = parts[0].trim().to_string();
-                        let version = parts[1].trim_start_matches('v').trim_end_matches(':').to_string();
+                        let version = parts[1]
+                            .trim_start_matches('v')
+                            .trim_end_matches(':')
+                            .to_string();
                         apps.push(AppItem {
                             idx,
                             name: name.clone(),
@@ -850,7 +914,6 @@ fn collect_installed_apps() -> Vec<AppItem> {
     apps
 }
 
-
 fn is_cmd_available(cmd: &str) -> bool {
     crate::core::utils::cmd_exists(cmd)
 }
@@ -897,10 +960,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    println!("\n{RED}🗑️  Purging {} selected application(s)...{NC}\n", to_purge.len());
+    println!(
+        "\n{RED}🗑️  Purging {} selected application(s)...{NC}\n",
+        to_purge.len()
+    );
 
     for item in &to_purge {
-        println!("{RED}🔥 Uninstalling {} ({}) via {}...{NC}", item.name, item.pkg_id, item.source);
+        println!(
+            "{RED}🔥 Uninstalling {} ({}) via {}...{NC}",
+            item.name, item.pkg_id, item.source
+        );
 
         let mgr = MANAGERS.iter().find(|m| m.name.contains(&item.source));
         let ok = if let Some(m) = mgr {

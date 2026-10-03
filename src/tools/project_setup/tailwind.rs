@@ -8,11 +8,11 @@
 //  src/tools/project_setup/tailwind.rs — Tailwind CSS v4 Auto-Installer & Config Patcher
 // =============================================================================
 
+use super::utils::{patch_tsconfig, patch_viteconfig, resolve_cmd};
 use std::error::Error;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use super::utils::{patch_tsconfig, patch_viteconfig, resolve_cmd};
 
 /// `gladeshell css` — Tailwind CSS v4 Auto-Installer & Full Config Patcher.
 pub fn run_css() -> Result<(), Box<dyn Error>> {
@@ -26,11 +26,27 @@ pub fn run_css() -> Result<(), Box<dyn Error>> {
     println!("📦 Installing Tailwind CSS v4 & dependencies via {pm}...");
     if is_bun {
         Command::new(resolve_cmd("bun"))
-            .args(["add", "-D", "tailwindcss", "@tailwindcss/vite", "clsx", "tailwind-merge", "@types/node"])
+            .args([
+                "add",
+                "-D",
+                "tailwindcss",
+                "@tailwindcss/vite",
+                "clsx",
+                "tailwind-merge",
+                "@types/node",
+            ])
             .status()?;
     } else {
         Command::new(resolve_cmd("npm"))
-            .args(["install", "-D", "tailwindcss", "@tailwindcss/vite", "clsx", "tailwind-merge", "@types/node"])
+            .args([
+                "install",
+                "-D",
+                "tailwindcss",
+                "@tailwindcss/vite",
+                "clsx",
+                "tailwind-merge",
+                "@types/node",
+            ])
             .status()?;
     }
 
@@ -51,7 +67,11 @@ pub fn run_css() -> Result<(), Box<dyn Error>> {
         fs::create_dir_all(parent)?;
     }
 
-    let current = if css_file.exists() { fs::read_to_string(css_file)? } else { String::new() };
+    let current = if css_file.exists() {
+        fs::read_to_string(css_file)?
+    } else {
+        String::new()
+    };
     if !current.contains("@import \"tailwindcss\";") {
         fs::write(css_file, format!("@import \"tailwindcss\";\n{current}"))?;
         println!("✅ Added @import \"tailwindcss\"; to {target_css}");

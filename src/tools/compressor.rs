@@ -19,12 +19,13 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ignore::WalkBuilder;
-use rayon::prelude::*;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -33,6 +34,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Gauge, List, ListItem, Paragraph},
     Frame, Terminal,
 };
+use rayon::prelude::*;
 
 // ── Color Palette (Modern Dark Slate / Electric Cyan / Neon Violet) ─────────
 const C_BG: Color = Color::Rgb(12, 14, 24);
@@ -72,7 +74,9 @@ impl fmt::Display for CompressionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CompressionError::PathNotFound(p) => write!(f, "Target path not found: {}", p),
-            CompressionError::UnsupportedFormat(fmt) => write!(f, "Unsupported archive format: {}", fmt),
+            CompressionError::UnsupportedFormat(fmt) => {
+                write!(f, "Unsupported archive format: {}", fmt)
+            }
             CompressionError::Io(e) => write!(f, "I/O Error: {}", e),
             CompressionError::ArchiveError(msg) => write!(f, "Compression engine error: {}", msg),
         }
@@ -199,13 +203,46 @@ impl CompressionLevel {
 /// Detects if a file is already compressed media/binary (Video, Audio, Image, Zip).
 /// Re-compressing already-compressed video streams yields 0% ratio while wasting 100x CPU time.
 pub fn is_media_or_compressed_file(path: &Path) -> bool {
-    let lower = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let lower = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
     matches!(
         lower.as_str(),
-        "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" | "m4v" | "3gp" | "ts" |
-        "mp3" | "aac" | "flac" | "ogg" | "wav" | "m4a" |
-        "jpg" | "jpeg" | "png" | "gif" | "webp" | "bmp" | "svg" |
-        "zip" | "7z" | "rar" | "tar" | "gz" | "bz2" | "xz" | "zst" | "iso" | "pdf"
+        "mp4"
+            | "mkv"
+            | "avi"
+            | "mov"
+            | "webm"
+            | "flv"
+            | "wmv"
+            | "m4v"
+            | "3gp"
+            | "ts"
+            | "mp3"
+            | "aac"
+            | "flac"
+            | "ogg"
+            | "wav"
+            | "m4a"
+            | "jpg"
+            | "jpeg"
+            | "png"
+            | "gif"
+            | "webp"
+            | "bmp"
+            | "svg"
+            | "zip"
+            | "7z"
+            | "rar"
+            | "tar"
+            | "gz"
+            | "bz2"
+            | "xz"
+            | "zst"
+            | "iso"
+            | "pdf"
     )
 }
 
@@ -255,7 +292,9 @@ pub struct CompressApp {
 
 impl CompressApp {
     pub fn new(target_path: &Path, custom_out: Option<&str>) -> Result<Self, Box<dyn Error>> {
-        let canonical = target_path.canonicalize().unwrap_or_else(|_| target_path.to_path_buf());
+        let canonical = target_path
+            .canonicalize()
+            .unwrap_or_else(|_| target_path.to_path_buf());
         let default_name = match canonical.file_name().and_then(|s| s.to_str()) {
             Some(n) if !n.is_empty() => n.to_string(),
             _ => "archive".to_string(),
@@ -323,7 +362,11 @@ impl Drop for TerminalCleanup {
 //  RUN FUNCTION & EVENT LOOP
 // =============================================================================
 
-pub fn run(target: Option<&str>, custom_out: Option<&str>, format_flag: Option<&str>) -> Result<(), Box<dyn Error>> {
+pub fn run(
+    target: Option<&str>,
+    custom_out: Option<&str>,
+    format_flag: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
     let target_str = target.unwrap_or(".");
     let target_path = Path::new(target_str);
 
@@ -368,7 +411,9 @@ pub fn run(target: Option<&str>, custom_out: Option<&str>, format_flag: Option<&
                         if !current_file.is_empty() {
                             let entry_log = format!("Compressing: {}", current_file);
                             if let Some(last) = app.compress_log.last_mut() {
-                                if last.starts_with("Compressing: Compressing 7-Zip") && entry_log.starts_with("Compressing: Compressing 7-Zip") {
+                                if last.starts_with("Compressing: Compressing 7-Zip")
+                                    && entry_log.starts_with("Compressing: Compressing 7-Zip")
+                                {
                                     *last = entry_log;
                                 } else if app.compress_log.last() != Some(&entry_log) {
                                     app.compress_log.push(entry_log);
@@ -378,9 +423,16 @@ pub fn run(target: Option<&str>, custom_out: Option<&str>, format_flag: Option<&
                             }
                         }
                     }
-                    WorkerMsg::Finished { compressed_bytes, uncompressed_bytes, duration_secs, output_path } => {
+                    WorkerMsg::Finished {
+                        compressed_bytes,
+                        uncompressed_bytes,
+                        duration_secs,
+                        output_path,
+                    } => {
                         let ratio = if *uncompressed_bytes > 0 {
-                            (100.0 - ((*compressed_bytes as f64 / *uncompressed_bytes as f64) * 100.0)).max(0.0)
+                            (100.0
+                                - ((*compressed_bytes as f64 / *uncompressed_bytes as f64) * 100.0))
+                                .max(0.0)
                         } else {
                             0.0
                         };
@@ -412,10 +464,14 @@ pub fn run(target: Option<&str>, custom_out: Option<&str>, format_flag: Option<&
         if event::poll(Duration::from_millis(50))? {
             match event::read()? {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    let ctrl = key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);
+                    let ctrl = key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::CONTROL);
 
                     // Fullscreen Dashboard Interactions
-                    if app.is_compressing || matches!(&app.progress, Some(WorkerMsg::Finished { .. })) {
+                    if app.is_compressing
+                        || matches!(&app.progress, Some(WorkerMsg::Finished { .. }))
+                    {
                         match key.code {
                             KeyCode::Esc => {
                                 if app.is_compressing {
@@ -506,7 +562,9 @@ pub fn run(target: Option<&str>, custom_out: Option<&str>, format_flag: Option<&
                                 worker_rx = Some(rx);
 
                                 thread::spawn(move || {
-                                    if let Err(e) = execute_compression(&target_p, &out_p, format, level, ignore_nm, ignore_g, &tx) {
+                                    if let Err(e) = execute_compression(
+                                        &target_p, &out_p, format, level, ignore_nm, ignore_g, &tx,
+                                    ) {
                                         let _ = tx.send(WorkerMsg::Error(e.to_string()));
                                     }
                                 });
@@ -598,31 +656,81 @@ fn execute_compression(
 
     let total_files = files_to_compress.len();
     if total_files == 0 {
-        return Err(CompressionError::PathNotFound("No valid files to compress.".to_string()).into());
+        return Err(
+            CompressionError::PathNotFound("No valid files to compress.".to_string()).into(),
+        );
     }
 
     // 2. Perform compression (Hybrid Engine: Try Native System Binary for 100% Assembly Speed -> Seamless Pure Rust Fallback)
-    let native_handled = try_native_system_compress(target, output_path, format, level, &files_to_compress, total_uncompressed_bytes, tx)?;
+    let native_handled = try_native_system_compress(
+        target,
+        output_path,
+        format,
+        level,
+        &files_to_compress,
+        total_uncompressed_bytes,
+        tx,
+    )?;
 
     if !native_handled {
         match format {
             ArchiveFormat::Zip => {
-                compress_zip(target, output_path, &files_to_compress, total_uncompressed_bytes, level, tx)?;
+                compress_zip(
+                    target,
+                    output_path,
+                    &files_to_compress,
+                    total_uncompressed_bytes,
+                    level,
+                    tx,
+                )?;
             }
             ArchiveFormat::SevenZip => {
-                compress_7z(target, output_path, &files_to_compress, total_uncompressed_bytes, tx)?;
+                compress_7z(
+                    target,
+                    output_path,
+                    &files_to_compress,
+                    total_uncompressed_bytes,
+                    tx,
+                )?;
             }
             ArchiveFormat::TarGz => {
-                compress_tar_gz(target, output_path, &files_to_compress, total_uncompressed_bytes, level, tx)?;
+                compress_tar_gz(
+                    target,
+                    output_path,
+                    &files_to_compress,
+                    total_uncompressed_bytes,
+                    level,
+                    tx,
+                )?;
             }
             ArchiveFormat::TarXz => {
-                compress_tar_xz(target, output_path, &files_to_compress, total_uncompressed_bytes, level, tx)?;
+                compress_tar_xz(
+                    target,
+                    output_path,
+                    &files_to_compress,
+                    total_uncompressed_bytes,
+                    level,
+                    tx,
+                )?;
             }
             ArchiveFormat::TarBz2 => {
-                compress_tar_bz2(target, output_path, &files_to_compress, total_uncompressed_bytes, level, tx)?;
+                compress_tar_bz2(
+                    target,
+                    output_path,
+                    &files_to_compress,
+                    total_uncompressed_bytes,
+                    level,
+                    tx,
+                )?;
             }
             ArchiveFormat::Tar => {
-                compress_tar_plain(target, output_path, &files_to_compress, total_uncompressed_bytes, tx)?;
+                compress_tar_plain(
+                    target,
+                    output_path,
+                    &files_to_compress,
+                    total_uncompressed_bytes,
+                    tx,
+                )?;
             }
         }
     }
@@ -651,7 +759,11 @@ fn find_binary_path(cmd: &str) -> Option<String> {
             return Some(p.to_string_lossy().to_string());
         }
     }
-    let check_cmd = if cfg!(target_os = "windows") { "where" } else { "which" };
+    let check_cmd = if cfg!(target_os = "windows") {
+        "where"
+    } else {
+        "which"
+    };
     if let Ok(out) = Command::new(check_cmd).arg(cmd).output() {
         if out.status.success() {
             let path_str = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -681,7 +793,9 @@ fn try_native_system_compress(
     let out_abs = if output_path.is_absolute() {
         output_path.to_path_buf()
     } else if let Some(parent) = output_path.parent() {
-        let parent_abs = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
+        let parent_abs = parent
+            .canonicalize()
+            .unwrap_or_else(|_| parent.to_path_buf());
         if let Some(file_name) = output_path.file_name() {
             parent_abs.join(file_name)
         } else {
@@ -699,7 +813,10 @@ fn try_native_system_compress(
 
     let (binary, args) = match format {
         ArchiveFormat::Zip => {
-            if let Some(bin) = find_binary_path("7z").or_else(|| find_binary_path("7za")).or_else(|| find_binary_path("7zz")) {
+            if let Some(bin) = find_binary_path("7z")
+                .or_else(|| find_binary_path("7za"))
+                .or_else(|| find_binary_path("7zz"))
+            {
                 let a = vec![
                     "a".to_string(),
                     "-tzip".to_string(),
@@ -711,7 +828,11 @@ fn try_native_system_compress(
                 ];
                 (bin, a)
             } else if let Some(bin) = find_binary_path("zip") {
-                let mut a = vec!["-r".to_string(), "-q".to_string(), format!("-{}", level_num)];
+                let mut a = vec![
+                    "-r".to_string(),
+                    "-q".to_string(),
+                    format!("-{}", level_num),
+                ];
                 a.push(out_abs.to_string_lossy().to_string());
                 (bin, a)
             } else {
@@ -745,7 +866,12 @@ fn try_native_system_compress(
                 None => return Ok(false),
             };
             let a = if find_binary_path("pigz").is_some() {
-                vec!["-I".to_string(), "pigz".to_string(), "-cf".to_string(), out_abs.to_string_lossy().to_string()]
+                vec![
+                    "-I".to_string(),
+                    "pigz".to_string(),
+                    "-cf".to_string(),
+                    out_abs.to_string_lossy().to_string(),
+                ]
             } else {
                 vec!["-czf".to_string(), out_abs.to_string_lossy().to_string()]
             };
@@ -757,7 +883,12 @@ fn try_native_system_compress(
                 None => return Ok(false),
             };
             let a = if find_binary_path("pixz").is_some() {
-                vec!["-I".to_string(), "pixz".to_string(), "-cf".to_string(), out_abs.to_string_lossy().to_string()]
+                vec![
+                    "-I".to_string(),
+                    "pixz".to_string(),
+                    "-cf".to_string(),
+                    out_abs.to_string_lossy().to_string(),
+                ]
             } else {
                 vec!["-cJf".to_string(), out_abs.to_string_lossy().to_string()]
             };
@@ -769,7 +900,12 @@ fn try_native_system_compress(
                 None => return Ok(false),
             };
             let a = if find_binary_path("pbzip2").is_some() {
-                vec!["-I".to_string(), "pbzip2".to_string(), "-cf".to_string(), out_abs.to_string_lossy().to_string()]
+                vec![
+                    "-I".to_string(),
+                    "pbzip2".to_string(),
+                    "-cf".to_string(),
+                    out_abs.to_string_lossy().to_string(),
+                ]
             } else {
                 vec!["-cjf".to_string(), out_abs.to_string_lossy().to_string()]
             };
@@ -791,29 +927,44 @@ fn try_native_system_compress(
     let out_path_buf = output_path.to_path_buf();
     let total_b = total_bytes;
     let total_f = files.len();
-    let binary_display = Path::new(&binary).file_name().unwrap_or_default().to_string_lossy().to_string();
+    let binary_display = Path::new(&binary)
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
 
     let ticker_handle = thread::spawn(move || {
         let mut last_max_written: u64 = 0;
         while !stop_clone.load(std::sync::atomic::Ordering::Relaxed) {
             thread::sleep(Duration::from_millis(150));
             let raw_size = fs::metadata(&out_path_buf).map(|m| m.len()).unwrap_or(0);
-            
+
             last_max_written = last_max_written.max(raw_size);
             let out_size = last_max_written;
 
             let max_est_bytes = total_b.saturating_sub(1024 * 1024).max(1);
             let est_bytes = (out_size * 2).min(max_est_bytes);
 
-            let est_ratio = if total_b > 0 { est_bytes as f64 / total_b as f64 } else { 0.0 };
-            let est_files = ((est_ratio * total_f as f64) as usize).max(1).min(total_f.saturating_sub(1).max(1));
+            let est_ratio = if total_b > 0 {
+                est_bytes as f64 / total_b as f64
+            } else {
+                0.0
+            };
+            let est_files = ((est_ratio * total_f as f64) as usize)
+                .max(1)
+                .min(total_f.saturating_sub(1).max(1));
 
             let _ = tx_ticker.send(WorkerMsg::Progress {
                 files_processed: est_files,
                 total_files: total_f,
                 bytes_processed: est_bytes,
                 total_bytes: total_b,
-                current_file: format!("⚡ Running Native '{}' Engine ({} threads)... ({} written)", binary_display, thread_count, format_bytes(out_size)),
+                current_file: format!(
+                    "⚡ Running Native '{}' Engine ({} threads)... ({} written)",
+                    binary_display,
+                    thread_count,
+                    format_bytes(out_size)
+                ),
             });
         }
     });
@@ -832,8 +983,19 @@ fn try_native_system_compress(
 
     let mut full_args = args;
     let out_is_inside = output_path.starts_with(base_dir) || out_abs.starts_with(base_dir);
-    let bin_name = Path::new(&binary).file_name().unwrap_or_default().to_string_lossy();
-    if base_dir.is_dir() && !out_is_inside && (files.len() > 50 || bin_name == "zip" || bin_name == "7z" || bin_name == "7za" || bin_name == "7zz" || bin_name == "tar") {
+    let bin_name = Path::new(&binary)
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy();
+    if base_dir.is_dir()
+        && !out_is_inside
+        && (files.len() > 50
+            || bin_name == "zip"
+            || bin_name == "7z"
+            || bin_name == "7za"
+            || bin_name == "7zz"
+            || bin_name == "tar")
+    {
         full_args.push(".".to_string());
     } else {
         for f in files {
@@ -999,7 +1161,7 @@ fn compress_7z(
         while !stop_clone.load(std::sync::atomic::Ordering::Relaxed) {
             thread::sleep(Duration::from_millis(150));
             let raw_size = fs::metadata(&out_path_buf).map(|m| m.len()).unwrap_or(0);
-            
+
             // Guarantee monotonic written bytes (prevent fluctuating numbers)
             last_max_written = last_max_written.max(raw_size);
             let out_size = last_max_written;
@@ -1009,15 +1171,24 @@ fn compress_7z(
             let est_bytes = (out_size * 2).min(max_est_bytes);
 
             // Scale estimated file count dynamically based on compression progress (e.g. 1/9 -> 8/9)
-            let est_ratio = if total_b > 0 { est_bytes as f64 / total_b as f64 } else { 0.0 };
-            let est_files = ((est_ratio * total_f as f64) as usize).max(1).min(total_f.saturating_sub(1).max(1));
+            let est_ratio = if total_b > 0 {
+                est_bytes as f64 / total_b as f64
+            } else {
+                0.0
+            };
+            let est_files = ((est_ratio * total_f as f64) as usize)
+                .max(1)
+                .min(total_f.saturating_sub(1).max(1));
 
             let _ = tx_ticker.send(WorkerMsg::Progress {
                 files_processed: est_files,
                 total_files: total_f,
                 bytes_processed: est_bytes,
                 total_bytes: total_b,
-                current_file: format!("Compressing 7-Zip LZMA2 archive... ({} written)", format_bytes(out_size)),
+                current_file: format!(
+                    "Compressing 7-Zip LZMA2 archive... ({} written)",
+                    format_bytes(out_size)
+                ),
             });
         }
     });
@@ -1183,9 +1354,15 @@ fn append_files_to_tar<W: Write>(
 
 fn get_relative_path(base_dir: &Path, file_path: &Path) -> PathBuf {
     if base_dir.is_file() {
-        return file_path.file_name().map(PathBuf::from).unwrap_or_else(|| PathBuf::from("file"));
+        return file_path
+            .file_name()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("file"));
     }
-    file_path.strip_prefix(base_dir).unwrap_or(file_path).to_path_buf()
+    file_path
+        .strip_prefix(base_dir)
+        .unwrap_or(file_path)
+        .to_path_buf()
 }
 
 fn format_bytes(bytes: u64) -> String {
@@ -1234,7 +1411,10 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
 
     // 1. Header Bar
     let header_title = if app.is_compressing {
-        format!(" 🚀 COMPRESSION OPERATIONS DASHBOARD — {} COMPRESSING ", spinner_char)
+        format!(
+            " 🚀 COMPRESSION OPERATIONS DASHBOARD — {} COMPRESSING ",
+            spinner_char
+        )
     } else {
         " ✨ COMPRESSION OPERATIONS COMPLETE ".to_string()
     };
@@ -1242,39 +1422,87 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
     let header_block = Block::default()
         .title(Span::styled(
             header_title,
-            Style::default().fg(if app.is_compressing { C_ACCENT } else { C_GREEN }).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(if app.is_compressing {
+                    C_ACCENT
+                } else {
+                    C_GREEN
+                })
+                .add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(if app.is_compressing { C_BORDER } else { C_GREEN }))
+        .border_style(Style::default().fg(if app.is_compressing {
+            C_BORDER
+        } else {
+            C_GREEN
+        }))
         .style(Style::default().bg(C_BG));
 
     let header_text = Line::from(vec![
         Span::styled("📂 Source: ", Style::default().fg(C_DIM)),
-        Span::styled(app.target_path.display().to_string(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            app.target_path.display().to_string(),
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("  ➔  📦 Output: ", Style::default().fg(C_DIM)),
-        Span::styled(out_path.display().to_string(), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            out_path.display().to_string(),
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(format!(" [{}]", format_name), Style::default().fg(C_CYAN)),
     ]);
-    f.render_widget(Paragraph::new(header_text).block(header_block), dashboard_chunks[0]);
+    f.render_widget(
+        Paragraph::new(header_text).block(header_block),
+        dashboard_chunks[0],
+    );
 
     // Extract progress metrics & FREEZE elapsed_sec and speed_mb_s when finished!
-    let (files_processed, total_files, bytes_processed, total_bytes, elapsed_sec, speed_mb_s) = match &app.progress {
-        Some(WorkerMsg::Progress { files_processed, total_files, bytes_processed, total_bytes, .. }) => {
-            let elapsed = app.start_time.map_or(0.001, |st| st.elapsed().as_secs_f64().max(0.001));
-            let speed = (*bytes_processed as f64 / (1024.0 * 1024.0)) / elapsed;
-            (*files_processed, *total_files, *bytes_processed, *total_bytes, elapsed, speed)
-        }
-        Some(WorkerMsg::Finished { uncompressed_bytes, duration_secs, .. }) => {
-            let elapsed = (*duration_secs).max(0.001);
-            let speed = (*uncompressed_bytes as f64 / (1024.0 * 1024.0)) / elapsed;
-            (1, 1, *uncompressed_bytes, *uncompressed_bytes, elapsed, speed)
-        }
-        _ => {
-            let elapsed = app.start_time.map_or(0.001, |st| st.elapsed().as_secs_f64().max(0.001));
-            (0, 1, 0, 1, elapsed, 0.0)
-        }
-    };
+    let (files_processed, total_files, bytes_processed, total_bytes, elapsed_sec, speed_mb_s) =
+        match &app.progress {
+            Some(WorkerMsg::Progress {
+                files_processed,
+                total_files,
+                bytes_processed,
+                total_bytes,
+                ..
+            }) => {
+                let elapsed = app
+                    .start_time
+                    .map_or(0.001, |st| st.elapsed().as_secs_f64().max(0.001));
+                let speed = (*bytes_processed as f64 / (1024.0 * 1024.0)) / elapsed;
+                (
+                    *files_processed,
+                    *total_files,
+                    *bytes_processed,
+                    *total_bytes,
+                    elapsed,
+                    speed,
+                )
+            }
+            Some(WorkerMsg::Finished {
+                uncompressed_bytes,
+                duration_secs,
+                ..
+            }) => {
+                let elapsed = (*duration_secs).max(0.001);
+                let speed = (*uncompressed_bytes as f64 / (1024.0 * 1024.0)) / elapsed;
+                (
+                    1,
+                    1,
+                    *uncompressed_bytes,
+                    *uncompressed_bytes,
+                    elapsed,
+                    speed,
+                )
+            }
+            _ => {
+                let elapsed = app
+                    .start_time
+                    .map_or(0.001, |st| st.elapsed().as_secs_f64().max(0.001));
+                (0, 1, 0, 1, elapsed, 0.0)
+            }
+        };
 
     let ratio = if total_bytes > 0 {
         (bytes_processed as f64 / total_bytes as f64).clamp(0.0, 1.0)
@@ -1289,9 +1517,19 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
     let label_str = if app.is_compressing {
         format!(
             " {} {:.1}% | {:.1} MB / {:.1} MB @ {:.1} MB/s ",
-            spinner_char, ratio * 100.0, proc_mb, tot_mb, speed_mb_s
+            spinner_char,
+            ratio * 100.0,
+            proc_mb,
+            tot_mb,
+            speed_mb_s
         )
-    } else if let Some(WorkerMsg::Finished { compressed_bytes, uncompressed_bytes, duration_secs, .. }) = &app.progress {
+    } else if let Some(WorkerMsg::Finished {
+        compressed_bytes,
+        uncompressed_bytes,
+        duration_secs,
+        ..
+    }) = &app.progress
+    {
         let saved_pct = if *uncompressed_bytes > 0 {
             (100.0 - ((*compressed_bytes as f64 / *uncompressed_bytes as f64) * 100.0)).max(0.0)
         } else {
@@ -1308,7 +1546,11 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
         " Preparing compression... ".to_string()
     };
 
-    let gauge_border = if app.is_compressing { C_ACCENT } else { C_GREEN };
+    let gauge_border = if app.is_compressing {
+        C_ACCENT
+    } else {
+        C_GREEN
+    };
     let gauge = Gauge::default()
         .block(
             Block::default()
@@ -1319,12 +1561,19 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
         )
         .gauge_style(
             Style::default()
-                .fg(if app.is_compressing { C_ACCENT } else { C_GREEN })
+                .fg(if app.is_compressing {
+                    C_ACCENT
+                } else {
+                    C_GREEN
+                })
                 .bg(C_PANEL_BG)
                 .add_modifier(Modifier::BOLD),
         )
         .ratio(if app.is_compressing { ratio } else { 1.0 })
-        .label(Span::styled(label_str, Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)));
+        .label(Span::styled(
+            label_str,
+            Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+        ));
 
     f.render_widget(gauge, dashboard_chunks[1]);
 
@@ -1354,12 +1603,22 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
         .border_style(Style::default().fg(C_ACCENT))
         .style(Style::default().bg(C_PANEL_BG));
     let card1_val = format!("{:.2} MB/s", speed_mb_s);
-    let card1_subtext = if app.is_compressing { "Compression Rate" } else { "Avg Speed (Frozen)" };
+    let card1_subtext = if app.is_compressing {
+        "Compression Rate"
+    } else {
+        "Avg Speed (Frozen)"
+    };
     let card1_text = vec![
-        Line::from(Span::styled(card1_val, Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            card1_val,
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        )),
         Line::from(Span::styled(card1_subtext, Style::default().fg(C_DIM))),
     ];
-    f.render_widget(Paragraph::new(card1_text).block(card1_block), stat_chunks[0]);
+    f.render_widget(
+        Paragraph::new(card1_text).block(card1_block),
+        stat_chunks[0],
+    );
 
     // Card 2: Payload Processed
     let card2_block = Block::default()
@@ -1370,10 +1629,19 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
         .style(Style::default().bg(C_PANEL_BG));
     let card2_val = format!("{:.1} / {:.1} MB", proc_mb, tot_mb);
     let card2_text = vec![
-        Line::from(Span::styled(card2_val, Style::default().fg(C_MAGENTA).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(format_bytes(bytes_processed), Style::default().fg(C_DIM))),
+        Line::from(Span::styled(
+            card2_val,
+            Style::default().fg(C_MAGENTA).add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            format_bytes(bytes_processed),
+            Style::default().fg(C_DIM),
+        )),
     ];
-    f.render_widget(Paragraph::new(card2_text).block(card2_block), stat_chunks[1]);
+    f.render_widget(
+        Paragraph::new(card2_text).block(card2_block),
+        stat_chunks[1],
+    );
 
     // Card 3: ETA & Time (Frozen when finished)
     let card3_block = Block::default()
@@ -1387,12 +1655,22 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
     } else {
         format!("{:.2}s Total", elapsed_sec)
     };
-    let card3_subtext = if app.is_compressing { "Compressing..." } else { "Finished (Timer Frozen)" };
+    let card3_subtext = if app.is_compressing {
+        "Compressing..."
+    } else {
+        "Finished (Timer Frozen)"
+    };
     let card3_text = vec![
-        Line::from(Span::styled(card3_val, Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            card3_val,
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )),
         Line::from(Span::styled(card3_subtext, Style::default().fg(C_DIM))),
     ];
-    f.render_widget(Paragraph::new(card3_text).block(card3_block), stat_chunks[2]);
+    f.render_widget(
+        Paragraph::new(card3_text).block(card3_block),
+        stat_chunks[2],
+    );
 
     // Card 4: Files Processed
     let card4_block = Block::default()
@@ -1407,10 +1685,16 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
         format!("{} Files", files_processed)
     };
     let card4_text = vec![
-        Line::from(Span::styled(card4_val, Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            card4_val,
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )),
         Line::from(Span::styled("Processed Count", Style::default().fg(C_DIM))),
     ];
-    f.render_widget(Paragraph::new(card4_text).block(card4_block), stat_chunks[3]);
+    f.render_widget(
+        Paragraph::new(card4_text).block(card4_block),
+        stat_chunks[3],
+    );
 
     // 4. Real-Time Stream OR Celebration Banner Box
     if app.is_compressing {
@@ -1434,8 +1718,17 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
             })
             .collect();
 
-        f.render_widget(List::new(log_items).block(stream_block), dashboard_chunks[3]);
-    } else if let Some(WorkerMsg::Finished { compressed_bytes, uncompressed_bytes, duration_secs, output_path }) = &app.progress {
+        f.render_widget(
+            List::new(log_items).block(stream_block),
+            dashboard_chunks[3],
+        );
+    } else if let Some(WorkerMsg::Finished {
+        compressed_bytes,
+        uncompressed_bytes,
+        duration_secs,
+        output_path,
+    }) = &app.progress
+    {
         let celeb_block = Block::default()
             .title(" ✨ COMPRESSION COMPLETED SUCCESSFULLY ")
             .borders(Borders::ALL)
@@ -1454,34 +1747,65 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
             Line::from(""),
             Line::from(vec![
                 Span::raw("   "),
-                Span::styled("🎉 COMPRESSION COMPLETE! 100% SUCCESS", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "🎉 COMPRESSION COMPLETE! 100% SUCCESS",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("   📦 Output Archive:  "),
-                Span::styled(output_path.display().to_string(), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    output_path.display().to_string(),
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::raw("   📊 Size Savings:     "),
-                Span::styled(format!("{} ➔ {}", format_bytes(*uncompressed_bytes), format_bytes(*compressed_bytes)), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(format!("  ({:.1}% saved)", ratio), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!(
+                        "{} ➔ {}",
+                        format_bytes(*uncompressed_bytes),
+                        format_bytes(*compressed_bytes)
+                    ),
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("  ({:.1}% saved)", ratio),
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::raw("   ⏱️ Total Elapsed:   "),
-                Span::styled(format!("{:.2} seconds", duration_secs), Style::default().fg(C_CYAN)),
+                Span::styled(
+                    format!("{:.2} seconds", duration_secs),
+                    Style::default().fg(C_CYAN),
+                ),
             ]),
             Line::from(vec![
                 Span::raw("   ⚡ Average Speed:   "),
-                Span::styled(format!("{:.2} MB/s", avg_speed), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{:.2} MB/s", avg_speed),
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("   "),
-                Span::styled("[ PRESS ENTER / SPACE / ESC TO RETURN TO CONFIGURATION ]", Style::default().bg(C_GREEN).fg(C_BG).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[ PRESS ENTER / SPACE / ESC TO RETURN TO CONFIGURATION ]",
+                    Style::default()
+                        .bg(C_GREEN)
+                        .fg(C_BG)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
         ];
 
-        f.render_widget(Paragraph::new(celeb_lines).block(celeb_block), dashboard_chunks[3]);
+        f.render_widget(
+            Paragraph::new(celeb_lines).block(celeb_block),
+            dashboard_chunks[3],
+        );
     } else {
         let stream_block = Block::default()
             .title(" 📜 COMPRESSION LOG ")
@@ -1497,26 +1821,47 @@ fn render_compression_dashboard(f: &mut Frame, app: &CompressApp, area: Rect) {
             .map(|line| ListItem::new(Line::from(Span::styled(line, Style::default().fg(C_TEXT)))))
             .collect();
 
-        f.render_widget(List::new(log_items).block(stream_block), dashboard_chunks[3]);
+        f.render_widget(
+            List::new(log_items).block(stream_block),
+            dashboard_chunks[3],
+        );
     }
 
     // 5. Footer Bar
     let footer_text = if app.is_compressing {
         Line::from(vec![
-            Span::styled(" [Esc] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
-            Span::styled("Return to Settings (Compression continues)  ", Style::default().fg(C_TEXT)),
-            Span::styled(" [Ctrl+C] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Esc] ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "Return to Settings (Compression continues)  ",
+                Style::default().fg(C_TEXT),
+            ),
+            Span::styled(
+                " [Ctrl+C] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Quit", Style::default().fg(C_TEXT)),
         ])
     } else {
         Line::from(vec![
-            Span::styled(" [Enter/Space/Esc] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [Enter/Space/Esc] ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Return to Configuration  ", Style::default().fg(C_TEXT)),
-            Span::styled(" [q] ", Style::default().fg(C_RED).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " [q] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
             Span::styled("Quit Compressor", Style::default().fg(C_TEXT)),
         ])
     };
-    f.render_widget(Paragraph::new(footer_text).alignment(Alignment::Center), dashboard_chunks[4]);
+    f.render_widget(
+        Paragraph::new(footer_text).alignment(Alignment::Center),
+        dashboard_chunks[4],
+    );
 }
 
 fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
@@ -1536,9 +1881,18 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
 
     // 1. Header Banner
     let header_line = Line::from(vec![
-        Span::styled(" 🚀 GLADESHELL PARALLEL COMPRESSOR ", Style::default().fg(C_WHITE).bg(C_SELECTED_BG).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " 🚀 GLADESHELL PARALLEL COMPRESSOR ",
+            Style::default()
+                .fg(C_WHITE)
+                .bg(C_SELECTED_BG)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("  "),
-        Span::styled(format!("📂 {}", app.target_path.display()), Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("📂 {}", app.target_path.display()),
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
     ]);
 
     let header = Paragraph::new(header_line)
@@ -1559,7 +1913,10 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
         .flat_map(|(idx, fmt)| {
             let is_active = *fmt == app.format;
             let style = if is_active {
-                Style::default().fg(C_WHITE).bg(C_BORDER).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(C_WHITE)
+                    .bg(C_BORDER)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(C_TEXT).bg(Color::Rgb(25, 30, 48))
             };
@@ -1590,15 +1947,24 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
     let details_lines = vec![
         Line::from(vec![
             Span::styled(" 📁 Source Target: ", Style::default().fg(C_DIM)),
-            Span::styled(app.target_path.display().to_string(), Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                app.target_path.display().to_string(),
+                Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" 📦 Output Archive: ", Style::default().fg(C_DIM)),
-            Span::styled(out_path.display().to_string(), Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                out_path.display().to_string(),
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
         ]),
         Line::from(vec![
             Span::styled(" ⚡ Compression Level: ", Style::default().fg(C_DIM)),
-            Span::styled(app.level.name(), Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                app.level.name(),
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
             Span::styled(" (Press [L] to change)", Style::default().fg(C_DIM)),
         ]),
         Line::from(vec![
@@ -1606,12 +1972,23 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
             Span::styled(
                 format!(
                     "node_modules: [{}]  |  .git: [{}]",
-                    if app.ignore_node_modules { "✓ Ignored" } else { "Included" },
-                    if app.ignore_git { "✓ Ignored" } else { "Included" }
+                    if app.ignore_node_modules {
+                        "✓ Ignored"
+                    } else {
+                        "Included"
+                    },
+                    if app.ignore_git {
+                        "✓ Ignored"
+                    } else {
+                        "Included"
+                    }
                 ),
                 Style::default().fg(C_ACCENT),
             ),
-            Span::styled(" (Press [N] for node_modules, [G] for git)", Style::default().fg(C_DIM)),
+            Span::styled(
+                " (Press [N] for node_modules, [G] for git)",
+                Style::default().fg(C_DIM),
+            ),
         ]),
     ];
 
@@ -1621,7 +1998,10 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(C_BORDER))
             .style(Style::default().bg(C_PANEL_BG))
-            .title(Span::styled(" 📊 Compression Settings & Target ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD))),
+            .title(Span::styled(
+                " 📊 Compression Settings & Target ",
+                Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+            )),
     );
     f.render_widget(details_panel, chunks[2]);
 
@@ -1629,35 +2009,75 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
     let input_lines = if app.active_field == ActiveField::OutputNameInput {
         vec![
             Line::from(vec![
-                Span::styled(" ✏️ Output Archive Name: ", Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD)),
-                Span::styled(format!("{}█", app.output_name), Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    " ✏️ Output Archive Name: ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("{}█", app.output_name),
+                    Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+                ),
             ]),
-            Line::from(Span::styled(" Press [Enter / Esc] to confirm name.", Style::default().fg(C_DIM))),
+            Line::from(Span::styled(
+                " Press [Enter / Esc] to confirm name.",
+                Style::default().fg(C_DIM),
+            )),
         ]
     } else if let Some((ref msg, is_success)) = app.status_msg {
-        let style = if is_success { Style::default().fg(C_GREEN) } else { Style::default().fg(C_RED) };
+        let style = if is_success {
+            Style::default().fg(C_GREEN)
+        } else {
+            Style::default().fg(C_RED)
+        };
         vec![
-            Line::from(Span::styled(msg.clone(), style.add_modifier(Modifier::BOLD))),
-            Line::from(Span::styled(" Press [ENTER] to compress again or [Q / Esc] to exit.", Style::default().fg(C_DIM))),
+            Line::from(Span::styled(
+                msg.clone(),
+                style.add_modifier(Modifier::BOLD),
+            )),
+            Line::from(Span::styled(
+                " Press [ENTER] to compress again or [Q / Esc] to exit.",
+                Style::default().fg(C_DIM),
+            )),
         ]
     } else {
         vec![
             Line::from(vec![
                 Span::styled(" 💡 Press ", Style::default().fg(C_DIM)),
-                Span::styled("[ENTER]", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
-                Span::styled(" to start multithreaded compression.", Style::default().fg(C_WHITE)),
+                Span::styled(
+                    "[ENTER]",
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    " to start multithreaded compression.",
+                    Style::default().fg(C_WHITE),
+                ),
             ]),
             Line::from(vec![
                 Span::styled(" Shortcuts: ", Style::default().fg(C_DIM)),
-                Span::styled("[1-6] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[1-6] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Formats  ", Style::default().fg(C_DIM)),
-                Span::styled("[L] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[L] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Level  ", Style::default().fg(C_DIM)),
-                Span::styled("[N] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[N] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Toggle node_modules  ", Style::default().fg(C_DIM)),
-                Span::styled("[G] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[G] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Toggle .git  ", Style::default().fg(C_DIM)),
-                Span::styled("[O] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "[O] ",
+                    Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled("Output Name", Style::default().fg(C_DIM)),
             ]),
         ]
@@ -1667,23 +2087,44 @@ fn draw_configuration_ui(f: &mut Frame, app: &mut CompressApp) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(C_BORDER_DIM))
-        .title(Span::styled(" ⚙️ Controls & Input ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)));
+        .title(Span::styled(
+            " ⚙️ Controls & Input ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ));
     f.render_widget(Paragraph::new(input_lines).block(log_block), chunks[3]);
 
     // 5. Footer Bar
     let footer_line = Line::from(vec![
-        Span::styled("[◀/▶ / 1-6] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[◀/▶ / 1-6] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Format  ", Style::default().fg(C_DIM)),
-        Span::styled("[L] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[L] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Level  ", Style::default().fg(C_DIM)),
-        Span::styled("[N/G] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[N/G] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Exclusions  ", Style::default().fg(C_DIM)),
-        Span::styled("[O] ", Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[O] ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Output Name  ", Style::default().fg(C_DIM)),
-        Span::styled("[ENTER] ", Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[ENTER] ",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        ),
         Span::styled("Start Compression", Style::default().fg(C_DIM)),
     ]);
-    f.render_widget(Paragraph::new(footer_line).alignment(Alignment::Center), chunks[4]);
+    f.render_widget(
+        Paragraph::new(footer_line).alignment(Alignment::Center),
+        chunks[4],
+    );
 }
 
 // =============================================================================
@@ -1726,7 +2167,10 @@ mod tests {
 
     #[test]
     fn test_zip_integrity_roundtrip() {
-        let base_tmp = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("target").join("test_tmp");
+        let base_tmp = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("target")
+            .join("test_tmp");
         let temp_dir = base_tmp.join(format!("unittest_zip_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
@@ -1768,7 +2212,10 @@ mod tests {
 
     #[test]
     fn test_tar_gz_integrity_roundtrip() {
-        let base_tmp = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("target").join("test_tmp");
+        let base_tmp = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("target")
+            .join("test_tmp");
         let temp_dir = base_tmp.join(format!("unittest_targz_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();

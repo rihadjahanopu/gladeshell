@@ -25,39 +25,69 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{
-        Block, BorderType, Borders, List, ListItem, ListState, Paragraph,
-    },
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Terminal,
 };
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
-const GOLD: Color      = Color::Rgb(255, 200, 0);
-const GOLD_DIM: Color  = Color::Rgb(180, 140, 0);
-const BG_SEL: Color    = Color::Rgb(40, 34, 0);
-const TS_BLUE: Color   = Color::Rgb(59, 130, 246);
-const JS_AMB: Color    = Color::Rgb(234, 179, 8);
-const GREEN: Color     = Color::Rgb(34, 197, 94);
-const RED: Color       = Color::Rgb(239, 68, 68);
-const AMBER: Color     = Color::Rgb(245, 158, 11);
-const MUTED: Color     = Color::Rgb(120, 113, 108);
-const FG: Color        = Color::Rgb(240, 235, 220);
+const GOLD: Color = Color::Rgb(255, 200, 0);
+const GOLD_DIM: Color = Color::Rgb(180, 140, 0);
+const BG_SEL: Color = Color::Rgb(40, 34, 0);
+const TS_BLUE: Color = Color::Rgb(59, 130, 246);
+const JS_AMB: Color = Color::Rgb(234, 179, 8);
+const GREEN: Color = Color::Rgb(34, 197, 94);
+const RED: Color = Color::Rgb(239, 68, 68);
+const AMBER: Color = Color::Rgb(245, 158, 11);
+const MUTED: Color = Color::Rgb(120, 113, 108);
+const FG: Color = Color::Rgb(240, 235, 220);
 
 // ── Run modes ─────────────────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, PartialEq)]
-enum RunMode { Run, Hot, Watch }
+enum RunMode {
+    Run,
+    Hot,
+    Watch,
+}
 
 impl RunMode {
     const ALL: [RunMode; 3] = [RunMode::Run, RunMode::Hot, RunMode::Watch];
 
-    fn icon(self)        -> &'static str  { match self { RunMode::Run => "🚀", RunMode::Hot => "🔥", RunMode::Watch => "👁 " } }
-    fn title(self)       -> &'static str  { match self { RunMode::Run => "bun run", RunMode::Hot => "bun --hot", RunMode::Watch => "bun --watch" } }
-    fn subtitle(self)    -> &'static str  { match self { RunMode::Run => "Execute once", RunMode::Hot => "Hot reload on save", RunMode::Watch => "Restart on change" } }
-    fn color(self)       -> Color         { match self { RunMode::Run => GREEN, RunMode::Hot => RED, RunMode::Watch => AMBER } }
-    fn bun_args(self)    -> &'static [&'static str] {
-        match self { RunMode::Run => &["run"], RunMode::Hot => &["--hot"], RunMode::Watch => &["--watch"] }
+    fn icon(self) -> &'static str {
+        match self {
+            RunMode::Run => "🚀",
+            RunMode::Hot => "🔥",
+            RunMode::Watch => "👁 ",
+        }
+    }
+    fn title(self) -> &'static str {
+        match self {
+            RunMode::Run => "bun run",
+            RunMode::Hot => "bun --hot",
+            RunMode::Watch => "bun --watch",
+        }
+    }
+    fn subtitle(self) -> &'static str {
+        match self {
+            RunMode::Run => "Execute once",
+            RunMode::Hot => "Hot reload on save",
+            RunMode::Watch => "Restart on change",
+        }
+    }
+    fn color(self) -> Color {
+        match self {
+            RunMode::Run => GREEN,
+            RunMode::Hot => RED,
+            RunMode::Watch => AMBER,
+        }
+    }
+    fn bun_args(self) -> &'static [&'static str] {
+        match self {
+            RunMode::Run => &["run"],
+            RunMode::Hot => &["--hot"],
+            RunMode::Watch => &["--watch"],
+        }
     }
 }
 
@@ -78,32 +108,53 @@ struct FileMeta {
 
 impl FileMeta {
     fn load(name: &str) -> Self {
-        let size_kb = fs::metadata(name).map(|m| m.len() as f64 / 1024.0).unwrap_or(0.0);
-        Self { name: name.to_string(), size_kb }
+        let size_kb = fs::metadata(name)
+            .map(|m| m.len() as f64 / 1024.0)
+            .unwrap_or(0.0);
+        Self {
+            name: name.to_string(),
+            size_kb,
+        }
     }
 
     fn ext(&self) -> &str {
-        Path::new(&self.name).extension().and_then(|s| s.to_str()).unwrap_or("")
+        Path::new(&self.name)
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
     }
 
     fn icon(&self) -> &'static str {
-        match self.ext() { "ts" => "📘", _ => "📒" }
+        match self.ext() {
+            "ts" => "📘",
+            _ => "📒",
+        }
     }
 
     fn ext_color(&self) -> Color {
-        match self.ext() { "ts" => TS_BLUE, _ => JS_AMB }
+        match self.ext() {
+            "ts" => TS_BLUE,
+            _ => JS_AMB,
+        }
     }
 
     fn size_str(&self) -> String {
-        if self.size_kb < 1.0 { format!("{:.0} B", self.size_kb * 1024.0) }
-        else { format!("{:.1} KB", self.size_kb) }
+        if self.size_kb < 1.0 {
+            format!("{:.0} B", self.size_kb * 1024.0)
+        } else {
+            format!("{:.1} KB", self.size_kb)
+        }
     }
 }
 
 // ── Platform helper ───────────────────────────────────────────────────────────
 
 fn bun_cmd() -> &'static str {
-    if cfg!(target_os = "windows") { "bun.exe" } else { "bun" }
+    if cfg!(target_os = "windows") {
+        "bun.exe"
+    } else {
+        "bun"
+    }
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -138,11 +189,17 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         None => return Ok(()),
     };
 
-    println!("\n\x1b[1;38;2;255;200;0m⚡ {} {}:\x1b[0m  \x1b[1m{}\x1b[0m\n",
-        mode.icon(), mode.title(), files[file_idx].name);
+    println!(
+        "\n\x1b[1;38;2;255;200;0m⚡ {} {}:\x1b[0m  \x1b[1m{}\x1b[0m\n",
+        mode.icon(),
+        mode.title(),
+        files[file_idx].name
+    );
 
     let mut cmd = Command::new(bun_cmd());
-    for a in mode.bun_args() { cmd.arg(a); }
+    for a in mode.bun_args() {
+        cmd.arg(a);
+    }
     cmd.arg(&files[file_idx].name).status()?;
     Ok(())
 }
@@ -152,14 +209,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct RunnerState<'a> {
-    files:        &'a [FileMeta],
-    filtered:     Vec<usize>,      // indices into `files`
-    cursor:       usize,
-    search:       String,
-    search_mode:  bool,
-    pane:         ActivePane,
-    mode_cursor:  usize,
-    tick:         u64,
+    files: &'a [FileMeta],
+    filtered: Vec<usize>, // indices into `files`
+    cursor: usize,
+    search: String,
+    search_mode: bool,
+    pane: ActivePane,
+    mode_cursor: usize,
+    tick: u64,
 }
 
 impl<'a> RunnerState<'a> {
@@ -239,91 +296,93 @@ fn interactive_runner(files: &[FileMeta]) -> Result<Option<(usize, RunMode)>, Bo
                     }
                 } else {
                     match st.pane {
-                        ActivePane::FileList => {
-                            match key.code {
-                                KeyCode::Char('/') | KeyCode::Char('s') => {
-                                    st.search_mode = true;
-                                }
-                                KeyCode::Esc | KeyCode::Char('q') => break Ok(None),
-                                KeyCode::Char('c') if ctrl => break Ok(None),
-
-                                KeyCode::Up | KeyCode::Char('k') => {
-                                    if st.cursor > 0 {
-                                        st.cursor -= 1;
-                                    }
-                                }
-                                KeyCode::Char('p') if ctrl => {
-                                    if st.cursor > 0 {
-                                        st.cursor -= 1;
-                                    }
-                                }
-                                KeyCode::Down | KeyCode::Char('j') => {
-                                    if !st.filtered.is_empty() && st.cursor < st.filtered.len() - 1 {
-                                        st.cursor += 1;
-                                    }
-                                }
-                                KeyCode::Char('n') if ctrl => {
-                                    if !st.filtered.is_empty() && st.cursor < st.filtered.len() - 1 {
-                                        st.cursor += 1;
-                                    }
-                                }
-
-                                KeyCode::Char('1') => {
-                                    if let Some(file_idx) = st.selected_global_idx() {
-                                        break Ok(Some((file_idx, RunMode::Run)));
-                                    }
-                                }
-                                KeyCode::Char('2') => {
-                                    if let Some(file_idx) = st.selected_global_idx() {
-                                        break Ok(Some((file_idx, RunMode::Hot)));
-                                    }
-                                }
-                                KeyCode::Char('3') => {
-                                    if let Some(file_idx) = st.selected_global_idx() {
-                                        break Ok(Some((file_idx, RunMode::Watch)));
-                                    }
-                                }
-
-                                KeyCode::Enter | KeyCode::Right => {
-                                    if st.selected().is_some() {
-                                        st.pane = ActivePane::ModeSelect;
-                                        st.mode_cursor = 0;
-                                    }
-                                }
-                                _ => {}
+                        ActivePane::FileList => match key.code {
+                            KeyCode::Char('/') | KeyCode::Char('s') => {
+                                st.search_mode = true;
                             }
-                        }
-                        ActivePane::ModeSelect => {
-                            match key.code {
-                                KeyCode::Esc | KeyCode::Left | KeyCode::Backspace => {
-                                    st.pane = ActivePane::FileList;
-                                }
-                                KeyCode::Char('q') => break Ok(None),
-                                KeyCode::Char('c') if ctrl => break Ok(None),
+                            KeyCode::Esc | KeyCode::Char('q') => break Ok(None),
+                            KeyCode::Char('c') if ctrl => break Ok(None),
 
-                                KeyCode::Up | KeyCode::Char('k') => {
-                                    if st.mode_cursor > 0 {
-                                        st.mode_cursor -= 1;
-                                    }
+                            KeyCode::Up | KeyCode::Char('k') => {
+                                if st.cursor > 0 {
+                                    st.cursor -= 1;
                                 }
-                                KeyCode::Down | KeyCode::Char('j') => {
-                                    if st.mode_cursor < RunMode::ALL.len() - 1 {
-                                        st.mode_cursor += 1;
-                                    }
-                                }
-                                KeyCode::Char('1') => { st.mode_cursor = 0; }
-                                KeyCode::Char('2') => { st.mode_cursor = 1; }
-                                KeyCode::Char('3') => { st.mode_cursor = 2; }
-
-                                KeyCode::Enter => {
-                                    if let Some(file_idx) = st.selected_global_idx() {
-                                        let mode = RunMode::ALL[st.mode_cursor];
-                                        break Ok(Some((file_idx, mode)));
-                                    }
-                                }
-                                _ => {}
                             }
-                        }
+                            KeyCode::Char('p') if ctrl => {
+                                if st.cursor > 0 {
+                                    st.cursor -= 1;
+                                }
+                            }
+                            KeyCode::Down | KeyCode::Char('j') => {
+                                if !st.filtered.is_empty() && st.cursor < st.filtered.len() - 1 {
+                                    st.cursor += 1;
+                                }
+                            }
+                            KeyCode::Char('n') if ctrl => {
+                                if !st.filtered.is_empty() && st.cursor < st.filtered.len() - 1 {
+                                    st.cursor += 1;
+                                }
+                            }
+
+                            KeyCode::Char('1') => {
+                                if let Some(file_idx) = st.selected_global_idx() {
+                                    break Ok(Some((file_idx, RunMode::Run)));
+                                }
+                            }
+                            KeyCode::Char('2') => {
+                                if let Some(file_idx) = st.selected_global_idx() {
+                                    break Ok(Some((file_idx, RunMode::Hot)));
+                                }
+                            }
+                            KeyCode::Char('3') => {
+                                if let Some(file_idx) = st.selected_global_idx() {
+                                    break Ok(Some((file_idx, RunMode::Watch)));
+                                }
+                            }
+
+                            KeyCode::Enter | KeyCode::Right => {
+                                if st.selected().is_some() {
+                                    st.pane = ActivePane::ModeSelect;
+                                    st.mode_cursor = 0;
+                                }
+                            }
+                            _ => {}
+                        },
+                        ActivePane::ModeSelect => match key.code {
+                            KeyCode::Esc | KeyCode::Left | KeyCode::Backspace => {
+                                st.pane = ActivePane::FileList;
+                            }
+                            KeyCode::Char('q') => break Ok(None),
+                            KeyCode::Char('c') if ctrl => break Ok(None),
+
+                            KeyCode::Up | KeyCode::Char('k') => {
+                                if st.mode_cursor > 0 {
+                                    st.mode_cursor -= 1;
+                                }
+                            }
+                            KeyCode::Down | KeyCode::Char('j') => {
+                                if st.mode_cursor < RunMode::ALL.len() - 1 {
+                                    st.mode_cursor += 1;
+                                }
+                            }
+                            KeyCode::Char('1') => {
+                                st.mode_cursor = 0;
+                            }
+                            KeyCode::Char('2') => {
+                                st.mode_cursor = 1;
+                            }
+                            KeyCode::Char('3') => {
+                                st.mode_cursor = 2;
+                            }
+
+                            KeyCode::Enter => {
+                                if let Some(file_idx) = st.selected_global_idx() {
+                                    let mode = RunMode::ALL[st.mode_cursor];
+                                    break Ok(Some((file_idx, mode)));
+                                }
+                            }
+                            _ => {}
+                        },
                     }
                 }
             }
@@ -359,14 +418,21 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
     let header_title = vec![
         Span::styled(" ⚡ ", Style::default().fg(Color::Black).bg(GOLD).bold()),
         Span::styled("BUN", Style::default().fg(Color::Black).bg(GOLD).bold()),
-        Span::styled(" INTERACTIVE RUNNER ", Style::default().fg(Color::Black).bg(GOLD_DIM).bold()),
-        Span::styled("  Select file & run mode  ", Style::default().fg(GOLD).bg(Color::Rgb(20,16,0))),
+        Span::styled(
+            " INTERACTIVE RUNNER ",
+            Style::default().fg(Color::Black).bg(GOLD_DIM).bold(),
+        ),
+        Span::styled(
+            "  Select file & run mode  ",
+            Style::default().fg(GOLD).bg(Color::Rgb(20, 16, 0)),
+        ),
     ];
-    let header = Paragraph::new(Line::from(header_title))
-        .block(Block::default()
+    let header = Paragraph::new(Line::from(header_title)).block(
+        Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(GOLD)));
+            .border_style(Style::default().fg(GOLD)),
+    );
     f.render_widget(header, root[0]);
 
     // ── Search Bar Box ────────────────────────────────────────────────────────
@@ -386,19 +452,27 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
         " 🔍 Search Files (Press / or s to type filter) "
     };
 
-    let cursor_char = if st.search_mode && st.pulse() { "█" } else { " " };
+    let cursor_char = if st.search_mode && st.pulse() {
+        "█"
+    } else {
+        " "
+    };
     let search_content = Line::from(vec![
         Span::styled("  ", Style::default()),
         Span::styled(&st.search, Style::default().fg(FG).bold()),
         Span::styled(cursor_char, Style::default().fg(GOLD)),
     ]);
 
-    let search_bar = Paragraph::new(search_content)
-        .block(Block::default()
-            .title(Span::styled(search_title, Style::default().fg(search_border_col).bold()))
+    let search_bar = Paragraph::new(search_content).block(
+        Block::default()
+            .title(Span::styled(
+                search_title,
+                Style::default().fg(search_border_col).bold(),
+            ))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(search_border_col)));
+            .border_style(Style::default().fg(search_border_col)),
+    );
     f.render_widget(search_bar, root[1]);
 
     // ── Main Body Layout: Split (Left: List, Right: Run Modes) ───────────────
@@ -410,7 +484,11 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
     // ── File List (Left Pane) ─────────────────────────────────────────────────
     let is_file_list_active = st.pane == ActivePane::FileList;
     let list_border_color = if is_file_list_active {
-        if st.pulse() { GOLD } else { GOLD_DIM }
+        if st.pulse() {
+            GOLD
+        } else {
+            GOLD_DIM
+        }
     } else {
         Color::Rgb(60, 55, 45)
     };
@@ -421,48 +499,54 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
         format!(" 🔍 Matches ({}) ", st.filtered.len())
     };
 
-    let items: Vec<ListItem> = st.filtered.iter().enumerate().map(|(idx, &fi)| {
-        let file = &st.files[fi];
-        let selected = idx == st.cursor;
-        let pulse = st.pulse();
+    let items: Vec<ListItem> = st
+        .filtered
+        .iter()
+        .enumerate()
+        .map(|(idx, &fi)| {
+            let file = &st.files[fi];
+            let selected = idx == st.cursor;
+            let pulse = st.pulse();
 
-        let prefix = if selected {
-            if is_file_list_active && pulse {
-                Span::styled(" ➔ ", Style::default().fg(GOLD).bold())
+            let prefix = if selected {
+                if is_file_list_active && pulse {
+                    Span::styled(" ➔ ", Style::default().fg(GOLD).bold())
+                } else {
+                    Span::styled(" ▸ ", Style::default().fg(GOLD_DIM))
+                }
             } else {
-                Span::styled(" ▸ ", Style::default().fg(GOLD_DIM))
-            }
-        } else {
-            Span::styled("   ", Style::default())
-        };
+                Span::styled("   ", Style::default())
+            };
 
-        let icon = Span::styled(format!("{} ", file.icon()), Style::default().fg(file.ext_color()));
-        let name = if selected {
-            Span::styled(&file.name, Style::default().fg(FG).bg(BG_SEL).bold())
-        } else {
-            Span::styled(&file.name, Style::default().fg(FG))
-        };
-        let size = Span::styled(
-            format!("  {}", file.size_str()),
-            Style::default().fg(MUTED),
-        );
+            let icon = Span::styled(
+                format!("{} ", file.icon()),
+                Style::default().fg(file.ext_color()),
+            );
+            let name = if selected {
+                Span::styled(&file.name, Style::default().fg(FG).bg(BG_SEL).bold())
+            } else {
+                Span::styled(&file.name, Style::default().fg(FG))
+            };
+            let size = Span::styled(format!("  {}", file.size_str()), Style::default().fg(MUTED));
 
-        let line = Line::from(vec![prefix, icon, name, size]);
-        let style = if selected {
-            Style::default().bg(BG_SEL)
-        } else {
-            Style::default()
-        };
-        ListItem::new(line).style(style)
-    }).collect();
+            let line = Line::from(vec![prefix, icon, name, size]);
+            let style = if selected {
+                Style::default().bg(BG_SEL)
+            } else {
+                Style::default()
+            };
+            ListItem::new(line).style(style)
+        })
+        .collect();
 
-    let list = List::new(items)
-        .block(Block::default()
+    let list = List::new(items).block(
+        Block::default()
             .title(list_title)
             .title_style(Style::default().fg(list_border_color).bold())
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(list_border_color)));
+            .border_style(Style::default().fg(list_border_color)),
+    );
 
     let mut list_state = ListState::default();
     if !st.filtered.is_empty() {
@@ -492,7 +576,10 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
     };
 
     let right_block = Block::default()
-        .title(Span::styled(title_text, Style::default().fg(container_border_col).bold()))
+        .title(Span::styled(
+            title_text,
+            Style::default().fg(container_border_col).bold(),
+        ))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(container_border_col));
@@ -514,7 +601,11 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
             let is_card_selected = is_mode_select_active && (idx == st.mode_cursor);
             let color = mode.color();
             let border_col = if is_card_selected {
-                if st.pulse() { color } else { GOLD_DIM }
+                if st.pulse() {
+                    color
+                } else {
+                    GOLD_DIM
+                }
             } else if !is_mode_select_active && idx == 0 {
                 Color::Rgb(100, 90, 40)
             } else {
@@ -536,11 +627,15 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
             let number = Span::styled(format!(" [{}] ", idx + 1), num_style);
             let icon_span = Span::styled(
                 format!("  {}  ", mode.icon()),
-                Style::default().fg(if is_card_selected { color } else { FG }).bold(),
+                Style::default()
+                    .fg(if is_card_selected { color } else { FG })
+                    .bold(),
             );
             let title_span = Span::styled(
                 format!(" {} ", mode.title()),
-                Style::default().fg(if is_card_selected { color } else { FG }).bold(),
+                Style::default()
+                    .fg(if is_card_selected { color } else { FG })
+                    .bold(),
             );
             let sub_span = Span::styled(
                 format!("    {}", mode.subtitle()),
@@ -550,17 +645,19 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
             let line1 = Line::from(vec![number, icon_span, title_span]);
             let line2 = Line::from(vec![sub_span]);
 
-            let card_content = vec![
-                line1,
-                line2,
-            ];
+            let card_content = vec![line1, line2];
 
-            let card = Paragraph::new(card_content)
-                .block(Block::default()
+            let card = Paragraph::new(card_content).block(
+                Block::default()
                     .borders(Borders::ALL)
-                    .border_type(if is_card_selected { BorderType::Double } else { BorderType::Rounded })
+                    .border_type(if is_card_selected {
+                        BorderType::Double
+                    } else {
+                        BorderType::Rounded
+                    })
                     .border_style(Style::default().fg(border_col))
-                    .style(Style::default().bg(bg)));
+                    .style(Style::default().bg(bg)),
+            );
 
             f.render_widget(card, cards_layout[idx]);
         }
@@ -577,18 +674,30 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
         ActivePane::FileList => {
             if st.search_mode {
                 vec![
-                    Span::styled(" Typing Search ", Style::default().fg(Color::Black).bg(GOLD).bold()),
-                    Span::styled("  [Enter/Down] Back to Files  [Esc] Clear search ", Style::default().fg(MUTED)),
+                    Span::styled(
+                        " Typing Search ",
+                        Style::default().fg(Color::Black).bg(GOLD).bold(),
+                    ),
+                    Span::styled(
+                        "  [Enter/Down] Back to Files  [Esc] Clear search ",
+                        Style::default().fg(MUTED),
+                    ),
                 ]
             } else {
                 vec![
                     Span::styled(" ↑↓/jk ", Style::default().fg(Color::Black).bg(GOLD_DIM)),
                     Span::styled(" Navigate  ", Style::default().fg(MUTED)),
-                    Span::styled(" / ", Style::default().fg(Color::Black).bg(Color::Rgb(60,60,80))),
+                    Span::styled(
+                        " / ",
+                        Style::default().fg(Color::Black).bg(Color::Rgb(60, 60, 80)),
+                    ),
                     Span::styled(" Search  ", Style::default().fg(MUTED)),
                     Span::styled(" Enter ", Style::default().fg(Color::Black).bg(GREEN)),
                     Span::styled(" Select & Choose Mode  ", Style::default().fg(MUTED)),
-                    Span::styled(" 1 2 3 ", Style::default().fg(Color::Black).bg(Color::Rgb(60,60,80))),
+                    Span::styled(
+                        " 1 2 3 ",
+                        Style::default().fg(Color::Black).bg(Color::Rgb(60, 60, 80)),
+                    ),
                     Span::styled(" Quick Run  ", Style::default().fg(MUTED)),
                     Span::styled(" q / Esc ", Style::default().fg(Color::Black).bg(RED)),
                     Span::styled(" Quit ", Style::default().fg(MUTED)),
@@ -599,21 +708,29 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
             vec![
                 Span::styled(" ↑↓/jk ", Style::default().fg(Color::Black).bg(GOLD_DIM)),
                 Span::styled(" Move  ", Style::default().fg(MUTED)),
-                Span::styled(" 1 2 3 ", Style::default().fg(Color::Black).bg(Color::Rgb(60,60,80))),
+                Span::styled(
+                    " 1 2 3 ",
+                    Style::default().fg(Color::Black).bg(Color::Rgb(60, 60, 80)),
+                ),
                 Span::styled(" Pick Mode  ", Style::default().fg(MUTED)),
                 Span::styled(" Enter ", Style::default().fg(Color::Black).bg(GREEN)),
                 Span::styled(" Run Bun  ", Style::default().fg(MUTED)),
-                Span::styled(" Esc / ← ", Style::default().fg(Color::Black).bg(Color::Rgb(60,60,80))),
+                Span::styled(
+                    " Esc / ← ",
+                    Style::default().fg(Color::Black).bg(Color::Rgb(60, 60, 80)),
+                ),
                 Span::styled(" Back to Files ", Style::default().fg(MUTED)),
             ]
         }
     };
 
     let footer = Paragraph::new(Line::from(hints))
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(GOLD_DIM)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(GOLD_DIM)),
+        )
         .alignment(Alignment::Left);
     f.render_widget(footer, root[3]);
 }

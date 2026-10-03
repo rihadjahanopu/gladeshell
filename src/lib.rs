@@ -22,15 +22,15 @@
 #![deny(clippy::unwrap_in_result)]
 
 // Re-export the core modules so both lib consumers and unit-tests can reach them.
+pub mod buffer_engine;
 pub mod core;
 pub mod daemon;
 pub mod git;
 pub mod init;
-pub mod plugins;
 pub mod input_parser;
-pub mod buffer_engine;
-pub mod renderer;
 pub mod plugin_engine;
+pub mod plugins;
+pub mod renderer;
 #[cfg(feature = "tools")]
 pub mod tools;
 
@@ -207,25 +207,37 @@ mod tests {
     #[test]
     fn init_bash_is_valid_utf8() {
         let result = init::generate("bash").unwrap();
-        assert!(result.contains("gladeshell"), "bash init must contain marker");
+        assert!(
+            result.contains("gladeshell"),
+            "bash init must contain marker"
+        );
     }
 
     #[test]
     fn init_zsh_is_valid_utf8() {
         let result = init::generate("zsh").unwrap();
-        assert!(result.contains("gladeshell"), "zsh init must contain marker");
+        assert!(
+            result.contains("gladeshell"),
+            "zsh init must contain marker"
+        );
     }
 
     #[test]
     fn init_fish_is_valid_utf8() {
         let result = init::generate("fish").unwrap();
-        assert!(result.contains("gladeshell"), "fish init must contain marker");
+        assert!(
+            result.contains("gladeshell"),
+            "fish init must contain marker"
+        );
     }
 
     #[test]
     fn init_pwsh_is_valid_utf8() {
         let result = init::generate("pwsh").unwrap();
-        assert!(result.contains("gladeshell"), "pwsh init must contain marker");
+        assert!(
+            result.contains("gladeshell"),
+            "pwsh init must contain marker"
+        );
     }
 
     #[test]

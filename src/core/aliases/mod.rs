@@ -66,7 +66,7 @@ impl Shell {
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_ascii_lowercase().as_str() {
             "bash" => Some(Shell::Bash),
-            "zsh"  => Some(Shell::Zsh),
+            "zsh" => Some(Shell::Zsh),
             "fish" => Some(Shell::Fish),
             "pwsh" | "powershell" => Some(Shell::Pwsh),
             _ => None,
@@ -76,7 +76,7 @@ impl Shell {
     pub fn name(self) -> &'static str {
         match self {
             Shell::Bash => "bash",
-            Shell::Zsh  => "zsh",
+            Shell::Zsh => "zsh",
             Shell::Fish => "fish",
             Shell::Pwsh => "pwsh",
         }
@@ -139,10 +139,7 @@ impl AliasFile {
                             out.push_str(&format!("unfunction {} 2>/dev/null\n", entry.key));
                         }
                         if entry.description.is_empty() {
-                            out.push_str(&format!(
-                                "alias {}='{}'\n",
-                                entry.key, escaped_val
-                            ));
+                            out.push_str(&format!("alias {}='{}'\n", entry.key, escaped_val));
                         } else {
                             out.push_str(&format!(
                                 "alias {}='{}'  # {}\n",
@@ -153,10 +150,7 @@ impl AliasFile {
                     Shell::Fish => {
                         let escaped_val = entry.value.replace('\'', "\\'");
                         if entry.description.is_empty() {
-                            out.push_str(&format!(
-                                "alias {} '{}'\n",
-                                entry.key, escaped_val
-                            ));
+                            out.push_str(&format!("alias {} '{}'\n", entry.key, escaped_val));
                         } else {
                             out.push_str(&format!(
                                 "alias {} '{}'  # {}\n",
@@ -259,7 +253,11 @@ value = "git push"
     #[test]
     fn builtin_has_all_categories() {
         let af = AliasFile::builtin();
-        assert!(af.group.len() >= 15, "Expected at least 15 categories, got {}", af.group.len());
+        assert!(
+            af.group.len() >= 15,
+            "Expected at least 15 categories, got {}",
+            af.group.len()
+        );
     }
 
     #[test]

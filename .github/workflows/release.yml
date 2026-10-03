@@ -35,12 +35,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Verify Crate Publishability (Cargo Dry-Run)
-        run: cargo publish --dry-run --allow-dirty
-
       - name: Detect Version Bump & Handle Tagging
         id: get_version
         shell: bash
@@ -80,6 +74,14 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "should_release=${SHOULD_RELEASE}" >> $GITHUB_OUTPUT
+
+      - name: Install Rust toolchain
+        if: steps.get_version.outputs.should_release == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify Crate Publishability (Cargo Dry-Run)
+        if: steps.get_version.outputs.should_release == 'true'
+        run: cargo publish --dry-run --allow-dirty
 
       - name: Extract Release Notes from CHANGELOG.md
         id: changelog

@@ -7,16 +7,13 @@ on:
       - "src/**"
       - "benches/**"
       - "Cargo.toml"
-      - "Cargo.lock"
       - "aliases.toml"
-      - ".github/workflows/rust-ci.yml"
   pull_request:
     branches: ['main']
     paths:
       - "src/**"
       - "benches/**"
       - "Cargo.toml"
-      - "Cargo.lock"
       - "aliases.toml"
       - ".github/workflows/rust-ci.yml"
 

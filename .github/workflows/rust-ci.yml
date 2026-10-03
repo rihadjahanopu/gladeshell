@@ -90,4 +90,6 @@ jobs:
         run: cargo test --workspace --all-targets --all-features
 
       - name: Verify documentation generation (no warnings)
-        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --all-features
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --no-deps --workspace --all-features

@@ -1,0 +1,17 @@
+# Cargo Audit Configuration
+# Advisories acknowledged and suppressed with justification.
+
+[advisories]
+
+# RUSTSEC-2026-0245 / RUSTSEC-2026-0246 — sevenz-rust: path traversal + unmaintained
+# Justification: gladeshell implements its own sanitize_extract_path() which validates
+# all archive entry paths against the destination directory before any write.
+# The CVE requires a maliciously crafted .7z archive; our sanitizer prevents zip-slip.
+# Tracked for migration to sevenz-rust2 once its public API stabilises.
+ignore = [
+    "RUSTSEC-2026-0245",
+    "RUSTSEC-2026-0246",
+    "RUSTSEC-2025-0068",
+    "RUSTSEC-2020-0168",
+    "RUSTSEC-2021-0119",
+]

@@ -86,7 +86,7 @@ enum Commands {
     /// Interactive Git stage, commit & push with auto-rebase on conflict (gwip/gcommit)
     #[command(trailing_var_arg = true)]
     Gwip {
-        /// Optional: [type] [message] — e.g. `feat "new login"` or `"my message"`
+        /// Optional: `[type]` `[message]` — e.g. `feat "new login"` or `"my message"`
         args: Vec<String>,
     },
 
@@ -144,7 +144,7 @@ enum Commands {
     #[command(alias = "file-find", alias = "find-file")]
     Ff(gladeshell_core::tools::file_find::FfArgs),
 
-    /// Kill process running on a specific port (kp <port>)
+    /// Kill process running on a specific port (`kp <port>`)
     Kp(KpArgs),
 
     /// Interactive Project Initializer (Bun, NPM, PNPM, Yarn + .gitignore)
@@ -196,7 +196,7 @@ enum Commands {
         target: Option<String>,
     },
 
-    /// Universal Package Converter (pg <file> [-i])
+    /// Universal Package Converter (`pg <file> [-i]`)
     Pg {
         /// Package file to convert
         file: String,
@@ -216,26 +216,26 @@ enum Commands {
     #[command(alias = "fcd")]
     Cf,
 
-    /// Create files with confirmation feedback (t <file1> <file2> ...)
+    /// Create files with confirmation feedback (`t <file1> <file2> ...`)
     T {
         /// File names to create
         #[arg(value_name = "FILES", required = true)]
         files: Vec<String>,
     },
 
-    /// Create directory and enter it (mkd <name>)
+    /// Create directory and enter it (`mkd <name>`)
     Mkd {
         /// Directory name to create
         name: String,
     },
 
-    /// Force remove directory recursively (rmd <name>)
+    /// Force remove directory recursively (`rmd <name>`)
     Rmd {
         /// Directory or file name to remove
         name: String,
     },
 
-    /// Remove file with confirmation (rmf <file>)
+    /// Remove file with confirmation (`rmf <file>`)
     Rmf {
         /// File name to remove
         name: String,
@@ -245,13 +245,13 @@ enum Commands {
         force: bool,
     },
 
-    /// Create backup copy (.bak) (bak <file>)
+    /// Create backup copy (.bak) (`bak <file>`)
     Bak {
         /// File or directory name to back up
         name: String,
     },
 
-    /// Move file to system trash safely (trash <file>)
+    /// Move file to system trash safely (`trash <file>`)
     Trash {
         /// File or directory name to trash
         name: String,

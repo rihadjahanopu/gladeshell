@@ -31,7 +31,7 @@ clap_complete = "4"
 # Serialization / config
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
-serde_yml = "0.0"
+serde_norway = "0.9"
 toml = "1.1"
 
 # Git internals – gitoxide (pure Rust, zero C dependencies)
@@ -43,7 +43,7 @@ gix = { version = "0.88", default-features = false, features = [
 
 # System info & PC Diagnostics (Phase 2 prompt / Phase 4 tools / pc-info)
 sysinfo = { version = "0.39", optional = true }
-battery = { version = "0.7.8", optional = true }
+starship-battery = { version = "0.12", optional = true }
 
 # Interactive prompts (Phase 4 tools: uup, uu)
 inquire = { version = "0.9", optional = true }
@@ -75,7 +75,7 @@ flate2 = { version = "1.0", features = ["zlib-rs"], optional = true }
 zip = { version = "2.2", optional = true }
 bzip2 = { version = "0.5", optional = true }
 xz2 = { version = "0.1", optional = true }
-sevenz-rust = { version = "0.6", optional = true }
+sevenz-rust2 = { version = "0.23", optional = true }
 zeroize = { version = "1.8", features = ["zeroize_derive"], optional = true }
 rpassword = { version = "7.3", optional = true }
 rand = { version = "0.10", optional = true }
@@ -104,7 +104,7 @@ prompt-engine = ["gix", "rayon"]
 # Enable Phase-4 tool subcommands & pc-info diagnostics
 tools = [
     "sysinfo",
-    "battery",
+    "starship-battery",
     "inquire",
     "ratatui",
     "crossterm",
@@ -123,7 +123,7 @@ tools = [
     "zip",
     "bzip2",
     "xz2",
-    "sevenz-rust",
+    "sevenz-rust2",
     "zeroize",
     "rpassword",
     "rand",

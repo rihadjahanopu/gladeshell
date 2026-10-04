@@ -1199,9 +1199,9 @@ fn compress_7z(
     }
 
     let res = if base_dir.is_dir() {
-        sevenz_rust::compress_to_path(base_dir, output_path)
+        sevenz_rust2::compress_to_path(base_dir, output_path)
     } else {
-        sevenz_rust::compress_to_path(files[0].as_path(), output_path)
+        sevenz_rust2::compress_to_path(files[0].as_path(), output_path)
     };
 
     stop_signal.store(true, std::sync::atomic::Ordering::Relaxed);

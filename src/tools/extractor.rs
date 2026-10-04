@@ -273,7 +273,7 @@ pub fn extract_archive_with_progress(
         return extract_zip_parallel(archive, out_dir, Some(&progress_tx), total_bytes);
     }
 
-    // 2. .7z (Pure Rust via sevenz-rust)
+    // 2. .7z (Pure Rust via sevenz-rust2)
     if lower_name.ends_with(".7z") {
         return extract_7z(
             archive,
@@ -840,12 +840,10 @@ fn extract_7z(
     total_bytes: u64,
 ) -> Result<usize, ExtractionError> {
     let file = File::open(archive)?;
-    let file_len = file.metadata()?.len();
+    let _file_len = file.metadata()?.len();
 
     // 1. Multi-threaded Rayon parallel extraction for non-solid / multi-entry 7z archives
-    if let Ok(reader) =
-        sevenz_rust::SevenZReader::new(file, file_len, sevenz_rust::Password::empty())
-    {
+    if let Ok(reader) = sevenz_rust2::ArchiveReader::new(file, sevenz_rust2::Password::empty()) {
         let entries: Vec<(String, u64, bool)> = reader
             .archive()
             .files
@@ -887,10 +885,9 @@ fn extract_7z(
                         }
 
                         if let Ok(f_handle) = File::open(archive) {
-                            if let Ok(mut thread_reader) = sevenz_rust::SevenZReader::new(
+                            if let Ok(mut thread_reader) = sevenz_rust2::ArchiveReader::new(
                                 f_handle,
-                                file_len,
-                                sevenz_rust::Password::empty(),
+                                sevenz_rust2::Password::empty(),
                             ) {
                                 let mut buf = vec![0u8; IO_BUFFER_SIZE];
                                 if let Ok(out_file) = File::create(&target_path) {
@@ -953,7 +950,7 @@ fn extract_7z(
     let bytes_extracted = Arc::new(AtomicU64::new(0));
     let bytes_extracted_clone = bytes_extracted.clone();
 
-    let res = sevenz_rust::decompress_file_with_extract_fn(
+    let res = sevenz_rust2::decompress_file_with_extract_fn(
         archive,
         out_dir,
         move |entry, reader, _dest| {
@@ -996,7 +993,7 @@ fn extract_7z(
     );
 
     if let Err(_e) = res {
-        sevenz_rust::decompress_file(archive, out_dir)
+        sevenz_rust2::decompress_file(archive, out_dir)
             .map_err(|e| ExtractionError::ArchiveError(e.to_string()))?;
     }
 
@@ -1285,7 +1282,7 @@ pub fn inspect_archive(archive_path: &Path) -> Result<ArchiveMetadata, String> {
     // 1b. 7-Zip (.7z) Inspection
     if lower_name.ends_with(".7z") {
         if let Ok(sz) =
-            sevenz_rust::SevenZReader::open(archive_path, sevenz_rust::Password::empty())
+            sevenz_rust2::ArchiveReader::open(archive_path, sevenz_rust2::Password::empty())
         {
             let mut inner_files = Vec::new();
             let mut total_size = 0u64;
@@ -3447,7 +3444,7 @@ mod tests {
         fs::write(&file_path, b"dummy video content").unwrap();
 
         // Compress
-        sevenz_rust::compress_to_path(&file_path, &archive_path).unwrap();
+        sevenz_rust2::compress_to_path(&file_path, &archive_path).unwrap();
 
         // Decompress to out_dir
         let out_dir = temp_dir.join("extracted_out");

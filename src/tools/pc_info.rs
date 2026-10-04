@@ -147,8 +147,8 @@ impl SystemReport {
     }
 
     /// Serializes the system report into a YAML string.
-    pub fn to_yaml(&self) -> Result<String, serde_yml::Error> {
-        serde_yml::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, serde_norway::Error> {
+        serde_norway::to_string(self)
     }
 
     /// Serializes the system report into a TOML string.
@@ -617,8 +617,8 @@ impl SystemReport {
     }
 
     /// Deserializes a `SystemReport` from a YAML string.
-    pub fn from_yaml(yaml_str: &str) -> Result<Self, serde_yml::Error> {
-        serde_yml::from_str(yaml_str)
+    pub fn from_yaml(yaml_str: &str) -> Result<Self, serde_norway::Error> {
+        serde_norway::from_str(yaml_str)
     }
 
     /// Deserializes a `SystemReport` from a TOML string.
@@ -1883,19 +1883,19 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
             });
         }
 
-        // 7. Real Battery Telemetry (Cross-platform battery crate with sysfs fallback)
+        // 7. Real Battery Telemetry (Cross-platform starship_battery crate with sysfs fallback)
         let battery = {
             let crate_bat: Option<BatteryInfo> = (|| {
-                let manager = battery::Manager::new().ok()?;
+                let manager = starship_battery::Manager::new().ok()?;
                 let mut batteries = manager.batteries().ok()?;
                 let bat = batteries.next()?.ok()?;
 
                 let state_of_charge_pct = bat.state_of_charge().value * 100.0;
                 let power_state = match bat.state() {
-                    battery::State::Charging => BatteryState::Charging,
-                    battery::State::Discharging => BatteryState::Discharging,
-                    battery::State::Full => BatteryState::Full,
-                    battery::State::Empty => BatteryState::Empty,
+                    starship_battery::State::Charging => BatteryState::Charging,
+                    starship_battery::State::Discharging => BatteryState::Discharging,
+                    starship_battery::State::Full => BatteryState::Full,
+                    starship_battery::State::Empty => BatteryState::Empty,
                     _ => BatteryState::AcConnected,
                 };
 

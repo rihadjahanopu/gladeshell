@@ -164,6 +164,8 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
 /// Inject `eval "$(gladeshell init <shell>)"` (or equivalent) into the
 /// appropriate shell RC file — idempotent, appends only if not already present.
 pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
+    let _ = ensure_auto_heal_hooks();
+
     let rc_path = match get_rc_path_for_shell(shell) {
         Some(p) => p,
         None => return Ok(false),
@@ -240,6 +242,10 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
         let home = std::path::PathBuf::from(home_str);
 
         // 1. Zsh auto-heal hook in ~/.zshenv (sourced before ~/.zshrc)
+        // IMPORTANT: only re-inject when the block is truly MISSING from .zshrc.
+        // The old unconditional `gladeshell setup` call was the root cause of the
+        // "block added on every new tab" regression — setup re-injected on every
+        // shell start even when the block was already present.
         let zshenv = home.join(".zshenv");
         let start_marker = "# >>> glade-zshenv >>>";
         let end_marker = "# <<< glade-zshenv <<<";
@@ -251,7 +257,14 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
 
         if !existing.contains(start_marker) || !existing.contains(end_marker) {
             let hook = format!(
-                "{start_marker}\nif command -v gladeshell >/dev/null 2>&1; then\n    gladeshell setup >/dev/null 2>&1\nfi\n{end_marker}\n"
+                "{start_marker}\n\
+# Guard: only re-inject when the glade block is truly missing (not every startup).\n\
+if command -v gladeshell >/dev/null 2>&1; then\n\
+    if ! grep -qF '# >>> glade-zshrc >>>' \"$HOME/.zshrc\" 2>/dev/null; then\n\
+        gladeshell setup >/dev/null 2>&1\n\
+    fi\n\
+fi\n\
+{end_marker}\n"
             );
             let mut file = fs::OpenOptions::new()
                 .create(true)
@@ -272,8 +285,16 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
             };
 
             if !p_existing.contains(p_start_marker) || !p_existing.contains(p_end_marker) {
+                // Guard: only call setup when .bashrc block is truly absent.
                 let hook = format!(
-                    "{p_start_marker}\nif command -v gladeshell >/dev/null 2>&1; then\n    gladeshell setup >/dev/null 2>&1\nfi\n{p_end_marker}\n"
+                    "{p_start_marker}\n\
+# Only re-inject when the glade block is truly missing (not on every startup).\n\
+if command -v gladeshell >/dev/null 2>&1; then\n\
+    if ! grep -qF '# >>> glade-bashrc >>>' \"$HOME/.bashrc\" 2>/dev/null; then\n\
+        gladeshell setup >/dev/null 2>&1\n\
+    fi\n\
+fi\n\
+{p_end_marker}\n"
                 );
                 let mut file = fs::OpenOptions::new()
                     .create(true)
@@ -296,8 +317,16 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
             };
 
             if !f_existing.contains(f_start_marker) || !f_existing.contains(f_end_marker) {
+                // Guard: only call setup when config.fish block is truly absent.
                 let hook = format!(
-                    "{f_start_marker}\nif type -q gladeshell\n    gladeshell setup >/dev/null 2>&1\nend\n{f_end_marker}\n"
+                    "{f_start_marker}\n\
+# Only re-inject when the glade block is truly missing (not on every startup).\n\
+if type -q gladeshell\n\
+    if not grep -qF '# >>> glade-fish >>>' \"$HOME/.config/fish/config.fish\" 2>/dev/null\n\
+        gladeshell setup >/dev/null 2>&1\n\
+    end\n\
+end\n\
+{f_end_marker}\n"
                 );
                 let _ = fs::write(&fish_heal_file, hook);
             }
@@ -316,8 +345,17 @@ pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
             };
 
             if !pw_existing.contains(pw_start_marker) || !pw_existing.contains(pw_end_marker) {
+                // Guard: only call setup when the pwsh profile block is truly absent.
                 let hook = format!(
-                    "{pw_start_marker}\nif (Get-Command gladeshell -ErrorAction SilentlyContinue) {{\n    gladeshell setup | Out-Null\n}}\n{pw_end_marker}\n"
+                    "{pw_start_marker}\n\
+# Only re-inject when the glade block is truly missing (not on every startup).\n\
+if (Get-Command gladeshell -ErrorAction SilentlyContinue) {{\n\
+    $gladeRc = Join-Path $HOME '.config/powershell/Microsoft.PowerShell_profile.ps1'\n\
+    if (-not (Select-String -Path $gladeRc -Pattern '# >>> glade-powershell >>>' -Quiet -ErrorAction SilentlyContinue)) {{\n\
+        gladeshell setup | Out-Null\n\
+    }}\n\
+}}\n\
+{pw_end_marker}\n"
                 );
                 let mut file = fs::OpenOptions::new()
                     .create(true)

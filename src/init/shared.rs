@@ -117,35 +117,42 @@ export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
             if let Some(node_bin) = get_latest_nvm_node_bin() {
                 out.push_str(&format!("export PATH=\"{}:$PATH\"\n", node_bin));
             }
+
             out.push_str(
                 r##"
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
-if [[ -o interactive ]] && [[ -f "$HOME/.zshrc" ]]; then
+# Run at most once per session (GLADESHELL_HEAL_DONE guard) and only in interactive shells.
+if [[ -o interactive ]] && [[ -f "$HOME/.zshrc" ]] && [[ -z "${GLADESHELL_HEAL_DONE:-}" ]]; then
+    export GLADESHELL_HEAL_DONE=1
     if ! grep -qF "# >>> glade-zshrc >>>" "$HOME/.zshrc" 2>/dev/null; then
-        # Block is missing → re-inject
+        # Block is missing → re-inject (background, non-blocking)
         gladeshell setup >/dev/null 2>&1 &!
-    elif ! tail -3 "$HOME/.zshrc" | grep -qF "# <<< glade-zshrc <<<" 2>/dev/null; then
+    elif ! tail -5 "$HOME/.zshrc" | grep -qF "# <<< glade-zshrc <<<" 2>/dev/null; then
         # Block exists but not at bottom (bun/deno/nvm appended after it) → reorder
         gladeshell internal-clean-rc >/dev/null 2>&1 &!
     fi
 fi
 
-_fb_lazy_load_nvm() {
-    unset -f nvm node npm npx 2>/dev/null
-    if [ -s "$NVM_DIR/nvm.sh" ]; then
-        \. "$NVM_DIR/nvm.sh"
-    fi
-    if [ -s "$NVM_DIR/bash_completion" ]; then
-        autoload -Uz bashcompinit 2>/dev/null
-        bashcompinit 2>/dev/null || true
-        \. "$NVM_DIR/bash_completion"
-    fi
-}
-
-nvm()  { _fb_lazy_load_nvm; nvm  "$@"; }
-node() { _fb_lazy_load_nvm; node "$@"; }
-npm()  { _fb_lazy_load_nvm; npm  "$@"; }
-npx()  { _fb_lazy_load_nvm; npx  "$@"; }
+# ── NVM lazy stubs (only if nvm is NOT already loaded by user's own config) ──
+# If user has their own nvm lines before the glade block, skip redefining —
+# so gladeshell removal never breaks node/nvm.
+if ! (( ${+functions[nvm]} )) && ! (( ${+commands[nvm]} )); then
+    _fb_lazy_load_nvm() {
+        unset -f nvm node npm npx 2>/dev/null || true
+        if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+            \. "$NVM_DIR/nvm.sh"
+        fi
+        if [[ -s "$NVM_DIR/bash_completion" ]]; then
+            autoload -Uz bashcompinit 2>/dev/null
+            bashcompinit 2>/dev/null || true
+            \. "$NVM_DIR/bash_completion"
+        fi
+    }
+    nvm()  { _fb_lazy_load_nvm; command nvm  "$@"; }
+    node() { _fb_lazy_load_nvm; command node "$@"; }
+    npm()  { _fb_lazy_load_nvm; command npm  "$@"; }
+    npx()  { _fb_lazy_load_nvm; command npx  "$@"; }
+fi
 "##,
             );
         }
@@ -160,28 +167,41 @@ export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
             if let Some(node_bin) = get_latest_nvm_node_bin() {
                 out.push_str(&format!("export PATH=\"{}:$PATH\"\n", node_bin));
             }
+
             out.push_str(
                 r##"
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
-if [[ $- == *i* ]] && [[ -f "$HOME/.bashrc" ]]; then
+# Run at most once per session (GLADESHELL_HEAL_DONE guard) and only in interactive shells.
+if [[ $- == *i* ]] && [[ -f "$HOME/.bashrc" ]] && [[ -z "${GLADESHELL_HEAL_DONE:-}" ]]; then
+    export GLADESHELL_HEAL_DONE=1
     if ! grep -qF "# >>> glade-bashrc >>>" "$HOME/.bashrc" 2>/dev/null; then
-        # Block is missing → re-inject
+        # Block is missing → re-inject (background, non-blocking)
         gladeshell setup >/dev/null 2>&1 &
-    elif ! tail -3 "$HOME/.bashrc" | grep -qF "# <<< glade-bashrc <<<" 2>/dev/null; then
-        # Block exists but not at bottom → reorder
+    elif ! tail -5 "$HOME/.bashrc" | grep -qF "# <<< glade-bashrc <<<" 2>/dev/null; then
+        # Block exists but not at bottom → reorder (background, non-blocking)
         gladeshell internal-clean-rc >/dev/null 2>&1 &
     fi
 fi
 
-_fb_lazy_load_nvm() {
-    unset -f nvm node npm npx
-    [[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"
-    [[ -s "$NVM_DIR/bash_completion" ]] && \. "$NVM_DIR/bash_completion"
-}
-nvm()  { _fb_lazy_load_nvm; nvm  "$@"; }
-node() { _fb_lazy_load_nvm; node "$@"; }
-npm()  { _fb_lazy_load_nvm; npm  "$@"; }
-npx()  { _fb_lazy_load_nvm; npx  "$@"; }
+# ── NVM lazy stubs (only if nvm is NOT already loaded by user's own config) ──
+# If user has their own nvm lines before the glade block, skip redefining —
+# so gladeshell removal never breaks node/nvm.
+if ! type -t nvm >/dev/null 2>&1 && ! command -v node >/dev/null 2>&1; then
+    _fb_lazy_load_nvm() {
+        unset -f nvm node npm npx 2>/dev/null || true
+        if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+            # shellcheck disable=SC1091
+            \. "$NVM_DIR/nvm.sh"
+        fi
+        if [[ -s "$NVM_DIR/bash_completion" ]]; then
+            \. "$NVM_DIR/bash_completion"
+        fi
+    }
+    nvm()  { _fb_lazy_load_nvm; command nvm  "$@"; }
+    node() { _fb_lazy_load_nvm; command node "$@"; }
+    npm()  { _fb_lazy_load_nvm; command npm  "$@"; }
+    npx()  { _fb_lazy_load_nvm; command npx  "$@"; }
+fi
 "##,
             );
         }
@@ -227,8 +247,8 @@ if [[ -d "$BUN_INSTALL/bin" && ":$PATH:" != *":$BUN_INSTALL/bin:"* ]]; then
     export PATH="$BUN_INSTALL/bin:$PATH"
 fi
 
-if [[ -s "$BUN_INSTALL/_bun" ]]; then
-    [ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun" 2>/dev/null
+if [[ -n "$ZSH_VERSION" && -s "$BUN_INSTALL/_bun" ]]; then
+    source "$BUN_INSTALL/_bun" 2>/dev/null
 fi
 "#
         .to_string(),

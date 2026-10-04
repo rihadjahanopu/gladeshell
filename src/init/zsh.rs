@@ -280,6 +280,11 @@ _fb_precmd() {
         _fb_timer=0
     fi
 
+    # ── Auto-heal & auto-reorder hook for Zsh ──
+    if [[ -f "$HOME/.zshrc" ]] && ! grep -qF '# >>> glade-zshrc >>>' "$HOME/.zshrc" 2>/dev/null; then
+        (gladeshell setup >/dev/null 2>&1 &)
+    fi
+
     # Resolve socket path dynamically — never hardcoded — so macOS, custom
     # TMPDIR, and Linux all work correctly without any configuration.
     local sock

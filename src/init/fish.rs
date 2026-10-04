@@ -55,6 +55,11 @@ function fish_prompt
         set _fb_dur $CMD_DURATION
     end
 
+    # Auto-heal: if glade block was deleted from config.fish, restore it in background
+    if test -f "$HOME/.config/fish/config.fish"; and not grep -qF '# >>> glade-fish >>>' "$HOME/.config/fish/config.fish" 2>/dev/null
+        gladeshell setup >/dev/null 2>&1 &
+    end
+
     # Resolve hostname safely (works on Linux and macOS)
     set -l _fb_host (hostname -s 2>/dev/null; or hostname 2>/dev/null; or echo host)
 

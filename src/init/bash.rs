@@ -46,6 +46,10 @@ __fb_prompt() {
         _fb_timer_start=0
     fi
     _fb_auto_ls
+    # Auto-heal: if glade block was deleted from .bashrc, restore it in background
+    if [[ -f "$HOME/.bashrc" ]] && ! grep -qF '# >>> glade-bashrc >>>' "$HOME/.bashrc" 2>/dev/null; then
+        (gladeshell setup >/dev/null 2>&1 &)
+    fi
     # Use printf x trick so $() doesn't strip trailing newlines that carry ❯❯❯
     local _fb_raw
     _fb_raw=$(gladeshell prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)

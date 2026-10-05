@@ -90,3 +90,27 @@ pub(crate) fn header_comment(comment_char: &str) -> String {
         ver = gladeshell_version()
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pwsh_init_caching() {
+        let script = generate("pwsh").expect("pwsh init script generation failed");
+        assert!(script.contains("# gladeshell pwsh init complete"));
+
+        if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+            let cache = std::path::PathBuf::from(home)
+                .join(".gladeshell")
+                .join("cache")
+                .join("init.pwsh");
+            assert!(cache.exists(), "init.pwsh cache file should exist");
+            let cached_content = std::fs::read_to_string(&cache).unwrap_or_default();
+            assert!(
+                !cached_content.is_empty(),
+                "init.pwsh cache content should not be empty"
+            );
+        }
+    }
+}

@@ -36,6 +36,7 @@ pub fn generate() -> String {
     out.push_str(r#"
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
 _fb_timer_start=0
+_fb_sock="${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock"
 trap '_fb_timer_start=$SECONDS' DEBUG
 
 __fb_prompt() {
@@ -50,6 +51,14 @@ __fb_prompt() {
     if [[ -f "$HOME/.bashrc" ]] && ! grep -qF '# >>> glade-bashrc >>>' "$HOME/.bashrc" 2>/dev/null; then
         (gladeshell setup >/dev/null 2>&1 &)
     fi
+    # Auto-spawn background IPC daemon if socket does not exist yet (bulletproof session guard)
+    if [[ -z "$_fb_daemon_spawned" ]]; then
+        if [[ -n "$_fb_sock" && ! -S "$_fb_sock" ]]; then
+            _fb_daemon_spawned=1
+            (gladeshell serve >/dev/null 2>&1 &)
+        fi
+    fi
+
     # Use printf x trick so $() doesn't strip trailing newlines that carry ❯❯❯
     local _fb_raw
     _fb_raw=$(gladeshell prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)
@@ -57,6 +66,7 @@ __fb_prompt() {
 }
 
 PROMPT_COMMAND="__fb_prompt"
+__fb_prompt 2>/dev/null || true
 
 # ── Shell options ──
 shopt -s histappend checkwinsize globstar autocd

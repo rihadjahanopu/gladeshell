@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🚀 [1.2.0] — 2026-10-05
+
+### ⚡ Performance & UX Enhancements
+
+- 🚀 **Zero Subshell Shell Init Loading**:
+  - Replaced subshell binary forks (`$(gladeshell socket-path)`) during `.zshrc`/`.bashrc`/`config.fish` load with pure shell variable expansion (`${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock`).
+  - Eliminates cold terminal tab opening black screen delays and lag.
+- ⚡ **Instant Cold Startup & Socket Fallback**:
+  - Added early `!path.exists()` check in IPC client daemon before attempting OS Unix socket connection.
+  - Reduced socket IPC read/write timeouts to 10ms for instant offline fallback.
+- 🎨 **Zero-Flicker Prompt Pre-Rendering**:
+  - Pre-populates prompt variables prior to initial frame draw in Zsh, Bash, Fish, and PowerShell.
+- 🔒 **Subcommands**: Added CLI flags `socket-path`, `suggest`, `highlight`, and `complete`.
+
+---
+
 ## 🩹 [1.1.2] — 2026-10-03
 
 ### 🛠️ CI/CD Fixes

@@ -46,6 +46,8 @@ if (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue) {
 
 # ── gladeshell Prompt & Native Auto-LS ──
 $global:_fb_last_pwd = $null
+$global:_fb_daemon_spawned = $false
+$global:_fb_sock = if ($env:TEMP) { "$env:TEMP\gladeshell_$env:USERNAME.sock" } else { "/tmp/gladeshell_$env:USERNAME.sock" }
 function Prompt {
     $ErrorActionPreference = 'SilentlyContinue'
     $lastExit = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
@@ -54,6 +56,15 @@ function Prompt {
         $global:_fb_last_pwd = $cwd
         gladeshell auto-ls 2>$null
     }
+    # Auto-spawn background IPC daemon if socket file does not exist (bulletproof try-catch)
+    try {
+        if (-not $global:_fb_daemon_spawned) {
+            if ($global:_fb_sock -and -not (Test-Path $global:_fb_sock)) {
+                $global:_fb_daemon_spawned = $true
+                Start-Job { gladeshell serve 2>$null } | Out-Null
+            }
+        }
+    } catch {}
     gladeshell prompt --cwd "$cwd" --exit-code "$lastExit" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
 }
 

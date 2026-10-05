@@ -269,6 +269,7 @@ fi
     out.push_str(r#"
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
 typeset -g _fb_timer=0
+typeset -g _fb_sock="${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock"
 
 _fb_preexec() { _fb_timer=$SECONDS; }
 
@@ -285,16 +286,18 @@ _fb_precmd() {
         (gladeshell setup >/dev/null 2>&1 &)
     fi
 
-    # Resolve socket path dynamically — never hardcoded — so macOS, custom
-    # TMPDIR, and Linux all work correctly without any configuration.
-    local sock
-    sock=$(gladeshell socket-path 2>/dev/null)
-    sock="${sock:-}"
+    # Auto-spawn background IPC daemon if socket does not exist yet (bulletproof session guard)
+    if [[ -z "$_fb_daemon_spawned" ]]; then
+        if [[ -n "$_fb_sock" && ! -S "$_fb_sock" ]]; then
+            _fb_daemon_spawned=1
+            (gladeshell serve >/dev/null 2>&1 &!)
+        fi
+    fi
 
     local fd
     zmodload -i zsh/net/socket 2>/dev/null || true
 
-    if [[ -n "$sock" && -S "$sock" ]] && zsocket "$sock" 2>/dev/null; then
+    if [[ -n "$_fb_sock" && -S "$_fb_sock" ]] && zsocket "$_fb_sock" 2>/dev/null; then
         fd=$REPLY
         print -u $fd "${PWD}"$'\x1f'"${exit_code}"$'\x1f'"0"$'\x1f'"${USER}"$'\x1f'"${HOST}"$'\x1f'"${duration}"$'\x1f'"0"
         # Read the FULL multiline prompt (IFS= read -r -d '' preserves all newlines)
@@ -314,6 +317,7 @@ _fb_precmd() {
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _fb_preexec
 add-zsh-hook precmd  _fb_precmd
+_fb_precmd
 
 # ── Typo Engine & Command Not Found Handler ──
 command_not_found_handler() {

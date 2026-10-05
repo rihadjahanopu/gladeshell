@@ -44,6 +44,10 @@ pub fn generate() -> String {
 # $status    = exit code of the last command (captured BEFORE any other calls)
 # $CMD_DURATION = Fish built-in: duration of last command in milliseconds
 #
+set -g _fb_sock "$TMPDIR/gladeshell_$USER.sock"
+if not test -n "$_fb_sock"
+    set -g _fb_sock "/tmp/gladeshell_$USER.sock"
+end
 
 function fish_prompt
     # Capture exit code FIRST before any other command clobbers it
@@ -58,6 +62,14 @@ function fish_prompt
     # Auto-heal: if glade block was deleted from config.fish, restore it in background
     if test -f "$HOME/.config/fish/config.fish"; and not grep -qF '# >>> glade-fish >>>' "$HOME/.config/fish/config.fish" 2>/dev/null
         gladeshell setup >/dev/null 2>&1 &
+    end
+
+    # Auto-spawn background IPC daemon if socket file does not exist (bulletproof session guard)
+    if not set -q _fb_daemon_spawned
+        set -g _fb_daemon_spawned 1
+        if test -n "$_fb_sock" -a ! -S "$_fb_sock"
+            gladeshell serve >/dev/null 2>&1 &
+        end
     end
 
     # Resolve hostname safely (works on Linux and macOS)

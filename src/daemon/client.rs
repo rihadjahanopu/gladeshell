@@ -40,9 +40,12 @@ pub fn request_prompt(
         use std::io::Read;
 
         let path = socket_path();
+        if !path.exists() {
+            return Err("daemon socket does not exist".into());
+        }
         let mut stream = UnixStream::connect(&path)?;
-        stream.set_read_timeout(Some(Duration::from_millis(50)))?;
-        stream.set_write_timeout(Some(Duration::from_millis(50)))?;
+        stream.set_read_timeout(Some(Duration::from_millis(10)))?;
+        stream.set_write_timeout(Some(Duration::from_millis(10)))?;
 
         // Build packed payload: fields joined by \x1f (same as daemon parses)
         let payload = format!(

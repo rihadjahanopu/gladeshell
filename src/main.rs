@@ -286,12 +286,37 @@ enum Commands {
         path: Option<String>,
     },
 
-    /// Check for command typos and suggest intended subcommand (correct / suggest)
-    #[command(alias = "suggest")]
+    /// Check for command typos and suggest intended subcommand (correct)
+    #[command(alias = "correct")]
     Correct {
         /// Mistyped command name
         #[arg(value_name = "COMMAND")]
         command: String,
+    },
+
+    /// Print the user-specific daemon Unix socket path
+    #[command(name = "socket-path", alias = "socket_path")]
+    SocketPath,
+
+    /// Native Rust Autosuggestion engine lookup
+    Suggest {
+        /// Typed input buffer string
+        #[arg(default_value = "")]
+        buffer: String,
+    },
+
+    /// Native Rust Syntax Highlighting engine lookup
+    Highlight {
+        /// Typed input buffer string
+        #[arg(default_value = "")]
+        buffer: String,
+    },
+
+    /// Native Rust Autocompletion engine lookup
+    Complete {
+        /// Typed input buffer string
+        #[arg(default_value = "")]
+        buffer: String,
     },
 
     /// Auto-inject `eval "$(gladeshell init <shell>)"` into your shell RC file
@@ -617,6 +642,9 @@ fn main() {
                     gladeshell_core::plugins::autocomplete::complete(buffer)
                 );
                 return;
+            } else if subcmd == "socket-path" || subcmd == "socket_path" {
+                println!("{}", gladeshell_core::daemon::socket_path_str());
+                return;
             } else if subcmd == "auto-ls" {
                 let path = raw_args.get(2).map(|s| s.as_str());
                 gladeshell_core::tools::auto_ls::run_path(path);
@@ -721,6 +749,30 @@ fn main() {
             Commands::EnsureDep(args) => gladeshell_core::tools::dep_installer::run(&args),
             Commands::AutoLs { path } => {
                 gladeshell_core::tools::auto_ls::run_path(path.as_deref());
+                Ok(())
+            }
+            Commands::SocketPath => {
+                println!("{}", gladeshell_core::daemon::socket_path_str());
+                Ok(())
+            }
+            Commands::Suggest { buffer } => {
+                if let Some(suggestion) = gladeshell_core::plugins::autosuggest::suggest(&buffer) {
+                    print!("{}", suggestion);
+                }
+                Ok(())
+            }
+            Commands::Highlight { buffer } => {
+                println!(
+                    "{}",
+                    gladeshell_core::plugins::highlight::highlight(&buffer)
+                );
+                Ok(())
+            }
+            Commands::Complete { buffer } => {
+                println!(
+                    "{}",
+                    gladeshell_core::plugins::autocomplete::complete(&buffer)
+                );
                 Ok(())
             }
             Commands::Correct { command } => {

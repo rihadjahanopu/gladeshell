@@ -2,14 +2,16 @@
 
 <br>
 
-```
+<!-- ```
    ██████╗ ██╗      █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗     ██╗
   ██╔════╝ ██║     ██╔══██╗██╔══██╗██╔════╝██╔════╝██║  ██║██╔════╝██║     ██║
   ██║  ███╗██║     ███████║██║  ██║█████╗  ███████╗███████║█████╗  ██║     ██║
   ██║   ██║██║     ██╔══██║██║  ██║██╔══╝  ╚════██║██║  ██║██╔══╝  ██║     ██║
   ╚█████╔╝ ███████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗███████╗███████╗
    ╚════╝  ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
-```
+``` -->
+
+<img src="web/favicon.svg" alt="logo" width="15%">
 
 ### ⚡ The Ultimate Pure Rust Shell & Developer Suite for Modern Terminal Users
 
@@ -118,16 +120,16 @@ One binary. One install. Absolute speed.
 >
 > Tested on Linux x86_64 / macOS ARM64 using 10,000-iteration sample suites. See [benchmark.md](benchmark.md) for full methodology.
 
-| Performance Metric | ⚡ **`gladeshell`** | 🚀 **`Starship`** | 🎨 **`Oh My Posh`** | 🐚 **`Oh My Zsh`** |
-| :--- | :---: | :---: | :---: | :---: |
-| **Engine Architecture** | **Rust (Pure `gix` / Zero-Alloc)** | Rust (Modular Binary) | Go (GC Static Binary) | Zsh Scripting |
-| **Core Prompt Latency (`PS1`)** | **0.0165 ms (16.5 µs)** 🏆 | 2.40 ms – 8.50 ms | 8.20 ms – 26.50 ms | 18.50 ms – 95.00 ms |
-| **Terminal Startup Overhead** | **~2 ms (Cached init)** ⚡ | 18.5 ms – 32.0 ms | 38.0 ms – 85.0 ms | 180 ms – 450 ms |
-| **Subshell Process Forks** | **0 (Zero subshells)** | 1 (Exec binary) | 1 (Exec binary) | 3 – 8 (git/env subshells) |
-| **Git Repo Overhead (`gix`)** | **0 ms cache / < 0.5 ms live** | 8.5 ms – 35.0 ms | 15.0 ms – 55.0 ms | 45.0 ms – 250.0 ms |
-| **Tab RSS Memory Footprint** | **~3.9 MB (Fat LTO Stripped)** | ~12.5 MB – 18.2 MB | ~18.5 MB – 32.0 MB | ~28.0 MB – 55.0 MB |
-| **Autocompletion Engine Latency** | **~0.08 ms (Native Rust)** | N/A | N/A | ~12.5 ms (`zsh-syntax-hl`) |
-| **Included Themes** | **55 Themes** | Config required | JSON Presets | Community themes |
+| Performance Metric                |        ⚡ **`gladeshell`**         |   🚀 **`Starship`**   |  🎨 **`Oh My Posh`**  |     🐚 **`Oh My Zsh`**     |
+| :-------------------------------- | :--------------------------------: | :-------------------: | :-------------------: | :------------------------: |
+| **Engine Architecture**           | **Rust (Pure `gix` / Zero-Alloc)** | Rust (Modular Binary) | Go (GC Static Binary) |       Zsh Scripting        |
+| **Core Prompt Latency (`PS1`)**   |     **0.0165 ms (16.5 µs)** 🏆     |   2.40 ms – 8.50 ms   |  8.20 ms – 26.50 ms   |    18.50 ms – 95.00 ms     |
+| **Terminal Startup Overhead**     |     **~2 ms (Cached init)** ⚡     |   18.5 ms – 32.0 ms   |   38.0 ms – 85.0 ms   |      180 ms – 450 ms       |
+| **Subshell Process Forks**        |       **0 (Zero subshells)**       |    1 (Exec binary)    |    1 (Exec binary)    | 3 – 8 (git/env subshells)  |
+| **Git Repo Overhead (`gix`)**     |   **0 ms cache / < 0.5 ms live**   |   8.5 ms – 35.0 ms    |   15.0 ms – 55.0 ms   |     45.0 ms – 250.0 ms     |
+| **Tab RSS Memory Footprint**      |   **~3.9 MB (Fat LTO Stripped)**   |  ~12.5 MB – 18.2 MB   |  ~18.5 MB – 32.0 MB   |     ~28.0 MB – 55.0 MB     |
+| **Autocompletion Engine Latency** |     **~0.08 ms (Native Rust)**     |          N/A          |          N/A          | ~12.5 ms (`zsh-syntax-hl`) |
+| **Included Themes**               |           **55 Themes**            |    Config required    |     JSON Presets      |      Community themes      |
 
 ```
 Prompt Render Latency (Lower is better):
@@ -137,7 +139,7 @@ Oh My Posh (Go Engine)       : ████████████████�
 Oh My Zsh (Zsh Scripting)    : ██████████████████████████████████████████ 18.50 ms
 ```
 
-> 📖 *For complete micro-benchmarking methodology, IPC socket metrics, and memory profiles, see [benchmark.md](benchmark.md).*
+> 📖 _For complete micro-benchmarking methodology, IPC socket metrics, and memory profiles, see [benchmark.md](benchmark.md)._
 
 ---
 
@@ -521,22 +523,22 @@ uu
 
 ### 🔨 Utility Tools
 
-| Command        | Description                                             | Example                      |
-| -------------- | ------------------------------------------------------- | ---------------------------- |
-| `mkd <name>`   | Create directory and `cd` into it                       | `mkd my-app`                 |
-| `t <file>`     | Create a file with feedback                             | `t index.js`                 |
-| `rmd <name>`   | Force remove directory recursively                      | `rmd old-build`              |
-| `rmf <file>`   | Safely remove a file                                    | `rmf config.bak`             |
-| `bak <file>`   | Create a `.bak` backup copy                             | `bak .env`                   |
-| `trash <file>` | Move file to system trash (safe delete)                 | `trash temp.log`             |
-| `ex <archive>` | Extract any archive format                              | `ex project.tar.gz`          |
-| `ff <name>`    | Find file by name (skips `node_modules`, `.git`)        | `ff tsconfig`                |
-| `gen <len>`    | Generate a cryptographically secure secret key          | `gen 32`                     |
+| Command        | Description                                                 | Example                      |
+| -------------- | ----------------------------------------------------------- | ---------------------------- |
+| `mkd <name>`   | Create directory and `cd` into it                           | `mkd my-app`                 |
+| `t <file>`     | Create a file with feedback                                 | `t index.js`                 |
+| `rmd <name>`   | Force remove directory recursively                          | `rmd old-build`              |
+| `rmf <file>`   | Safely remove a file                                        | `rmf config.bak`             |
+| `bak <file>`   | Create a `.bak` backup copy                                 | `bak .env`                   |
+| `trash <file>` | Move file to system trash (safe delete)                     | `trash temp.log`             |
+| `ex <archive>` | Extract any archive format                                  | `ex project.tar.gz`          |
+| `ff <name>`    | Find file by name (skips `node_modules`, `.git`)            | `ff tsconfig`                |
+| `gen <len>`    | Generate a cryptographically secure secret key              | `gen 32`                     |
 | `completions`  | Shell auto-completion generator (auto-loaded in shell init) | `gladeshell completions zsh` |
-| `h <word>`     | Search command history                                  | `h docker`                   |
-| `to`           | Open current directory in VS Code                       |                              |
-| `v`            | Play video in terminal                                  |                              |
-| `c` / `cls`    | Clear the terminal screen                               |                              |
+| `h <word>`     | Search command history                                      | `h docker`                   |
+| `to`           | Open current directory in VS Code                           |                              |
+| `v`            | Play video in terminal                                      |                              |
+| `c` / `cls`    | Clear the terminal screen                                   |                              |
 
 #### Archive formats supported by `ex`:
 

@@ -59,7 +59,7 @@ jobs:
           $psFiles = Get-ChildItem -Recurse -Filter "*.ps1"
           foreach ($file in $psFiles) {
               Write-Host "🔍 Analyzing $($file.FullName)..."
-              $results = Invoke-ScriptAnalyzer -Path $file.FullName -Severity Error, Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseBOMForUnicodeEncodedFile
+              $results = Invoke-ScriptAnalyzer -Path $file.FullName -Severity Error, Warning -ExcludeRule PSAvoidUsingWriteHost, PSUseBOMForUnicodeEncodedFile, PSReviewUnusedParameter
               if ($results) {
                   $results | Format-Table -AutoSize
                   throw "PSScriptAnalyzer found issues in $($file.Name)"

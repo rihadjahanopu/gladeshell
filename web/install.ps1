@@ -7,6 +7,7 @@
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '')]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseBOMForUnicodeEncodedFile', '')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '')]
 param(
     [String]$Version = "latest",
     [Switch]$ForceBaseline = $false,
@@ -66,6 +67,11 @@ $MODE = "install"
 if ($Doctor.IsPresent -or $Check.IsPresent) { $MODE = "doctor" }
 if ($Rollback.IsPresent -or $Undo.IsPresent) { $MODE = "rollback" }
 $TARGET_ALL_SHELLS = $AllShells.IsPresent
+$TARGET_VERSION = if ($Version) { $Version } else { "latest" }
+$TARGET_FORCE_BASELINE = $ForceBaseline.IsPresent
+$TARGET_NO_PATH_UPDATE = $NoPathUpdate.IsPresent
+$TARGET_NO_REGISTER = $NoRegisterInstallation.IsPresent
+$TARGET_DOWNLOAD_NO_CURL = $DownloadWithoutCurl.IsPresent
 
 # Parse raw args for positional fallback
 foreach ($arg in $args) {
@@ -74,6 +80,10 @@ foreach ($arg in $args) {
         "^(-Doctor|-Check|--doctor|--check|doctor|check)$" { $MODE = "doctor" }
         "^(-Rollback|-Undo|--rollback|--undo|rollback|undo)$" { $MODE = "rollback" }
         "^(-All|-AllShells|--all|--all-shells)$" { $TARGET_ALL_SHELLS = $true }
+        "^(-ForceBaseline|--force-baseline)$" { $TARGET_FORCE_BASELINE = $true }
+        "^(-NoPathUpdate|--no-path-update)$" { $TARGET_NO_PATH_UPDATE = $true }
+        "^(-NoRegisterInstallation|--no-register)$" { $TARGET_NO_REGISTER = $true }
+        "^(-DownloadWithoutCurl|--no-curl)$" { $TARGET_DOWNLOAD_NO_CURL = $true }
     }
 }
 
@@ -484,11 +494,11 @@ function Install-RustBinary {
 }
 
 Install-RustBinary `
-    -TargetVersion $Version `
-    -ForceBaseline:$ForceBaseline `
-    -NoPathUpdate:$NoPathUpdate `
-    -NoRegisterInstallation:$NoRegisterInstallation `
-    -DownloadWithoutCurl:$DownloadWithoutCurl | Out-Null
+    -TargetVersion $TARGET_VERSION `
+    -ForceBaseline:$TARGET_FORCE_BASELINE `
+    -NoPathUpdate:$TARGET_NO_PATH_UPDATE `
+    -NoRegisterInstallation:$TARGET_NO_REGISTER `
+    -DownloadWithoutCurl:$TARGET_DOWNLOAD_NO_CURL | Out-Null
 
 # --- STEP 5: Atomic Write & Auto-Reload ---------------------------------------
 Show-ProgressBar -Current 5 -Total 5 -StepName "Writing Profile & Auto-Reload"

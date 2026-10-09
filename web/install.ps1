@@ -5,6 +5,8 @@
 #   Supports: Windows PowerShell 5.1+, PowerShell Core 7+, Git Bash
 # ==============================================================================
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseBOMForUnicodeEncodedFile', '')]
 param(
     [String]$Version = "latest",
     [Switch]$ForceBaseline = $false,
@@ -41,7 +43,7 @@ try {
         [Net.SecurityProtocolType]::Tls11 -bor
         [Net.SecurityProtocolType]::Tls
     )
-} catch { <# PS7 handles automatically #> }
+} catch { $null = $_ }
 
 # --- GUARD 4: Self-Bypass ExecutionPolicy -------------------------------------
 $_scriptPath = $MyInvocation.MyCommand.Path
@@ -63,6 +65,7 @@ $AUTO_YES = $Yes.IsPresent -or $Unattended.IsPresent -or ($env:GLADESHELL_AUTO_Y
 $MODE = "install"
 if ($Doctor.IsPresent -or $Check.IsPresent) { $MODE = "doctor" }
 if ($Rollback.IsPresent -or $Undo.IsPresent) { $MODE = "rollback" }
+$TARGET_ALL_SHELLS = $AllShells.IsPresent
 
 # Parse raw args for positional fallback
 foreach ($arg in $args) {
@@ -70,7 +73,7 @@ foreach ($arg in $args) {
         "^(-y|-Yes|--yes|--unattended)$" { $AUTO_YES = $true }
         "^(-Doctor|-Check|--doctor|--check|doctor|check)$" { $MODE = "doctor" }
         "^(-Rollback|-Undo|--rollback|--undo|rollback|undo)$" { $MODE = "rollback" }
-        "^(-All|-AllShells|--all|--all-shells)$" { $ALL_SHELLS = $true }
+        "^(-All|-AllShells|--all|--all-shells)$" { $TARGET_ALL_SHELLS = $true }
     }
 }
 
@@ -97,7 +100,7 @@ public static extern IntPtr SendMessageTimeout(
             $WM_SETTINGCHANGE = 0x1a
             $result = [UIntPtr]::Zero
             [Win32.NativeMethods]::SendMessageTimeout($HWND_BROADCAST, $WM_SETTINGCHANGE, [UIntPtr]::Zero, "Environment", 2, 5000, [ref] $result) | Out-Null
-        } catch {}
+        } catch { $null = $_ }
     }
 }
 
@@ -118,7 +121,7 @@ function Write-UserEnvPath {
             }
             $envKey.Close()
         }
-    } catch {}
+    } catch { $null = $_ }
 }
 
 # --- CPU Architecture & Hardware Probing (AVX2 Check) -------------------------
@@ -136,8 +139,8 @@ function Test-Avx2Supported {
 
 # --- Windows Add/Remove Programs Registry Registration ------------------------
 function Register-WindowsInstallation {
-    param([string]$InstallDir, [string]$ExePath)
-    if ($NoRegisterInstallation) { return }
+    param([string]$InstallDir, [string]$ExePath, [switch]$SkipRegistration)
+    if ($SkipRegistration) { return }
     try {
         $RegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Gladeshell"
         $null = New-Item -Path $RegistryKey -Force
@@ -146,12 +149,12 @@ function Register-WindowsInstallation {
         New-ItemProperty -Path $RegistryKey -Name "DisplayIcon" -Value $ExePath -PropertyType String -Force | Out-Null
         New-ItemProperty -Path $RegistryKey -Name "Publisher" -Value "Rihad Jahan Opu" -PropertyType String -Force | Out-Null
         New-ItemProperty -Path $RegistryKey -Name "UninstallString" -Value "powershell -c `"& `'$ExePath`' uninstall`" -ExecutionPolicy Bypass" -PropertyType String -Force | Out-Null
-    } catch {}
+    } catch { $null = $_ }
 }
 
 # --- Header Banner ------------------------------------------------------------
 function Show-Header {
-    try { Clear-Host } catch {}
+    try { Clear-Host } catch { $null = $_ }
     Write-Host ""
     Write-Host "${PUR}          ██████╗ ██╗      █████╗ ██████╗ ███████╗███████╗██╗  ██╗███████╗██╗     ██╗     ${NC}"
     Write-Host "${PUR}         ██=════╝ ██║     ██=══██╗██=══██╗██=════╝██=════╝██║  ██║██=════╝██║     ██║     ${NC}"
@@ -356,12 +359,19 @@ try {
         $profileContent | Out-File $PROFILE -Encoding utf8 -Force
         Write-Host "  ${GRN}✔ Profile cleaned.${NC}"
     }
-} catch {}
+} catch { $null = $_ }
 
 # --- STEP 4: Install Rust Binary ---------------------------------------------
 Show-ProgressBar -Current 4 -Total 5 -StepName "Installing Rust Engine Binary"
 
 function Install-RustBinary {
+    param(
+        [string]$TargetVersion = "latest",
+        [switch]$ForceBaseline,
+        [switch]$NoPathUpdate,
+        [switch]$NoRegisterInstallation,
+        [switch]$DownloadWithoutCurl
+    )
     Write-Host "  ${CYAN}➜${NC} Installing gladeshell Rust engine binary..."
     $binDir = Join-Path $HOME ".local\bin"
     if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir -Force | Out-Null }
@@ -371,7 +381,7 @@ function Install-RustBinary {
     if ($scriptDir -and (Test-Path (Join-Path $scriptDir "target\release\gladeshell.exe"))) {
         Copy-Item (Join-Path $scriptDir "target\release\gladeshell.exe") (Join-Path $binDir "gladeshell.exe") -Force
         Write-Host "  ${GRN}✔ Installed local release binary to $binDir\gladeshell.exe${NC}"
-        Register-WindowsInstallation -InstallDir $binDir -ExePath (Join-Path $binDir "gladeshell.exe")
+        Register-WindowsInstallation -InstallDir $binDir -ExePath (Join-Path $binDir "gladeshell.exe") -SkipRegistration:$NoRegisterInstallation
         if (-not $NoPathUpdate) { Write-UserEnvPath -BinPath $binDir }
         return $true
     }
@@ -396,12 +406,13 @@ function Install-RustBinary {
         if ($openProc) {
             Stop-Process -InputObject $openProc -Force -ErrorAction SilentlyContinue
         }
-    } catch {}
+    } catch { $null = $_ }
 
+    $downloadTag = if ($TargetVersion -and $TargetVersion -ne "latest") { "download/$TargetVersion" } else { "latest/download" }
     Write-Host "  ${CYAN}⚡ Attempting GitHub Release pre-built binary download...${NC}"
     foreach ($repo in $repos) {
         foreach ($asset in $assets) {
-            $url = "https://github.com/$repo/releases/latest/download/$asset"
+            $url = "https://github.com/$repo/releases/$downloadTag/$asset"
             $downloadSuccess = $false
 
             if (-not $DownloadWithoutCurl -and (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
@@ -410,7 +421,7 @@ function Install-RustBinary {
                     if ($LASTEXITCODE -eq 0 -and (Test-Path $targetExe) -and ((Get-Item $targetExe).Length -gt 0)) {
                         $downloadSuccess = $true
                     }
-                } catch {}
+                } catch { $null = $_ }
             }
 
             if (-not $downloadSuccess) {
@@ -419,21 +430,21 @@ function Install-RustBinary {
                     if ((Test-Path $targetExe) -and ((Get-Item $targetExe).Length -gt 0)) {
                         $downloadSuccess = $true
                     }
-                } catch {}
+                } catch { $null = $_ }
             }
 
             if ($downloadSuccess) {
                 # Sanity test binary & trap STATUS_ILLEGAL_INSTRUCTION
-                $testVer = try { & "$targetExe" --version 2>$null } catch { $null }
+                $null = try { & "$targetExe" --version 2>$null } catch { $null }
                 if ($LASTEXITCODE -eq 1073741795 -or $LASTEXITCODE -eq -1073741795) {
                     Write-Host "  ${YLW}⚠️ Executable incompatible with CPU instruction set. Falling back to baseline build...${NC}"
                     if (-not $ForceBaseline) {
-                        return Install-RustBinary -ForceBaseline $true
+                        return Install-RustBinary -TargetVersion $TargetVersion -ForceBaseline -NoPathUpdate:$NoPathUpdate -NoRegisterInstallation:$NoRegisterInstallation -DownloadWithoutCurl:$DownloadWithoutCurl
                     }
                 }
 
                 Write-Host "  ${GRN}✔ Downloaded latest pre-built binary from GitHub Release ($repo)!${NC}"
-                Register-WindowsInstallation -InstallDir $binDir -ExePath $targetExe
+                Register-WindowsInstallation -InstallDir $binDir -ExePath $targetExe -SkipRegistration:$NoRegisterInstallation
                 if (-not $NoPathUpdate) { Write-UserEnvPath -BinPath $binDir }
                 return $true
             }
@@ -448,7 +459,7 @@ function Install-RustBinary {
         if (Test-Path (Join-Path $scriptDir "target\release\gladeshell.exe")) {
             Copy-Item (Join-Path $scriptDir "target\release\gladeshell.exe") (Join-Path $binDir "gladeshell.exe") -Force
             Write-Host "  ${GRN}✔ Built & installed binary to $binDir\gladeshell.exe${NC}"
-            Register-WindowsInstallation -InstallDir $binDir -ExePath $targetExe
+            Register-WindowsInstallation -InstallDir $binDir -ExePath $targetExe -SkipRegistration:$NoRegisterInstallation
             if (-not $NoPathUpdate) { Write-UserEnvPath -BinPath $binDir }
             return $true
         }
@@ -472,7 +483,12 @@ function Install-RustBinary {
     return $false
 }
 
-Install-RustBinary | Out-Null
+Install-RustBinary `
+    -TargetVersion $Version `
+    -ForceBaseline:$ForceBaseline `
+    -NoPathUpdate:$NoPathUpdate `
+    -NoRegisterInstallation:$NoRegisterInstallation `
+    -DownloadWithoutCurl:$DownloadWithoutCurl | Out-Null
 
 # --- STEP 5: Atomic Write & Auto-Reload ---------------------------------------
 Show-ProgressBar -Current 5 -Total 5 -StepName "Writing Profile & Auto-Reload"
@@ -502,11 +518,27 @@ if ([System.IO.File]::Exists(`$fb_cache)) {
 $END
 "@
 
-try {
-    Write-AtomicFile -Path $PROFILE -Content $newBlock
-    Write-Host "  ${GRN}✅ Config written to `$PROFILE safely via Atomic Write!${NC}"
-} catch {
-    Write-Host "  ${RED}❌ Failed to write to profile: $($_.Exception.Message)${NC}"
+$targetProfiles = @($PROFILE)
+if ($TARGET_ALL_SHELLS) {
+    $docsPath = [Environment]::GetFolderPath("MyDocuments")
+    $extraProfiles = @(
+        (Join-Path $docsPath "WindowsPowerShell\Microsoft.PowerShell_profile.ps1"),
+        (Join-Path $docsPath "PowerShell\Microsoft.PowerShell_profile.ps1")
+    )
+    foreach ($ep in $extraProfiles) {
+        if ($targetProfiles -notcontains $ep) { $targetProfiles += $ep }
+    }
+}
+
+foreach ($p in $targetProfiles) {
+    try {
+        $pDir = Split-Path $p -Parent
+        if (-not (Test-Path $pDir)) { New-Item -ItemType Directory -Path $pDir -Force | Out-Null }
+        Write-AtomicFile -Path $p -Content $newBlock
+        Write-Host "  ${GRN}✅ Config written to $p safely via Atomic Write!${NC}"
+    } catch {
+        Write-Host "  ${RED}❌ Failed to write to profile ($p): $($_.Exception.Message)${NC}"
+    }
 }
 
 # Reload profile

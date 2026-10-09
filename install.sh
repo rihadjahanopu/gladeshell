@@ -101,8 +101,10 @@ draw_progress_bar() {
     local completed=$((width * current / total))
     local remaining=$((width - completed))
 
-    local bar=$(printf "%${completed}s" | tr ' ' '█')
-    local empty=$(printf "%${remaining}s" | tr ' ' '░')
+    local bar
+    bar=$(printf "%${completed}s" | tr ' ' '█')
+    local empty
+    empty=$(printf "%${remaining}s" | tr ' ' '░')
 
     echo ""
     printf "${BLUE}Progress:${NC} [${GREEN}%s${GRAY}%s${NC}] ${CYAN}%d%%${NC} (Step %d/%d)\n" "$bar" "$empty" "$percentage" "$current" "$total"
@@ -176,15 +178,18 @@ tildify() {
 }
 
 show_sysinfo() {
-    local os_name=$(uname -s)
+    local os_name
+    os_name=$(uname -s)
     if [ -f /etc/os-release ]; then
         os_name=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d '=' -f 2 | tr -d '"')
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         os_name="macOS $(sw_vers -productVersion 2>/dev/null || echo '')"
     fi
 
-    local arch=$(uname -m)
-    local user=${USER:-$(whoami 2>/dev/null || echo "user")}
+    local arch
+    arch=$(uname -m)
+    local user
+    user=${USER:-$(whoami 2>/dev/null || echo "user")}
     local current_shell
     current_shell=$(detect_shell)
     local all_shells
@@ -280,7 +285,8 @@ check_and_install_fonts() {
         return 1
     fi
 
-    local pm=$(detect_pm)
+    local pm
+    pm=$(detect_pm)
     local sudo_cmd=""
     if [ "${EUID:-$(id -u)}" -ne 0 ] && command -v sudo &>/dev/null; then
         sudo_cmd="sudo"
@@ -539,6 +545,7 @@ setup_rust_binary() {
         return 0
     fi
 
+    # shellcheck disable=SC2034
     local os_type arch_type is_musl=false is_rosetta=false
     os_type="$(uname -s | tr '[:upper:]' '[:lower:]')"
     arch_type="$(uname -m)"
@@ -559,6 +566,7 @@ setup_rust_binary() {
     if [ "$os_type" = "darwin" ] && [ "$arch_type" = "amd64" ]; then
         if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
             arch_type="arm64"
+            # shellcheck disable=SC2034
             is_rosetta=true
             printf "  ${CYAN}ℹ${NC} Rosetta 2 detected — downloading native Apple Silicon (arm64) binary\n"
         fi
@@ -566,8 +574,10 @@ setup_rust_binary() {
 
     # Alpine = always musl
     if [ "$os_type" = "linux" ] && [ -f /etc/alpine-release ]; then
+        # shellcheck disable=SC2034
         is_musl=true
     fi
+    : "$is_rosetta" "$is_musl"
 
     # 2 ▸ Pre-built binary download
     if [ "$os_type" != "unknown" ] && [ "$arch_type" != "unknown" ]; then
@@ -869,6 +879,7 @@ show_summary() {
             fi
             ;;
         *)
+            # shellcheck source=/dev/null
             if source "$target_rc" 2>/dev/null; then
                 reloaded=true
             fi

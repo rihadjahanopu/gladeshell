@@ -40,69 +40,69 @@ const C_BORDER: Color = Color::Rgb(40, 42, 65); // Card border
 
 struct CommitType {
     label: &'static str,
-    prefix: &'static str,
-    emoji: &'static str,
+    prefix: &'static str, // Git commit prefix (e.g. "fix", "feat") without emoji
+    emoji: &'static str,  // Emoji for TUI display
     desc: &'static str,
 }
 
 const COMMIT_TYPES: &[CommitType] = &[
     CommitType {
         label: "WIP",
-        prefix: "🚧 wip",
+        prefix: "wip",
         emoji: "🚧",
         desc: "Work in progress, save point",
     },
     CommitType {
         label: "feat",
-        prefix: "✨ feat",
+        prefix: "feat",
         emoji: "✨",
         desc: "A new feature or enhancement",
     },
     CommitType {
         label: "fix",
-        prefix: "🐛 fix",
+        prefix: "fix",
         emoji: "🐛",
         desc: "A bug fix",
     },
     CommitType {
         label: "docs",
-        prefix: "📝 docs",
+        prefix: "docs",
         emoji: "📝",
         desc: "Documentation only changes",
     },
     CommitType {
         label: "style",
-        prefix: "💄 style",
+        prefix: "style",
         emoji: "💄",
         desc: "Formatting, missing semicolons",
     },
     CommitType {
         label: "refactor",
-        prefix: "♻️  refactor",
+        prefix: "refactor",
         emoji: "♻️",
         desc: "Code refactor, no fix/feat",
     },
     CommitType {
         label: "test",
-        prefix: "🧪 test",
+        prefix: "test",
         emoji: "🧪",
         desc: "Adding or updating tests",
     },
     CommitType {
         label: "chore",
-        prefix: "🔧 chore",
+        prefix: "chore",
         emoji: "🔧",
         desc: "Build process or tooling",
     },
     CommitType {
         label: "perf",
-        prefix: "⚡ perf",
+        prefix: "perf",
         emoji: "⚡",
         desc: "Performance improvements",
     },
     CommitType {
         label: "ci",
-        prefix: "🤖 ci",
+        prefix: "ci",
         emoji: "🤖",
         desc: "CI/CD configuration changes",
     },
@@ -768,25 +768,25 @@ fn cli_commit_msg(args: &[String]) -> String {
     if let Some(prefix) = arg_to_prefix(first) {
         build_full_msg(prefix, &args[1..].join(" "))
     } else if first == "-m" {
-        build_full_msg("🚧 wip", &args[1..].join(" "))
+        build_full_msg("wip", &args[1..].join(" "))
     } else {
-        build_full_msg("🚧 wip", &args.join(" "))
+        build_full_msg("wip", &args.join(" "))
     }
 }
 
 fn arg_to_prefix(arg: &str) -> Option<&'static str> {
     match arg {
-        "feat" | "✨" => Some("✨ feat"),
-        "fix" | "🐛" => Some("🐛 fix"),
-        "docs" | "📝" => Some("📝 docs"),
-        "style" | "💄" => Some("💄 style"),
-        "refactor" | "♻️" => Some("♻️  refactor"),
-        "test" | "🧪" => Some("🧪 test"),
-        "chore" | "🔧" => Some("🔧 chore"),
-        "perf" | "⚡" => Some("⚡ perf"),
-        "ci" | "🤖" => Some("🤖 ci"),
-        "wip" | "🚧" => Some("🚧 wip"),
-        "-m" => Some("🚧 wip"),
+        "feat" | "✨" => Some("feat"),
+        "fix" | "🐛" => Some("fix"),
+        "docs" | "📝" => Some("docs"),
+        "style" | "💄" => Some("style"),
+        "refactor" | "♻️" => Some("refactor"),
+        "test" | "🧪" => Some("test"),
+        "chore" | "🔧" => Some("chore"),
+        "perf" | "⚡" => Some("perf"),
+        "ci" | "🤖" => Some("ci"),
+        "wip" | "🚧" => Some("wip"),
+        "-m" => Some("wip"),
         _ => None,
     }
 }
@@ -801,7 +801,7 @@ fn build_full_msg(prefix: &str, msg: &str) -> String {
 }
 
 fn default_wip_msg() -> String {
-    default_wip_msg_with_prefix("🚧 wip")
+    default_wip_msg_with_prefix("wip")
 }
 
 fn default_wip_msg_with_prefix(prefix: &str) -> String {
@@ -1236,12 +1236,12 @@ mod tests {
 
     #[test]
     fn test_arg_to_prefix_known() {
-        assert_eq!(arg_to_prefix("feat"), Some("✨ feat"));
-        assert_eq!(arg_to_prefix("fix"), Some("🐛 fix"));
-        assert_eq!(arg_to_prefix("wip"), Some("🚧 wip"));
-        assert_eq!(arg_to_prefix("refactor"), Some("♻️  refactor"));
-        assert_eq!(arg_to_prefix("perf"), Some("⚡ perf"));
-        assert_eq!(arg_to_prefix("ci"), Some("🤖 ci"));
+        assert_eq!(arg_to_prefix("feat"), Some("feat"));
+        assert_eq!(arg_to_prefix("fix"), Some("fix"));
+        assert_eq!(arg_to_prefix("wip"), Some("wip"));
+        assert_eq!(arg_to_prefix("refactor"), Some("refactor"));
+        assert_eq!(arg_to_prefix("perf"), Some("perf"));
+        assert_eq!(arg_to_prefix("ci"), Some("ci"));
     }
 
     #[test]
@@ -1251,33 +1251,33 @@ mod tests {
 
     #[test]
     fn test_build_full_msg_with_text() {
-        assert_eq!(build_full_msg("✨ feat", "add login"), "✨ feat: add login");
-        assert_eq!(build_full_msg("🐛 fix", "null ptr"), "🐛 fix: null ptr");
+        assert_eq!(build_full_msg("feat", "add login"), "feat: add login");
+        assert_eq!(build_full_msg("fix", "null ptr"), "fix: null ptr");
     }
 
     #[test]
     fn test_build_full_msg_empty_timestamp() {
-        let msg = build_full_msg("🚧 wip", "");
-        assert!(msg.contains("🚧 wip: save point"));
+        let msg = build_full_msg("wip", "");
+        assert!(msg.contains("wip: save point"));
         assert!(msg.contains('-'));
     }
 
     #[test]
     fn test_cli_commit_plain() {
         let args: Vec<String> = vec!["my message".into()];
-        assert!(cli_commit_msg(&args).starts_with("🚧 wip: my message"));
+        assert!(cli_commit_msg(&args).starts_with("wip: my message"));
     }
 
     #[test]
     fn test_cli_commit_typed() {
         let args: Vec<String> = vec!["feat".into(), "new feature".into()];
-        assert_eq!(cli_commit_msg(&args), "✨ feat: new feature");
+        assert_eq!(cli_commit_msg(&args), "feat: new feature");
     }
 
     #[test]
     fn test_cli_commit_fix() {
         let args: Vec<String> = vec!["fix".into(), "crash on startup".into()];
-        assert_eq!(cli_commit_msg(&args), "🐛 fix: crash on startup");
+        assert_eq!(cli_commit_msg(&args), "fix: crash on startup");
     }
 
     #[test]

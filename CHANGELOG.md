@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🚀 [1.2.1] — 2026-10-09
+
+### 🐛 Bug Fixes & Refinements
+
+- 🎨 **Clean Git WIP Commit Messages (`gwip`)**:
+  - Removed emojis/icons from actual `git commit` messages for all commit types (e.g. `fix: message`, `feat: message`).
+  - Preserved rich emoji badges and styling inside the interactive Ratatui TUI.
+
+---
+
 ## 🚀 [1.2.0] — 2026-10-05
 
 ### ⚡ Performance & UX Enhancements

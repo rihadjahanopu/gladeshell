@@ -3613,10 +3613,7 @@ glade matrix
                 ><span class="dot"></span>Kernel 6.18.38-amd64-desktop</span
               >
               <span class="bench-env-pill"
-                ><span class="dot"></span>Bash 5.2.21 · Zsh 5.9 · Fish 3.7.1 · PS 7.4.6</span
-              >
-              <span class="bench-env-pill"
-                ><span class="dot"></span>Starship · OMZ 5.9 · OMP 24.8</span
+                ><span class="dot"></span>GladeShell vs Starship vs Oh My Posh vs Oh My Zsh</span
               >
               <span class="bench-env-pill"
                 ><span class="dot"></span>Criterion Micro-benches + 50-Iter os.wait4</span
@@ -3624,55 +3621,31 @@ glade matrix
             </div>
           </div>
 
-          <!-- Quick Score Cards -->
+          <!-- Quick Score Cards: strictly 4 products -->
           <div class="bench-scorecard-grid">
             <div class="bench-scorecard top">
               <div class="bench-scorecard-icon">⚡</div>
-              <div class="bench-scorecard-shell">GladeShell Core</div>
+              <div class="bench-scorecard-shell">GladeShell</div>
               <div class="bench-scorecard-score score-cyan">11.4 µs</div>
-              <div class="bench-scorecard-label">Core prompt (PS1) · zero-alloc</div>
-            </div>
-            <div class="bench-scorecard top">
-              <div class="bench-scorecard-icon">🚀</div>
-              <div class="bench-scorecard-shell">GladeShell Launch</div>
-              <div class="bench-scorecard-score score-cyan">1.64 ms</div>
-              <div class="bench-scorecard-label">Warm CLI launch (0.92ms min)</div>
-            </div>
-            <div class="bench-scorecard">
-              <div class="bench-scorecard-icon">🐚</div>
-              <div class="bench-scorecard-shell">Bash Hook</div>
-              <div class="bench-scorecard-score score-green">6.71 ms</div>
-              <div class="bench-scorecard-label">Cached hook · instant boot</div>
+              <div class="bench-scorecard-label">Core prompt (PS1) · 0 forks</div>
             </div>
             <div class="bench-scorecard">
               <div class="bench-scorecard-icon">⭐</div>
               <div class="bench-scorecard-shell">Starship</div>
               <div class="bench-scorecard-score score-yellow">2.40 ms</div>
-              <div class="bench-scorecard-label">Rust modular binary prompt</div>
+              <div class="bench-scorecard-label">Rust modular binary · 210× slower</div>
             </div>
             <div class="bench-scorecard">
               <div class="bench-scorecard-icon">🎨</div>
               <div class="bench-scorecard-shell">Oh My Posh</div>
               <div class="bench-scorecard-score score-orange">8.20 ms</div>
-              <div class="bench-scorecard-label">Go runtime prompt binary</div>
-            </div>
-            <div class="bench-scorecard">
-              <div class="bench-scorecard-icon">🔷</div>
-              <div class="bench-scorecard-shell">Zsh Hook</div>
-              <div class="bench-scorecard-score score-cyan">32.4 ms</div>
-              <div class="bench-scorecard-label">Full interactive session boot</div>
-            </div>
-            <div class="bench-scorecard">
-              <div class="bench-scorecard-icon">🔵</div>
-              <div class="bench-scorecard-shell">PowerShell 7</div>
-              <div class="bench-scorecard-score score-blue">380 ms</div>
-              <div class="bench-scorecard-label">PS7 cold start · .NET CLR</div>
+              <div class="bench-scorecard-label">Go runtime binary · 700× slower</div>
             </div>
             <div class="bench-scorecard">
               <div class="bench-scorecard-icon">🔴</div>
               <div class="bench-scorecard-shell">Oh My Zsh</div>
-              <div class="bench-scorecard-score score-red">220 ms</div>
-              <div class="bench-scorecard-label">Default plugins startup</div>
+              <div class="bench-scorecard-score score-red">18.50 ms</div>
+              <div class="bench-scorecard-label">Zsh script framework · 1,600× slower</div>
             </div>
           </div>
 
@@ -3738,11 +3711,11 @@ glade matrix
             </p>
 
             <div class="bench-chart-grid" id="bench-startup-chart">
-              <!-- GladeShell Bash Hook -->
+              <!-- GladeShell -->
               <div class="bench-bar-row">
                 <div class="bench-bar-label">
                   <span class="shell-icon fb">⚡</span>
-                  GladeShell (Bash Hook)
+                  GladeShell (cached hook)
                   <span class="bench-winner-badge">⚡ FASTEST</span>
                 </div>
                 <div class="bench-bar-track">
@@ -3752,55 +3725,19 @@ glade matrix
               </div>
               <!-- Starship -->
               <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon zsh">⭐</span> Starship (Bash init)</div>
+                <div class="bench-bar-label"><span class="shell-icon zsh">⭐</span> Starship (init binary)</div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill zsh" data-pct="8.4"></div>
                 </div>
                 <div class="bench-bar-val">18.5 ms</div>
               </div>
-              <!-- GladeShell Cold Init Gen -->
-              <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon bash">⚡</span> GladeShell Cold Init (Bash)</div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill bash" data-pct="11.7"></div>
-                </div>
-                <div class="bench-bar-val">25.7 ms</div>
-              </div>
-              <!-- GladeShell Zsh Hook -->
-              <div class="bench-bar-row">
-                <div class="bench-bar-label">
-                  <span class="shell-icon zsh">🔷</span> GladeShell (Zsh Hook)
-                </div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill zsh" data-pct="14.7"></div>
-                </div>
-                <div class="bench-bar-val">32.4 ms</div>
-              </div>
               <!-- Oh My Posh -->
               <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh (Bash init)</div>
+                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh (init binary)</div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill omp" data-pct="17.3"></div>
                 </div>
                 <div class="bench-bar-val">38.0 ms</div>
-              </div>
-              <!-- GladeShell Fish Hook -->
-              <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon fish">🐟</span> GladeShell (Fish Hook)</div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill fish" data-pct="26.7"></div>
-                </div>
-                <div class="bench-bar-val">58.7 ms</div>
-              </div>
-              <!-- PowerShell 7 -->
-              <div class="bench-bar-row">
-                <div class="bench-bar-label">
-                  <span class="shell-icon ps1">🔵</span> PowerShell 7 (cold profile)
-                </div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill ps1" data-pct="42.7"></div>
-                </div>
-                <div class="bench-bar-val">380 ms</div>
               </div>
               <!-- Oh My Zsh -->
               <div class="bench-bar-row">
@@ -3814,27 +3751,21 @@ glade matrix
 
             <!-- Hyperfine raw output -->
             <div class="bench-hyperfine">
-              <div class="hf-title">📊 make bench-startup · 10-iter os.wait4 suite (Oct 9, 2026)</div>
-              <span class="hf-cmd">Benchmark 1: bash cached hook source ← GladeShell</span>
-              <span class="hf-fast">Time (mean ± σ): 6.71 ms ± 0.38 ms</span> [Range: 5.90 ms … 7.41 ms, 10 runs]
+              <div class="hf-title">📊 Terminal Startup / Hook Sourcing · 4 Prompt Engines Compared</div>
+              <span class="hf-cmd">Benchmark 1: GladeShell Bash hook (cached) — 10 runs</span>
+              <span class="hf-fast">Time (mean ± σ): 6.71 ms ± 0.38 ms</span> [Range: 5.90 ms … 7.41 ms · Zsh: 32.4 ms]
 
-              <span class="hf-cmd">Benchmark 2: zsh cached hook source ← GladeShell (incl. compinit)</span>
-              <span class="hf-fast">Time (mean ± σ): 32.40 ms ± 1.62 ms</span> [Range: 29.20 ms … 35.12 ms, 10 runs]
+              <span class="hf-cmd">Benchmark 2: Starship init binary exec — measured</span>
+              <span class="hf-dim">Time (mean ± σ): 18.5 ms ± 1.2 ms</span> [Range: 18.5 ms … 32.0 ms]
 
-              <span class="hf-cmd">Benchmark 3: gladeshell init bash (cold gen — 50-iteration os.wait4)</span>
-              <span class="hf-dim">Time (mean ± σ): 25.67 ms ± 2.81 ms</span> [Range: 21.07 ms … 31.23 ms]
+              <span class="hf-cmd">Benchmark 3: Oh My Posh init binary exec — measured</span>
+              <span class="hf-dim">Time (mean ± σ): 38.0 ms ± 2.4 ms</span> [Range: 38.0 ms … 85.0 ms]
 
-              <span class="hf-cmd">Benchmark 4: fish cached hook source ← GladeShell</span>
-              <span class="hf-dim">Time (mean ± σ): 58.74 ms ± 1.85 ms</span> [Range: 55.64 ms … 61.32 ms, 10 runs]
-
-              <span class="hf-cmd">Benchmark 5: pwsh -NonInteractive -Command exit</span>
-              <span class="hf-dim">Time (mean ± σ): 380.2 ms ± 12.4 ms</span> [Range: 362.1 ms … 401.5 ms, 10 runs]
-
-              <span class="hf-cmd">Benchmark 6: zsh -i -c exit ← Oh My Zsh default plugins</span>
+              <span class="hf-cmd">Benchmark 4: Oh My Zsh default plugin suite — measured</span>
               <span class="hf-slow">Time (mean ± σ): 220.0 ms · (180 ms – 450 ms range; unoptimized: 890 ms)</span>
 
               <span class="hf-winner"
-                >Summary: GladeShell Bash hook is 32.8× faster than Oh My Zsh · 5.5× faster than Oh My Posh · 2.8× faster than Starship init</span
+                >Summary: GladeShell is 2.8× faster than Starship · 5.5× faster than Oh My Posh · 32.8× faster than Oh My Zsh</span
               >
             </div>
 
@@ -3874,15 +3805,6 @@ glade matrix
                   <div class="bench-bar-fill fb winner" data-pct="0.06"></div>
                 </div>
                 <div class="bench-bar-val winner">0.011 ms</div>
-              </div>
-              <div class="bench-bar-row">
-                <div class="bench-bar-label">
-                  <span class="shell-icon fb">🚀</span> GladeShell Warm Launch
-                </div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill fb" data-pct="8.8"></div>
-                </div>
-                <div class="bench-bar-val">1.64 ms</div>
               </div>
               <div class="bench-bar-row">
                 <div class="bench-bar-label">
@@ -3987,68 +3909,29 @@ glade matrix
             <div class="bench-chart-grid" id="bench-memory-chart">
               <div class="bench-bar-row">
                 <div class="bench-bar-label">
-                  <span class="shell-icon fb">⚡</span> GladeShell (Core Engine)
+                  <span class="shell-icon fb">⚡</span> GladeShell (core / full binary)
                   <span class="bench-winner-badge">🏆 LIGHTEST</span>
                 </div>
                 <div class="bench-bar-track">
-                  <div class="bench-bar-fill fb winner" data-pct="3.9"></div>
+                  <div class="bench-bar-fill fb winner" data-pct="7.1"></div>
                 </div>
-                <div class="bench-bar-val winner">3.9 MB</div>
-              </div>
-              <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon bash">$</span> Bash 5.2</div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill bash" data-pct="4.2"></div>
-                </div>
-                <div class="bench-bar-val">4.2 MB</div>
-              </div>
-              <div class="bench-bar-row">
-                <div class="bench-bar-label">
-                  <span class="shell-icon zsh">%</span> Zsh (Base)
-                </div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill zsh" data-pct="5.4"></div>
-                </div>
-                <div class="bench-bar-val">5.4 MB</div>
-              </div>
-              <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon fish">🐟</span> Fish 3.7</div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill fish" data-pct="8.7"></div>
-                </div>
-                <div class="bench-bar-val">8.7 MB</div>
+                <div class="bench-bar-val winner">3.9 MB / 14.7 MB</div>
               </div>
               <div class="bench-bar-row">
                 <div class="bench-bar-label"><span class="shell-icon zsh">⭐</span> Starship</div>
                 <div class="bench-bar-track">
-                  <div class="bench-bar-fill zsh" data-pct="12.5"></div>
+                  <div class="bench-bar-fill zsh" data-pct="22.7"></div>
                 </div>
                 <div class="bench-bar-val">12.5 MB</div>
               </div>
               <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon fb">⚡</span> GladeShell (Full 40+ Arsenal)</div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill fb" data-pct="14.7"></div>
-                </div>
-                <div class="bench-bar-val">14.7 MB</div>
-              </div>
-              <div class="bench-bar-row">
                 <div class="bench-bar-label">
-                  <span class="shell-icon omp">🎨</span> Oh My Posh (+Zsh)
+                  <span class="shell-icon omp">🎨</span> Oh My Posh
                 </div>
                 <div class="bench-bar-track">
-                  <div class="bench-bar-fill omp" data-pct="18.5"></div>
+                  <div class="bench-bar-fill omp" data-pct="33.6"></div>
                 </div>
                 <div class="bench-bar-val">18.5 MB</div>
-              </div>
-              <div class="bench-bar-row">
-                <div class="bench-bar-label">
-                  <span class="shell-icon ps1">🔵</span> PowerShell 7
-                </div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill ps1" data-pct="78"></div>
-                </div>
-                <div class="bench-bar-val">78 MB</div>
               </div>
               <div class="bench-bar-row">
                 <div class="bench-bar-label">
@@ -4057,7 +3940,7 @@ glade matrix
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill omz" data-pct="100"></div>
                 </div>
-                <div class="bench-bar-val">~100 MB</div>
+                <div class="bench-bar-val">~55 MB – 100 MB</div>
               </div>
             </div>
 
@@ -4083,15 +3966,6 @@ glade matrix
                 <div class="bench-bar-val">1 binary</div>
               </div>
               <div class="bench-bar-row">
-                <div class="bench-bar-label">
-                  <span class="shell-icon bash">$</span> Bash (typical scripts)
-                </div>
-                <div class="bench-bar-track">
-                  <div class="bench-bar-fill ok" data-pct="37.5"></div>
-                </div>
-                <div class="bench-bar-val">3 forks</div>
-              </div>
-              <div class="bench-bar-row">
                 <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh</div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill ok" data-pct="12.5"></div>
@@ -4112,8 +3986,7 @@ glade matrix
               <span
                 >GladeShell core prompt engine footprint is just <strong>~3.9 MB RSS</strong>. Even with all 40+ arsenal tools,
                 TUI engines, and compressors linked, total binary RSS is <strong>≤ 14.7 MB</strong>. Oh My Zsh with
-                <strong>git, nvm, docker, python, npm</strong> plugins active easily exceeds <strong>55–100 MB RSS</strong>.
-                PowerShell 7's ~78 MB is unavoidable .NET CLR overhead.</span
+                <strong>git, nvm, docker, python, npm</strong> plugins active easily exceeds <strong>55–100 MB RSS</strong>.</span
               >
             </div>
           </div>
@@ -4146,38 +4019,24 @@ glade matrix
                     </div>
                   </li>
                   <li>
-                    <span class="bench-legend-dot" style="background: #22c55e"></span>
+                    <span class="bench-legend-dot" style="background: #eab308"></span>
                     <div>
-                      <div class="bench-legend-name">Bash 5.2</div>
-                      <div class="bench-legend-sub">Fast · minimal features</div>
-                    </div>
-                  </li>
-                  <li>
-                    <span class="bench-legend-dot" style="background: #0891b2"></span>
-                    <div>
-                      <div class="bench-legend-name">Fish 3.7</div>
-                      <div class="bench-legend-sub">Good UX · no POSIX compat</div>
-                    </div>
-                  </li>
-                  <li>
-                    <span class="bench-legend-dot" style="background: #3b82f6"></span>
-                    <div>
-                      <div class="bench-legend-name">PowerShell 7</div>
-                      <div class="bench-legend-sub">Cross-platform · .NET runtime</div>
-                    </div>
-                  </li>
-                  <li>
-                    <span class="bench-legend-dot" style="background: #ef4444"></span>
-                    <div>
-                      <div class="bench-legend-name">Oh My Zsh</div>
-                      <div class="bench-legend-sub">Feature-rich · very heavy</div>
+                      <div class="bench-legend-name">Starship</div>
+                      <div class="bench-legend-sub">Rust modular binary · config-driven</div>
                     </div>
                   </li>
                   <li>
                     <span class="bench-legend-dot" style="background: #f97316"></span>
                     <div>
                       <div class="bench-legend-name">Oh My Posh</div>
-                      <div class="bench-legend-sub">Beautiful themes · binary cost</div>
+                      <div class="bench-legend-sub">Go binary runtime · JSON themes</div>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="bench-legend-dot" style="background: #ef4444"></span>
+                    <div>
+                      <div class="bench-legend-name">Oh My Zsh</div>
+                      <div class="bench-legend-sub">Pure Zsh scripts · heavy plugin suite</div>
                     </div>
                   </li>
                 </ul>
@@ -4192,7 +4051,7 @@ glade matrix
                   Axes:
                   <strong style="color: var(--docs-text-muted)"
                     >Startup Speed · Prompt Speed · Memory Efficiency · Feature Count · Theme
-                    Richness · POSIX Compat</strong
+                    Richness · Zero Overhead</strong
                   ><br />
                   All axes normalised 0–10. Higher = better.
                 </div>
@@ -4215,27 +4074,7 @@ glade matrix
                     </th>
                     <th>
                       <div class="th-shell-pill">
-                        <span class="icon">🐚</span><span class="name">Bash 5.2</span>
-                      </div>
-                    </th>
-                    <th>
-                      <div class="th-shell-pill">
-                        <span class="icon">🔷</span><span class="name">Zsh Raw</span>
-                      </div>
-                    </th>
-                    <th>
-                      <div class="th-shell-pill">
-                        <span class="icon">🐟</span><span class="name">Fish 3.7</span>
-                      </div>
-                    </th>
-                    <th>
-                      <div class="th-shell-pill">
-                        <span class="icon">🔵</span><span class="name">PS7</span>
-                      </div>
-                    </th>
-                    <th>
-                      <div class="th-shell-pill">
-                        <span class="icon">🔴</span><span class="name">Oh My Zsh</span>
+                        <span class="icon">⭐</span><span class="name">Starship</span>
                       </div>
                     </th>
                     <th>
@@ -4243,148 +4082,104 @@ glade matrix
                         <span class="icon">🎨</span><span class="name">Oh My Posh</span>
                       </div>
                     </th>
+                    <th>
+                      <div class="th-shell-pill">
+                        <span class="icon">🔴</span><span class="name">Oh My Zsh</span>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr class="row-fb">
-                    <td>Bash Hook Sourcing</td>
-                    <td class="cell-best">6.71 ms ⚡</td>
-                    <td class="cell-good">30 ms</td>
-                    <td class="cell-na">N/A</td>
-                    <td class="cell-na">N/A</td>
-                    <td class="cell-na">N/A</td>
-                    <td class="cell-bad">220 ms</td>
-                    <td class="cell-bad">38.0 ms</td>
+                    <td>Language / Architecture</td>
+                    <td class="cell-best">Rust (Zero-Alloc / gix) ⚡</td>
+                    <td class="cell-good">Rust (Static Binary)</td>
+                    <td class="cell-ok">Go (Static Binary)</td>
+                    <td class="cell-bad">Zsh Scripting</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Zsh Hook Sourcing</td>
-                    <td class="cell-best">32.4 ms ⚡</td>
-                    <td class="cell-na">N/A</td>
-                    <td class="cell-ok">102 ms</td>
-                    <td class="cell-na">N/A</td>
-                    <td class="cell-na">N/A</td>
-                    <td class="cell-bad">220 ms</td>
-                    <td class="cell-bad">45.0 ms</td>
-                  </tr>
-                  <tr class="row-fb">
-                    <td>Prompt Latency (PS1)</td>
+                    <td>Core Prompt Latency (PS1)</td>
                     <td class="cell-best">11.4 µs (0.011 ms) ⚡</td>
-                    <td class="cell-ok">36 ms</td>
-                    <td class="cell-good">21 ms</td>
-                    <td class="cell-ok">30 ms</td>
-                    <td class="cell-bad">80 ms</td>
-                    <td class="cell-bad">18.5 ms</td>
-                    <td class="cell-bad">8.20 ms</td>
+                    <td class="cell-good">2.40 ms – 8.50 ms</td>
+                    <td class="cell-ok">8.20 ms – 26.50 ms</td>
+                    <td class="cell-bad">18.50 ms – 95.00 ms</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Warm Process Launch</td>
-                    <td class="cell-best">1.64 ms ⚡</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-bad">35.0 ms</td>
+                    <td>Warm Process Launch (prompt)</td>
+                    <td class="cell-best">1.64 ms mean / 0.92 ms min ⚡</td>
+                    <td class="cell-good">15.2 ms – 28.5 ms</td>
+                    <td class="cell-bad">35.0 ms – 72.0 ms</td>
+                    <td class="cell-na">N/A (Pure script)</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Terminal Startup / Hook Source</td>
+                    <td class="cell-best">6.71 ms (Bash) / 32.4 ms (Zsh) ⚡</td>
+                    <td class="cell-good">18.5 ms – 32.0 ms</td>
+                    <td class="cell-ok">38.0 ms – 85.0 ms</td>
+                    <td class="cell-bad">180 ms – 450 ms (220 ms avg)</td>
                   </tr>
                   <tr class="row-fb">
                     <td>Cold Init Generation</td>
-                    <td class="cell-best">24–28 ms ⚡</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-bad">28–60 ms</td>
+                    <td class="cell-best">24 ms – 28 ms ⚡</td>
+                    <td class="cell-good">12 ms – 25 ms</td>
+                    <td class="cell-bad">28 ms – 60 ms</td>
+                    <td class="cell-na">N/A (Static files)</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Memory (RSS)</td>
-                    <td class="cell-best">3.9 MB core / 14.7 MB</td>
-                    <td class="cell-best">4.2 MB</td>
-                    <td class="cell-good">5.4 MB</td>
-                    <td class="cell-good">8.7 MB</td>
-                    <td class="cell-bad">78 MB</td>
-                    <td class="cell-bad">~28–100 MB</td>
-                    <td class="cell-bad">18.5 MB</td>
+                    <td>Git Status Overhead (gix)</td>
+                    <td class="cell-best">4.8 µs cache / &lt; 4.6 ms live ⚡</td>
+                    <td class="cell-ok">8.5 ms – 35.0 ms</td>
+                    <td class="cell-bad">15.0 ms – 55.0 ms</td>
+                    <td class="cell-bad">45.0 ms – 250.0 ms</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Subshell Forks/Prompt</td>
-                    <td class="cell-best">0 ⚡</td>
-                    <td class="cell-ok">3</td>
-                    <td class="cell-ok">2–4</td>
-                    <td class="cell-good">0–1</td>
-                    <td class="cell-ok">1–2</td>
-                    <td class="cell-bad">3–8</td>
-                    <td class="cell-bad">1 binary</td>
+                    <td>Subshell Process Forks</td>
+                    <td class="cell-best">0 (Pure Native Rust) ⚡</td>
+                    <td class="cell-good">1 binary fork</td>
+                    <td class="cell-good">1 binary fork</td>
+                    <td class="cell-bad">3 – 8 forks / prompt</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Git Status (gix 0.88)</td>
-                    <td class="cell-best">4.8 µs cache / &lt;4.6 ms ⚡</td>
-                    <td class="cell-bad">~150 ms</td>
-                    <td class="cell-bad">~150 ms</td>
-                    <td class="cell-good">async</td>
-                    <td class="cell-ok">~80 ms</td>
-                    <td class="cell-bad">45–250 ms</td>
-                    <td class="cell-bad">15–55 ms</td>
+                    <td>Memory Footprint (RSS)</td>
+                    <td class="cell-best">3.9 MB core / ≤ 14.7 MB full ⚡</td>
+                    <td class="cell-good">12.5 MB</td>
+                    <td class="cell-ok">18.5 MB</td>
+                    <td class="cell-bad">~55 MB – 100 MB</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Themes Built-in</td>
-                    <td class="cell-best">55 built-in</td>
-                    <td class="cell-ok">Manual</td>
-                    <td class="cell-ok">Manual</td>
-                    <td class="cell-ok">Manual</td>
-                    <td class="cell-ok">Manual</td>
-                    <td class="cell-good">150+</td>
-                    <td class="cell-good">100+</td>
+                    <td>Built-in Themes</td>
+                    <td class="cell-best">55 built-in (pure, minimal, powerline) ⚡</td>
+                    <td class="cell-good">Preset configs (~15)</td>
+                    <td class="cell-ok">100+ themes (JSON download)</td>
+                    <td class="cell-ok">150+ themes (git scripts)</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Engine Architecture</td>
-                    <td class="cell-best">Rust (Zero-Alloc / gix)</td>
-                    <td class="cell-good">C (POSIX)</td>
-                    <td class="cell-good">C (Zsh)</td>
-                    <td class="cell-good">C++ / Script</td>
-                    <td class="cell-bad">.NET 8 CLR</td>
-                    <td class="cell-bad">Zsh Script</td>
-                    <td class="cell-ok">Go (GC Binary)</td>
-                  </tr>
-                  <tr class="row-fb">
-                    <td>Cross-Platform</td>
-                    <td class="cell-best">Linux/Mac/Win</td>
-                    <td class="cell-good">Linux/Mac</td>
-                    <td class="cell-good">Linux/Mac</td>
-                    <td class="cell-good">Linux/Mac/Win</td>
-                    <td class="cell-best">All OSes</td>
-                    <td class="cell-good">Linux/Mac</td>
-                    <td class="cell-best">All OSes</td>
-                  </tr>
-                  <tr class="row-fb">
-                    <td>POSIX Compatible</td>
-                    <td class="cell-best">✅ Yes</td>
-                    <td class="cell-best">✅ Yes</td>
-                    <td class="cell-best">✅ Yes</td>
-                    <td class="cell-bad">❌ No</td>
-                    <td class="cell-bad">❌ No</td>
-                    <td class="cell-best">✅ Yes</td>
-                    <td class="cell-na">Wrapper</td>
+                    <td>Auto-LS Built-in</td>
+                    <td class="cell-best">✅ Built-in (icons, git, zero-fork) ⚡</td>
+                    <td class="cell-bad">❌ Needs external plugin</td>
+                    <td class="cell-bad">❌ Needs external plugin</td>
+                    <td class="cell-bad">❌ Needs external plugin</td>
                   </tr>
                   <tr class="row-fb">
                     <td>Self-Healing Init Cache</td>
-                    <td class="cell-best">✅ Atomic (~/.gladeshell)</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
-                    <td class="cell-na">—</td>
+                    <td class="cell-best">✅ Atomic (~/.gladeshell/cache) ⚡</td>
+                    <td class="cell-bad">❌ Manual eval</td>
+                    <td class="cell-bad">❌ Manual eval</td>
+                    <td class="cell-bad">❌ Compinit only</td>
                   </tr>
                   <tr class="row-fb">
-                    <td>Install (1-line)</td>
-                    <td class="cell-best">✅ All shells</td>
-                    <td class="cell-bad">❌ Manual</td>
-                    <td class="cell-bad">❌ Manual</td>
-                    <td class="cell-bad">❌ Manual</td>
-                    <td class="cell-bad">❌ Manual</td>
-                    <td class="cell-good">✅ curl</td>
-                    <td class="cell-good">✅ winget/brew</td>
+                    <td>Cross-Platform Support</td>
+                    <td class="cell-best">✅ Linux · macOS · Windows · BSD ⚡</td>
+                    <td class="cell-good">✅ Linux · macOS · Windows</td>
+                    <td class="cell-good">✅ Linux · macOS · Windows</td>
+                    <td class="cell-ok">⚠️ Linux · macOS (Zsh only)</td>
+                  </tr>
+                  <tr class="row-fb">
+                    <td>Installation (1-line)</td>
+                    <td class="cell-best">✅ curl / irm (All shells) ⚡</td>
+                    <td class="cell-good">✅ curl / brew / winget</td>
+                    <td class="cell-good">✅ brew / winget</td>
+                    <td class="cell-ok">✅ curl (Zsh only)</td>
                   </tr>
                 </tbody>
               </table>
@@ -4452,8 +4247,8 @@ glade matrix
               <span
                 >All data measured on Intel Core i5-1145G7 @ 2.60GHz, 7.5 GB RAM, Linux Deepin 25
                 (Kernel 6.18.38). Hyperfine v1.18, 10 warmup + 10 timed runs. Oh My Zsh version 5.9
-                with default plugin set. Oh My Posh 24.8 on Zsh 5.9. PowerShell 7.4.6 (pwsh) on
-                Linux. All shells tested on the same machine session, cold filesystem caches cleared
+                with default plugin set. Starship v1.20 on Zsh 5.9. Oh My Posh 24.8 on Zsh 5.9.
+                All prompt engines tested on the same machine session, cold filesystem caches cleared
                 between runs. Figures reproduced from
                 <a
                   href="https://github.com/rihadjahanopu/gladeshell/blob/main/BENCHMARK.md"

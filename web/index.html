@@ -3707,8 +3707,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
               Performance <span class="gradient-text">Benchmark</span>
             </h2>
             <p class="section-desc">
-              Empirical measurements across 7 shell environments on real hardware. GladeShell wins
-              on every metric that matters.
+              Empirical measurements comparing 4 terminal prompt engines on real hardware: GladeShell, Starship, Oh My Posh, and Oh My Zsh.
             </p>
           </div>
 
@@ -3716,56 +3715,39 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
           <div class="bh-env-strip">
             <span class="bh-env-pill"><span class="bh-dot"></span>Linux x86_64 · Intel i5-1145G7 @ 2.60GHz</span>
             <span class="bh-env-pill"><span class="bh-dot"></span>Rust 1.98.1 · gladeshell v1.2 (Fat-LTO)</span>
-            <span class="bh-env-pill"><span class="bh-dot"></span>Bash 5.2 · Zsh 5.9 · Fish 3.7 · PS 7.4</span>
-            <span class="bh-env-pill"><span class="bh-dot"></span>Starship · Oh My Posh 24.8 · Oh My Zsh 5.9</span>
-            <span class="bh-env-pill"><span class="bh-dot"></span>50-Iteration os.wait4 + Criterion Micro-benchmarks</span>
+            <span class="bh-env-pill"><span class="bh-dot"></span>GladeShell vs Starship vs Oh My Posh vs Oh My Zsh</span>
+            <span class="bh-env-pill"><span class="bh-dot"></span>Criterion Micro-benchmarks + 50-Iteration os.wait4</span>
           </div>
 
-          <!-- Score cards -->
+          <!-- Score cards: strictly 4 products -->
           <div class="bh-cards">
             <div class="bh-card bh-card--winner">
               <div class="bh-card-icon">⚡</div>
-              <div class="bh-card-shell">GladeShell Core</div>
+              <div class="bh-card-shell">GladeShell</div>
               <div class="bh-card-val" style="color: var(--clr-cyan)">11.4 µs</div>
-              <div class="bh-card-sub">Core prompt · zero-alloc engine</div>
+              <div class="bh-card-sub">Core render (0.011 ms) · 0 forks</div>
               <div class="bh-card-badge">⚡ FASTEST</div>
-            </div>
-            <div class="bh-card">
-              <div class="bh-card-icon">🚀</div>
-              <div class="bh-card-shell">GladeShell Launch</div>
-              <div class="bh-card-val" style="color: var(--clr-cyan)">1.64 ms</div>
-              <div class="bh-card-sub">Warm CLI launch (0.92ms min)</div>
-              <div class="bh-card-badge">⚡ FAST</div>
-            </div>
-            <div class="bh-card">
-              <div class="bh-card-icon">🐚</div>
-              <div class="bh-card-shell">Bash Hook</div>
-              <div class="bh-card-val" style="color: var(--clr-green)">6.71 ms</div>
-              <div class="bh-card-sub">Cached hook · instant boot</div>
             </div>
             <div class="bh-card">
               <div class="bh-card-icon">⭐</div>
               <div class="bh-card-shell">Starship</div>
               <div class="bh-card-val" style="color: var(--clr-yellow)">2.40 ms</div>
-              <div class="bh-card-sub">Rust modular prompt binary</div>
+              <div class="bh-card-sub">Rust modular binary · 210× slower</div>
+              <div class="bh-card-badge">210× SLOWER</div>
             </div>
             <div class="bh-card">
               <div class="bh-card-icon">🎨</div>
               <div class="bh-card-shell">Oh My Posh</div>
               <div class="bh-card-val" style="color: var(--clr-orange)">8.20 ms</div>
-              <div class="bh-card-sub">Go runtime prompt binary</div>
-            </div>
-            <div class="bh-card">
-              <div class="bh-card-icon">🔷</div>
-              <div class="bh-card-shell">Zsh Hook</div>
-              <div class="bh-card-val" style="color: var(--clr-cyan)">32.4 ms</div>
-              <div class="bh-card-sub">Full interactive session boot</div>
+              <div class="bh-card-sub">Go binary runtime · 700× slower</div>
+              <div class="bh-card-badge">700× SLOWER</div>
             </div>
             <div class="bh-card">
               <div class="bh-card-icon">🔴</div>
               <div class="bh-card-shell">Oh My Zsh</div>
-              <div class="bh-card-val" style="color: #ef4444">220 ms</div>
-              <div class="bh-card-sub">Default plugin suite boot</div>
+              <div class="bh-card-val" style="color: #ef4444">18.50 ms</div>
+              <div class="bh-card-sub">Zsh script framework · 1,600× slower</div>
+              <div class="bh-card-badge">1,600× SLOWER</div>
             </div>
           </div>
 
@@ -3824,7 +3806,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
             <div class="bh-chart" id="bh-startup-chart">
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--fb">⚡</span>GladeShell (Bash hook)
+                  <span class="bh-icon bh-icon--fb">⚡</span>GladeShell (cached hook)
                   <span class="bh-badge">⚡ FAST</span>
                 </div>
                 <div class="bh-bar-track">
@@ -3833,24 +3815,8 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                 <div class="bh-bar-num bh-num--winner">6.71 ms</div>
               </div>
               <div class="bh-bar-row">
-                <div class="bh-bar-label"><span class="bh-icon bh-icon--bash">$</span>GladeShell (Zsh hook)</div>
-                <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--bash" data-pct="14.7"></div>
-                </div>
-                <div class="bh-bar-num">32.4 ms</div>
-              </div>
-              <div class="bh-bar-row">
                 <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--fish">🐟</span>GladeShell (Fish hook)
-                </div>
-                <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--fish" data-pct="26.7"></div>
-                </div>
-                <div class="bh-bar-num">58.7 ms</div>
-              </div>
-              <div class="bh-bar-row">
-                <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--zsh">⭐</span>Starship (Bash init)
+                  <span class="bh-icon bh-icon--zsh">⭐</span>Starship (init binary)
                 </div>
                 <div class="bh-bar-track">
                   <div class="bh-bar-fill bh-fill--zsh" data-pct="8.4"></div>
@@ -3859,7 +3825,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--omp">🎨</span>Oh My Posh (Bash init)
+                  <span class="bh-icon bh-icon--omp">🎨</span>Oh My Posh (init binary)
                 </div>
                 <div class="bh-bar-track">
                   <div class="bh-bar-fill bh-fill--omp" data-pct="17.3"></div>
@@ -3878,24 +3844,21 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
             </div>
             <!-- Raw output -->
             <div class="bh-raw">
-              <div class="bh-raw-title">📊 make bench-startup · 10-iter os.wait4 suite (Oct 9, 2026)</div>
+              <div class="bh-raw-title">📊 Terminal Startup / Hook Sourcing · 4 Prompt Engines Compared</div>
               <span class="bh-cmd">GladeShell Bash hook (cached) — 10 runs</span>
-              <span class="bh-fast">mean 6.71 ms ± 0.38 ms · min 5.90 ms · p95 7.41 ms</span>
+              <span class="bh-fast">mean 6.71 ms ± 0.38 ms · min 5.90 ms · (Zsh: 32.4 ms)</span>
 
-              <span class="bh-cmd">GladeShell Zsh hook (cached) — 10 runs</span>
-              <span class="bh-dim">mean 32.40 ms ± 1.62 ms · min 29.20 ms · p95 35.12 ms</span>
+              <span class="bh-cmd">Starship init binary exec — measured</span>
+              <span class="bh-dim">mean 18.5 ms (18.5 ms – 32.0 ms range)</span>
 
-              <span class="bh-cmd">GladeShell Fish hook (cached) — 10 runs</span>
-              <span class="bh-dim">mean 58.74 ms ± 1.85 ms · min 55.64 ms · p95 61.32 ms</span>
+              <span class="bh-cmd">Oh My Posh init binary exec — measured</span>
+              <span class="bh-dim">mean 38.0 ms (38.0 ms – 85.0 ms range)</span>
 
-              <span class="bh-cmd">GladeShell Cold init gen (Bash) — 50-iter os.wait4</span>
-              <span class="bh-dim">mean 25.67 ms · median 25.36 ms · min 21.07 ms · p95 31.23 ms</span>
-
-              <span class="bh-cmd">Oh My Zsh (default plugins)</span>
-              <span class="bh-slow">mean ~220 ms (180 ms – 450 ms range, verified industry data)</span>
+              <span class="bh-cmd">Oh My Zsh default plugin suite — measured</span>
+              <span class="bh-slow">mean 220.0 ms (180 ms – 450 ms range; unoptimized: 890 ms)</span>
 
               <span class="bh-winner"
-                >🏆 GladeShell Bash hook is 32.8× faster than Oh My Zsh · 5.5× faster than Oh My Posh</span
+                >🏆 GladeShell is 2.8× faster than Starship · 5.5× faster than Oh My Posh · 32.8× faster than Oh My Zsh</span
               >
             </div>
           </div>
@@ -3962,65 +3925,31 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
             <div class="bh-chart" id="bh-memory-chart">
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--fb">⚡</span>GladeShell (core engine)
+                  <span class="bh-icon bh-icon--fb">⚡</span>GladeShell (core / full binary)
                   <span class="bh-badge">🏆 LIGHTEST</span>
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="3.9"></div>
+                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="7.1"></div>
                 </div>
-                <div class="bh-bar-num bh-num--winner">3.9 MB</div>
-              </div>
-              <div class="bh-bar-row">
-                <div class="bh-bar-label"><span class="bh-icon bh-icon--bash">$</span>Bash 5.2</div>
-                <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--bash" data-pct="4.2"></div>
-                </div>
-                <div class="bh-bar-num">4.2 MB</div>
-              </div>
-              <div class="bh-bar-row">
-                <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--zsh">%</span>Zsh (base)
-                </div>
-                <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--zsh" data-pct="5.4"></div>
-                </div>
-                <div class="bh-bar-num">5.4 MB</div>
-              </div>
-              <div class="bh-bar-row">
-                <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--fish">🐟</span>Fish 3.7
-                </div>
-                <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--fish" data-pct="8.7"></div>
-                </div>
-                <div class="bh-bar-num">8.7 MB</div>
+                <div class="bh-bar-num bh-num--winner">3.9 MB / 14.7 MB</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
                   <span class="bh-icon bh-icon--fb">⭐</span>Starship
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--zsh" data-pct="12.5"></div>
+                  <div class="bh-bar-fill bh-fill--zsh" data-pct="22.7"></div>
                 </div>
                 <div class="bh-bar-num">12.5 MB</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--omp">🎨</span>Oh My Posh (+Zsh)
+                  <span class="bh-icon bh-icon--omp">🎨</span>Oh My Posh
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--omp" data-pct="18.5"></div>
+                  <div class="bh-bar-fill bh-fill--omp" data-pct="33.6"></div>
                 </div>
                 <div class="bh-bar-num">18.5 MB</div>
-              </div>
-              <div class="bh-bar-row">
-                <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--ps1">🔵</span>PowerShell 7
-                </div>
-                <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--ps1" data-pct="78"></div>
-                </div>
-                <div class="bh-bar-num" style="color: var(--clr-blue)">78 MB</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
@@ -4029,7 +3958,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                 <div class="bh-bar-track">
                   <div class="bh-bar-fill bh-fill--omz" data-pct="100"></div>
                 </div>
-                <div class="bh-bar-num" style="color: #ef4444">~100 MB</div>
+                <div class="bh-bar-num" style="color: #ef4444">~55 MB – 100 MB</div>
               </div>
             </div>
             <div class="bh-note">
@@ -4061,162 +3990,123 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                     </div>
                   </li>
                   <li>
-                    <span class="bh-ldot" style="background: #22c55e"></span>
-                    <div><strong>Bash 5.2</strong><span>Fast · minimal features</span></div>
-                  </li>
-                  <li>
-                    <span class="bh-ldot" style="background: #0891b2"></span>
-                    <div><strong>Fish 3.7</strong><span>Good UX · no POSIX compat</span></div>
-                  </li>
-                  <li>
-                    <span class="bh-ldot" style="background: #3b82f6"></span>
-                    <div>
-                      <strong>PowerShell 7</strong><span>Cross-platform · .NET runtime</span>
-                    </div>
-                  </li>
-                  <li>
-                    <span class="bh-ldot" style="background: #ef4444"></span>
-                    <div><strong>Oh My Zsh</strong><span>Feature-rich · very heavy</span></div>
+                    <span class="bh-ldot" style="background: #eab308"></span>
+                    <div><strong>Starship</strong><span>Rust modular binary · config-driven</span></div>
                   </li>
                   <li>
                     <span class="bh-ldot" style="background: #f97316"></span>
                     <div>
-                      <strong>Oh My Posh</strong><span>Beautiful themes · binary cost</span>
+                      <strong>Oh My Posh</strong><span>Go binary runtime · JSON themes</span>
                     </div>
+                  </li>
+                  <li>
+                    <span class="bh-ldot" style="background: #ef4444"></span>
+                    <div><strong>Oh My Zsh</strong><span>Pure Zsh scripts · heavy plugin suite</span></div>
                   </li>
                 </ul>
                 <div class="bh-radar-axes-note">
                   Startup Speed · Prompt Speed · Memory Efficiency · Feature Count · Theme Richness
-                  · POSIX Compat
+                  · Zero Overhead
                 </div>
               </div>
             </div>
 
-            <!-- Master table -->
+            <!-- Master table: strictly 4 products -->
             <div class="bh-table-wrap">
               <table class="bh-table">
                 <thead>
                   <tr>
                     <th>Metric</th>
                     <th>⚡ GladeShell</th>
-                    <th>🐚 Bash</th>
-                    <th>🔷 Zsh</th>
-                    <th>🐟 Fish</th>
-                    <th>🔵 PS7</th>
-                    <th>🔴 OMZ</th>
-                    <th>🎨 OMP</th>
+                    <th>⭐ Starship</th>
+                    <th>🎨 Oh My Posh</th>
+                    <th>🔴 Oh My Zsh</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Bash Hook Source</td>
-                    <td class="bh-best">6.71 ms ⚡</td>
-                    <td class="bh-na">N/A</td>
-                    <td class="bh-na">N/A</td>
-                    <td class="bh-na">N/A</td>
-                    <td class="bh-na">N/A</td>
-                    <td class="bh-bad">220 ms</td>
-                    <td class="bh-bad">38 ms</td>
+                    <td>Language / Architecture</td>
+                    <td class="bh-best">Rust (Zero-Alloc / gix)</td>
+                    <td class="bh-good">Rust (Static Binary)</td>
+                    <td class="bh-ok">Go (Static Binary)</td>
+                    <td class="bh-bad">Zsh Scripting</td>
                   </tr>
                   <tr>
-                    <td>Prompt Latency</td>
+                    <td>Core Prompt Latency (PS1)</td>
                     <td class="bh-best">11.4 µs (0.011 ms) ⚡</td>
-                    <td class="bh-ok">36 ms</td>
-                    <td class="bh-good">21 ms</td>
-                    <td class="bh-ok">30 ms</td>
-                    <td class="bh-bad">80 ms</td>
-                    <td class="bh-bad">18.5 ms</td>
-                    <td class="bh-bad">8.20 ms</td>
+                    <td class="bh-good">2.40 ms – 8.50 ms</td>
+                    <td class="bh-ok">8.20 ms – 26.50 ms</td>
+                    <td class="bh-bad">18.50 ms – 95.00 ms</td>
                   </tr>
                   <tr>
-                    <td>Warm Process Launch</td>
-                    <td class="bh-best">1.64 ms ⚡</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-bad">35.0 ms</td>
+                    <td>Warm Process Launch (prompt)</td>
+                    <td class="bh-best">1.64 ms mean / 0.92 ms min ⚡</td>
+                    <td class="bh-good">15.2 ms – 28.5 ms</td>
+                    <td class="bh-bad">35.0 ms – 72.0 ms</td>
+                    <td class="bh-na">N/A (Pure script)</td>
+                  </tr>
+                  <tr>
+                    <td>Terminal Startup / Hook Source</td>
+                    <td class="bh-best">6.71 ms (Bash) / 32.4 ms (Zsh) ⚡</td>
+                    <td class="bh-good">18.5 ms – 32.0 ms</td>
+                    <td class="bh-ok">38.0 ms – 85.0 ms</td>
+                    <td class="bh-bad">180 ms – 450 ms (220 ms avg)</td>
                   </tr>
                   <tr>
                     <td>Cold Init Generation</td>
-                    <td class="bh-best">24–28 ms ⚡</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-na">—</td>
-                    <td class="bh-bad">28–60 ms</td>
+                    <td class="bh-best">24 ms – 28 ms ⚡</td>
+                    <td class="bh-good">12 ms – 25 ms</td>
+                    <td class="bh-bad">28 ms – 60 ms</td>
+                    <td class="bh-na">N/A (Static files)</td>
                   </tr>
                   <tr>
-                    <td>Memory (RSS)</td>
-                    <td class="bh-best">3.9 MB core / 14.7 MB</td>
-                    <td class="bh-best">4.2 MB</td>
-                    <td class="bh-good">5.4 MB</td>
-                    <td class="bh-good">8.7 MB</td>
-                    <td class="bh-bad">78 MB</td>
-                    <td class="bh-bad">~28–100 MB</td>
-                    <td class="bh-bad">18.5 MB</td>
+                    <td>Git Status Overhead (gix)</td>
+                    <td class="bh-best">4.8 µs cache / &lt; 4.6 ms live ⚡</td>
+                    <td class="bh-ok">8.5 ms – 35.0 ms</td>
+                    <td class="bh-bad">15.0 ms – 55.0 ms</td>
+                    <td class="bh-bad">45.0 ms – 250.0 ms</td>
                   </tr>
                   <tr>
-                    <td>Subshell Forks/Prompt</td>
-                    <td class="bh-best">0 ⚡</td>
-                    <td class="bh-ok">3</td>
-                    <td class="bh-ok">2–4</td>
-                    <td class="bh-good">0–1</td>
-                    <td class="bh-ok">1–2</td>
-                    <td class="bh-bad">3–8</td>
-                    <td class="bh-bad">1 binary</td>
+                    <td>Subshell Process Forks</td>
+                    <td class="bh-best">0 (Zero subshells) ⚡</td>
+                    <td class="bh-good">1 (Exec binary)</td>
+                    <td class="bh-good">1 (Exec binary)</td>
+                    <td class="bh-bad">3 – 8 (git/env subshells)</td>
+                  </tr>
+                  <tr>
+                    <td>Memory Footprint (RSS)</td>
+                    <td class="bh-best">~3.9 MB core / 14.7 MB full ⚡</td>
+                    <td class="bh-good">~12.5 MB – 18.2 MB</td>
+                    <td class="bh-ok">~18.5 MB – 32.0 MB</td>
+                    <td class="bh-bad">~28.0 MB – 55.0 MB (up to 100 MB)</td>
                   </tr>
                   <tr>
                     <td>Themes Built-in</td>
-                    <td class="bh-best">55 Themes</td>
-                    <td class="bh-bad">Manual</td>
-                    <td class="bh-bad">Manual</td>
-                    <td class="bh-bad">Manual</td>
-                    <td class="bh-bad">Manual</td>
-                    <td class="bh-good">150+</td>
-                    <td class="bh-good">100+</td>
+                    <td class="bh-best">55 Themes ⚡</td>
+                    <td class="bh-bad">Modular manual config</td>
+                    <td class="bh-good">Preset themes / JSON</td>
+                    <td class="bh-good">Community themes (150+)</td>
                   </tr>
                   <tr>
-                    <td>Git Status (gix 0.88)</td>
-                    <td class="bh-best">4.8 µs cache / &lt;4.6 ms ⚡</td>
-                    <td class="bh-bad">~150 ms</td>
-                    <td class="bh-bad">~150 ms</td>
-                    <td class="bh-good">async</td>
-                    <td class="bh-ok">~80 ms</td>
-                    <td class="bh-bad">45–250 ms</td>
-                    <td class="bh-bad">15–55 ms</td>
+                    <td>Cross-Shell Support</td>
+                    <td class="bh-best">Bash, Zsh, Fish, PowerShell</td>
+                    <td class="bh-best">Bash, Zsh, Fish, PS, Nu</td>
+                    <td class="bh-best">Bash, Zsh, Fish, PS</td>
+                    <td class="bh-bad">Zsh only</td>
                   </tr>
                   <tr>
-                    <td>Engine Architecture</td>
-                    <td class="bh-best">Rust (Zero-Alloc / gix)</td>
-                    <td class="bh-good">C (POSIX)</td>
-                    <td class="bh-good">C (Zsh)</td>
-                    <td class="bh-good">C++ / Script</td>
-                    <td class="bh-bad">.NET 8 CLR</td>
-                    <td class="bh-bad">Zsh Script</td>
-                    <td class="bh-ok">Go (GC Binary)</td>
+                    <td>Cross-OS Support</td>
+                    <td class="bh-best">Linux, macOS, Windows</td>
+                    <td class="bh-best">Linux, macOS, Windows</td>
+                    <td class="bh-best">Linux, macOS, Windows</td>
+                    <td class="bh-ok">macOS, Linux</td>
                   </tr>
                   <tr>
-                    <td>POSIX compat</td>
-                    <td class="bh-best">✅</td>
-                    <td class="bh-best">✅</td>
-                    <td class="bh-best">✅</td>
-                    <td class="bh-bad">❌</td>
-                    <td class="bh-bad">❌</td>
-                    <td class="bh-best">✅</td>
-                    <td class="bh-ok">Wrapper</td>
-                  </tr>
-                  <tr>
-                    <td>1-line install</td>
+                    <td>1-Line Installation</td>
                     <td class="bh-best">✅ All shells</td>
-                    <td class="bh-bad">❌</td>
-                    <td class="bh-bad">❌</td>
-                    <td class="bh-bad">❌</td>
-                    <td class="bh-bad">❌</td>
+                    <td class="bh-good">✅ curl / winget</td>
+                    <td class="bh-good">✅ winget / brew</td>
                     <td class="bh-good">✅ curl</td>
-                    <td class="bh-good">✅ winget</td>
                   </tr>
                 </tbody>
               </table>

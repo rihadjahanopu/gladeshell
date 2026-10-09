@@ -1549,33 +1549,26 @@ function initBenchmark() {
       {
         name: 'GladeShell',
         color: '#22d3ee',
-        fill: 'rgba(34,211,238,0.15)',
-        scores: [10, 10, 9.8, 8.5, 9, 9],
+        fill: 'rgba(34,211,238,0.18)',
+        scores: [10, 10, 9.8, 9.0, 9.0, 10],
       },
       {
-        name: 'Bash',
-        color: '#22c55e',
-        fill: 'rgba(34,197,94,0.10)',
-        scores: [9.7, 5, 9.9, 4, 1, 10],
-      },
-      {
-        name: 'Fish',
-        color: '#0891b2',
-        fill: 'rgba(8,145,178,0.10)',
-        scores: [8.5, 7, 8.5, 7, 3, 0],
-      },
-      { name: 'PS7', color: '#3b82f6', fill: 'rgba(59,130,246,0.10)', scores: [2, 4, 1, 7, 3, 0] },
-      {
-        name: 'Oh My Zsh',
-        color: '#ef4444',
-        fill: 'rgba(239,68,68,0.10)',
-        scores: [1, 2, 1, 9, 10, 10],
+        name: 'Starship',
+        color: '#eab308',
+        fill: 'rgba(234,179,8,0.12)',
+        scores: [8.0, 7.5, 7.5, 8.0, 7.5, 9.5],
       },
       {
         name: 'Oh My Posh',
         color: '#f97316',
-        fill: 'rgba(249,115,22,0.10)',
-        scores: [4, 1, 4, 7, 10, 5],
+        fill: 'rgba(249,115,22,0.12)',
+        scores: [6.5, 6.0, 6.0, 8.5, 9.5, 8.0],
+      },
+      {
+        name: 'Oh My Zsh',
+        color: '#ef4444',
+        fill: 'rgba(239,68,68,0.12)',
+        scores: [2.5, 3.5, 3.0, 9.0, 10, 9.0],
       },
     ];
 

@@ -2732,6 +2732,88 @@ img {
   line-height: 1;
 }
 
+/* Badge Tooltip */
+.bench-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 99px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  color: var(--clr-cyan, #22d3ee);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+.bench-tip:hover,
+.bench-tip:focus {
+  background: rgba(34, 211, 238, 0.25);
+  border-color: rgba(34, 211, 238, 0.6);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+  transform: translateY(-1px);
+}
+.bench-tip::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.03em;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 12px rgba(34, 211, 238, 0.2);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+  z-index: 1000;
+}
+.bench-tip::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0 5px;
+  border-style: solid;
+  border-color: rgba(34, 211, 238, 0.4) transparent transparent transparent;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+  z-index: 1001;
+}
+.bench-tip:hover::before,
+.bench-tip:focus::before,
+.bench-tip:active::before,
+.bh-bar-label:hover .bench-tip::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.bench-tip:hover::after,
+.bench-tip:focus::after,
+.bench-tip:active::after,
+.bh-bar-label:hover .bench-tip::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Hyperfine raw block */
 .bh-raw {
   background: #060910;

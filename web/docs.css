@@ -2068,14 +2068,20 @@ td code {
 
 .bench-bar-row {
   display: grid;
-  grid-template-columns: 180px 1fr 80px;
+  grid-template-columns: 240px 1fr 85px;
   align-items: center;
   gap: 14px;
 }
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .bench-bar-row {
-    grid-template-columns: 140px 1fr 60px;
-    gap: 8px;
+    grid-template-columns: 200px 1fr 75px;
+    gap: 10px;
+  }
+}
+@media (max-width: 520px) {
+  .bench-bar-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 }
 
@@ -2086,6 +2092,8 @@ td code {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--docs-text);
+  white-space: nowrap;
+  min-width: 0;
 }
 .bench-bar-label .shell-icon {
   width: 24px; height: 24px;

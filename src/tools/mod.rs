@@ -51,4 +51,5 @@ pub mod universal_clean;
 pub mod updater;
 pub mod vault;
 pub mod video_player;
+pub mod z_jumper;
 pub mod zed_setup;

@@ -512,8 +512,7 @@ pub fn pending_updates_count() -> u32 {
     0
 }
 
-/// Node / npm / Bun version cache — port of:
-/// `node_version`, `npm_version`, `bun_version`
+/// Node / npm / Bun / Rust / Python / Go / Docker tool version cache
 #[derive(Debug, Clone, Default)]
 pub struct ToolVersions {
     /// e.g. "🟢 v22.5.1"
@@ -522,6 +521,54 @@ pub struct ToolVersions {
     pub npm: String,
     /// e.g. "🥐 v1.1.38"
     pub bun: String,
+    /// e.g. "🦀 v1.82.0"
+    pub rust: String,
+    /// e.g. "🐍 v3.12.3"
+    pub python: String,
+    /// e.g. "🐹 v1.23.1"
+    pub go: String,
+    /// e.g. "🐳 Docker"
+    pub docker: String,
+}
+
+fn parse_rust_version(raw: Option<String>) -> String {
+    raw.and_then(|s| {
+        s.split_whitespace()
+            .nth(1)
+            .map(|ver| format!("🦀 v{}", ver.trim_start_matches('v')))
+    })
+    .unwrap_or_default()
+}
+
+fn parse_python_version(raw: Option<String>) -> String {
+    raw.and_then(|s| {
+        s.split_whitespace()
+            .nth(1)
+            .map(|ver| format!("🐍 v{}", ver.trim_start_matches('v')))
+    })
+    .unwrap_or_default()
+}
+
+fn parse_go_version(raw: Option<String>) -> String {
+    raw.and_then(|s| {
+        s.split_whitespace()
+            .find(|t| t.starts_with("go1.") || t.starts_with("go2."))
+            .map(|ver| {
+                format!(
+                    "🐹 v{}",
+                    ver.trim_start_matches("go").trim_start_matches('v')
+                )
+            })
+    })
+    .unwrap_or_default()
+}
+
+fn parse_docker_version(raw: Option<String>) -> String {
+    if raw.is_some() {
+        "🐳 Docker".to_string()
+    } else {
+        String::new()
+    }
 }
 
 impl ToolVersions {
@@ -546,11 +593,7 @@ impl ToolVersions {
         }
     }
 
-    /// Collect tool versions by spawning subprocesses.
-    ///
-    /// With the `rayon` feature: node / npm / bun are spawned in parallel
-    /// (≈3 threads), reducing wall time from ~45 ms to ~15 ms on a typical
-    /// system.
+    /// Collect tool versions by spawning subprocesses in parallel threads.
     #[cfg(feature = "rayon")]
     pub fn collect() -> Self {
         let (node, (npm, bun)) = rayon::join(
@@ -562,10 +605,31 @@ impl ToolVersions {
                 )
             },
         );
+        let (rust, (python, (go, docker))) = rayon::join(
+            || run_version(&["rustc", "-V"]),
+            || {
+                rayon::join(
+                    || {
+                        run_version(&["python3", "--version"])
+                            .or_else(|| run_version(&["python", "--version"]))
+                    },
+                    || {
+                        rayon::join(
+                            || run_version(&["go", "version"]),
+                            || run_version(&["docker", "--version"]),
+                        )
+                    },
+                )
+            },
+        );
         ToolVersions {
             node: node.map(|v| format!("\u{1F7E2} {v}")).unwrap_or_default(),
             npm: npm.map(|v| format!("\u{1F4E6} v{v}")).unwrap_or_default(),
             bun: bun.map(|v| format!("\u{1F950} v{v}")).unwrap_or_default(),
+            rust: parse_rust_version(rust),
+            python: parse_python_version(python),
+            go: parse_go_version(go),
+            docker: parse_docker_version(docker),
         }
     }
 
@@ -582,6 +646,13 @@ impl ToolVersions {
         if let Some(v) = run_version(&["bun", "-v"]) {
             tv.bun = format!("\u{1F950} v{v}");
         }
+        tv.rust = parse_rust_version(run_version(&["rustc", "-V"]));
+        tv.python = parse_python_version(
+            run_version(&["python3", "--version"])
+                .or_else(|| run_version(&["python", "--version"])),
+        );
+        tv.go = parse_go_version(run_version(&["go", "version"]));
+        tv.docker = parse_docker_version(run_version(&["docker", "--version"]));
         tv
     }
 }

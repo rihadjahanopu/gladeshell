@@ -477,22 +477,28 @@ Install-RustBinary | Out-Null
 # --- STEP 5: Atomic Write & Auto-Reload ---------------------------------------
 Show-ProgressBar -Current 5 -Total 5 -StepName "Writing Profile & Auto-Reload"
 
-$initScript = if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
-    & gladeshell init pwsh 2>$null
-} else {
-    "if (Get-Command gladeshell -ErrorAction SilentlyContinue) { Invoke-Expression (& gladeshell init pwsh) }"
+$cacheDir = "$HOME\.gladeshell\cache"
+if (-not (Test-Path $cacheDir)) {
+    New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
+}
+if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
+    & gladeshell init pwsh > "$cacheDir\init.pwsh" 2>$null
 }
 
 $newBlock = @"
 
 $START
 # Installed by GladeShell: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-# gladeshell Rust Native Engine Initialization
+# gladeshell Rust Native Engine Initialization (Zero-Fork Cached Bootstrap)
 if (-not (`$env:PATH -split ';' -contains '$HOME\.local\bin')) {
     `$env:PATH = "$HOME\.local\bin;`$env:PATH"
 }
-
-$initScript
+`$fb_cache = "$HOME\.gladeshell\cache\init.pwsh"
+if ([System.IO.File]::Exists(`$fb_cache)) {
+    . `$fb_cache
+} elseif (Get-Command gladeshell -ErrorAction SilentlyContinue) {
+    gladeshell init pwsh | Invoke-Expression
+}
 $END
 "@
 

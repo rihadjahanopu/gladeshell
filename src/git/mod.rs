@@ -28,9 +28,11 @@ use std::time::{Duration, Instant};
 
 // ── TTL and Cache Constants ───────────────────────────────────────────────────
 
-/// Monorepo TTL: 3.0 seconds (3000 ms). Large repos are cached to prevent lag.
-/// Normal repos (< ~5000 files) scan fresh on every prompt (~0.5ms) — no TTL needed.
-const TTL_MONOREPO_MS: u64 = 3000;
+/// Normal repo TTL: 1.5 seconds (1500 ms). Eliminates synchronous scans on rapid commands.
+const TTL_NORMAL_MS: u64 = 1500;
+
+/// Monorepo TTL: 5.0 seconds (5000 ms). Large repos are cached longer to prevent lag.
+const TTL_MONOREPO_MS: u64 = 5000;
 
 /// Directory count threshold for monorepo detection.
 const MONOREPO_THRESHOLD: usize = 4;
@@ -86,6 +88,8 @@ struct CacheEntry {
     status: GitStatus,
     /// Cached monorepo flag — computed once on first insert, reused on refresh.
     is_monorepo: bool,
+    /// Whether an asynchronous background update is currently in-flight.
+    updating: bool,
 }
 
 // ── Global Sharded Cache ──────────────────────────────────────────────────────
@@ -128,15 +132,17 @@ fn insert_with_cap(guard: &mut HashMap<PathBuf, CacheEntry>, key: PathBuf, entry
 // ── TTL and Monorepo Helpers ──────────────────────────────────────────────────
 
 /// TTL check:
-/// - Normal repo  → always false (gix scan is ultra-fast ~0.5ms, always fresh)
-/// - Monorepo     → 3.0s TTL
+/// - Normal repo  → 1.5s TTL
+/// - Monorepo     → 5.0s TTL
 fn is_fresh(entry: &CacheEntry) -> bool {
-    if !entry.is_monorepo {
-        return false; // normal repo -> always scan fresh
-    }
+    let ttl = if entry.is_monorepo {
+        Duration::from_millis(TTL_MONOREPO_MS)
+    } else {
+        Duration::from_millis(TTL_NORMAL_MS)
+    };
 
     if let Some(last) = entry.status.last_updated {
-        last.elapsed() < Duration::from_millis(TTL_MONOREPO_MS)
+        last.elapsed() < ttl
     } else {
         false
     }
@@ -197,23 +203,51 @@ fn get_status_internal(cwd: &Path) -> GitStatus {
     let git_root_opt = find_git_root(cwd);
 
     if let Some(ref git_root) = git_root_opt {
-        let cached_hit = lock_cache(|guard| {
-            if let Some(entry) = guard.get(git_root) {
+        #[derive(Default)]
+        enum CacheLookup {
+            Fresh(GitStatus),
+            StaleTriggerAsync(GitStatus),
+            #[default]
+            Miss,
+        }
+
+        let lookup = lock_cache(|guard| {
+            if let Some(entry) = guard.get_mut(git_root) {
                 if is_fresh(entry) {
                     let mut cached = entry.status.clone();
                     cached.path = cwd.to_path_buf();
-                    return Some(cached);
+                    CacheLookup::Fresh(cached)
+                } else if !entry.updating {
+                    entry.updating = true;
+                    let mut stale = entry.status.clone();
+                    stale.path = cwd.to_path_buf();
+                    CacheLookup::StaleTriggerAsync(stale)
+                } else {
+                    let mut stale = entry.status.clone();
+                    stale.path = cwd.to_path_buf();
+                    CacheLookup::Fresh(stale)
                 }
+            } else {
+                CacheLookup::Miss
             }
-            None
         });
 
-        if let Some(status) = cached_hit {
-            return status;
+        match lookup {
+            CacheLookup::Fresh(status) => return status,
+            CacheLookup::StaleTriggerAsync(stale_status) => {
+                let cwd_buf = cwd.to_path_buf();
+                let _ = std::thread::Builder::new()
+                    .name("gladeshell-git-swr".into())
+                    .spawn(move || {
+                        refresh_internal(&cwd_buf);
+                    });
+                return stale_status;
+            }
+            CacheLookup::Miss => {}
         }
     }
 
-    // Cache miss or stale — query fresh status
+    // Cache miss — query fresh status
     let mut status = query_git_status(cwd);
     status.last_updated = Some(Instant::now());
 
@@ -228,6 +262,7 @@ fn get_status_internal(cwd: &Path) -> GitStatus {
                 CacheEntry {
                     status: status.clone(),
                     is_monorepo,
+                    updating: false,
                 },
             );
         });
@@ -262,6 +297,7 @@ fn refresh_internal(cwd: &Path) {
                 CacheEntry {
                     status,
                     is_monorepo,
+                    updating: false,
                 },
             );
         });

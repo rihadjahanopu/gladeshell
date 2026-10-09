@@ -2,10 +2,38 @@
 #  Makefile — gladeshell Build, Lint, Test & Installation Manager
 # =============================================================================
 
-.PHONY: build check clippy fmt test bench install update uninstall hooks help
+.PHONY: build check clippy fmt test bench bench-startup install update uninstall hooks help
 
 # Default action
 all: build
+
+define BENCH_SCRIPT
+import subprocess as sp, time, os, statistics as st
+def measure(cmd, lbl, n=10):
+    ts = []
+    for _ in range(n):
+        t0 = time.perf_counter_ns()
+        try:
+            p = sp.Popen(cmd, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+            os.wait4(p.pid, 0)
+            ts.append((time.perf_counter_ns() - t0)/1e6)
+        except Exception:
+            return
+    if ts:
+        print(f"  {lbl:<25}: mean={st.mean(ts):.2f}ms, min={min(ts):.2f}ms")
+
+print("\n⚡ Measuring gladeshell startup latency:")
+measure(["./target/release/gladeshell", "prompt"], "gladeshell prompt")
+measure(["bash", "--norc", "-c", "source ~/.gladeshell/cache/init.bash"], "Bash cache source")
+measure(["zsh", "--no-rcs", "-c", "source ~/.gladeshell/cache/init.zsh"], "Zsh cache source")
+measure(["fish", "--no-config", "-c", "source ~/.gladeshell/cache/init.fish"], "Fish cache source")
+endef
+export BENCH_SCRIPT
+
+## bench-startup: Benchmark process launch & shell init startup times
+bench-startup:
+	@python3 -c "$$BENCH_SCRIPT"
+
 
 ## build: Build release binary
 build:

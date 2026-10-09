@@ -30,6 +30,18 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     let timestamp = chrono_timestamp();
 
+    // ── 0. Stop Running Daemon & Remove Socket Files ────────────────────────────
+    let sock = crate::daemon::socket_path();
+    if sock.exists() {
+        let _ = fs::remove_file(&sock);
+    }
+    #[cfg(unix)]
+    {
+        let _ = std::process::Command::new("systemctl")
+            .args(["--user", "stop", "gladeshell.service"])
+            .output();
+    }
+
     // ── 1. Target Shell Config Files ───────────────────────────────────────────
     let target_files = vec![
         home.join(".bashrc"),

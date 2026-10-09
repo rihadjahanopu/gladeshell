@@ -19,6 +19,7 @@ const MAX_HISTORY_ENTRIES: usize = 50_000;
 
 struct HistoryCache {
     commands: Vec<String>,
+    file_mtimes: Vec<(PathBuf, std::time::SystemTime)>,
 }
 
 static CACHE: OnceLock<Mutex<HistoryCache>> = OnceLock::new();
@@ -29,6 +30,7 @@ fn get_cache() -> &'static Mutex<HistoryCache> {
     CACHE.get_or_init(|| {
         Mutex::new(HistoryCache {
             commands: Vec::new(),
+            file_mtimes: Vec::new(),
         })
     })
 }
@@ -75,16 +77,22 @@ fn history_file_candidates(home: &Path) -> Vec<PathBuf> {
 
 /// Load history from all available shell history files.
 /// Never panics; errors silently produce fewer entries.
-fn load_all_history() -> Vec<String> {
+fn load_all_history() -> (Vec<String>, Vec<(PathBuf, std::time::SystemTime)>) {
     let home = match dirs_home() {
         Some(h) => h,
-        None => return Vec::new(),
+        None => return (Vec::new(), Vec::new()),
     };
 
     let mut all_cmds: Vec<String> = Vec::with_capacity(4096);
+    let mut file_mtimes = Vec::new();
 
     for path in history_file_candidates(&home) {
         if path.is_file() {
+            if let Ok(meta) = fs::metadata(&path) {
+                if let Ok(mtime) = meta.modified() {
+                    file_mtimes.push((path.clone(), mtime));
+                }
+            }
             all_cmds.extend(load_history_file(&path));
         }
     }
@@ -107,7 +115,7 @@ fn load_all_history() -> Vec<String> {
         deduped.truncate(MAX_HISTORY_ENTRIES);
     }
 
-    deduped
+    (deduped, file_mtimes)
 }
 
 /// Parse and extract commands from a single history file.
@@ -229,12 +237,30 @@ pub fn suggest(buffer: &str) -> Option<String> {
         Err(poison) => poison.into_inner(),
     };
 
-    if cache.commands.is_empty() {
-        cache.commands = load_all_history();
+    let mut needs_reload = cache.commands.is_empty();
+    if !needs_reload {
+        for (path, last_mtime) in &cache.file_mtimes {
+            if let Ok(meta) = fs::metadata(path) {
+                if let Ok(mtime) = meta.modified() {
+                    if mtime > *last_mtime {
+                        needs_reload = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if needs_reload {
+        let (cmds, mtimes) = load_all_history();
+        cache.commands = cmds;
+        cache.file_mtimes = mtimes;
     }
 
     // Search most-recent matching command (commands are stored most-recent first)
-    for cmd in &cache.commands {
+    // Fast path: search top 100 most recent first for optimal cache locality
+    let search_limit = cache.commands.len().min(100);
+    for cmd in &cache.commands[..search_limit] {
         // Prefer exact-prefix match against the full typed buffer (preserving leading whitespace)
         if cmd.starts_with(buffer) && cmd.len() > buffer.len() {
             return Some(cmd.clone());
@@ -242,6 +268,17 @@ pub fn suggest(buffer: &str) -> Option<String> {
         // Also match against the whitespace-trimmed version
         if cmd.starts_with(trimmed_input) && cmd.len() > trimmed_input.len() {
             return Some(cmd.clone());
+        }
+    }
+
+    if cache.commands.len() > 100 {
+        for cmd in &cache.commands[100..] {
+            if cmd.starts_with(buffer) && cmd.len() > buffer.len() {
+                return Some(cmd.clone());
+            }
+            if cmd.starts_with(trimmed_input) && cmd.len() > trimmed_input.len() {
+                return Some(cmd.clone());
+            }
         }
     }
 
@@ -253,9 +290,8 @@ pub fn suggest(buffer: &str) -> Option<String> {
 pub fn invalidate_cache() {
     if let Ok(mut cache) = get_cache().lock() {
         cache.commands.clear();
+        cache.file_mtimes.clear();
     }
-    // If the lock is poisoned, we simply skip invalidation — next lock call
-    // will recover the poisoned value and it will be refreshed anyway.
 }
 
 /// Append a new command entry to the top of the history cache in real time.
@@ -272,7 +308,9 @@ pub fn add_history_entry(cmd: &str) {
     };
 
     if cache.commands.is_empty() {
-        cache.commands = load_all_history();
+        let (cmds, mtimes) = load_all_history();
+        cache.commands = cmds;
+        cache.file_mtimes = mtimes;
     }
 
     // Deduplicate: remove existing instance if present

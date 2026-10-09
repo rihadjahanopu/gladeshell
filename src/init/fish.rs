@@ -33,6 +33,8 @@ pub fn generate() -> String {
     out.push_str(&shared::render_integrations(Shell::Fish));
     out.push_str(&shared::render_auto_ls_hook(Shell::Fish));
     out.push_str(&shared::render_cf_wrapper(Shell::Fish));
+    out.push_str(&shared::render_z_wrapper(Shell::Fish));
+    out.push_str(&shared::render_notification_helpers(Shell::Fish));
     out.push_str(&shared::render_cli_completions(Shell::Fish));
 
     // ── Prompt function (Native Rust Engine) ──────────────────────────────────
@@ -48,10 +50,21 @@ set -g _fb_sock "$TMPDIR/gladeshell_$USER.sock"
 if not test -n "$_fb_sock"
     set -g _fb_sock "/tmp/gladeshell_$USER.sock"
 end
+set -g _fb_host "$hostname"
+if not test -n "$_fb_host"
+    set -g _fb_host (hostname -s 2>/dev/null; or hostname 2>/dev/null; or echo host)
+end
 
 function fish_prompt
     # Capture exit code FIRST before any other command clobbers it
     set -l _fb_exit $status
+
+    # Transient prompt hook
+    if test "$_fb_transient" = "1"
+        set -g _fb_transient 0
+        gladeshell prompt --transient --shell fish --exit-code $_fb_exit 2>/dev/null
+        return
+    end
 
     # CMD_DURATION is a Fish built-in (ms). Default 0 if not set.
     set -l _fb_dur 0
@@ -59,9 +72,21 @@ function fish_prompt
         set _fb_dur $CMD_DURATION
     end
 
-    # Auto-heal: if glade block was deleted from config.fish, restore it in background
-    if test -f "$HOME/.config/fish/config.fish"; and not grep -qF '# >>> glade-fish >>>' "$HOME/.config/fish/config.fish" 2>/dev/null
-        gladeshell setup >/dev/null 2>&1 &
+    # Long-running command desktop notification (>= 10s by default)
+    set -l _notify_thresh 10000
+    if set -q GLADESHELL_NOTIFY_THRESHOLD
+        set _notify_thresh $GLADESHELL_NOTIFY_THRESHOLD
+    end
+    if test $_notify_thresh -gt 0 -a $_fb_dur -ge $_notify_thresh
+        _fb_notify $_fb_exit $_fb_dur 2>/dev/null
+    end
+
+    # Auto-heal: if glade block was deleted from config.fish, restore it in background (one-time check)
+    if not set -q _fb_healed
+        set -g _fb_healed 1
+        if test -f "$HOME/.config/fish/config.fish"; and not grep -qF '# >>> glade-fish >>>' "$HOME/.config/fish/config.fish" 2>/dev/null
+            gladeshell setup >/dev/null 2>&1 &
+        end
     end
 
     # Auto-spawn background IPC daemon if socket file does not exist (bulletproof session guard)
@@ -72,16 +97,13 @@ function fish_prompt
         end
     end
 
-    # Resolve hostname safely (works on Linux and macOS)
-    set -l _fb_host (hostname -s 2>/dev/null; or hostname 2>/dev/null; or echo host)
-
     # Render prompt via Native Rust engine — outputs raw ANSI (no escaping needed in Fish)
     gladeshell prompt \
         --shell fish \
         --cwd "$PWD" \
         --exit-code $_fb_exit \
-        --user (whoami) \
-        --host $_fb_host \
+        --user "$USER" \
+        --host "$_fb_host" \
         --cmd-duration $_fb_dur \
         2>/dev/null
 end
@@ -105,9 +127,24 @@ if type -q gladeshell
     bind \cr 'gladeshell fh'
 end
 
+# ── Transient / Compact Prompt Mode ──
+function _fb_transient_accept
+    if test "$GLADESHELL_TRANSIENT" != "0" -a -n (commandline)
+        set -g _fb_transient 1
+        commandline -f repaint
+    end
+    commandline -f execute
+end
+bind \r _fb_transient_accept
+bind \n _fb_transient_accept
+
 # ── Typo Engine & Command Not Found Handler ──
 function fish_command_not_found
-    gladeshell correct $argv[1]
+    if type -q gladeshell
+        gladeshell correct $argv[1]
+    else
+        __fish_default_command_not_found_handler $argv[1]
+    end
 end
 "#,
     );

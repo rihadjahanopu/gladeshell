@@ -23,6 +23,7 @@
 
 // Re-export the core modules so both lib consumers and unit-tests can reach them.
 pub mod buffer_engine;
+pub mod cli;
 pub mod core;
 pub mod daemon;
 pub mod git;
@@ -124,6 +125,67 @@ pub unsafe extern "C" fn fb_prompt_render_ctx(
         }
         Err(_) => -1,
     }
+}
+
+/// Unified C-ABI prompt renderer for in-process memory calls (.NET P/Invoke, Zsh zmodload, Bash enable -f).
+///
+/// Parameters:
+/// - `cwd`: C-string working directory (if null or invalid, falls back to ".")
+/// - `exit_code`: exit code of previous command
+/// - `theme_id`: theme ID (0-55)
+/// - `user`: C-string username (if null, falls back to "user")
+/// - `host`: C-string hostname (if null, falls back to "host")
+/// - `out_buf`: caller-provided buffer
+/// - `buf_len`: capacity of `out_buf` in bytes
+///
+/// Returns:
+/// Number of bytes written into `out_buf`, or -1 on error.
+///
+/// # Safety
+/// `out_buf` must be a valid, writable buffer of at least `buf_len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn gladeshell_prompt_render(
+    cwd: *const c_char,
+    exit_code: c_int,
+    theme_id: usize,
+    user: *const c_char,
+    host: *const c_char,
+    out_buf: *mut c_char,
+    buf_len: usize,
+) -> c_int {
+    if out_buf.is_null() || buf_len == 0 {
+        return -1;
+    }
+
+    let cwd_str = if cwd.is_null() {
+        "."
+    } else {
+        unsafe { CStr::from_ptr(cwd) }.to_str().unwrap_or(".")
+    };
+
+    let user_str = if user.is_null() {
+        "user"
+    } else {
+        unsafe { CStr::from_ptr(user) }.to_str().unwrap_or("user")
+    };
+
+    let host_str = if host.is_null() {
+        "host"
+    } else {
+        unsafe { CStr::from_ptr(host) }.to_str().unwrap_or("host")
+    };
+
+    let rendered = daemon::client::render_fallback(
+        cwd_str, exit_code, theme_id, user_str, host_str, 3, // 3 = Pwsh / raw mode
+    );
+
+    let rendered_bytes = rendered.as_bytes();
+    let to_copy = rendered_bytes.len().min(buf_len.saturating_sub(1));
+    let buf_slice = unsafe { std::slice::from_raw_parts_mut(out_buf as *mut u8, buf_len) };
+    buf_slice[..to_copy].copy_from_slice(&rendered_bytes[..to_copy]);
+    buf_slice[to_copy] = 0;
+
+    to_copy as c_int
 }
 
 // =============================================================================

@@ -10,7 +10,7 @@
 
 use std::error::Error;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
@@ -128,49 +128,13 @@ fn apply_pure_rust_upgrade(script_path: &Path) -> Result<(), Box<dyn Error>> {
         return Err("Installer payload not found".into());
     }
 
-    let home_path = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .ok()
-        .map(PathBuf::from);
+    // Automatically configure shells with zero-fork cached blocks
+    let _ = crate::init::cleaner::ensure_all_installed_shells_configured();
+    let _ = crate::init::cleaner::ensure_auto_heal_hooks();
 
-    if let Some(home) = home_path {
-        let targets = vec![
-            (home.join(".bashrc"), "eval \"$(gladeshell init bash)\"\n"),
-            (home.join(".zshrc"), "eval \"$(gladeshell init zsh)\"\n"),
-            (
-                home.join(".config/fish/config.fish"),
-                "gladeshell init fish | source\n",
-            ),
-            (
-                home.join("Documents/PowerShell/Microsoft.PowerShell_profile.ps1"),
-                "Invoke-Expression (&gladeshell init pwsh | Out-String)\n",
-            ),
-            (
-                home.join("Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"),
-                "Invoke-Expression (&gladeshell init pwsh | Out-String)\n",
-            ),
-            (
-                home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
-                "Invoke-Expression (&gladeshell init pwsh | Out-String)\n",
-            ),
-        ];
-
-        for (rc, init_line) in targets {
-            let is_ps = rc.to_string_lossy().contains("PowerShell")
-                || rc.to_string_lossy().contains("powershell");
-            let parent_exists = rc.parent().map(|p| p.exists()).unwrap_or(false);
-
-            if rc.exists() || (is_ps && parent_exists) {
-                if let Some(parent) = rc.parent() {
-                    let _ = fs::create_dir_all(parent);
-                }
-                let content = fs::read_to_string(&rc).unwrap_or_default();
-                if !content.contains("gladeshell init") {
-                    let formatted = format!("\n{}\n", init_line.trim());
-                    let _ = fs::write(&rc, format!("{}{}", content, formatted));
-                }
-            }
-        }
+    // Re-generate caches for all common shells
+    for shell in ["bash", "zsh", "fish", "pwsh"] {
+        let _ = crate::init::generate(shell);
     }
 
     Ok(())

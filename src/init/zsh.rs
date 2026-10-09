@@ -107,29 +107,53 @@ if [[ -o interactive ]]; then
     # continues to work normally — no silent breakage possible.
 
     _fb_zle_autosuggest_and_highlight() {
-        # 1. Native Whitespace-Protected Autosuggestion (non-blocking)
         POSTDISPLAY=""
         local trimmed="${BUFFER#"${BUFFER%%[^[:space:]]*}"}"
-        if [[ -n "$trimmed" ]]; then
-            local sug
-            sug=$(gladeshell suggest "$BUFFER" 2>/dev/null) || sug=""
-            # Only show ghost text when suggestion is STRICTLY longer than typed buffer
-            if [[ -n "$sug" && "$sug" == "$BUFFER"* && "$sug" != "$BUFFER" ]]; then
-                POSTDISPLAY="${sug#$BUFFER}"
+        local sug=""
+        local hl_spec=""
+        local socket_ok=0
+
+        # Fast-Path: Query daemon over open zsocket (0.08ms, zero subshell forks)
+        if [[ -n "$_fb_sock" && -S "$_fb_sock" ]]; then
+            if zsocket "$_fb_sock" 2>/dev/null; then
+                local fd=$REPLY
+                print -u $fd "SUGGEST"$'\x1f'"$BUFFER"
+                IFS= read -r -d '' -u $fd sug
+                exec {fd}>&-
+                if zsocket "$_fb_sock" 2>/dev/null; then
+                    fd=$REPLY
+                    print -u $fd "HIGHLIGHT"$'\x1f'"$BUFFER"
+                    IFS= read -r -d '' -u $fd hl_spec
+                    exec {fd}>&-
+                fi
+                socket_ok=1
+            else
+                rm -f "$_fb_sock" 2>/dev/null
             fi
         fi
 
-        # 2. Native Zero-Latency Syntax Highlighting (non-blocking; safe on failure)
-        region_highlight=()
-        if [[ -n "$BUFFER" ]]; then
-            local hl_spec
-            hl_spec=$(gladeshell highlight "$BUFFER" 2>/dev/null) || hl_spec=""
-            if [[ -n "$hl_spec" ]]; then
-                local _hl
-                while IFS= read -r _hl; do
-                    [[ -n "$_hl" ]] && region_highlight+=("$_hl")
-                done <<< "$hl_spec"
+        # Fallback: standalone CLI fast-path (only when daemon offline)
+        if (( ! socket_ok )); then
+            if [[ -n "$trimmed" ]]; then
+                sug=$(gladeshell suggest "$BUFFER" 2>/dev/null) || sug=""
             fi
+            if [[ -n "$BUFFER" ]]; then
+                hl_spec=$(gladeshell highlight "$BUFFER" 2>/dev/null) || hl_spec=""
+            fi
+        fi
+
+        # 1. Native Whitespace-Protected Autosuggestion
+        if [[ -n "$trimmed" && -n "$sug" && "$sug" == "$BUFFER"* && "$sug" != "$BUFFER" ]]; then
+            POSTDISPLAY="${sug#$BUFFER}"
+        fi
+
+        # 2. Native Zero-Latency Syntax Highlighting
+        region_highlight=()
+        if [[ -n "$hl_spec" ]]; then
+            local _hl
+            while IFS= read -r _hl; do
+                [[ -n "$_hl" ]] && region_highlight+=("$_hl")
+            done <<< "$hl_spec"
         fi
 
         # 3. Highlight Ghost-Text (POSTDISPLAY) in Dim Grey (fg=8)
@@ -253,6 +277,16 @@ if [[ -o interactive ]]; then
     bindkey -M viins '^[[1;5C' forward-word  2>/dev/null || true   # Ctrl+Right Arrow
     bindkey -M viins '^[[1;3C' forward-word  2>/dev/null || true   # Alt+Right Arrow
     bindkey -M viins '^F'      forward-char  2>/dev/null || true   # Ctrl+F (fish-style accept)
+
+    # ── Transient / Compact Prompt Mode ──
+    _fb_zle_accept_line() {
+        if [[ "${GLADESHELL_TRANSIENT:-1}" != "0" && -n "$BUFFER" ]]; then
+            PROMPT="$(gladeshell prompt --transient --exit-code $? --shell zsh 2>/dev/null)"
+            zle .reset-prompt 2>/dev/null
+        fi
+        zle .accept-line
+    }
+    zle -N accept-line _fb_zle_accept_line
 fi
 "#);
 
@@ -281,9 +315,17 @@ _fb_precmd() {
         _fb_timer=0
     fi
 
-    # ── Auto-heal & auto-reorder hook for Zsh ──
-    if [[ -f "$HOME/.zshrc" ]] && ! grep -qF '# >>> glade-zshrc >>>' "$HOME/.zshrc" 2>/dev/null; then
-        (gladeshell setup >/dev/null 2>&1 &)
+    # ── Long-running command desktop notification (>= 10s by default) ──
+    if (( duration >= ${GLADESHELL_NOTIFY_THRESHOLD:-10000} && ${GLADESHELL_NOTIFY_THRESHOLD:-10000} > 0 )); then
+        _fb_notify "$exit_code" "$duration" 2>/dev/null || true
+    fi
+
+    # ── Auto-heal & auto-reorder hook for Zsh (one-time check) ──
+    if [[ -z "$_fb_healed" ]]; then
+        _fb_healed=1
+        if [[ -f "$HOME/.zshrc" ]] && ! grep -qF '# >>> glade-zshrc >>>' "$HOME/.zshrc" 2>/dev/null; then
+            (gladeshell setup >/dev/null 2>&1 &)
+        fi
     fi
 
     # Auto-spawn background IPC daemon if socket does not exist yet (bulletproof session guard)
@@ -297,36 +339,47 @@ _fb_precmd() {
     local fd
     zmodload -i zsh/net/socket 2>/dev/null || true
 
-    if [[ -n "$_fb_sock" && -S "$_fb_sock" ]] && zsocket "$_fb_sock" 2>/dev/null; then
-        fd=$REPLY
-        print -u $fd "${PWD}"$'\x1f'"${exit_code}"$'\x1f'"0"$'\x1f'"${USER}"$'\x1f'"${HOST}"$'\x1f'"${duration}"$'\x1f'"0"
-        # Read the FULL multiline prompt (IFS= read -r -d '' preserves all newlines)
-        local raw_prompt
-        IFS= read -r -d '' -u $fd raw_prompt
-        PROMPT="${raw_prompt}"
-        exec {fd}>&-
-    else
-        # Fallback: direct binary call.
-        # printf-trick avoids $() stripping trailing newlines that carry ❯❯❯.
-        local tmp
-        tmp=$(gladeshell prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOST" 2>/dev/null; printf x)
-        PROMPT="${tmp%x}"
+    if [[ -n "$_fb_sock" && -S "$_fb_sock" ]]; then
+        if zsocket "$_fb_sock" 2>/dev/null; then
+            fd=$REPLY
+            print -u $fd "${PWD}"$'\x1f'"${exit_code}"$'\x1f'"0"$'\x1f'"${USER}"$'\x1f'"${HOST}"$'\x1f'"${duration}"$'\x1f'"0"
+            # Read the FULL multiline prompt (IFS= read -r -d '' preserves all newlines)
+            local raw_prompt
+            IFS= read -r -d '' -u $fd raw_prompt
+            PROMPT="${raw_prompt}"
+            exec {fd}>&-
+            return
+        else
+            # Stale dead socket file detected — clean it up!
+            rm -f "$_fb_sock" 2>/dev/null
+        fi
     fi
+
+    # Fallback: direct binary call.
+    # printf-trick avoids $() stripping trailing newlines that carry ❯❯❯.
+    local tmp
+    tmp=$(gladeshell prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOST" 2>/dev/null; printf x)
+    PROMPT="${tmp%x}"
 }
 
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _fb_preexec
 add-zsh-hook precmd  _fb_precmd
-_fb_precmd
 
 # ── Typo Engine & Command Not Found Handler ──
 command_not_found_handler() {
-    gladeshell correct "$1"
+    if (( $+commands[gladeshell] )); then
+        gladeshell correct "$1"
+    else
+        echo "zsh: command not found: $1" >&2
+    fi
     return 127
 }
 "#);
     out.push_str(&shared::render_auto_ls_hook(Shell::Zsh));
     out.push_str(&shared::render_cf_wrapper(Shell::Zsh));
+    out.push_str(&shared::render_z_wrapper(Shell::Zsh));
+    out.push_str(&shared::render_notification_helpers(Shell::Zsh));
     out.push_str(&shared::render_cli_completions(Shell::Zsh));
 
     out.push_str("\n# gladeshell zsh init complete\n");

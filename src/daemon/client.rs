@@ -43,7 +43,13 @@ pub fn request_prompt(
         if !path.exists() {
             return Err("daemon socket does not exist".into());
         }
-        let mut stream = UnixStream::connect(&path)?;
+        let mut stream = match UnixStream::connect(&path) {
+            Ok(s) => s,
+            Err(e) => {
+                let _ = std::fs::remove_file(&path);
+                return Err(e.into());
+            }
+        };
         stream.set_read_timeout(Some(Duration::from_millis(10)))?;
         stream.set_write_timeout(Some(Duration::from_millis(10)))?;
 

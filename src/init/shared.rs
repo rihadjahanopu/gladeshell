@@ -211,7 +211,11 @@ fi
 if functions -q nvm
     # nvm.fish is already loaded; nothing to do.
 else
-    set -gx NVM_DIR (test -d $HOME/.config/nvm && echo $HOME/.config/nvm || echo $HOME/.nvm)
+    if test -d "$HOME/.config/nvm"
+        set -gx NVM_DIR "$HOME/.config/nvm"
+    else
+        set -gx NVM_DIR "$HOME/.nvm"
+    end
 end
 
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
@@ -322,38 +326,25 @@ if (Get-Command eza -ErrorAction SilentlyContinue) {
     }
 }
 
-/// Render automatic CLI completion evaluation for gladeshell itself.
+/// Render automatic CLI completions pre-baked directly in-memory at init time (Zero Runtime Subshell).
 pub fn render_cli_completions(shell: Shell) -> String {
-    match shell {
-        Shell::Zsh => r#"
-# ── Auto-load gladeshell CLI completions ──
-if command -v gladeshell >/dev/null 2>&1; then
-    eval "$(gladeshell completions zsh 2>/dev/null)"
-fi
-"#
-        .to_string(),
-        Shell::Bash => r#"
-# ── Auto-load gladeshell CLI completions ──
-if command -v gladeshell >/dev/null 2>&1; then
-    eval "$(gladeshell completions bash 2>/dev/null)"
-fi
-"#
-        .to_string(),
-        Shell::Fish => r#"
-# ── Auto-load gladeshell CLI completions ──
-if command -v gladeshell >/dev/null 2>&1
-    gladeshell completions fish 2>/dev/null | source
-end
-"#
-        .to_string(),
-        Shell::Pwsh => r#"
-# ── Auto-load gladeshell CLI completions ──
-if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
-    gladeshell completions pwsh 2>/dev/null | Invoke-Expression
-}
-"#
-        .to_string(),
-    }
+    use crate::cli::Cli;
+    use clap::CommandFactory;
+    use clap_complete::{generate, Shell as ClapShell};
+
+    let clap_shell = match shell {
+        Shell::Bash => ClapShell::Bash,
+        Shell::Zsh => ClapShell::Zsh,
+        Shell::Fish => ClapShell::Fish,
+        Shell::Pwsh => ClapShell::PowerShell,
+    };
+
+    let mut buf = Vec::with_capacity(4096);
+    let mut cmd = Cli::command();
+    generate(clap_shell, &mut cmd, "gladeshell", &mut buf);
+
+    let script = String::from_utf8_lossy(&buf);
+    format!("\n# ── Pre-baked gladeshell CLI completions (Zero Runtime Subshell) ──\n{script}\n")
 }
 
 /// Render shell function helpers for filesystem operations (mkd, rmd, rmf, bak, trash).
@@ -361,7 +352,7 @@ pub fn render_file_helpers(shell: Shell) -> String {
     match shell {
         Shell::Zsh | Shell::Bash => r#"
 # ── Native Rust File & Directory Helper Functions ──
-unfunction mkd rmd rmf bak trash 2>/dev/null || true
+unset -f mkd rmd rmf bak trash 2>/dev/null || true
 unalias mkd rmd rmf bak trash 2>/dev/null || true
 
 mkd() {
@@ -609,7 +600,7 @@ cf() {
 }
 
 unalias ff 2>/dev/null || true
-unfunction ff 2>/dev/null || true
+unset -f ff 2>/dev/null || true
 ff() {
     local result action target
     if [ $# -eq 0 ]; then
@@ -886,6 +877,126 @@ function ff {
     }
 }
 
+/// Render desktop and terminal notification helper function per shell.
+pub fn render_notification_helpers(shell: Shell) -> String {
+    match shell {
+        Shell::Zsh | Shell::Bash => r#"
+# ── gladeshell Long-Running Command Notification ──
+_fb_notify() {
+    local code="$1"
+    local dur="$2"
+    local dur_s=$(( dur / 1000 ))
+    local msg
+    if [[ "$code" -eq 0 ]]; then
+        msg="✅ Command finished in ${dur_s}s"
+    else
+        msg="❌ Command failed (exit $code) in ${dur_s}s"
+    fi
+
+    # 1. OSC 777 & OSC 99 native terminal notification sequences
+    printf '\033]777;notify;gladeshell;%s\007' "$msg" 2>/dev/null || true
+    printf '\033]99;i=1:d=0;gladeshell\007\033]99;p=body;%s\007' "$msg" 2>/dev/null || true
+
+    # 2. Desktop notification system fallback
+    if command -v notify-send >/dev/null 2>&1; then
+        (notify-send -a "gladeshell" -i terminal "gladeshell" "$msg" >/dev/null 2>&1 &)
+    elif command -v osascript >/dev/null 2>&1; then
+        (osascript -e "display notification \"$msg\" with title \"gladeshell\"" >/dev/null 2>&1 &)
+    fi
+}
+"#.to_string(),
+        Shell::Fish => r#"
+# ── gladeshell Long-Running Command Notification ──
+function _fb_notify
+    set -l code $argv[1]
+    set -l dur $argv[2]
+    set -l dur_s (math "round($dur / 1000)")
+    set -l msg
+    if test "$code" -eq 0
+        set msg "✅ Command finished in {$dur_s}s"
+    else
+        set msg "❌ Command failed (exit $code) in {$dur_s}s"
+    end
+
+    printf '\033]777;notify;gladeshell;%s\007' "$msg" 2>/dev/null
+    printf '\033]99;i=1:d=0;gladeshell\007\033]99;p=body;%s\007' "$msg" 2>/dev/null
+
+    if type -q notify-send
+        notify-send -a "gladeshell" -i terminal "gladeshell" "$msg" >/dev/null 2>&1 &
+    else if type -q osascript
+        osascript -e "display notification \"$msg\" with title \"gladeshell\"" >/dev/null 2>&1 &
+    end
+end
+"#.to_string(),
+        Shell::Pwsh => r#"
+# ── gladeshell Long-Running Command Notification ──
+function _fb_notify($code, $dur) {
+    $dur_s = [math]::Round($dur / 1000)
+    $msg = if ($code -eq 0) { "✅ Command finished in ${dur_s}s" } else { "❌ Command failed (exit $code) in ${dur_s}s" }
+    [System.Console]::Write("`e]777;notify;gladeshell;$msg`a")
+}
+"#.to_string(),
+    }
+}
+
+/// Render pure Rust frecent directory jumper (`z`) shell wrapper.
+pub fn render_z_wrapper(shell: Shell) -> String {
+    match shell {
+        Shell::Zsh | Shell::Bash => r#"
+# ── Smart Frecent Directory Jumper (`z`) ──
+unalias z 2>/dev/null || true
+z() {
+    if [ $# -eq 0 ]; then
+        cf
+        return
+    fi
+    if [ "$1" = "-l" ] || [ "$1" = "--list" ]; then
+        gladeshell z --list
+        return
+    fi
+    local target
+    target="$(gladeshell z "$@")" || return
+    if [ -n "$target" ] && [ -d "$target" ]; then
+        cd "$target" || return
+    fi
+}
+"#
+        .to_string(),
+        Shell::Fish => r#"
+# ── Smart Frecent Directory Jumper (`z`) ──
+functions -e z 2>/dev/null
+function z
+    if test (count $argv) -eq 0
+        cf
+        return
+    end
+    if test "$argv[1]" = "-l" -o "$argv[1]" = "--list"
+        gladeshell z --list
+        return
+    end
+    set -l target (gladeshell z $argv)
+    if test $status -eq 0 -a -n "$target" -a -d "$target"
+        cd "$target"
+    end
+end
+"#
+        .to_string(),
+        Shell::Pwsh => r#"
+# ── Smart Frecent Directory Jumper (`z`) ──
+Remove-Item alias:z -ErrorAction SilentlyContinue 2>$null
+function z {
+    if ($args.Count -eq 0) { cf; return }
+    if ($args[0] -eq '-l' -or $args[0] -eq '--list') { gladeshell z --list; return }
+    $target = gladeshell z @args 2>$null
+    if ($target -and (Test-Path -Path $target -PathType Container)) {
+        Set-Location -Path $target
+    }
+}
+"#
+        .to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -949,5 +1060,21 @@ mod tests {
         assert!(render_integrations(Shell::Bash).is_empty());
         assert!(render_integrations(Shell::Fish).is_empty());
         assert!(render_integrations(Shell::Pwsh).is_empty());
+    }
+
+    #[test]
+    fn test_render_notification_helpers() {
+        assert!(render_notification_helpers(Shell::Zsh).contains("OSC 777"));
+        assert!(render_notification_helpers(Shell::Bash).contains("_fb_notify"));
+        assert!(render_notification_helpers(Shell::Fish).contains("notify-send"));
+        assert!(render_notification_helpers(Shell::Pwsh).contains("Write"));
+    }
+
+    #[test]
+    fn test_render_z_wrapper() {
+        assert!(render_z_wrapper(Shell::Zsh).contains("gladeshell z"));
+        assert!(render_z_wrapper(Shell::Bash).contains("cd \"$target\""));
+        assert!(render_z_wrapper(Shell::Fish).contains("function z"));
+        assert!(render_z_wrapper(Shell::Pwsh).contains("Set-Location"));
     }
 }

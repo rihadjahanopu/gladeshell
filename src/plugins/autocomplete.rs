@@ -34,6 +34,9 @@ fn collect_path_completions(last_word: &str, candidates: &mut Vec<String>) {
 
     if let Ok(entries) = fs::read_dir(dir_path) {
         for entry in entries.flatten() {
+            if candidates.len() >= 50 {
+                break;
+            }
             let name = entry.file_name().to_string_lossy().into_owned();
             if name.starts_with(prefix) {
                 let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);

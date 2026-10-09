@@ -30,22 +30,42 @@ pub fn generate() -> String {
     out.push_str(&shared::render_env_and_path(Shell::Pwsh));
     out.push_str(&shared::render_aliases(Shell::Pwsh));
     out.push_str(&shared::render_integrations(Shell::Pwsh));
+    out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));
+    out.push_str(&shared::render_z_wrapper(Shell::Pwsh));
+    out.push_str(&shared::render_notification_helpers(Shell::Pwsh));
     out.push_str(&shared::render_cli_completions(Shell::Pwsh));
 
     out.push_str(r##"
 # ── PSReadLine & Native Rust Engine ──
-if (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue) {
-    Set-PSReadLineOption -EditMode Emacs
-    Set-PSReadLineOption -HistorySearchCursorMovesToEnd
-    Set-PSReadLineOption -PredictionSource History
-    Set-PSReadLineOption -PredictionViewStyle InlineView
-    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
-    Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward
-    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+if ([bool](Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue)) {
+    Set-PSReadLineOption -EditMode Emacs -ErrorAction SilentlyContinue
+    Set-PSReadLineOption -HistorySearchCursorMovesToEnd -ErrorAction SilentlyContinue
+    Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue
+    Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue
+    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete -ErrorAction SilentlyContinue
+    Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward -ErrorAction SilentlyContinue
+    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward -ErrorAction SilentlyContinue
+    # ── Transient Prompt & Timer Key Handler ──
+    try {
+        Set-PSReadLineKeyHandler -Key Enter -ScriptBlock {
+            $global:_fb_timer = Get-Date
+            $line = $null
+            [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$null)
+            if ($env:GLADESHELL_TRANSIENT -ne '0' -and $line) {
+                $transient = gladeshell prompt --transient --shell pwsh --exit-code $LASTEXITCODE 2>$null
+                if ($transient) {
+                    [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
+                    [Microsoft.PowerShell.PSConsoleReadLine]::Insert($transient + $line)
+                }
+            }
+            [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+        }
+    } catch {}
 }
 
 # ── gladeshell Prompt & Native Auto-LS ──
 $global:_fb_last_pwd = $null
+$global:_fb_timer = $null
 $global:_fb_daemon_spawned = $false
 $global:_fb_sock = if ($env:TEMP) { "$env:TEMP\gladeshell_$env:USERNAME.sock" } else { "/tmp/gladeshell_$env:USERNAME.sock" }
 function Prompt {
@@ -56,16 +76,36 @@ function Prompt {
         $global:_fb_last_pwd = $cwd
         gladeshell auto-ls 2>$null
     }
-    # Auto-spawn background IPC daemon if socket file does not exist (bulletproof try-catch)
+
+    # Calculate command duration
+    $duration = 0
+    if ($global:_fb_timer) {
+        $duration = [int]((Get-Date) - $global:_fb_timer).TotalMilliseconds
+        $global:_fb_timer = $null
+    }
+
+    # Long-running command notification (>= 10s by default)
+    $notifyThresh = if ($env:GLADESHELL_NOTIFY_THRESHOLD) { [int]$env:GLADESHELL_NOTIFY_THRESHOLD } else { 10000 }
+    if ($notifyThresh -gt 0 -and $duration -ge $notifyThresh) {
+        _fb_notify $lastExit $duration
+    }
+
+    # Auto-spawn background IPC daemon if socket file does not exist (2ms Process::Start instead of 1000ms Start-Job)
     try {
         if (-not $global:_fb_daemon_spawned) {
-            if ($global:_fb_sock -and -not (Test-Path $global:_fb_sock)) {
+            if ($global:_fb_sock -and -not [System.IO.File]::Exists($global:_fb_sock)) {
                 $global:_fb_daemon_spawned = $true
-                Start-Job { gladeshell serve 2>$null } | Out-Null
+                $psi = [System.Diagnostics.ProcessStartInfo]@{
+                    FileName = 'gladeshell'
+                    Arguments = 'serve'
+                    CreateNoWindow = $true
+                    UseShellExecute = $false
+                }
+                [System.Diagnostics.Process]::Start($psi) | Out-Null
             }
         }
     } catch {}
-    gladeshell prompt --cwd "$cwd" --exit-code "$lastExit" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
+    gladeshell prompt --cwd "$cwd" --exit-code "$lastExit" --cmd-duration "$duration" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
 }
 
 # ── History & Defaults ──
@@ -79,22 +119,31 @@ $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
 }
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
 $_fb_pwsh_profile = $PROFILE
-if ($_fb_pwsh_profile -and (Test-Path $_fb_pwsh_profile)) {
-    $profileContent = Get-Content $_fb_pwsh_profile -Raw 2>$null
-    if ($profileContent -and -not ($profileContent -match [regex]::Escape("# >>> glade-powershell >>>"))) {
-        # Block is missing → re-inject
-        Start-Job { gladeshell setup 2>$null } | Out-Null
-    } elseif ($profileContent) {
-        $lastLines = (Get-Content $_fb_pwsh_profile -Tail 3 2>$null) -join "`n"
-        if (-not ($lastLines -match [regex]::Escape("# <<< glade-powershell <<<"))) {
-            # Block exists but not at bottom → reorder
-            Start-Job { gladeshell internal-clean-rc 2>$null } | Out-Null
+if ($_fb_pwsh_profile -and [System.IO.File]::Exists($_fb_pwsh_profile)) {
+    try {
+        $profileContent = [System.IO.File]::ReadAllText($_fb_pwsh_profile)
+        if ($profileContent -and -not $profileContent.Contains("# >>> glade-powershell >>>")) {
+            # Block is missing → re-inject in background
+            $psi = [System.Diagnostics.ProcessStartInfo]@{
+                FileName = 'gladeshell'
+                Arguments = 'setup'
+                CreateNoWindow = $true
+                UseShellExecute = $false
+            }
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        } elseif ($profileContent -and -not $profileContent.TrimEnd().EndsWith("# <<< glade-powershell <<<")) {
+            # Block exists but not at bottom → reorder in background
+            $psi = [System.Diagnostics.ProcessStartInfo]@{
+                FileName = 'gladeshell'
+                Arguments = 'internal-clean-rc'
+                CreateNoWindow = $true
+                UseShellExecute = $false
+            }
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
         }
-    }
+    } catch {}
 }
 "##);
-
-    out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));
 
     out.push_str("\n# gladeshell pwsh init complete\n");
     out
@@ -109,6 +158,10 @@ mod tests {
         let script = generate();
         assert!(script.contains("function Prompt"));
         assert!(script.contains("Set-PSReadLineOption"));
+        assert!(script.contains("Set-PSReadLineKeyHandler -Key Enter"));
+        assert!(script.contains("function z"));
+        assert!(script.contains("function _fb_notify"));
+        assert_eq!(script.matches("function cf").count(), 1);
         assert!(script.contains("gladeshell pwsh init complete"));
     }
 }

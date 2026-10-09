@@ -1771,6 +1771,84 @@ fn format_short_cwd(raw_cwd: &str) -> &str {
     }
 }
 
+/// Render compact transient prompt (❯ ) on accept-line
+pub fn render_transient(exit_code: i32, shell: u8) -> String {
+    let color = if exit_code == 0 {
+        "\x1b[1;32m" // bold green
+    } else {
+        "\x1b[1;31m" // bold red
+    };
+
+    match shell {
+        0 => format!("%{{{color}%}}❯%{{\x1b[0m%}} "), // Zsh
+        1 => format!("\\[{color}\\]❯\\[\x1b[0m\\] "), // Bash
+        _ => format!("{color}❯\x1b[0m "),             // Fish / Pwsh
+    }
+}
+
+/// Detect project environment (Rust, Node, Python, Go, Docker) in cwd (< 1 µs cached check)
+pub fn detect_project_toolchain(
+    cwd_path: &std::path::Path,
+    tv: &ToolVersions,
+) -> Option<(&'static str, String)> {
+    if cwd_path.join("Cargo.toml").is_file() {
+        let text = if !tv.rust.is_empty() {
+            tv.rust.clone()
+        } else {
+            "🦀 Rust".to_string()
+        };
+        Some(("\x1b[38;2;222;165;132m", text))
+    } else if cwd_path.join("bun.lockb").is_file()
+        || cwd_path.join("bun.lock").is_file()
+        || cwd_path.join("bunfig.toml").is_file()
+    {
+        let text = if !tv.bun.is_empty() {
+            tv.bun.clone()
+        } else {
+            "🥐 Bun".to_string()
+        };
+        Some(("\x1b[38;2;251;200;160m", text))
+    } else if cwd_path.join("deno.json").is_file()
+        || cwd_path.join("deno.jsonc").is_file()
+        || cwd_path.join("deno.lock").is_file()
+    {
+        Some(("\x1b[38;2;112;230;216m", "🦕 Deno".to_string()))
+    } else if cwd_path.join("package.json").is_file() {
+        let text = if !tv.node.is_empty() {
+            tv.node.replace("🟢 ", "⬢ ")
+        } else {
+            "⬢ Node".to_string()
+        };
+        Some(("\x1b[38;2;104;160;99m", text))
+    } else if cwd_path.join("pyproject.toml").is_file()
+        || cwd_path.join("requirements.txt").is_file()
+        || cwd_path.join("Pipfile").is_file()
+        || cwd_path.join("poetry.lock").is_file()
+        || cwd_path.join("uv.lock").is_file()
+    {
+        let text = if !tv.python.is_empty() {
+            tv.python.clone()
+        } else {
+            "🐍 Python".to_string()
+        };
+        Some(("\x1b[38;2;75;139;190m", text))
+    } else if cwd_path.join("go.mod").is_file() {
+        let text = if !tv.go.is_empty() {
+            tv.go.clone()
+        } else {
+            "🐹 Go".to_string()
+        };
+        Some(("\x1b[38;2;0;173;216m", text))
+    } else if cwd_path.join("Dockerfile").is_file()
+        || cwd_path.join("docker-compose.yml").is_file()
+        || cwd_path.join("compose.yaml").is_file()
+    {
+        Some(("\x1b[38;2;36;150;237m", "🐳 Docker".to_string()))
+    } else {
+        None
+    }
+}
+
 /// Core render — writes a two-line ANSI prompt into `buf`.
 ///
 /// Line 1: `{line1_prefix} {emoji} {user_color}user@host{reset} {path_color}~/path{reset}  {git_color}[🌿 branch]{reset}`
@@ -2135,6 +2213,18 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
                 write_str(buf, &mut off, " ❗");
             }
             write_str(buf, &mut off, "]");
+            write_ansi(buf, &mut off, RESET, s);
+        }
+    }
+
+    // ── Project Toolchain & Environment Detector Badge ──
+    {
+        let tv = ToolVersions::get_cached();
+        let cwd_path = std::path::Path::new(cwd_raw);
+        if let Some((color, text)) = detect_project_toolchain(cwd_path, &tv) {
+            write_str(buf, &mut off, " ");
+            write_ansi(buf, &mut off, color, s);
+            write_str(buf, &mut off, &text);
             write_ansi(buf, &mut off, RESET, s);
         }
     }
@@ -2580,5 +2670,80 @@ mod tests {
             elapsed, avg_micros, avg_nanos
         );
         assert!(avg_micros < 1000.0, "Prompt render must be < 1 ms");
+    }
+
+    #[test]
+    fn test_render_transient() {
+        let zsh_ok = render_transient(0, 0);
+        assert!(zsh_ok.contains("❯"));
+        assert!(zsh_ok.contains("\x1b[1;32m"));
+
+        let zsh_err = render_transient(1, 0);
+        assert!(zsh_err.contains("❯"));
+        assert!(zsh_err.contains("\x1b[1;31m"));
+
+        let bash_ok = render_transient(0, 1);
+        assert!(bash_ok.contains("\\["));
+
+        let fish_ok = render_transient(0, 2);
+        assert!(fish_ok.contains("❯"));
+    }
+
+    #[test]
+    fn test_detect_project_toolchain() {
+        let tv = ToolVersions {
+            rust: "🦀 v1.98.0".into(),
+            bun: "🥐 v1.4.2".into(),
+            ..Default::default()
+        };
+        let cwd = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let detected = detect_project_toolchain(cwd, &tv);
+        assert!(detected.is_some());
+        let (color, text) = detected.unwrap();
+        assert!(text.contains("🦀"));
+        assert!(color.contains("38;2;222;165;132"));
+
+        // Test Bun detection precedence over package.json
+        let temp_dir =
+            std::env::temp_dir().join(format!("glade_test_bun_project_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+        let _ = std::fs::write(temp_dir.join("package.json"), b"{}");
+        let _ = std::fs::write(temp_dir.join("bun.lockb"), b"");
+        let bun_detected = detect_project_toolchain(&temp_dir, &tv);
+        assert!(bun_detected.is_some());
+        let (b_color, b_text) = bun_detected.unwrap();
+        assert!(b_text.contains("🥐"));
+        assert!(b_color.contains("38;2;251;200;160"));
+        let _ = std::fs::remove_dir_all(&temp_dir);
+
+        // Test Node detection when no bun lockfile exists
+        let node_dir =
+            std::env::temp_dir().join(format!("glade_test_node_project_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&node_dir);
+        let _ = std::fs::write(node_dir.join("package.json"), b"{}");
+        let node_tv = ToolVersions {
+            node: "🟢 v22.0.0".into(),
+            ..Default::default()
+        };
+        let node_detected = detect_project_toolchain(&node_dir, &node_tv);
+        assert!(node_detected.is_some());
+        let (_, n_text) = node_detected.unwrap();
+        assert!(n_text.contains("⬢"));
+        let _ = std::fs::remove_dir_all(&node_dir);
+
+        // Test Python detection with uv.lock
+        let py_dir =
+            std::env::temp_dir().join(format!("glade_test_py_project_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&py_dir);
+        let _ = std::fs::write(py_dir.join("uv.lock"), b"");
+        let py_tv = ToolVersions {
+            python: "🐍 v3.12".into(),
+            ..Default::default()
+        };
+        let py_detected = detect_project_toolchain(&py_dir, &py_tv);
+        assert!(py_detected.is_some());
+        let (_, p_text) = py_detected.unwrap();
+        assert!(p_text.contains("🐍"));
+        let _ = std::fs::remove_dir_all(&py_dir);
     }
 }

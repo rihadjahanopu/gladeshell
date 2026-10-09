@@ -162,6 +162,7 @@ pub fn run_path(target_path: Option<&str>) {
     let mut items: Vec<DirEntryItem> = Vec::new();
 
     if current_dir.is_dir() {
+        crate::tools::z_jumper::record_visit(&current_dir);
         if let Ok(entries) = fs::read_dir(&current_dir) {
             for entry in entries.flatten() {
                 let name = entry.file_name();

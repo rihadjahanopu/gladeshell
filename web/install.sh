@@ -698,7 +698,13 @@ EOF
 # >>> glade-zshrc >>>
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 if (( ${+commands[gladeshell]} )); then
-    eval "$(gladeshell init zsh)"
+    _fb_cache="$HOME/.gladeshell/cache/init.zsh"
+    _fb_bin="${commands[gladeshell]}"
+    if [[ -f "$_fb_cache" && -n "$_fb_bin" && "$_fb_cache" -nt "$_fb_bin" ]]; then
+        source "$_fb_cache"
+    else
+        eval "$(gladeshell init zsh)"
+    fi
 fi
 # <<< glade-zshrc <<<
 EOF
@@ -717,8 +723,14 @@ EOF
 # gladeshell Rust Native Engine - auto-loaded every shell session
 export PATH="\$HOME/.cargo/bin:\$HOME/.local/bin:\$PATH"
 
-if command -v gladeshell >/dev/null 2>&1; then
-    eval "\$(gladeshell init bash)"
+if type gladeshell >/dev/null 2>&1; then
+    _fb_cache="\$HOME/.gladeshell/cache/init.bash"
+    _fb_bin="\$(command -v gladeshell 2>/dev/null)"
+    if [[ -f "\$_fb_cache" && -n "\$_fb_bin" && "\$_fb_cache" -nt "\$_fb_bin" ]]; then
+        source "\$_fb_cache"
+    else
+        eval "\$(gladeshell init bash)"
+    fi
 fi
 # <<< glade-bashrc <<<
 EOF

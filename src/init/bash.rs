@@ -46,6 +46,12 @@ __fb_prompt() {
         duration=$(( (SECONDS - _fb_timer_start) * 1000 ))
         _fb_timer_start=0
     fi
+
+    # ── Long-running command desktop notification (>= 10s by default) ──
+    if (( duration >= ${GLADESHELL_NOTIFY_THRESHOLD:-10000} && ${GLADESHELL_NOTIFY_THRESHOLD:-10000} > 0 )); then
+        _fb_notify "$exit_code" "$duration" 2>/dev/null || true
+    fi
+
     _fb_auto_ls
     # Auto-heal: if glade block was deleted from .bashrc, restore it in background
     if [[ -f "$HOME/.bashrc" ]] && ! grep -qF '# >>> glade-bashrc >>>' "$HOME/.bashrc" 2>/dev/null; then
@@ -66,7 +72,6 @@ __fb_prompt() {
 }
 
 PROMPT_COMMAND="__fb_prompt"
-__fb_prompt 2>/dev/null || true
 
 # ── Shell options ──
 shopt -s histappend checkwinsize globstar autocd
@@ -74,22 +79,34 @@ HISTSIZE=50000
 HISTFILESIZE=100000
 HISTCONTROL=ignoreboth:erasedups
 
-# ── Autocompletion ──
-if [[ -f /usr/share/bash-completion/bash_completion ]]; then
-    \. /usr/share/bash-completion/bash_completion
-elif [[ -f /etc/bash_completion ]]; then
-    \. /etc/bash_completion
+# ── Deferred / Lazy System Completion (Saves ~19.6ms on startup) ──
+_fb_load_system_completions() {
+    unset -f _fb_load_system_completions 2>/dev/null
+    if [[ -f /usr/share/bash-completion/bash_completion ]]; then
+        \. /usr/share/bash-completion/bash_completion
+    elif [[ -f /etc/bash_completion ]]; then
+        \. /etc/bash_completion
+    fi
+}
+if [[ -z "${BASH_COMPLETION_VERSINFO:-}" ]]; then
+    complete -D -F _fb_load_system_completions 2>/dev/null || _fb_load_system_completions
 fi
 
 # ── Typo Engine & Command Not Found Handler ──
 command_not_found_handle() {
-    gladeshell correct "$1"
+    if command -v gladeshell >/dev/null 2>&1; then
+        gladeshell correct "$1"
+    else
+        echo "bash: command not found: $1" >&2
+    fi
     return 127
 }
 "#);
 
     out.push_str(&shared::render_auto_ls_hook(Shell::Bash));
     out.push_str(&shared::render_cf_wrapper(Shell::Bash));
+    out.push_str(&shared::render_z_wrapper(Shell::Bash));
+    out.push_str(&shared::render_notification_helpers(Shell::Bash));
     out.push_str(&shared::render_cli_completions(Shell::Bash));
     out.push_str("\n# gladeshell bash init complete\n");
     out

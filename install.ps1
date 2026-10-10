@@ -275,7 +275,7 @@ function Invoke-Rollback {
             $profileContent = [regex]::Replace($profileContent, $regex, "")
             $profileContent | Out-File $PROFILE -Encoding utf8 -Force
             Write-Host "  ${GRN}✔ Removed gladeshell configuration block from $PROFILE${NC}"
-        fi
+        }
     }
 
     $parentDir = Split-Path $PROFILE -Parent

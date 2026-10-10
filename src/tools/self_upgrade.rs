@@ -6,14 +6,55 @@
 
 // =============================================================================
 //  src/tools/self_upgrade.rs — Pure Rust Self-upgrader for gladeshell (`upgrade`)
+//  Visual style: matches `bun upgrade` clean CLI aesthetic
 // =============================================================================
 
 use std::error::Error;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
+use std::time::Instant;
 
+// ── ANSI colour helpers ────────────────────────────────────────────────────────
+const RESET: &str = "\x1b[0m";
+const BOLD: &str = "\x1b[1m";
+const GREEN: &str = "\x1b[32m";
+const BOLD_GREEN: &str = "\x1b[1;32m";
+const CYAN: &str = "\x1b[36m";
+const DIM_CYAN: &str = "\x1b[2;36m";
+
+const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// ── Public entry-point ─────────────────────────────────────────────────────────
 pub fn run() -> Result<(), Box<dyn Error>> {
+    let start = Instant::now();
+
+    // 1. Fetch latest version from GitHub releases API
+    let latest_version = fetch_latest_version().unwrap_or_else(|_| CURRENT_VERSION.to_string());
+
+    // 2. Already up-to-date?
+    if version_eq(&latest_version, CURRENT_VERSION) {
+        println!(
+            "{green}Congrats! You're already on the latest version of Gladeshell (which is v{ver}){reset}",
+            green = BOLD_GREEN,
+            ver = CURRENT_VERSION,
+            reset = RESET,
+        );
+        return Ok(());
+    }
+
+    // 3. Announce upgrade
+    println!(
+        "{bold_green}Gladeshell v{new}{reset} is out! You're on {cyan}v{cur}{reset}",
+        bold_green = BOLD_GREEN,
+        new = latest_version,
+        reset = RESET,
+        cyan = CYAN,
+        cur = CURRENT_VERSION,
+    );
+
+    // 4. Download installer
     let is_windows = cfg!(target_os = "windows");
     let script_ext = if is_windows {
         "install.ps1"
@@ -21,59 +62,44 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         "install.sh"
     };
 
-    let gh_rs_url = format!(
-        "https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}",
-        script_ext
-    );
-    let gh_url = format!(
-        "https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}",
-        script_ext
-    );
-    let cdn_url = format!("https://gladeshell.netlify.app/{}", script_ext);
-
-    println!("\x1b[1;35m⚡ Upgrading gladeshell to latest version...\x1b[0m");
+    let urls = [
+        format!(
+            "https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}",
+            script_ext
+        ),
+        format!("https://gladeshell.netlify.app/{}", script_ext),
+    ];
 
     let temp_dir = std::env::temp_dir();
     let script_path = temp_dir.join(script_ext);
 
-    // Pure Rust ureq HTTP Fetching
-    let mut fetched = false;
-    for url in [&gh_rs_url, &gh_url, &cdn_url] {
-        if let Ok(res) = ureq::get(url).call() {
-            if let Ok(script_content) = res.into_body().read_to_string() {
-                if !script_content.is_empty() && fs::write(&script_path, &script_content).is_ok() {
-                    println!("\x1b[1;32m✨ gladeshell upgrade payload ({}) fetched via Pure Rust HTTP!\x1b[0m", script_ext);
-                    fetched = true;
-                    break;
-                }
-            }
-        }
-    }
+    let fetched = download_with_progress(&urls, &script_path);
+
+    // Newline after progress line
+    println!();
 
     if !fetched {
+        // Try local fallback silently
         let local_candidates = [format!("./{}", script_ext), format!("../{}", script_ext)];
+        let mut local_found = false;
         for candidate in &local_candidates {
             let p = Path::new(candidate);
             if p.exists() {
-                println!(
-                    "\x1b[1;36m💡 Found local {} script — utilizing...\x1b[0m",
-                    script_ext
-                );
                 if let Ok(content) = fs::read_to_string(p) {
                     let _ = fs::write(&script_path, content);
-                    fetched = true;
+                    local_found = true;
                     break;
                 }
             }
         }
+        if !local_found {
+            return Err(
+                "Upgrade failed. Could not download the latest version. Check your internet connection.".into(),
+            );
+        }
     }
 
-    if !fetched {
-        return Err("❌ Upgrade failed. Could not fetch installer payload via HTTP.".into());
-    }
-
-    // Execute installer payload binary upgrade
-    println!("\x1b[1;36m▶ Running installer payload...\x1b[0m");
+    // 5. Run installer
     let mut executed_installer = false;
 
     if is_windows {
@@ -103,26 +129,158 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    if executed_installer {
-        println!("\x1b[1;32m✅ Installer script executed successfully!\x1b[0m");
-    } else {
-        println!("\x1b[1;33m⚠️ Installer script execution skipped or non-zero exit; updating shell configurations...\x1b[0m");
-    }
-
-    // Process installer lines in Pure Rust to apply configuration updates
+    // 6. Apply Pure Rust config + shell heal
     let upgrade_res = apply_pure_rust_upgrade(&script_path);
-
-    // Cleanup temporary script file
     let _ = fs::remove_file(&script_path);
-
     upgrade_res?;
 
-    println!("\x1b[1;32m✨ gladeshell upgraded successfully via Pure Rust engine!\x1b[0m");
-    println!("\x1b[1;36m💡 Restart your shell or run: eval \"$(gladeshell init <shell>)\"\x1b[0m");
+    if !executed_installer {
+        // Non-fatal — shell configs were still updated
+    }
+
+    // 7. Print completion — Bun-style
+    let elapsed = start.elapsed().as_secs_f64();
+    println!(
+        "{green}[{:.2}s]{reset} Upgraded.",
+        elapsed,
+        green = GREEN,
+        reset = RESET,
+    );
+    println!();
+    println!(
+        "{bold}{green}Welcome to Gladeshell v{ver}!{reset}",
+        bold = BOLD,
+        green = GREEN,
+        ver = latest_version,
+        reset = RESET,
+    );
+    println!();
+    println!(
+        "{green}What's new in Gladeshell v{ver}:{reset}",
+        green = GREEN,
+        ver = latest_version,
+        reset = RESET,
+    );
+    println!();
+    println!(
+        "    {cyan}https://github.com/rihadjahanopu/gladeshell/releases/tag/v{ver}{reset}",
+        cyan = DIM_CYAN,
+        ver = latest_version,
+        reset = RESET,
+    );
+    println!();
+    println!(
+        "{green}Report any bugs:{reset}",
+        green = GREEN,
+        reset = RESET
+    );
+    println!();
+    println!(
+        "    {cyan}https://github.com/rihadjahanopu/gladeshell/issues{reset}",
+        cyan = DIM_CYAN,
+        reset = RESET,
+    );
+    println!();
+    println!("{green}Commit log:{reset}", green = GREEN, reset = RESET);
+    println!();
+    println!(
+        "    {cyan}https://github.com/rihadjahanopu/gladeshell/compare/v{old}...v{new}{reset}",
+        cyan = DIM_CYAN,
+        old = CURRENT_VERSION,
+        new = latest_version,
+        reset = RESET,
+    );
+    println!();
 
     Ok(())
 }
 
+// ── Download with inline progress counter ─────────────────────────────────────
+/// Returns `true` if the file was successfully downloaded to `dest`.
+fn download_with_progress(urls: &[String], dest: &Path) -> bool {
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+
+    for url in urls {
+        let Ok(resp) = ureq::get(url).call() else {
+            continue;
+        };
+
+        // Content-Length may or may not be present
+        let total: Option<u64> = resp
+            .headers()
+            .get("content-length")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse().ok());
+
+        let mut reader = resp.into_body().into_reader();
+        let mut buf = Vec::new();
+        let mut chunk = [0u8; 8192];
+
+        loop {
+            use std::io::Read;
+            match reader.read(&mut chunk) {
+                Ok(0) => break,
+                Ok(n) => {
+                    buf.extend_from_slice(&chunk[..n]);
+                    // Print inline progress: Downloading [downloaded/total]
+                    match total {
+                        Some(t) => {
+                            let _ = write!(
+                                out,
+                                "\r{}Downloading{} [{}/{}]",
+                                BOLD_GREEN,
+                                RESET,
+                                buf.len(),
+                                t
+                            );
+                        }
+                        None => {
+                            let _ = write!(
+                                out,
+                                "\r{}Downloading{} [{} bytes]",
+                                BOLD_GREEN,
+                                RESET,
+                                buf.len()
+                            );
+                        }
+                    }
+                    let _ = out.flush();
+                }
+                Err(_) => break,
+            }
+        }
+
+        if !buf.is_empty() && fs::write(dest, &buf).is_ok() {
+            return true;
+        }
+    }
+
+    false
+}
+
+// ── Fetch latest GitHub release version ───────────────────────────────────────
+fn fetch_latest_version() -> Result<String, Box<dyn Error>> {
+    let url = "https://api.github.com/repos/rihadjahanopu/gladeshell/releases/latest";
+    let resp = ureq::get(url)
+        .header("User-Agent", "gladeshell-self-upgrade")
+        .call()?;
+    let body = resp.into_body().read_to_string()?;
+    let json: serde_json::Value = serde_json::from_str(&body)?;
+    let tag = json["tag_name"]
+        .as_str()
+        .ok_or("tag_name missing")?
+        .trim_start_matches('v')
+        .to_string();
+    Ok(tag)
+}
+
+// ── Version comparison (simple string eq, both stripped of 'v') ───────────────
+fn version_eq(a: &str, b: &str) -> bool {
+    a.trim_start_matches('v') == b.trim_start_matches('v')
+}
+
+// ── Apply shell config updates ────────────────────────────────────────────────
 fn apply_pure_rust_upgrade(script_path: &Path) -> Result<(), Box<dyn Error>> {
     if !script_path.exists() {
         return Err("Installer payload not found".into());
@@ -140,6 +298,7 @@ fn apply_pure_rust_upgrade(script_path: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+// ── Tests ─────────────────────────────────────────────────────────────────────
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,5 +326,12 @@ mod tests {
         let res = apply_pure_rust_upgrade(&dummy);
         let _ = fs::remove_file(&dummy);
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_version_eq() {
+        assert!(version_eq("1.2.1", "v1.2.1"));
+        assert!(version_eq("v1.2.1", "1.2.1"));
+        assert!(!version_eq("1.2.0", "1.2.1"));
     }
 }

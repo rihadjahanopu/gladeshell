@@ -50,13 +50,34 @@
     />
     <link rel="stylesheet" href="docs.css" />
     <style>
-      html, body {
-        overflow-x: visible !important;
+      /* Mobile: Prevent all horizontal scrolling and off-screen gutter */
+      @media (max-width: 992px) {
+        html,
+        body {
+          overflow-x: hidden !important;
+          max-width: 100vw !important;
+          width: 100% !important;
+        }
+        .docs-layout {
+          overflow-x: hidden !important;
+          max-width: 100vw !important;
+          width: 100% !important;
+        }
+        .docs-content {
+          max-width: 100vw !important;
+          overflow-x: hidden !important;
+          min-width: 0 !important;
+        }
       }
-      .docs-layout {
-        overflow-x: visible !important;
-      }
+      /* Desktop: Ensure sticky sidebar and TOC work seamlessly */
       @media (min-width: 993px) {
+        html,
+        body {
+          overflow-x: clip !important;
+        }
+        .docs-layout {
+          overflow-x: visible !important;
+        }
         .docs-sidebar {
           position: -webkit-sticky !important;
           position: sticky !important;
@@ -2303,62 +2324,66 @@ glade matrix
             </p>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Flags:</h4>
-            <table class="docs-table" style="margin-bottom: 12px">
-              <thead>
-                <tr>
-                  <th>Flag</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>-l</code>, <code>--local</code></td>
-                  <td>Show local branches only</td>
-                </tr>
-                <tr>
-                  <td><code>-r</code>, <code>--remote</code></td>
-                  <td>Show remote branches only</td>
-                </tr>
-                <tr>
-                  <td><code>-a</code>, <code>--all</code></td>
-                  <td>Show all local and remote branches (default)</td>
-                </tr>
-                <tr>
-                  <td><code>-h</code>, <code>--help</code></td>
-                  <td>Print usage reference and keybindings</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="docs-table-wrapper">
+              <table class="docs-table" style="margin-bottom: 12px">
+                <thead>
+                  <tr>
+                    <th>Flag</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>-l</code>, <code>--local</code></td>
+                    <td>Show local branches only</td>
+                  </tr>
+                  <tr>
+                    <td><code>-r</code>, <code>--remote</code></td>
+                    <td>Show remote branches only</td>
+                  </tr>
+                  <tr>
+                    <td><code>-a</code>, <code>--all</code></td>
+                    <td>Show all local and remote branches (default)</td>
+                  </tr>
+                  <tr>
+                    <td><code>-h</code>, <code>--help</code></td>
+                    <td>Print usage reference and keybindings</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
               Interactive FZF Keybindings:
             </h4>
-            <table class="docs-table">
-              <thead>
-                <tr>
-                  <th>Keybinding</th>
-                  <th>Action / Operation</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><kbd>Enter</kbd></td>
-                  <td>Checkout selected branch (<code>git checkout</code>)</td>
-                </tr>
-                <tr>
-                  <td><kbd>Ctrl-D</kbd></td>
-                  <td>Delete local branch (<code>git branch -D</code>) with confirmation prompt</td>
-                </tr>
-                <tr>
-                  <td><kbd>Ctrl-R</kbd></td>
-                  <td>Rebase current branch onto selected (<code>git rebase</code>)</td>
-                </tr>
-                <tr>
-                  <td><kbd>Ctrl-O</kbd></td>
-                  <td>Merge selected branch into current (<code>git merge</code>)</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="docs-table-wrapper">
+              <table class="docs-table">
+                <thead>
+                  <tr>
+                    <th>Keybinding</th>
+                    <th>Action / Operation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><kbd>Enter</kbd></td>
+                    <td>Checkout selected branch (<code>git checkout</code>)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl-D</kbd></td>
+                    <td>Delete local branch (<code>git branch -D</code>) with confirmation prompt</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl-R</kbd></td>
+                    <td>Rebase current branch onto selected (<code>git rebase</code>)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl-O</kbd></td>
+                    <td>Merge selected branch into current (<code>git merge</code>)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <p style="margin-top: 8px; font-size: 0.85rem">
               <strong>Features:</strong> Live commit graph preview on the right (hash, author, date,
               subject). Smart remote checkout auto-strips <code>origin/</code> prefix. Fallback
@@ -3093,54 +3118,56 @@ glade matrix
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
               FZF Interactive Keybindings:
             </h4>
-            <table class="docs-table">
-              <thead>
-                <tr>
-                  <th>Keybinding</th>
-                  <th>Operation / Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><kbd>ENTER</kbd></td>
-                  <td>Navigate into directory OR open file in default app/editor</td>
-                </tr>
-                <tr>
-                  <td><kbd>CTRL-Z</kbd></td>
-                  <td>Switch candidate list to System Frecent Directories (<code>zoxide</code>)</td>
-                </tr>
-                <tr>
-                  <td><kbd>CTRL-V</kbd></td>
-                  <td>Play selected video file with <code>v()</code> player</td>
-                </tr>
-                <tr>
-                  <td><kbd>CTRL-P</kbd></td>
-                  <td>Open selected PDF document in Browser</td>
-                </tr>
-                <tr>
-                  <td><kbd>CTRL-O</kbd></td>
-                  <td>
-                    Open file or directory in Code Editor (<code>code</code> / <code>cursor</code> /
-                    <code>nvim</code>)
-                  </td>
-                </tr>
-                <tr>
-                  <td><kbd>CTRL-E</kbd></td>
-                  <td>Open directory in GUI File Manager (Nautilus / Dolphin / Explorer)</td>
-                </tr>
-                <tr>
-                  <td><kbd>CTRL-Y</kbd></td>
-                  <td>
-                    Copy path to Clipboard (<code>wl-copy</code> / <code>xclip</code> /
-                    <code>pbcopy</code>)
-                  </td>
-                </tr>
-                <tr>
-                  <td><kbd>CTRL-H</kbd></td>
-                  <td>Navigate to Parent Directory (<code>..</code>) inside FZF</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="docs-table-wrapper">
+              <table class="docs-table">
+                <thead>
+                  <tr>
+                    <th>Keybinding</th>
+                    <th>Operation / Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><kbd>ENTER</kbd></td>
+                    <td>Navigate into directory OR open file in default app/editor</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>CTRL-Z</kbd></td>
+                    <td>Switch candidate list to System Frecent Directories (<code>zoxide</code>)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>CTRL-V</kbd></td>
+                    <td>Play selected video file with <code>v()</code> player</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>CTRL-P</kbd></td>
+                    <td>Open selected PDF document in Browser</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>CTRL-O</kbd></td>
+                    <td>
+                      Open file or directory in Code Editor (<code>code</code> / <code>cursor</code> /
+                      <code>nvim</code>)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><kbd>CTRL-E</kbd></td>
+                    <td>Open directory in GUI File Manager (Nautilus / Dolphin / Explorer)</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>CTRL-Y</kbd></td>
+                    <td>
+                      Copy path to Clipboard (<code>wl-copy</code> / <code>xclip</code> /
+                      <code>pbcopy</code>)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><kbd>CTRL-H</kbd></td>
+                    <td>Navigate to Parent Directory (<code>..</code>) inside FZF</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Live Preview Features:</h4>
             <ul style="font-size: 0.85rem; padding-left: 20px; color: var(--docs-text-muted)">
@@ -3178,67 +3205,71 @@ glade matrix
             </p>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Arguments &amp; Usage:</h4>
-            <table class="docs-table" style="margin-bottom: 12px">
-              <thead>
-                <tr>
-                  <th>Argument</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><em>(none)</em></td>
-                  <td>Open all processes sorted by CPU descending</td>
-                </tr>
-                <tr>
-                  <td><code>fkill node</code></td>
-                  <td>Pre-filter process list to show only <code>node</code> processes</td>
-                </tr>
-                <tr>
-                  <td><code>fkill 3000</code></td>
-                  <td>
-                    Directly find and kill process running on <strong>port 3000</strong> (via
-                    <code>ss</code> / <code>lsof</code>)
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="docs-table-wrapper">
+              <table class="docs-table" style="margin-bottom: 12px">
+                <thead>
+                  <tr>
+                    <th>Argument</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><em>(none)</em></td>
+                    <td>Open all processes sorted by CPU descending</td>
+                  </tr>
+                  <tr>
+                    <td><code>fkill node</code></td>
+                    <td>Pre-filter process list to show only <code>node</code> processes</td>
+                  </tr>
+                  <tr>
+                    <td><code>fkill 3000</code></td>
+                    <td>
+                      Directly find and kill process running on <strong>port 3000</strong> (via
+                      <code>ss</code> / <code>lsof</code>)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
               FZF Interactive Keybindings:
             </h4>
-            <table class="docs-table" style="margin-bottom: 12px">
-              <thead>
-                <tr>
-                  <th>Keybinding</th>
-                  <th>Action / Operation</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><kbd>Tab</kbd></td>
-                  <td>Multi-select multiple processes at once</td>
-                </tr>
-                <tr>
-                  <td><kbd>Enter</kbd></td>
-                  <td>
-                    <strong>Soft kill</strong> selected process(es) (<code>SIGTERM</code> — graceful
-                    shutdown)
-                  </td>
-                </tr>
-                <tr>
-                  <td><kbd>Ctrl-X</kbd></td>
-                  <td>
-                    <strong>Force kill</strong> selected process(es) (<code>SIGKILL -9</code> —
-                    immediate)
-                  </td>
-                </tr>
-                <tr>
-                  <td><kbd>Ctrl-R</kbd></td>
-                  <td>Reload live process list without closing FZF</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="docs-table-wrapper">
+              <table class="docs-table" style="margin-bottom: 12px">
+                <thead>
+                  <tr>
+                    <th>Keybinding</th>
+                    <th>Action / Operation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><kbd>Tab</kbd></td>
+                    <td>Multi-select multiple processes at once</td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Enter</kbd></td>
+                    <td>
+                      <strong>Soft kill</strong> selected process(es) (<code>SIGTERM</code> — graceful
+                      shutdown)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl-X</kbd></td>
+                    <td>
+                      <strong>Force kill</strong> selected process(es) (<code>SIGKILL -9</code> —
+                      immediate)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><kbd>Ctrl-R</kbd></td>
+                    <td>Reload live process list without closing FZF</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">Process Type Badges:</h4>
             <ul style="font-size: 0.85rem; padding-left: 20px; color: var(--docs-text-muted)">

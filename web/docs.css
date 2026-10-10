@@ -85,6 +85,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@media (max-width: 992px) {
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+}
+@media (min-width: 993px) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -1351,7 +1365,9 @@ td code {
     z-index: 2500;
     background: #090e1a;
     border-right: 1px solid rgba(34, 211, 238, 0.25);
-    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    visibility: hidden;
+    pointer-events: none;
+    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
     box-shadow: 20px 0 50px rgba(0, 0, 0, 0.95);
     overflow-y: auto;
     overscroll-behavior-y: contain;
@@ -1362,6 +1378,8 @@ td code {
   }
   .docs-sidebar.open {
     left: 0;
+    visibility: visible;
+    pointer-events: auto;
   }
 
   .mobile-sidebar-header {
@@ -1503,13 +1521,22 @@ td code {
 
   .docs-content {
     padding: 24px 14px 48px;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
   .docs-header-hero {
     padding: 20px 14px;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
   .docs-header-hero h1 {
     font-size: 1.65rem;
     line-height: 1.25;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   .hero-stats-row {
     grid-template-columns: repeat(2, 1fr);
@@ -1520,15 +1547,20 @@ td code {
   .docs-table-wrapper {
     display: block;
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: var(--radius-md);
     margin: 16px 0;
     border: 1px solid var(--docs-border);
+    box-sizing: border-box;
   }
-  .docs-table {
+  .docs-table-wrapper .docs-table {
     min-width: 520px;
     font-size: 0.825rem;
+  }
+  .docs-table {
+    max-width: 100%;
   }
   .docs-table th,
   .docs-table td {
@@ -2523,8 +2555,10 @@ td code {
   .bench-radar-canvas-wrap { flex: 0 0 100%; }
 }
 #bench-radar {
-  width: 320px;
-  height: 320px;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  aspect-ratio: 1 / 1;
   display: block;
 }
 .bench-radar-legend {

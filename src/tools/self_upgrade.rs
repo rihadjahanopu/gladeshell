@@ -6,14 +6,14 @@
 
 // =============================================================================
 //  src/tools/self_upgrade.rs — Pure Rust Self-upgrader for gladeshell (`upgrade`)
-//  Visual style: matches `bun upgrade` clean CLI aesthetic
+//  - Detects OS + arch, downloads the correct binary directly from GitHub releases
+//  - Visual style matches `bun upgrade` clean CLI aesthetic
 // =============================================================================
 
 use std::error::Error;
 use std::fs;
 use std::io::Write;
-use std::path::Path;
-use std::process::Command;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 // ── ANSI colour helpers ────────────────────────────────────────────────────────
@@ -23,8 +23,10 @@ const GREEN: &str = "\x1b[32m";
 const BOLD_GREEN: &str = "\x1b[1;32m";
 const CYAN: &str = "\x1b[36m";
 const DIM_CYAN: &str = "\x1b[2;36m";
+const RED: &str = "\x1b[31m";
 
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const GITHUB_REPO: &str = "rihadjahanopu/gladeshell";
 
 // ── Public entry-point ─────────────────────────────────────────────────────────
 pub fn run() -> Result<(), Box<dyn Error>> {
@@ -44,7 +46,16 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    // 3. Announce upgrade
+    // 3. Detect OS + architecture → pick the right binary asset
+    let asset_name = detect_binary_asset()?;
+    let binary_url = format!(
+        "https://github.com/{repo}/releases/download/v{ver}/{asset}",
+        repo = GITHUB_REPO,
+        ver = latest_version,
+        asset = asset_name,
+    );
+
+    // 4. Announce upgrade
     println!(
         "{bold_green}Gladeshell v{new}{reset} is out! You're on {cyan}v{cur}{reset}",
         bold_green = BOLD_GREEN,
@@ -54,96 +65,39 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         cur = CURRENT_VERSION,
     );
 
-    // 4. Download installer
-    let is_windows = cfg!(target_os = "windows");
-    let script_ext = if is_windows {
-        "install.ps1"
-    } else {
-        "install.sh"
-    };
-
-    let urls = [
-        format!(
-            "https://raw.githubusercontent.com/rihadjahanopu/gladeshell/main/{}",
-            script_ext
-        ),
-        format!("https://gladeshell.netlify.app/{}", script_ext),
-    ];
-
+    // 5. Download the correct binary with inline progress
     let temp_dir = std::env::temp_dir();
-    let script_path = temp_dir.join(script_ext);
+    let tmp_bin = temp_dir.join(&asset_name);
 
-    let fetched = download_with_progress(&urls, &script_path);
+    let downloaded = download_with_progress(&binary_url, &tmp_bin);
+    println!(); // newline after \r progress
 
-    // Newline after progress line
-    println!();
-
-    if !fetched {
-        // Try local fallback silently
-        let local_candidates = [format!("./{}", script_ext), format!("../{}", script_ext)];
-        let mut local_found = false;
-        for candidate in &local_candidates {
-            let p = Path::new(candidate);
-            if p.exists() {
-                if let Ok(content) = fs::read_to_string(p) {
-                    let _ = fs::write(&script_path, content);
-                    local_found = true;
-                    break;
-                }
-            }
-        }
-        if !local_found {
-            return Err(
-                "Upgrade failed. Could not download the latest version. Check your internet connection.".into(),
-            );
-        }
+    if !downloaded {
+        return Err(format!(
+            "{red}error{reset}: Failed to download {asset}. Check your internet connection.",
+            red = RED,
+            reset = RESET,
+            asset = asset_name,
+        )
+        .into());
     }
 
-    // 5. Run installer
-    let mut executed_installer = false;
+    // 6. Replace the current binary
+    let current_exe = std::env::current_exe()?;
+    replace_binary(&tmp_bin, &current_exe)?;
 
-    if is_windows {
-        if crate::core::utils::cmd_exists("powershell") {
-            if let Ok(status) = Command::new("powershell")
-                .args([
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-File",
-                    script_path.to_str().unwrap_or_default(),
-                ])
-                .status()
-            {
-                executed_installer = status.success();
-            }
-        }
-    } else {
-        for sh_cmd in ["sh", "bash"] {
-            if crate::core::utils::cmd_exists(sh_cmd) {
-                if let Ok(status) = Command::new(sh_cmd).arg(&script_path).status() {
-                    if status.success() {
-                        executed_installer = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    // 7. Apply shell config updates (non-fatal)
+    let _ = apply_shell_configs();
 
-    // 6. Apply Pure Rust config + shell heal
-    let upgrade_res = apply_pure_rust_upgrade(&script_path);
-    let _ = fs::remove_file(&script_path);
-    upgrade_res?;
+    // Cleanup temp file
+    let _ = fs::remove_file(&tmp_bin);
 
-    if !executed_installer {
-        // Non-fatal — shell configs were still updated
-    }
-
-    // 7. Print completion — Bun-style
+    // 8. Bun-style completion output
     let elapsed = start.elapsed().as_secs_f64();
     println!(
-        "{green}[{:.2}s]{reset} Upgraded.",
-        elapsed,
+        "{green}[{elapsed:.2}s]{reset} Upgraded.",
         green = GREEN,
+        elapsed = elapsed,
         reset = RESET,
     );
     println!();
@@ -163,8 +117,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     );
     println!();
     println!(
-        "    {cyan}https://github.com/rihadjahanopu/gladeshell/releases/tag/v{ver}{reset}",
+        "    {cyan}https://github.com/{repo}/releases/tag/v{ver}{reset}",
         cyan = DIM_CYAN,
+        repo = GITHUB_REPO,
         ver = latest_version,
         reset = RESET,
     );
@@ -176,16 +131,18 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     );
     println!();
     println!(
-        "    {cyan}https://github.com/rihadjahanopu/gladeshell/issues{reset}",
+        "    {cyan}https://github.com/{repo}/issues{reset}",
         cyan = DIM_CYAN,
+        repo = GITHUB_REPO,
         reset = RESET,
     );
     println!();
     println!("{green}Commit log:{reset}", green = GREEN, reset = RESET);
     println!();
     println!(
-        "    {cyan}https://github.com/rihadjahanopu/gladeshell/compare/v{old}...v{new}{reset}",
+        "    {cyan}https://github.com/{repo}/compare/v{old}...v{new}{reset}",
         cyan = DIM_CYAN,
+        repo = GITHUB_REPO,
         old = CURRENT_VERSION,
         new = latest_version,
         reset = RESET,
@@ -195,107 +152,155 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// ── Download with inline progress counter ─────────────────────────────────────
-/// Returns `true` if the file was successfully downloaded to `dest`.
-fn download_with_progress(urls: &[String], dest: &Path) -> bool {
+// ── OS + Arch detection → asset filename ──────────────────────────────────────
+fn detect_binary_asset() -> Result<String, Box<dyn Error>> {
+    // Use compile-time cfg for OS
+    let os = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "darwin"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        return Err("Unsupported operating system for automatic upgrade. Please download manually from https://github.com/rihadjahanopu/gladeshell/releases".into());
+    };
+
+    // Use compile-time cfg for architecture
+    let arch = if cfg!(target_arch = "x86_64") {
+        "amd64"
+    } else if cfg!(target_arch = "aarch64") {
+        "arm64"
+    } else {
+        return Err("Unsupported CPU architecture for automatic upgrade. Please download manually from https://github.com/rihadjahanopu/gladeshell/releases".into());
+    };
+
+    let asset = if cfg!(target_os = "windows") {
+        format!("gladeshell-{}-{}.exe", os, arch)
+    } else {
+        format!("gladeshell-{}-{}", os, arch)
+    };
+
+    Ok(asset)
+}
+
+// ── Download binary with inline Bun-style progress ────────────────────────────
+fn download_with_progress(url: &str, dest: &Path) -> bool {
+    use std::io::Read;
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
 
-    for url in urls {
-        let Ok(resp) = ureq::get(url).call() else {
-            continue;
-        };
+    let Ok(resp) = ureq::get(url).call() else {
+        return false;
+    };
 
-        // Content-Length may or may not be present
-        let total: Option<u64> = resp
-            .headers()
-            .get("content-length")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| s.parse().ok());
+    let total: Option<u64> = resp
+        .headers()
+        .get("content-length")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
 
-        let mut reader = resp.into_body().into_reader();
-        let mut buf = Vec::new();
-        let mut chunk = [0u8; 8192];
+    let mut reader = resp.into_body().into_reader();
+    let mut buf = Vec::new();
+    let mut chunk = [0u8; 65536]; // 64 KB chunks for binaries
 
-        loop {
-            use std::io::Read;
-            match reader.read(&mut chunk) {
-                Ok(0) => break,
-                Ok(n) => {
-                    buf.extend_from_slice(&chunk[..n]);
-                    // Print inline progress: Downloading [downloaded/total]
-                    match total {
-                        Some(t) => {
-                            let _ = write!(
-                                out,
-                                "\r{}Downloading{} [{}/{}]",
-                                BOLD_GREEN,
-                                RESET,
-                                buf.len(),
-                                t
-                            );
-                        }
-                        None => {
-                            let _ = write!(
-                                out,
-                                "\r{}Downloading{} [{} bytes]",
-                                BOLD_GREEN,
-                                RESET,
-                                buf.len()
-                            );
-                        }
+    loop {
+        match reader.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => {
+                buf.extend_from_slice(&chunk[..n]);
+                match total {
+                    Some(t) => {
+                        let _ = write!(
+                            out,
+                            "\r{bold_green}Downloading{reset} [{downloaded}/{total}]",
+                            bold_green = BOLD_GREEN,
+                            reset = RESET,
+                            downloaded = buf.len(),
+                            total = t,
+                        );
                     }
-                    let _ = out.flush();
+                    None => {
+                        let _ = write!(
+                            out,
+                            "\r{bold_green}Downloading{reset} [{downloaded} bytes]",
+                            bold_green = BOLD_GREEN,
+                            reset = RESET,
+                            downloaded = buf.len(),
+                        );
+                    }
                 }
-                Err(_) => break,
+                let _ = out.flush();
             }
-        }
-
-        if !buf.is_empty() && fs::write(dest, &buf).is_ok() {
-            return true;
+            Err(_) => break,
         }
     }
 
-    false
+    !buf.is_empty() && fs::write(dest, &buf).is_ok()
 }
 
-// ── Fetch latest GitHub release version ───────────────────────────────────────
+// ── Atomically replace the running binary ─────────────────────────────────────
+fn replace_binary(new_bin: &Path, current_exe: &PathBuf) -> Result<(), Box<dyn Error>> {
+    // On Unix: chmod +x the new binary first
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(new_bin)?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(new_bin, perms)?;
+    }
+
+    // On Windows: can't overwrite a running exe directly.
+    // Rename current → .old, then move new → current path.
+    #[cfg(target_os = "windows")]
+    {
+        let old_path = current_exe.with_extension("old.exe");
+        let _ = fs::remove_file(&old_path); // clean up any previous .old
+        fs::rename(current_exe, &old_path)?;
+    }
+
+    // Atomic replace via rename (works on Linux/macOS; fallback copy on Windows)
+    match fs::rename(new_bin, current_exe) {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            // Fallback: copy (e.g. cross-device on some Linux setups)
+            fs::copy(new_bin, current_exe)?;
+            Ok(())
+        }
+    }
+}
+
+// ── Fetch latest GitHub release version tag ───────────────────────────────────
 fn fetch_latest_version() -> Result<String, Box<dyn Error>> {
-    let url = "https://api.github.com/repos/rihadjahanopu/gladeshell/releases/latest";
-    let resp = ureq::get(url)
+    let url = format!(
+        "https://api.github.com/repos/{}/releases/latest",
+        GITHUB_REPO
+    );
+    let resp = ureq::get(&url)
         .header("User-Agent", "gladeshell-self-upgrade")
         .call()?;
     let body = resp.into_body().read_to_string()?;
     let json: serde_json::Value = serde_json::from_str(&body)?;
     let tag = json["tag_name"]
         .as_str()
-        .ok_or("tag_name missing")?
+        .ok_or("tag_name missing from GitHub API response")?
         .trim_start_matches('v')
         .to_string();
     Ok(tag)
 }
 
-// ── Version comparison (simple string eq, both stripped of 'v') ───────────────
-fn version_eq(a: &str, b: &str) -> bool {
-    a.trim_start_matches('v') == b.trim_start_matches('v')
-}
-
-// ── Apply shell config updates ────────────────────────────────────────────────
-fn apply_pure_rust_upgrade(script_path: &Path) -> Result<(), Box<dyn Error>> {
-    if !script_path.exists() {
-        return Err("Installer payload not found".into());
-    }
-
-    // Automatically configure shells with zero-fork cached blocks
+// ── Apply shell config updates (non-fatal) ────────────────────────────────────
+fn apply_shell_configs() -> Result<(), Box<dyn Error>> {
     let _ = crate::init::cleaner::ensure_all_installed_shells_configured();
     let _ = crate::init::cleaner::ensure_auto_heal_hooks();
-
-    // Re-generate caches for all common shells
     for shell in ["bash", "zsh", "fish", "pwsh"] {
         let _ = crate::init::generate(shell);
     }
-
     Ok(())
+}
+
+// ── Version comparison (strips leading 'v') ───────────────────────────────────
+fn version_eq(a: &str, b: &str) -> bool {
+    a.trim_start_matches('v') == b.trim_start_matches('v')
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -304,28 +309,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_self_upgrade_cdn_url_valid() {
-        const CDN_URL_SH: &str = "https://gladeshell.netlify.app/install.sh";
-        const CDN_URL_PS1: &str = "https://gladeshell.netlify.app/install.ps1";
-        assert!(CDN_URL_SH.starts_with("https://"));
-        assert!(CDN_URL_PS1.starts_with("https://"));
-    }
-
-    #[test]
-    fn test_apply_pure_rust_upgrade_non_existent_file() {
-        let dummy = Path::new("/tmp/non_existent_gladeshell_installer_test.sh");
-        let res = apply_pure_rust_upgrade(dummy);
-        assert!(res.is_err());
-    }
-
-    #[test]
-    fn test_apply_pure_rust_upgrade_with_temp_script() {
-        let temp_dir = std::env::temp_dir();
-        let dummy = temp_dir.join("test_installer_payload.sh");
-        let _ = fs::write(&dummy, "#!/bin/sh\necho ok");
-        let res = apply_pure_rust_upgrade(&dummy);
-        let _ = fs::remove_file(&dummy);
-        assert!(res.is_ok());
+    fn test_detect_binary_asset_valid() {
+        // Should not error on supported platforms
+        let result = detect_binary_asset();
+        assert!(result.is_ok(), "detect_binary_asset failed: {:?}", result);
+        let name = result.unwrap();
+        // Must start with "gladeshell-"
+        assert!(name.starts_with("gladeshell-"));
+        // Must contain os identifier
+        assert!(
+            name.contains("linux") || name.contains("darwin") || name.contains("windows"),
+            "Unexpected os in asset name: {}",
+            name
+        );
+        // Must contain arch
+        assert!(
+            name.contains("amd64") || name.contains("arm64"),
+            "Unexpected arch in asset name: {}",
+            name
+        );
     }
 
     #[test]
@@ -333,5 +335,12 @@ mod tests {
         assert!(version_eq("1.2.1", "v1.2.1"));
         assert!(version_eq("v1.2.1", "1.2.1"));
         assert!(!version_eq("1.2.0", "1.2.1"));
+    }
+
+    #[test]
+    fn test_cdn_urls_valid() {
+        assert!(
+            format!("https://github.com/{}/releases/latest", GITHUB_REPO).starts_with("https://")
+        );
     }
 }

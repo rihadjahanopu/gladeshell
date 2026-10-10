@@ -78,6 +78,8 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 80px;
+  overflow-x: hidden; /* prevent page-level horizontal scroll on mobile */
+  max-width: 100%;
 }
 
 body {
@@ -86,6 +88,8 @@ body {
   color: var(--clr-text);
   line-height: 1.6;
   overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -2083,6 +2087,127 @@ img {
   .footer-links {
     justify-content: center;
   }
+
+  /* ── Mobile overflow guards ───────────────────────────────── */
+
+  /* Hero background decorative orbs: shrink to stay inside hero */
+  .hero-orb-1 {
+    width: 280px;
+    height: 280px;
+    left: -80px;
+  }
+  .hero-orb-2 {
+    width: 240px;
+    height: 240px;
+    right: -60px;
+  }
+  .hero-orb-3 {
+    width: 220px;
+    height: 220px;
+  }
+
+  /* CTA decorative orbs: shrink to stay inside cta-card */
+  .cta-orb-1 {
+    width: 200px;
+    height: 200px;
+    top: -80px;
+    left: -60px;
+  }
+  .cta-orb-2 {
+    width: 180px;
+    height: 180px;
+    bottom: -80px;
+    right: -50px;
+  }
+
+  /* Zsh setup section: decorative pseudo-element can bleed */
+  .zsh-setup-section::before {
+    width: 280px;
+    height: 280px;
+    top: -100px;
+    right: -100px;
+  }
+
+  /* Terminal body: horizontal scroll confined within box */
+  .terminal-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prompt demo: terminal lines are nowrap, allow container to scroll */
+  .prompt-demo-terminal .terminal-body {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  /* Prompt demo terminal: constrain entire terminal card */
+  .prompt-demo-terminal {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  /* Feature prompt demo inside cards: clip overflowing text */
+  .feature-prompt-demo {
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  /* Install tabs: ensure tabs container wraps and doesn't push width */
+  .setup-tabs {
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  /* cmd-table-wrap: missing overflow-x: auto for bare wrapper class */
+  .cmd-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--clr-border);
+    background: var(--clr-surface);
+    max-width: 100%;
+  }
+
+  /* Contribute card body: prevent extending beyond parent */
+  .contribute-card-body {
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  /* Contribute timeline: prevent bleeding */
+  .contribute-timeline {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  /* Uninstall tabs: ensure wrap */
+  .uninstall-tabs {
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Radar canvas: limit to viewport */
+  #bh-radar {
+    width: 100%;
+    max-width: 280px;
+    height: auto;
+    aspect-ratio: 1/1;
+  }
+  .bh-radar-canvas-wrap {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .bh-radar-legend {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .bh-radar-wrap {
+    flex-direction: column;
+  }
 }
 
 /* =====================
@@ -2321,6 +2446,38 @@ img {
   .step-item {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  /* Extra-small: tighten hero orbs even further */
+  .hero-orb-1 {
+    width: 200px;
+    height: 200px;
+    left: -60px;
+  }
+  .hero-orb-2 {
+    width: 180px;
+    height: 180px;
+    right: -50px;
+  }
+  .hero-orb-3 {
+    width: 160px;
+    height: 160px;
+  }
+
+  /* Prevent fp-metrics and pdemo-line from extending past viewport */
+  .fp-line {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .pdemo-line {
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  /* Reduce cta-card padding to allow content to fit */
+  .cta-card {
+    padding: 2.5rem 1.25rem;
   }
 }
 

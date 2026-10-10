@@ -1,0 +1,5 @@
+# ── GitHub Linguist Overrides ────────────────────────────────────────────────
+# Exclude documentation website and frontend assets from language stats
+web/** linguist-documentation=true
+web/** linguist-detectable=false
+web/** linguist-vendored=true

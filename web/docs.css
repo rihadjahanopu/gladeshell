@@ -75,7 +75,7 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-height) + 24px);
   color-scheme: dark;
-  overflow-x: hidden; /* Prevent horizontal scroll from fixed sidebar at -100% */
+  overflow-x: clip; /* Prevent horizontal scroll without breaking position: sticky */
 }
 
 body {
@@ -84,7 +84,7 @@ body {
   font-family: var(--docs-font-sans);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
 }
 
@@ -405,7 +405,6 @@ a:hover {
   margin: 0 auto;
   padding-top: var(--header-height);
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 /* --- Left Sidebar --- */
@@ -414,6 +413,7 @@ a:hover {
   flex-shrink: 0;
   position: sticky;
   top: var(--header-height);
+  align-self: flex-start;
   height: calc(100vh - var(--header-height));
   overflow-y: auto;
   overscroll-behavior-y: contain;
@@ -1083,6 +1083,7 @@ td code {
   flex-shrink: 0;
   position: sticky;
   top: var(--header-height);
+  align-self: flex-start;
   height: calc(100vh - var(--header-height));
   overflow-y: auto;
   padding: 24px 16px;

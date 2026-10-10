@@ -49,6 +49,32 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="docs.css" />
+    <style>
+      html, body {
+        overflow-x: visible !important;
+      }
+      .docs-layout {
+        overflow-x: visible !important;
+      }
+      @media (min-width: 993px) {
+        .docs-sidebar {
+          position: -webkit-sticky !important;
+          position: sticky !important;
+          top: var(--header-height, 72px) !important;
+          align-self: flex-start !important;
+          height: calc(100vh - var(--header-height, 72px)) !important;
+          overflow-y: auto !important;
+        }
+        .docs-toc {
+          position: -webkit-sticky !important;
+          position: sticky !important;
+          top: var(--header-height, 72px) !important;
+          align-self: flex-start !important;
+          height: calc(100vh - var(--header-height, 72px)) !important;
+          overflow-y: auto !important;
+        }
+      }
+    </style>
     <!-- AI Agent & LLM Context Discovery Links -->
     <link
       rel="alternate"

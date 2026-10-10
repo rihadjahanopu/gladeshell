@@ -82,9 +82,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         .into());
     }
 
-    // 6. Replace the current binary
-    let current_exe = std::env::current_exe()?;
-    replace_binary(&tmp_bin, &current_exe)?;
+    // 6. Resolve the real installed binary (bulletproof — not debug/tmp path)
+    let install_path = resolve_install_path()?;
+    replace_binary(&tmp_bin, &install_path)?;
 
     // 7. Apply shell config updates (non-fatal)
     let _ = apply_shell_configs();
@@ -238,8 +238,96 @@ fn download_with_progress(url: &str, dest: &Path) -> bool {
     !buf.is_empty() && fs::write(dest, &buf).is_ok()
 }
 
-// ── Atomically replace the running binary ─────────────────────────────────────
-fn replace_binary(new_bin: &Path, current_exe: &PathBuf) -> Result<(), Box<dyn Error>> {
+// ── Resolve the real installed binary path (bulletproof) ──────────────────────
+/// Returns the path of the actually-installed `gladeshell` binary.
+///
+/// Strategy (in order):
+///   1. `current_exe()` — valid if it looks like a real install path
+///      (not inside `target/`, `/tmp/`, or a debug build dir)
+///   2. Known install dirs: `~/.local/bin/gladeshell`, `~/.cargo/bin/gladeshell`
+///   3. `which gladeshell` via PATH search
+fn resolve_install_path() -> Result<PathBuf, Box<dyn Error>> {
+    let exe_name = if cfg!(target_os = "windows") {
+        "gladeshell.exe"
+    } else {
+        "gladeshell"
+    };
+
+    // 1. current_exe() — validate it's not a dev/tmp path
+    if let Ok(cur) = std::env::current_exe() {
+        if is_real_install_path(&cur) {
+            return Ok(cur);
+        }
+    }
+
+    // 2. Known install dirs (matching install.sh logic)
+    let home = std::env::var("HOME").unwrap_or_default();
+    let known_dirs: &[&str] = &[
+        &format!("{}/.local/bin", home),
+        &format!("{}/.cargo/bin", home),
+        "/usr/local/bin",
+        "/usr/bin",
+    ];
+    for dir in known_dirs {
+        let candidate = PathBuf::from(dir).join(exe_name);
+        if candidate.exists() && candidate.is_file() {
+            return Ok(candidate);
+        }
+    }
+
+    // 3. PATH search (which gladeshell)
+    if let Some(found) = which_in_path(exe_name) {
+        return Ok(found);
+    }
+
+    Err("Could not find the installed gladeshell binary. \
+        Is it installed? Run the installer first: \
+        curl -fsSL https://gladeshell.netlify.app/install.sh | sh"
+        .into())
+}
+
+/// Returns true if the path looks like a real install location
+/// (not inside target/, /tmp/, or a build/debug directory)
+fn is_real_install_path(path: &Path) -> bool {
+    let path_str = path.to_string_lossy().to_lowercase();
+    // Reject obvious dev/temp paths
+    let bad_segments = [
+        "/target/debug/",
+        "/target/release/",
+        "\\target\\debug\\",
+        "\\target\\release\\",
+        "/tmp/",
+        "\\temp\\",
+        "/proc/",
+    ];
+    for bad in bad_segments {
+        if path_str.contains(bad) {
+            return false;
+        }
+    }
+    // Must actually exist as a file
+    path.is_file()
+}
+
+/// Search PATH for an executable by name
+fn which_in_path(name: &str) -> Option<PathBuf> {
+    let path_var = std::env::var("PATH").ok()?;
+    let sep = if cfg!(target_os = "windows") {
+        ';'
+    } else {
+        ':'
+    };
+    for dir in path_var.split(sep) {
+        let candidate = PathBuf::from(dir).join(name);
+        if candidate.exists() && candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+// ── Atomically replace the installed binary ───────────────────────────────────
+fn replace_binary(new_bin: &Path, install_path: &PathBuf) -> Result<(), Box<dyn Error>> {
     // On Unix: chmod +x the new binary first
     #[cfg(unix)]
     {
@@ -253,17 +341,17 @@ fn replace_binary(new_bin: &Path, current_exe: &PathBuf) -> Result<(), Box<dyn E
     // Rename current → .old, then move new → current path.
     #[cfg(target_os = "windows")]
     {
-        let old_path = current_exe.with_extension("old.exe");
+        let old_path = install_path.with_extension("old.exe");
         let _ = fs::remove_file(&old_path); // clean up any previous .old
-        fs::rename(current_exe, &old_path)?;
+        fs::rename(install_path, &old_path)?;
     }
 
     // Atomic replace via rename (works on Linux/macOS; fallback copy on Windows)
-    match fs::rename(new_bin, current_exe) {
+    match fs::rename(new_bin, install_path) {
         Ok(_) => Ok(()),
         Err(_) => {
             // Fallback: copy (e.g. cross-device on some Linux setups)
-            fs::copy(new_bin, current_exe)?;
+            fs::copy(new_bin, install_path)?;
             Ok(())
         }
     }

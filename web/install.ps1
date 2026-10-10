@@ -306,6 +306,13 @@ Show-ProgressBar -Current 1 -Total 5 -StepName "Environment Check"
 Write-Host "  ${GRN}✔ PowerShell v$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor) - supported.${NC}"
 Write-Host "  ${GRN}✔ TLS 1.2 enforced for secure downloads.${NC}"
 Write-Host "  ${GRN}✔ Running with ExecutionPolicy Bypass.${NC}"
+try {
+    $userPolicy = Get-ExecutionPolicy -Scope CurrentUser
+    if ($userPolicy -eq 'Restricted' -or $userPolicy -eq 'Undefined') {
+        Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force -ErrorAction SilentlyContinue
+        Write-Host "  ${GRN}✔ Configured ExecutionPolicy to RemoteSigned for CurrentUser.${NC}"
+    }
+} catch { $null = $_ }
 
 # --- STEP 2: Dependency Check & Auto-Install ----------------------------------
 Show-ProgressBar -Current 2 -Total 5 -StepName "Checking Dependencies"

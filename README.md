@@ -28,11 +28,11 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 
 <br>
 
-<img src="https://i.postimg.cc/pXB6h98T/terminal2.png" alt="gladeshell terminal preview 1" width="85%">
+<!-- <img src="https://i.postimg.cc/pXB6h98T/terminal2.png" alt="gladeshell terminal preview 1" width="85%">
 <br><br>
 <img src="https://i.postimg.cc/tCzMZ1P1/terminal1.png" alt="gladeshell terminal preview 2" width="85%">
 
-<br>
+<br> -->
 
 **🌐 Live Website: [gladeshell.netlify.app](https://gladeshell.netlify.app)**
 

@@ -39,6 +39,8 @@ const JS_AMB: Color = Color::Rgb(234, 179, 8);
 const GREEN: Color = Color::Rgb(34, 197, 94);
 const RED: Color = Color::Rgb(239, 68, 68);
 const AMBER: Color = Color::Rgb(245, 158, 11);
+const PINK: Color = Color::Rgb(244, 114, 182);
+const PURPLE: Color = Color::Rgb(168, 85, 247);
 const MUTED: Color = Color::Rgb(120, 113, 108);
 const FG: Color = Color::Rgb(240, 235, 220);
 
@@ -49,16 +51,29 @@ enum RunMode {
     Run,
     Hot,
     Watch,
+    Check,
+    HotCheck,
+    WatchCheck,
 }
 
 impl RunMode {
-    const ALL: [RunMode; 3] = [RunMode::Run, RunMode::Hot, RunMode::Watch];
+    const ALL: [RunMode; 6] = [
+        RunMode::Run,
+        RunMode::Hot,
+        RunMode::Watch,
+        RunMode::Check,
+        RunMode::HotCheck,
+        RunMode::WatchCheck,
+    ];
 
     fn icon(self) -> &'static str {
         match self {
             RunMode::Run => "🚀",
             RunMode::Hot => "🔥",
             RunMode::Watch => "👁 ",
+            RunMode::Check => "🛡️ ",
+            RunMode::HotCheck => "⚡",
+            RunMode::WatchCheck => "🔮",
         }
     }
     fn title(self) -> &'static str {
@@ -66,6 +81,9 @@ impl RunMode {
             RunMode::Run => "bun run",
             RunMode::Hot => "bun --hot",
             RunMode::Watch => "bun --watch",
+            RunMode::Check => "bun --check",
+            RunMode::HotCheck => "bun --hot --check",
+            RunMode::WatchCheck => "bun --watch --check",
         }
     }
     fn subtitle(self) -> &'static str {
@@ -73,6 +91,9 @@ impl RunMode {
             RunMode::Run => "Execute once",
             RunMode::Hot => "Hot reload on save",
             RunMode::Watch => "Restart on change",
+            RunMode::Check => "Typecheck & execute",
+            RunMode::HotCheck => "Hot reload + typecheck",
+            RunMode::WatchCheck => "Restart + typecheck",
         }
     }
     fn color(self) -> Color {
@@ -80,6 +101,9 @@ impl RunMode {
             RunMode::Run => GREEN,
             RunMode::Hot => RED,
             RunMode::Watch => AMBER,
+            RunMode::Check => TS_BLUE,
+            RunMode::HotCheck => PINK,
+            RunMode::WatchCheck => PURPLE,
         }
     }
     fn bun_args(self) -> &'static [&'static str] {
@@ -87,6 +111,9 @@ impl RunMode {
             RunMode::Run => &["run"],
             RunMode::Hot => &["--hot"],
             RunMode::Watch => &["--watch"],
+            RunMode::Check => &["--check"],
+            RunMode::HotCheck => &["--hot", "--check"],
+            RunMode::WatchCheck => &["--watch", "--check"],
         }
     }
 }
@@ -324,19 +351,12 @@ fn interactive_runner(files: &[FileMeta]) -> Result<Option<(usize, RunMode)>, Bo
                                 }
                             }
 
-                            KeyCode::Char('1') => {
-                                if let Some(file_idx) = st.selected_global_idx() {
-                                    break Ok(Some((file_idx, RunMode::Run)));
-                                }
-                            }
-                            KeyCode::Char('2') => {
-                                if let Some(file_idx) = st.selected_global_idx() {
-                                    break Ok(Some((file_idx, RunMode::Hot)));
-                                }
-                            }
-                            KeyCode::Char('3') => {
-                                if let Some(file_idx) = st.selected_global_idx() {
-                                    break Ok(Some((file_idx, RunMode::Watch)));
+                            KeyCode::Char(c @ '1'..='6') => {
+                                let idx = (c as usize) - ('1' as usize);
+                                if let Some(&mode) = RunMode::ALL.get(idx) {
+                                    if let Some(file_idx) = st.selected_global_idx() {
+                                        break Ok(Some((file_idx, mode)));
+                                    }
                                 }
                             }
 
@@ -347,8 +367,20 @@ fn interactive_runner(files: &[FileMeta]) -> Result<Option<(usize, RunMode)>, Bo
                             _ => {}
                         },
                         ActivePane::ModeSelect => match key.code {
-                            KeyCode::Esc | KeyCode::Left | KeyCode::Backspace => {
+                            KeyCode::Esc | KeyCode::Backspace => {
                                 st.pane = ActivePane::FileList;
+                            }
+                            KeyCode::Left | KeyCode::Char('h') => {
+                                if st.mode_cursor >= 3 {
+                                    st.mode_cursor -= 3;
+                                } else {
+                                    st.pane = ActivePane::FileList;
+                                }
+                            }
+                            KeyCode::Right | KeyCode::Char('l') => {
+                                if st.mode_cursor < 3 {
+                                    st.mode_cursor += 3;
+                                }
                             }
                             KeyCode::Char('q') => break Ok(None),
                             KeyCode::Char('c') if ctrl => break Ok(None),
@@ -363,14 +395,11 @@ fn interactive_runner(files: &[FileMeta]) -> Result<Option<(usize, RunMode)>, Bo
                                     st.mode_cursor += 1;
                                 }
                             }
-                            KeyCode::Char('1') => {
-                                st.mode_cursor = 0;
-                            }
-                            KeyCode::Char('2') => {
-                                st.mode_cursor = 1;
-                            }
-                            KeyCode::Char('3') => {
-                                st.mode_cursor = 2;
+                            KeyCode::Char(c @ '1'..='6') => {
+                                let idx = (c as usize) - ('1' as usize);
+                                if idx < RunMode::ALL.len() {
+                                    st.mode_cursor = idx;
+                                }
                             }
 
                             KeyCode::Enter => {
@@ -476,7 +505,7 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
     // ── Main Body Layout: Split (Left: List, Right: Run Modes) ───────────────
     let body = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
         .split(root[2]);
 
     // ── File List (Left Pane) ─────────────────────────────────────────────────
@@ -565,9 +594,9 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
     let title_text = match selected_file {
         Some(f) => {
             if is_mode_select_active {
-                format!(" ⚡ Select Run Mode for '{}' ", f.name)
+                format!(" ⚡ Select Run Mode [1-6] for '{}' ", f.name)
             } else {
-                format!(" ⚡ Run Modes for '{}' (Press Enter) ", f.name)
+                format!(" ⚡ Run Modes [1-6] for '{}' (Press Enter) ", f.name)
             }
         }
         None => " ⚡ Run Modes ".to_string(),
@@ -586,7 +615,7 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
     f.render_widget(right_block, body[1]);
 
     if selected_file.is_some() {
-        let cards_layout = Layout::default()
+        let rows = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Ratio(1, 3),
@@ -594,6 +623,16 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
                 Constraint::Ratio(1, 3),
             ])
             .split(inner_area);
+
+        let mut card_rects = [ratatui::layout::Rect::default(); 6];
+        for (row_idx, row) in rows.iter().enumerate() {
+            let cols = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
+                .split(*row);
+            card_rects[row_idx] = cols[0];
+            card_rects[row_idx + 3] = cols[1];
+        }
 
         for (idx, mode) in RunMode::ALL.iter().enumerate() {
             let is_card_selected = is_mode_select_active && (idx == st.mode_cursor);
@@ -624,13 +663,13 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
 
             let number = Span::styled(format!(" [{}] ", idx + 1), num_style);
             let icon_span = Span::styled(
-                format!("  {}  ", mode.icon()),
+                format!(" {} ", mode.icon()),
                 Style::default()
                     .fg(if is_card_selected { color } else { FG })
                     .bold(),
             );
             let title_span = Span::styled(
-                format!(" {} ", mode.title()),
+                format!("{} ", mode.title()),
                 Style::default()
                     .fg(if is_card_selected { color } else { FG })
                     .bold(),
@@ -643,7 +682,11 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
             let line1 = Line::from(vec![number, icon_span, title_span]);
             let line2 = Line::from(vec![sub_span]);
 
-            let card_content = vec![line1, line2];
+            let card_content = if card_rects[idx].height >= 4 {
+                vec![line1, line2]
+            } else {
+                vec![line1]
+            };
 
             let card = Paragraph::new(card_content).block(
                 Block::default()
@@ -657,7 +700,7 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
                     .style(Style::default().bg(bg)),
             );
 
-            f.render_widget(card, cards_layout[idx]);
+            f.render_widget(card, card_rects[idx]);
         }
     } else {
         let empty = Paragraph::new(Span::styled(
@@ -693,7 +736,7 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
                     Span::styled(" Enter ", Style::default().fg(Color::Black).bg(GREEN)),
                     Span::styled(" Select & Choose Mode  ", Style::default().fg(MUTED)),
                     Span::styled(
-                        " 1 2 3 ",
+                        " 1-6 ",
                         Style::default().fg(Color::Black).bg(Color::Rgb(60, 60, 80)),
                     ),
                     Span::styled(" Quick Run  ", Style::default().fg(MUTED)),
@@ -704,10 +747,13 @@ fn draw_runner(f: &mut ratatui::Frame, st: &RunnerState) {
         }
         ActivePane::ModeSelect => {
             vec![
-                Span::styled(" ↑↓/jk ", Style::default().fg(Color::Black).bg(GOLD_DIM)),
+                Span::styled(
+                    " ↑↓←→/hjkl ",
+                    Style::default().fg(Color::Black).bg(GOLD_DIM),
+                ),
                 Span::styled(" Move  ", Style::default().fg(MUTED)),
                 Span::styled(
-                    " 1 2 3 ",
+                    " 1-6 ",
                     Style::default().fg(Color::Black).bg(Color::Rgb(60, 60, 80)),
                 ),
                 Span::styled(" Pick Mode  ", Style::default().fg(MUTED)),

@@ -449,7 +449,7 @@
               <span class="code-lang">PowerShell (Windows Universal)</span>
               <button class="copy-btn"><span>📋</span> Copy Command</button>
             </div>
-            <pre><code>irm https://gladeshell.netlify.app/install.ps1 | iex</code></pre>
+            <pre><code>powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"</code></pre>
           </div>
 
           <h3 id="shell-installers">Shell-Specific Installers</h3>
@@ -494,7 +494,9 @@
                   <td><strong>PowerShell</strong></td>
                   <td><code>$PROFILE</code></td>
                   <td>
-                    <code>irm https://gladeshell.netlify.app/install.ps1 | iex</code>
+                    <code
+                      >powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"</code
+                    >
                   </td>
                 </tr>
               </tbody>
@@ -2371,7 +2373,9 @@ glade matrix
                   </tr>
                   <tr>
                     <td><kbd>Ctrl-D</kbd></td>
-                    <td>Delete local branch (<code>git branch -D</code>) with confirmation prompt</td>
+                    <td>
+                      Delete local branch (<code>git branch -D</code>) with confirmation prompt
+                    </td>
                   </tr>
                   <tr>
                     <td><kbd>Ctrl-R</kbd></td>
@@ -3133,7 +3137,9 @@ glade matrix
                   </tr>
                   <tr>
                     <td><kbd>CTRL-Z</kbd></td>
-                    <td>Switch candidate list to System Frecent Directories (<code>zoxide</code>)</td>
+                    <td>
+                      Switch candidate list to System Frecent Directories (<code>zoxide</code>)
+                    </td>
                   </tr>
                   <tr>
                     <td><kbd>CTRL-V</kbd></td>
@@ -3146,8 +3152,8 @@ glade matrix
                   <tr>
                     <td><kbd>CTRL-O</kbd></td>
                     <td>
-                      Open file or directory in Code Editor (<code>code</code> / <code>cursor</code> /
-                      <code>nvim</code>)
+                      Open file or directory in Code Editor (<code>code</code> /
+                      <code>cursor</code> / <code>nvim</code>)
                     </td>
                   </tr>
                   <tr>
@@ -3252,8 +3258,8 @@ glade matrix
                   <tr>
                     <td><kbd>Enter</kbd></td>
                     <td>
-                      <strong>Soft kill</strong> selected process(es) (<code>SIGTERM</code> — graceful
-                      shutdown)
+                      <strong>Soft kill</strong> selected process(es) (<code>SIGTERM</code> —
+                      graceful shutdown)
                     </td>
                   </tr>
                   <tr>
@@ -3625,9 +3631,12 @@ glade matrix
 
           <!-- Hero Card -->
           <div class="bench-hero">
-            <div class="bench-hero-title">⚡ Shell Performance Deep-Dive · gladeshell v1.2 (October 9, 2026)</div>
+            <div class="bench-hero-title">
+              ⚡ Shell Performance Deep-Dive · gladeshell v1.2 (October 9, 2026)
+            </div>
             <div class="bench-hero-sub">
-              Real empirical measurements across shell environments — Starship, Oh My Posh, Oh My Zsh, Bash, Zsh, Fish, PowerShell, and GladeShell — captured on live hardware using
+              Real empirical measurements across shell environments — Starship, Oh My Posh, Oh My
+              Zsh, Bash, Zsh, Fish, PowerShell, and GladeShell — captured on live hardware using
               <code
                 style="
                   color: var(--docs-cyan);
@@ -3662,7 +3671,9 @@ glade matrix
               >.
             </div>
             <div class="bench-env-pills">
-              <span class="bench-env-pill"><span class="dot"></span>Linux x86_64 · Intel i5-1145G7 @ 2.60GHz</span>
+              <span class="bench-env-pill"
+                ><span class="dot"></span>Linux x86_64 · Intel i5-1145G7 @ 2.60GHz</span
+              >
               <span class="bench-env-pill"
                 ><span class="dot"></span>Rust 1.98.1 · gladeshell v1.2.0 (Fat-LTO)</span
               >
@@ -3762,9 +3773,10 @@ glade matrix
               "
             >
               Shell startup &amp; hook sourcing overhead (cached init file) measured via
-              <code style="color: var(--docs-cyan)">make bench-startup</code> 10-iteration suite and 50-iteration
-              <code style="color: var(--docs-cyan)">os.wait4</code> timing. GladeShell writes atomic cached hooks to
-              <code>~/.gladeshell/cache/init.&lt;shell&gt;</code>. Bars are scaled relative to worst performer (Oh My Zsh · 220 ms).
+              <code style="color: var(--docs-cyan)">make bench-startup</code> 10-iteration suite and
+              50-iteration <code style="color: var(--docs-cyan)">os.wait4</code> timing. GladeShell
+              writes atomic cached hooks to <code>~/.gladeshell/cache/init.&lt;shell&gt;</code>.
+              Bars are scaled relative to worst performer (Oh My Zsh · 220 ms).
             </p>
 
             <div class="bench-chart-grid" id="bench-startup-chart">
@@ -3773,7 +3785,13 @@ glade matrix
                 <div class="bench-bar-label">
                   <span class="shell-icon fb">⚡</span>
                   GladeShell (cached hook)
-                  <span class="bench-tip" data-tooltip="⚡ FASTEST · 6.71 ms" tabindex="0" aria-label="Fastest">🏆</span>
+                  <span
+                    class="bench-tip"
+                    data-tooltip="⚡ FASTEST · 6.71 ms"
+                    tabindex="0"
+                    aria-label="Fastest"
+                    >🏆</span
+                  >
                 </div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill fb winner" data-pct="3.1"></div>
@@ -3782,7 +3800,9 @@ glade matrix
               </div>
               <!-- Starship -->
               <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon zsh">⭐</span> Starship (init binary)</div>
+                <div class="bench-bar-label">
+                  <span class="shell-icon zsh">⭐</span> Starship (init binary)
+                </div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill zsh" data-pct="8.4"></div>
                 </div>
@@ -3790,7 +3810,9 @@ glade matrix
               </div>
               <!-- Oh My Posh -->
               <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh (init binary)</div>
+                <div class="bench-bar-label">
+                  <span class="shell-icon omp">🎨</span> Oh My Posh (init binary)
+                </div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill omp" data-pct="17.3"></div>
                 </div>
@@ -3798,7 +3820,9 @@ glade matrix
               </div>
               <!-- Oh My Zsh -->
               <div class="bench-bar-row">
-                <div class="bench-bar-label"><span class="shell-icon omz">😱</span> Oh My Zsh (default plugins)</div>
+                <div class="bench-bar-label">
+                  <span class="shell-icon omz">😱</span> Oh My Zsh (default plugins)
+                </div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill omz" data-pct="100"></div>
                 </div>
@@ -3808,21 +3832,29 @@ glade matrix
 
             <!-- Hyperfine raw output -->
             <div class="bench-hyperfine">
-              <div class="hf-title">📊 Terminal Startup / Hook Sourcing · 4 Prompt Engines Compared</div>
+              <div class="hf-title">
+                📊 Terminal Startup / Hook Sourcing · 4 Prompt Engines Compared
+              </div>
               <span class="hf-cmd">Benchmark 1: GladeShell Bash hook (cached) — 10 runs</span>
-              <span class="hf-fast">Time (mean ± σ): 6.71 ms ± 0.38 ms</span> [Range: 5.90 ms … 7.41 ms · Zsh: 32.4 ms]
+              <span class="hf-fast">Time (mean ± σ): 6.71 ms ± 0.38 ms</span> [Range: 5.90 ms … 7.41
+              ms · Zsh: 32.4 ms]
 
               <span class="hf-cmd">Benchmark 2: Starship init binary exec — measured</span>
-              <span class="hf-dim">Time (mean ± σ): 18.5 ms ± 1.2 ms</span> [Range: 18.5 ms … 32.0 ms]
+              <span class="hf-dim">Time (mean ± σ): 18.5 ms ± 1.2 ms</span> [Range: 18.5 ms … 32.0
+              ms]
 
               <span class="hf-cmd">Benchmark 3: Oh My Posh init binary exec — measured</span>
-              <span class="hf-dim">Time (mean ± σ): 38.0 ms ± 2.4 ms</span> [Range: 38.0 ms … 85.0 ms]
+              <span class="hf-dim">Time (mean ± σ): 38.0 ms ± 2.4 ms</span> [Range: 38.0 ms … 85.0
+              ms]
 
               <span class="hf-cmd">Benchmark 4: Oh My Zsh default plugin suite — measured</span>
-              <span class="hf-slow">Time (mean ± σ): 220.0 ms · (180 ms – 450 ms range; unoptimized: 890 ms)</span>
+              <span class="hf-slow"
+                >Time (mean ± σ): 220.0 ms · (180 ms – 450 ms range; unoptimized: 890 ms)</span
+              >
 
               <span class="hf-winner"
-                >Summary: GladeShell is 2.8× faster than Starship · 5.5× faster than Oh My Posh · 32.8× faster than Oh My Zsh</span
+                >Summary: GladeShell is 2.8× faster than Starship · 5.5× faster than Oh My Posh ·
+                32.8× faster than Oh My Zsh</span
               >
             </div>
 
@@ -3830,9 +3862,11 @@ glade matrix
               <span class="icon">🔬</span>
               <span
                 >All startup times measured with <strong>10 warm-up runs</strong> + 10 timed runs
-                (<code>make bench-startup</code>) and 50-iteration <code>os.wait4</code> sub-millisecond process measurements.
-                GladeShell caches generated shell hooks atomically to <code>~/.gladeshell/cache/init.&lt;shell&gt;</code>,
-                bringing terminal open latency down to <strong>6.71 ms</strong> in Bash and <strong>32.4 ms</strong> in Zsh.</span
+                (<code>make bench-startup</code>) and 50-iteration
+                <code>os.wait4</code> sub-millisecond process measurements. GladeShell caches
+                generated shell hooks atomically to
+                <code>~/.gladeshell/cache/init.&lt;shell&gt;</code>, bringing terminal open latency
+                down to <strong>6.71 ms</strong> in Bash and <strong>32.4 ms</strong> in Zsh.</span
               >
             </div>
           </div>
@@ -3847,16 +3881,25 @@ glade matrix
                 line-height: 1.6;
               "
             >
-              Core prompt render latency (Criterion empirical micro-benchmarks &amp; live process timings). GladeShell uses a
-              zero-heap-allocation stack buffer (<code>PromptContext</code> + <code>[u8; 4096]</code>) and pure Rust
-              <code>gix 0.88</code> git engine — zero subshell forks on every keypress.
+              Core prompt render latency (Criterion empirical micro-benchmarks &amp; live process
+              timings). GladeShell uses a zero-heap-allocation stack buffer (<code
+                >PromptContext</code
+              >
+              + <code>[u8; 4096]</code>) and pure Rust <code>gix 0.88</code> git engine — zero
+              subshell forks on every keypress.
             </p>
 
             <div class="bench-chart-grid" id="bench-prompt-chart">
               <div class="bench-bar-row">
                 <div class="bench-bar-label">
                   <span class="shell-icon fb">⚡</span> GladeShell Core Engine
-                  <span class="bench-tip" data-tooltip="🏆 11.4 µs · Pure Zero-Alloc" tabindex="0" aria-label="Fastest Engine">🏆</span>
+                  <span
+                    class="bench-tip"
+                    data-tooltip="🏆 11.4 µs · Pure Zero-Alloc"
+                    tabindex="0"
+                    aria-label="Fastest Engine"
+                    >🏆</span
+                  >
                 </div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill fb winner" data-pct="0.06"></div>
@@ -3893,7 +3936,9 @@ glade matrix
             </div>
 
             <div class="bench-section-divider">
-              <span class="bench-section-title">Native Rust Autocompletion &amp; Highlighting vs Shell Plugins</span>
+              <span class="bench-section-title"
+                >Native Rust Autocompletion &amp; Highlighting vs Shell Plugins</span
+              >
             </div>
 
             <div class="bench-chart-grid">
@@ -3927,7 +3972,13 @@ glade matrix
                     >⚡</span
                   >
                   GladeShell Native Plugins
-                  <span class="bench-tip" data-tooltip="🏆 INSTANT · ~0.08 ms Rust" tabindex="0" aria-label="Instant">🏆</span>
+                  <span
+                    class="bench-tip"
+                    data-tooltip="🏆 INSTANT · ~0.08 ms Rust"
+                    tabindex="0"
+                    aria-label="Instant"
+                    >🏆</span
+                  >
                 </div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill good" data-pct="0.6"></div>
@@ -3939,10 +3990,12 @@ glade matrix
             <div class="bench-method-note">
               <span class="icon">⚡</span>
               <span
-                >Criterion empirical benchmarks measured: <strong>11.38 µs</strong> pure theme, <strong>13.51 µs</strong> default theme,
-                and <strong>14.41 µs</strong> dirty tree. In Git repositories, <code>gix 0.88</code> with monorepo TTL cache evaluates
-                branch and status in <strong>4.79 µs</strong> (hit) / <strong>&lt; 4.6 ms</strong> (miss), replacing external subshell forks.
-                Warm fast-path process launch runs in <strong>1.64 ms mean / 0.92 ms min</strong>.</span
+                >Criterion empirical benchmarks measured: <strong>11.38 µs</strong> pure theme,
+                <strong>13.51 µs</strong> default theme, and <strong>14.41 µs</strong> dirty tree.
+                In Git repositories, <code>gix 0.88</code> with monorepo TTL cache evaluates branch
+                and status in <strong>4.79 µs</strong> (hit) / <strong>&lt; 4.6 ms</strong> (miss),
+                replacing external subshell forks. Warm fast-path process launch runs in
+                <strong>1.64 ms mean / 0.92 ms min</strong>.</span
               >
             </div>
           </div>
@@ -3967,7 +4020,13 @@ glade matrix
               <div class="bench-bar-row">
                 <div class="bench-bar-label">
                   <span class="shell-icon fb">⚡</span> GladeShell (core / full binary)
-                  <span class="bench-tip" data-tooltip="🏆 LIGHTEST · 3.9 MB RSS" tabindex="0" aria-label="Lightest">🏆</span>
+                  <span
+                    class="bench-tip"
+                    data-tooltip="🏆 LIGHTEST · 3.9 MB RSS"
+                    tabindex="0"
+                    aria-label="Lightest"
+                    >🏆</span
+                  >
                 </div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill fb winner" data-pct="7.1"></div>
@@ -3982,9 +4041,7 @@ glade matrix
                 <div class="bench-bar-val">12.5 MB</div>
               </div>
               <div class="bench-bar-row">
-                <div class="bench-bar-label">
-                  <span class="shell-icon omp">🎨</span> Oh My Posh
-                </div>
+                <div class="bench-bar-label"><span class="shell-icon omp">🎨</span> Oh My Posh</div>
                 <div class="bench-bar-track">
                   <div class="bench-bar-fill omp" data-pct="33.6"></div>
                 </div>
@@ -4041,9 +4098,11 @@ glade matrix
             <div class="bench-method-note">
               <span class="icon">💾</span>
               <span
-                >GladeShell core prompt engine footprint is just <strong>~3.9 MB RSS</strong>. Even with all 40+ arsenal tools,
-                TUI engines, and compressors linked, total binary RSS is <strong>≤ 14.7 MB</strong>. Oh My Zsh with
-                <strong>git, nvm, docker, python, npm</strong> plugins active easily exceeds <strong>55–100 MB RSS</strong>.</span
+                >GladeShell core prompt engine footprint is just <strong>~3.9 MB RSS</strong>. Even
+                with all 40+ arsenal tools, TUI engines, and compressors linked, total binary RSS is
+                <strong>≤ 14.7 MB</strong>. Oh My Zsh with
+                <strong>git, nvm, docker, python, npm</strong> plugins active easily exceeds
+                <strong>55–100 MB RSS</strong>.</span
               >
             </div>
           </div>
@@ -4251,8 +4310,9 @@ glade matrix
                 <div class="bench-tip-icon">⚡</div>
                 <div class="bench-tip-title">Fast-Path CLI Dispatcher</div>
                 <div class="bench-tip-body">
-                  Manual zero-allocation argument matcher in <code>main.rs</code> bypasses <code>clap</code> entirely for
-                  <code>prompt</code>, <code>init</code>, and <code>auto-ls</code>. Reduces process launch from ~53 ms →
+                  Manual zero-allocation argument matcher in <code>main.rs</code> bypasses
+                  <code>clap</code> entirely for <code>prompt</code>, <code>init</code>, and
+                  <code>auto-ls</code>. Reduces process launch from ~53 ms →
                   <strong>1.64 ms mean (0.92 ms min)</strong>.
                 </div>
               </div>
@@ -4269,32 +4329,37 @@ glade matrix
                 <div class="bench-tip-icon">🚀</div>
                 <div class="bench-tip-title">Monorepo-Aware Git TTL Cache</div>
                 <div class="bench-tip-body">
-                  Pure Rust <code>gix 0.88</code> engine with per-repo-root caching and 1.5s / 5s TTL.
-                  Status discovery hits memory in <strong>4.79 µs</strong>; live scans complete in <strong>&lt; 4.6 ms</strong> with zero subshell forks.
+                  Pure Rust <code>gix 0.88</code> engine with per-repo-root caching and 1.5s / 5s
+                  TTL. Status discovery hits memory in <strong>4.79 µs</strong>; live scans complete
+                  in <strong>&lt; 4.6 ms</strong> with zero subshell forks.
                 </div>
               </div>
               <div class="bench-tip-card">
                 <div class="bench-tip-icon">⏩</div>
                 <div class="bench-tip-title">Packed Binary IPC Protocol</div>
                 <div class="bench-tip-body">
-                  Unix socket daemon communication uses <code>[u32-LE len][payload]</code> wire format, eliminating string parsing
-                  and newline scanning. Socket round-trip takes only <strong>~0.08 ms</strong>.
+                  Unix socket daemon communication uses <code>[u32-LE len][payload]</code> wire
+                  format, eliminating string parsing and newline scanning. Socket round-trip takes
+                  only <strong>~0.08 ms</strong>.
                 </div>
               </div>
               <div class="bench-tip-card">
                 <div class="bench-tip-icon">🛡️</div>
                 <div class="bench-tip-title">Stack-Allocated Byte Buffer</div>
                 <div class="bench-tip-body">
-                  Prompt rendering operates on a pre-allocated <code>[u8; 4096]</code> buffer with <strong>zero heap allocations</strong>
-                  on the hot path. Delivers <strong>11.4 µs (0.011 ms)</strong> core render latency.
+                  Prompt rendering operates on a pre-allocated <code>[u8; 4096]</code> buffer with
+                  <strong>zero heap allocations</strong> on the hot path. Delivers
+                  <strong>11.4 µs (0.011 ms)</strong> core render latency.
                 </div>
               </div>
               <div class="bench-tip-card">
                 <div class="bench-tip-icon">🐟</div>
                 <div class="bench-tip-title">Single-Pass compinit Caching</div>
                 <div class="bench-tip-body">
-                  Guarded Zsh completion initialization with <code>compinit -C -d ~/.zcompdump</code> and 24h freshness check.
-                  Eliminates redundant completion rebuilds and saves <strong>~150 ms</strong> per interactive session boot.
+                  Guarded Zsh completion initialization with
+                  <code>compinit -C -d ~/.zcompdump</code> and 24h freshness check. Eliminates
+                  redundant completion rebuilds and saves <strong>~150 ms</strong> per interactive
+                  session boot.
                 </div>
               </div>
             </div>
@@ -4304,8 +4369,8 @@ glade matrix
               <span
                 >All data measured on Intel Core i5-1145G7 @ 2.60GHz, 7.5 GB RAM, Linux Deepin 25
                 (Kernel 6.18.38). Hyperfine v1.18, 10 warmup + 10 timed runs. Oh My Zsh version 5.9
-                with default plugin set. Starship v1.20 on Zsh 5.9. Oh My Posh 24.8 on Zsh 5.9.
-                All prompt engines tested on the same machine session, cold filesystem caches cleared
+                with default plugin set. Starship v1.20 on Zsh 5.9. Oh My Posh 24.8 on Zsh 5.9. All
+                prompt engines tested on the same machine session, cold filesystem caches cleared
                 between runs. Figures reproduced from
                 <a
                   href="https://github.com/rihadjahanopu/gladeshell/blob/main/BENCHMARK.md"

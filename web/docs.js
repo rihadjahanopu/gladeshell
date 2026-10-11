@@ -1253,7 +1253,7 @@ function initInstallerBuilder() {
     bash: 'curl -fsSL https://gladeshell.netlify.app/public/install.sh | bash',
     zsh: 'curl -fsSL https://gladeshell.netlify.app/public/install.zsh | zsh',
     fish: 'curl -fsSL https://gladeshell.netlify.app/public/install.fish | fish',
-    powershell: 'irm https://gladeshell.netlify.app/public/install.ps1 | iex',
+    powershell: 'powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"',
   };
 
   function updateBuilder() {

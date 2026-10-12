@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🚀 [1.2.4] — 2026-10-12
+
+### 🛡️ Bulletproof Self-Upgrade Pipeline (`gladeshell upgrade`)
+
+- 🔄 **Atomic Cross-Device Binary Replacement**:
+  - Eliminated `Text file busy (os error 26)` (`ETXTBSY`) on Linux by staging directly in target directory and using atomic `rename(2)` instead of `fs::copy`.
+  - Added Windows NTFS executable locking support via temporary `.old.exe` rotation with automatic startup cleanup.
+- 🌐 **GitHub API Rate-Limit Resilience**:
+  - Added transparent fallback to GitHub web releases tag redirect (`302 Location`) when GitHub API encounters HTTP 403 rate limits.
+  - Configured resilient HTTP connect (15s), response (30s), and download (180s) timeouts.
+- 🐧 **Cross-OS & Libc Compatibility**:
+  - Added Alpine Linux / MUSL libc target detection (`gladeshell-linux-*-musl`).
+  - Added macOS Universal/Fat Mach-O binary validation and automatic quarantine clearing (`xattr -d com.apple.quarantine`).
+  - Implemented safe symlink canonicalization and early directory writability checks (`PermissionDenied`).
+- 🛡️ **Zero Orphaned Files Guarantee**:
+  - Implemented RAII `TempFileGuard` to guarantee automatic staging cleanup on errors or interruptions.
+
+---
+
 ## 🚀 [1.2.1] — 2026-10-09
 
 ### 🐛 Bug Fixes & Refinements

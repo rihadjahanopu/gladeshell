@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🚀 [1.2.5] — 2026-10-13
+
+### ⚡ CLI Enhancements
+
+- 🏷️ **Short Version Flag (`-v`)**:
+  - Added support for `gladeshell -v` to quickly inspect the installed version (similar to `bun -v` and `node -v`).
+
+---
+
 ## 🚀 [1.2.4] — 2026-10-12
 
 ### 🛡️ Bulletproof Self-Upgrade Pipeline (`gladeshell upgrade`)

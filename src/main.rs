@@ -129,7 +129,11 @@ fn main() {
                     std::process::exit(1);
                 }
                 return;
-            } else if subcmd == "version" || subcmd == "-V" || subcmd == "--version" {
+            } else if subcmd == "version"
+                || subcmd == "-V"
+                || subcmd == "--version"
+                || subcmd == "-v"
+            {
                 println!("gladeshell {}", env!("CARGO_PKG_VERSION"));
                 return;
             } else if subcmd == "suggest" {
@@ -809,4 +813,17 @@ fn cmd_completions(shell_str: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Cli::command();
     generate(shell, &mut cmd, "gladeshell", &mut std::io::stdout());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_version_flags_supported() {
+        let flags = ["version", "-V", "--version", "-v"];
+        for flag in flags {
+            let is_version =
+                flag == "version" || flag == "-V" || flag == "--version" || flag == "-v";
+            assert!(is_version, "Flag {flag} must be recognized as version flag");
+        }
+    }
 }

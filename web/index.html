@@ -1118,10 +1118,42 @@ chsh -s $(which bash)</code></pre>
                   </p>
                 </div>
 
-                <!-- Step 3: Install Emoji Font -->
-                <div class="zsh-step-card">
+                <!-- Step 3: Install Rust Toolchain -->
+                <div class="zsh-step-card zsh-step-card--wide">
                   <div class="zsh-step-header">
                     <div class="zsh-step-num">03</div>
+                    <div class="zsh-step-icon">🦀</div>
+                    <div>
+                      <h3>Install Rust Toolchain</h3>
+                      <p>
+                        gladeshell is a native <strong>Rust binary</strong> — install Rust once for
+                        blazing-fast prompt rendering and zero-dependency operation.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="code-block">
+                    <div class="code-header">
+                      <span class="code-lang">bash</span>
+                      <button
+                        class="copy-btn"
+                        data-copy="curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y&#10;source $HOME/.cargo/env"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source $HOME/.cargo/env</code></pre>
+                  </div>
+                  <p class="zsh-tip">
+                    <span class="zsh-tip-icon">⚡</span> Rust installs to <code>~/.cargo/</code> — no
+                    <code>sudo</code> required. Verify with <code>rustc --version</code> after sourcing.
+                  </p>
+                </div>
+
+                <!-- Step 4: Install Emoji Font -->
+                <div class="zsh-step-card">
+                  <div class="zsh-step-header">
+                    <div class="zsh-step-num">04</div>
                     <div class="zsh-step-icon">😀</div>
                     <div>
                       <h3>Install Emoji Font</h3>
@@ -1139,10 +1171,10 @@ chsh -s $(which bash)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 4: Install Font -->
+                <!-- Step 5: Install Font -->
                 <div class="zsh-step-card">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">04</div>
+                    <div class="zsh-step-num">05</div>
                     <div class="zsh-step-icon">✍️</div>
                     <div>
                       <h3>Install Font</h3>
@@ -1163,10 +1195,10 @@ chsh -s $(which bash)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 5: Set Font Priority -->
+                <!-- Step 6: Set Font Priority -->
                 <div class="zsh-step-card zsh-step-card--wide">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">05</div>
+                    <div class="zsh-step-num">06</div>
                     <div class="zsh-step-icon">⚙️</div>
                     <div>
                       <h3>Set Font Priority</h3>
@@ -1206,10 +1238,10 @@ chsh -s $(which bash)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 6: Rebuild Font Cache -->
+                <!-- Step 7: Rebuild Font Cache -->
                 <div class="zsh-step-card">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">06</div>
+                    <div class="zsh-step-num">07</div>
                     <div class="zsh-step-icon">🔄</div>
                     <div>
                       <h3>Rebuild Font Cache</h3>
@@ -1225,10 +1257,10 @@ chsh -s $(which bash)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 7: Set System Locale -->
+                <!-- Step 8: Set System Locale -->
                 <div class="zsh-step-card">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">07</div>
+                    <div class="zsh-step-num">08</div>
                     <div class="zsh-step-icon">🌐</div>
                     <div>
                       <h3>Set System Locale</h3>
@@ -1252,10 +1284,10 @@ reboot</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 8: Install gladeshell -->
+                <!-- Step 9: Install gladeshell -->
                 <div class="zsh-step-card zsh-step-card--wide">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">08</div>
+                    <div class="zsh-step-num">09</div>
                     <div class="zsh-step-icon">⚡</div>
                     <div>
                       <h3>Install gladeshell</h3>
@@ -1275,15 +1307,15 @@ reboot</code></pre>
                     <pre><code>bash &lt;(curl -fsSL https://gladeshell.netlify.app/public/install.sh)</code></pre>
                   </div>
                   <p class="zsh-tip">
-                    <span class="zsh-tip-icon">💡</span> The installer backs up your existing
-                    <code>.bashrc</code> and safely appends gladeshell — safe to re-run at any time.
+                    <span class="zsh-tip-icon">💡</span> <strong>100% Automated:</strong> The installer automatically configures gladeshell, backs up your existing
+                    <code>.bashrc</code>, and enables all native features — no manual file editing needed!
                   </p>
                 </div>
 
-                <!-- Step 9: Done -->
+                <!-- Step 10: Done -->
                 <div class="zsh-step-card zsh-step-card--wide">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">09</div>
+                    <div class="zsh-step-num">10</div>
                     <div class="zsh-step-icon">🎉</div>
                     <div>
                       <h3>Done! You're ready.</h3>
@@ -1358,100 +1390,42 @@ chsh -s $(which zsh)</code></pre>
                   </p>
                 </div>
 
-                <!-- Step 3: Create Plugin Directory -->
-                <div class="zsh-step-card" id="zsh-step-plugins-dir">
+                <!-- Step 3: Install Rust Toolchain -->
+                <div class="zsh-step-card zsh-step-card--wide">
                   <div class="zsh-step-header">
                     <div class="zsh-step-num">03</div>
-                    <div class="zsh-step-icon">📂</div>
+                    <div class="zsh-step-icon">🦀</div>
                     <div>
-                      <h3>Create Plugin Folder</h3>
+                      <h3>Install Rust Toolchain</h3>
                       <p>
-                        gladeshell loads plugins from the <code>~/.zsh/</code> folder. Create this
-                        directory.
+                        gladeshell is a native <strong>Rust binary</strong> — install Rust once for
+                        blazing-fast prompt rendering and zero-dependency operation.
                       </p>
                     </div>
                   </div>
-                  <div class="code-block" id="code-zsh-plugins-dir">
+                  <div class="code-block">
                     <div class="code-header">
                       <span class="code-lang">bash</span>
                       <button
                         class="copy-btn"
-                        aria-label="Copy create plugins directory command"
-                        data-copy="mkdir -p ~/.zsh"
+                        data-copy="curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y&#10;source $HOME/.cargo/env"
                       >
                         Copy
                       </button>
                     </div>
-                    <pre><code>mkdir -p ~/.zsh</code></pre>
+                    <pre><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source $HOME/.cargo/env</code></pre>
                   </div>
+                  <p class="zsh-tip">
+                    <span class="zsh-tip-icon">⚡</span> Rust installs to <code>~/.cargo/</code> — no
+                    <code>sudo</code> required. Verify with <code>rustc --version</code> after sourcing.
+                  </p>
                 </div>
 
-                <!-- Step 4: Install Plugins -->
-                <div class="zsh-step-card zsh-step-card--wide" id="zsh-step-clone">
-                  <div class="zsh-step-header">
-                    <div class="zsh-step-num">04</div>
-                    <div class="zsh-step-icon">🔌</div>
-                    <div>
-                      <h3>Install Plugins via Git</h3>
-                      <p>Clone both plugins — no plugin manager required.</p>
-                    </div>
-                  </div>
-                  <div class="zsh-plugins-two-col">
-                    <!-- Syntax Highlighting -->
-                    <div class="zsh-plugin-item">
-                      <div class="zsh-plugin-badge zsh-plugin-badge--green">
-                        <span>🎨</span> zsh-syntax-highlighting
-                      </div>
-                      <p class="zsh-plugin-desc">
-                        Color-codes commands in real time — valid commands turn green, invalid ones
-                        turn red.
-                      </p>
-                      <div class="code-block" id="code-plugin-syntax">
-                        <div class="code-header">
-                          <span class="code-lang">bash</span>
-                          <button
-                            class="copy-btn"
-                            aria-label="Copy syntax highlighting clone command"
-                            data-copy="git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.zsh/zsh-syntax-highlighting"
-                          >
-                            Copy
-                          </button>
-                        </div>
-                        <pre><code>git clone https://github.com/zsh-users/zsh-syntax-highlighting.git \
-  ~/.zsh/zsh-syntax-highlighting</code></pre>
-                      </div>
-                    </div>
-                    <!-- Autosuggestions -->
-                    <div class="zsh-plugin-item">
-                      <div class="zsh-plugin-badge zsh-plugin-badge--cyan">
-                        <span>💡</span> zsh-autosuggestions
-                      </div>
-                      <p class="zsh-plugin-desc">
-                        Suggests commands from your history as you type — press <code>→</code> to
-                        accept.
-                      </p>
-                      <div class="code-block" id="code-plugin-autosugg">
-                        <div class="code-header">
-                          <span class="code-lang">bash</span>
-                          <button
-                            class="copy-btn"
-                            aria-label="Copy autosuggestions clone command"
-                            data-copy="git clone https://github.com/zsh-users/zsh-autosuggestions.git ~/.zsh/zsh-autosuggestions"
-                          >
-                            Copy
-                          </button>
-                        </div>
-                        <pre><code>git clone https://github.com/zsh-users/zsh-autosuggestions.git \
-  ~/.zsh/zsh-autosuggestions</code></pre>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Step 5: Install Emoji Font -->
+                <!-- Step 4: Install Emoji Font -->
                 <div class="zsh-step-card">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">05</div>
+                    <div class="zsh-step-num">04</div>
                     <div class="zsh-step-icon">😀</div>
                     <div>
                       <h3>Install Emoji Font</h3>
@@ -1469,10 +1443,10 @@ chsh -s $(which zsh)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 6: Install Font -->
+                <!-- Step 5: Install Font -->
                 <div class="zsh-step-card">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">06</div>
+                    <div class="zsh-step-num">05</div>
                     <div class="zsh-step-icon">✍️</div>
                     <div>
                       <h3>Install Font</h3>
@@ -1493,10 +1467,10 @@ chsh -s $(which zsh)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 7: Set Font Priority -->
+                <!-- Step 6: Set Font Priority -->
                 <div class="zsh-step-card zsh-step-card--wide">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">07</div>
+                    <div class="zsh-step-num">06</div>
                     <div class="zsh-step-icon">⚙️</div>
                     <div>
                       <h3>Set Font Priority</h3>
@@ -1536,10 +1510,10 @@ chsh -s $(which zsh)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 8: Rebuild Font Cache -->
+                <!-- Step 7: Rebuild Font Cache -->
                 <div class="zsh-step-card">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">08</div>
+                    <div class="zsh-step-num">07</div>
                     <div class="zsh-step-icon">🔄</div>
                     <div>
                       <h3>Rebuild Font Cache</h3>
@@ -1555,10 +1529,10 @@ chsh -s $(which zsh)</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 9: Set System Locale -->
+                <!-- Step 8: Set System Locale -->
                 <div class="zsh-step-card">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">09</div>
+                    <div class="zsh-step-num">08</div>
                     <div class="zsh-step-icon">🌐</div>
                     <div>
                       <h3>Set System Locale</h3>
@@ -1582,14 +1556,14 @@ reboot</code></pre>
                   </div>
                 </div>
 
-                <!-- Step 10: Install gladeshell -->
+                <!-- Step 9: Install gladeshell -->
                 <div class="zsh-step-card zsh-step-card--wide">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">05</div>
+                    <div class="zsh-step-num">09</div>
                     <div class="zsh-step-icon">⚡</div>
                     <div>
                       <h3>Install gladeshell</h3>
-                      <p>Run the one-line installer to apply gladeshell to your Zsh shell.</p>
+                      <p>Run the one-line installer — it automatically handles all shell configuration and native Rust hooks.</p>
                     </div>
                   </div>
                   <div class="code-block">
@@ -1605,31 +1579,19 @@ reboot</code></pre>
                     <pre><code>zsh &lt;(curl -fsSL https://gladeshell.netlify.app/public/install.zsh)</code></pre>
                   </div>
                   <p class="zsh-tip">
-                    <span class="zsh-tip-icon">💡</span> The installer backs up your existing
-                    <code>.zshrc</code> and safely appends gladeshell — safe to re-run at any time.
+                    <span class="zsh-tip-icon">💡</span> <strong>100% Automated:</strong> The installer automatically sets up gladeshell's native Rust zero-latency autocompletion and syntax highlighting (~0.08ms) — no manual git clones or plugin folders needed!
                   </p>
                 </div>
 
-                <!-- Step 11: Done -->
+                <!-- Step 10: Done -->
                 <div class="zsh-step-card zsh-step-card--wide" id="zsh-step-done">
                   <div class="zsh-step-header">
-                    <div class="zsh-step-num">11</div>
+                    <div class="zsh-step-num">10</div>
                     <div class="zsh-step-icon">🎉</div>
                     <div>
-                      <h3>Done! gladeshell Auto-Sources the Plugins</h3>
-                      <p>
-                        Just clone them into the <code>~/.zsh/</code> folder. gladeshell's
-                        <code>config.zsh</code> automatically executes the following two lines.
-                      </p>
+                      <h3>Done! You're ready.</h3>
+                      <p>Restart your terminal and enjoy the ultra-fast, zero-dependency gladeshell experience on Zsh!</p>
                     </div>
-                  </div>
-                  <div class="code-block" id="code-zshrc-source">
-                    <div class="code-header">
-                      <span class="code-lang">config.zsh (auto-loaded)</span>
-                    </div>
-                    <pre><code><span class="t-comment"># Autocomplete and Syntax Highlighting</span>
-source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
-source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                   </div>
                   <p
                     class="zsh-tip"
@@ -1638,8 +1600,7 @@ source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh</code></pre>
                       border-color: rgba(34, 197, 94, 0.25);
                     "
                   >
-                    <span class="zsh-tip-icon">✅</span> After cloning both plugins into
-                    <code>~/.zsh/</code>, open a new terminal — everything will work automatically!
+                    <span class="zsh-tip-icon">✅</span> Everything was configured automatically by the installer. Native Rust autocompletion and syntax highlighting work out of the box!
                   </p>
                 </div>
               </div>

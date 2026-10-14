@@ -612,26 +612,21 @@ glade_upgrade</code></pre>
         <section class="docs-section">
           <h2 id="zsh-setup"><span class="section-icon">🐚</span> Shell Integration Guides</h2>
 
-          <h3>Zsh Setup & Zero-Framework Plugin Integration</h3>
+          <h3>Zsh Setup &amp; Native Rust Subsystem (Zero External Plugins)</h3>
           <p>
-            gladeshell (`config.zsh`) provides supercharged Zsh integration with automatic
-            autosuggestions and syntax highlighting,
-            <strong>without requiring heavy frameworks like Oh-My-Zsh</strong>.
+            gladeshell provides built-in <strong>Native Rust Autocompletion &amp; Syntax Highlighting (~0.08ms)</strong>.
+            Everything is configured automatically by the installer — <strong>no manual git clones, plugin managers, or heavy frameworks like Oh-My-Zsh required</strong>:
           </p>
 
           <div class="code-wrapper">
             <div class="code-header">
-              <span class="code-lang">Zsh Plugin Setup Script</span>
+              <span class="code-lang">Zsh Automated Setup</span>
               <button class="copy-btn"><span>📋</span> Copy</button>
             </div>
-            <pre><code><span class="hl-comment"># 1. Create native Zsh plugin directory</span>
-mkdir -p ~/.zsh
+            <pre><code><span class="hl-comment"># One-line automated installer — configures prompt + native Rust highlighting &amp; suggestions</span>
+zsh &lt;(curl -fsSL https://gladeshell.netlify.app/public/install.zsh)
 
-<span class="hl-comment"># 2. Clone syntax highlighting and autosuggestions</span>
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.zsh/zsh-syntax-highlighting
-git clone https://github.com/zsh-users/zsh-autosuggestions.git ~/.zsh/zsh-autosuggestions
-
-<span class="hl-comment"># 3. Reload Zsh</span>
+<span class="hl-comment"># Reload shell</span>
 source ~/.zshrc</code></pre>
           </div>
 

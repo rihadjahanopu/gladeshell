@@ -133,21 +133,19 @@ if (-not $env:GLADESHELL_HEAL_DONE) {
             $profileContent = [System.IO.File]::ReadAllText($_fb_pwsh_profile)
             if ($profileContent -and -not $profileContent.Contains("# >>> glade-powershell >>>")) {
                 # Block is missing → re-inject in background
-                $psi = [System.Diagnostics.ProcessStartInfo]@{
-                    FileName = 'gladeshell'
-                    Arguments = 'setup'
-                    CreateNoWindow = $true
-                    UseShellExecute = $false
-                }
+                $psi = New-Object System.Diagnostics.ProcessStartInfo
+                $psi.FileName = 'gladeshell'
+                $psi.Arguments = 'setup'
+                $psi.CreateNoWindow = $true
+                $psi.UseShellExecute = $false
                 [System.Diagnostics.Process]::Start($psi) | Out-Null
             } elseif ($profileContent -and -not $profileContent.TrimEnd().EndsWith("# <<< glade-powershell <<<")) {
                 # Block exists but not at bottom → reorder in background
-                $psi = [System.Diagnostics.ProcessStartInfo]@{
-                    FileName = 'gladeshell'
-                    Arguments = 'internal-clean-rc'
-                    CreateNoWindow = $true
-                    UseShellExecute = $false
-                }
+                $psi = New-Object System.Diagnostics.ProcessStartInfo
+                $psi.FileName = 'gladeshell'
+                $psi.Arguments = 'internal-clean-rc'
+                $psi.CreateNoWindow = $true
+                $psi.UseShellExecute = $false
                 [System.Diagnostics.Process]::Start($psi) | Out-Null
             }
         } catch {}

@@ -103,7 +103,7 @@ $END   = "# <<< glade-powershell <<<"
 # --- Colors & Formatting ------------------------------------------------------
 $ESC  = [char]27
 $RED  = "$ESC[1;31m"; $GRN  = "$ESC[1;32m"; $YLW  = "$ESC[1;33m"
-$BLU  = "$ESC[1;34m"; $PUR  = "$ESC[1;35m"; $CYN  = "$ESC[1;36m"
+$BLU  = "$ESC[1;34m"; $PUR  = "$ESC[1;35m"; $CYN  = "$ESC[1;36m"; $CYAN = $CYN
 $BOLD = "$ESC[1m";    $DIM  = "$ESC[2m";    $NC   = "$ESC[0m"
 
 # --- Win32 Native Environment Broadcast (No Unwanted Variable Expansion) -----
@@ -226,7 +226,8 @@ function Write-AtomicFile {
     $tempFile = Join-Path $dir (".gladeshell_tmp_" + [System.IO.Path]::GetRandomFileName())
     $merged = if ($existing -and -not $existing.EndsWith("`n")) { "$existing`r`n$Content" } else { "$existing$Content" }
     [System.IO.File]::WriteAllText($tempFile, $merged, [System.Text.Encoding]::UTF8)
-    Move-Item -Path $tempFile -Destination $Path -Force
+    [System.IO.File]::Copy($tempFile, $Path, $true)
+    Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -280,7 +281,7 @@ function Invoke-Rollback {
         if ($profileContent -and $profileContent.Contains($START)) {
             $regex = "(?s)\r?\n?" + [regex]::Escape($START) + ".*?" + [regex]::Escape($END)
             $profileContent = [regex]::Replace($profileContent, $regex, "")
-            $profileContent | Out-File $PROFILE -Encoding utf8 -Force
+            [System.IO.File]::WriteAllText($PROFILE, $profileContent, [System.Text.Encoding]::UTF8)
             Write-Host "  ${GRN}✔ Removed gladeshell configuration block from $PROFILE${NC}"
         }
     }
@@ -450,7 +451,7 @@ function Install-RustBinary {
 
             if (-not $downloadSuccess) {
                 try {
-                    Invoke-RestMethod -Uri $url -OutFile $targetExe -ErrorAction Stop
+                    Invoke-WebRequest -Uri $url -OutFile $targetExe -UseBasicParsing -ErrorAction Stop
                     if ((Test-Path $targetExe) -and ((Get-Item $targetExe).Length -gt 0)) {
                         $downloadSuccess = $true
                     }
@@ -534,7 +535,15 @@ $targetExe = Join-Path $binDir "gladeshell.exe"
 
 # Generate and write init.ps1 cache using UTF-8 (never use > redirection — it mangles encoding in PS 5.1)
 try {
-    $exe = if (Test-Path $targetExe) { $targetExe } else { (Get-Command gladeshell -ErrorAction SilentlyContinue)?.Source }
+    $exe = $null
+    if (Test-Path $targetExe) {
+        $exe = $targetExe
+    } else {
+        $cmdInfo = Get-Command gladeshell -ErrorAction SilentlyContinue
+        if ($cmdInfo) {
+            $exe = $cmdInfo.Source
+        }
+    }
     if ($exe) {
         $initLines = & $exe init pwsh
         if ($initLines) {
@@ -553,8 +562,8 @@ $START
 # Installed by GladeShell: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 # gladeshell Rust Native Engine Initialization (Zero-Fork Cached Bootstrap)
 `$localBin = Join-Path `$HOME ".local\bin"
-if (-not (`$env:PATH -split [IO.Path]::PathSeparator -contains `$localBin)) {
-    `$env:PATH = "`$localBin`$([IO.Path]::PathSeparator)`$env:PATH"
+if (-not (`$env:PATH -split [System.IO.Path]::PathSeparator -contains `$localBin)) {
+    `$env:PATH = "`$localBin`$([System.IO.Path]::PathSeparator)`$env:PATH"
 }
 `$fb_cache = Join-Path `$HOME ".gladeshell\cache\init.ps1"
 if ([System.IO.File]::Exists(`$fb_cache)) {

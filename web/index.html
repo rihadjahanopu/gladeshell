@@ -657,8 +657,10 @@
               aria-controls="tab-win"
               id="tab-btn-win"
               data-tab="win"
+              data-disabled="true"
+              data-tooltip="Windows coming soon"
             >
-              <span>🪟</span> Windows
+              <span>🪟</span> Windows <span class="coming-soon-badge">Soon</span>
             </button>
           </div>
 
@@ -722,12 +724,14 @@
               >
                 <div class="code-header" style="background: rgba(137, 180, 250, 0.1)">
                   <span class="code-lang" style="color: #89b4fa; font-weight: 600"
-                    >🪟 Universal Auto-Detect (Windows)</span
+                    >🪟 Universal Auto-Detect (Windows) <span class="coming-soon-badge">Coming Soon</span></span
                   >
                   <button
                     class="copy-btn"
                     aria-label="Copy universal Windows install command"
                     data-copy='powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"'
+                    data-disabled="true"
+                    data-tooltip="Windows coming soon"
                   >
                     <svg
                       width="16"
@@ -1078,8 +1082,9 @@
                   id="utab-btn-ps"
                   data-utab="ps"
                   data-disabled="true"
+                  data-tooltip="Windows coming soon"
                 >
-                  🪟 PowerShell
+                  🪟 PowerShell <span class="coming-soon-badge">Soon</span>
                 </button>
               </div>
 
@@ -1261,8 +1266,9 @@ sed -i '' '/# &gt;&gt;&gt; glade-zshrc &gt;&gt;&gt;/,/# &lt;&lt;&lt; glade-zshrc
               aria-controls="setup-tab-ps"
               data-setup-tab="ps"
               data-disabled="true"
+              data-tooltip="Windows coming soon"
             >
-              🪟 PowerShell
+              🪟 PowerShell <span class="coming-soon-badge">Soon</span>
             </button>
           </div>
 

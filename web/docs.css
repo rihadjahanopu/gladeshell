@@ -2593,3 +2593,76 @@ td code {
 .bench-legend-name { font-weight: 600; color: var(--docs-text); }
 .bench-legend-sub  { font-size: 0.75rem; color: var(--docs-text-dim); margin-top: 1px; }
 
+/* ============================================================
+   Disabled Button Tooltip & Badges
+   ============================================================ */
+[data-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+  position: relative;
+}
+
+[data-disabled='true']:hover .custom-tooltip,
+[data-disabled='true']:focus-visible .custom-tooltip,
+.custom-tooltip.show {
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+}
+
+.coming-soon-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  line-height: 1.2;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.custom-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(8px) scale(0.92);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  box-shadow:
+    0 10px 25px -5px rgba(168, 85, 247, 0.4),
+    0 0 15px rgba(34, 211, 238, 0.2);
+  z-index: 1000;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.custom-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(168, 85, 247, 0.6) transparent transparent transparent;
+}
+
+

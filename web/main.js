@@ -176,6 +176,7 @@ cmdCatBtns.forEach((btn) => {
 // ─── Copy buttons ─────────────────────────────────────────
 document.querySelectorAll('.copy-btn').forEach((btn) => {
   btn.addEventListener('click', async () => {
+    if (btn.dataset.disabled === 'true') return;
     const text = btn.dataset.copy;
     if (!text) return;
 
@@ -414,29 +415,28 @@ document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
 
 // ─── Disabled button tooltips ─────────────────────────────
 document.querySelectorAll('[data-disabled="true"]').forEach((btn) => {
+  // Pre-create tooltip element so hover/focus displays immediately
+  let tooltip = btn.querySelector('.custom-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.className = 'custom-tooltip';
+    tooltip.textContent = btn.dataset.tooltip || 'Windows coming soon';
+    btn.appendChild(tooltip);
+  }
+
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if tooltip already exists
-    let tooltip = btn.querySelector('.custom-tooltip');
-    if (!tooltip) {
-      tooltip = document.createElement('div');
-      tooltip.className = 'custom-tooltip';
-      tooltip.textContent = 'Coming soon';
-      btn.appendChild(tooltip);
-    }
-
-    // Show tooltip
-    // Use requestAnimationFrame to ensure the display transition happens
+    // Pulse/Show tooltip on click
     requestAnimationFrame(() => {
       tooltip.classList.add('show');
     });
 
-    // Hide tooltip after 2 seconds
-    setTimeout(() => {
+    clearTimeout(btn._tooltipTimer);
+    btn._tooltipTimer = setTimeout(() => {
       tooltip.classList.remove('show');
-    }, 2000);
+    }, 2200);
   });
 });
 

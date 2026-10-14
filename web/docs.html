@@ -444,10 +444,10 @@
             <pre><code>curl -fsSL https://gladeshell.netlify.app/install.sh | bash</code></pre>
           </div>
 
-          <div class="code-wrapper">
+          <div class="code-wrapper" style="opacity: 0.78; position: relative;">
             <div class="code-header">
-              <span class="code-lang">PowerShell (Windows Universal)</span>
-              <button class="copy-btn"><span>📋</span> Copy Command</button>
+              <span class="code-lang">PowerShell (Windows Universal) <span class="coming-soon-badge">Coming Soon</span></span>
+              <button class="copy-btn" data-disabled="true" data-tooltip="Windows coming soon"><span>⏳</span> Coming Soon</button>
             </div>
             <pre><code>powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"</code></pre>
           </div>
@@ -491,12 +491,12 @@
                   </td>
                 </tr>
                 <tr>
-                  <td><strong>PowerShell</strong></td>
+                  <td><strong>PowerShell</strong> <span class="coming-soon-badge">Coming Soon</span></td>
                   <td><code>$PROFILE</code></td>
                   <td>
-                    <code
-                      >powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"</code
-                    >
+                    <button type="button" class="table-soon-btn" data-disabled="true" data-tooltip="Windows coming soon" style="background: rgba(168, 85, 247, 0.12); border: 1px dashed rgba(168, 85, 247, 0.4); color: #c084fc; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: not-allowed; font-family: inherit; font-weight: 500;">
+                      <span>⏳</span> Windows Coming Soon
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -650,13 +650,13 @@ fish <(curl -fsSL https://gladeshell.netlify.app/public/install.fish)
 source ~/.config/fish/config.fish</code></pre>
           </div>
 
-          <h3 id="powershell-setup">PowerShell Setup ($PROFILE)</h3>
-          <p>PowerShell 7+ and Windows PowerShell 5.1 are fully supported via `install.ps1`.</p>
+          <h3 id="powershell-setup">PowerShell Setup ($PROFILE) <span class="coming-soon-badge">Coming Soon</span></h3>
+          <p>PowerShell 7+ and Windows PowerShell 5.1 support is currently undergoing stabilization for parity with Linux &amp; macOS.</p>
           <div class="alert-box alert-warning">
-            <div class="alert-title">⚠️ Windows Script Execution Policy</div>
+            <div class="alert-title">⏳ Windows Support Coming Soon</div>
             <p>
-              If PowerShell blocks remote script execution, enable execution policy first in an
-              Administrator terminal:
+              Windows native installer is temporarily paused while we polish PowerShell performance and compatibility.
+              Once released, you can enable remote script execution via:
               <code>Set-ExecutionPolicy RemoteSigned -Scope CurrentUser</code>
             </p>
           </div>

@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSearchModal();
   initMobileSidebar();
   initBenchmark(); // ← Advanced benchmark section
+  initDisabledTooltips(); // ← Disabled buttons & tooltips
 });
 
 /* ============================================================
@@ -778,6 +779,26 @@ function initCopyButtons() {
     const copyBtn = e.target.closest('.copy-btn');
     if (!copyBtn) return;
 
+    if (copyBtn.dataset.disabled === 'true') {
+      e.preventDefault();
+      e.stopPropagation();
+      let tooltip = copyBtn.querySelector('.custom-tooltip');
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'custom-tooltip';
+        tooltip.textContent = copyBtn.dataset.tooltip || 'Windows coming soon';
+        copyBtn.appendChild(tooltip);
+      }
+      requestAnimationFrame(() => {
+        tooltip.classList.add('show');
+      });
+      clearTimeout(copyBtn._tooltipTimer);
+      copyBtn._tooltipTimer = setTimeout(() => {
+        tooltip.classList.remove('show');
+      }, 2200);
+      return;
+    }
+
     const targetId = copyBtn.getAttribute('data-copy-target');
     let textToCopy = '';
 
@@ -807,6 +828,30 @@ function initCopyButtons() {
       .catch((err) => {
         showToast('Failed to copy: ' + err);
       });
+  });
+}
+
+function initDisabledTooltips() {
+  document.querySelectorAll('[data-disabled="true"]').forEach((btn) => {
+    let tooltip = btn.querySelector('.custom-tooltip');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.className = 'custom-tooltip';
+      tooltip.textContent = btn.dataset.tooltip || 'Windows coming soon';
+      btn.appendChild(tooltip);
+    }
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      requestAnimationFrame(() => {
+        tooltip.classList.add('show');
+      });
+      clearTimeout(btn._tooltipTimer);
+      btn._tooltipTimer = setTimeout(() => {
+        tooltip.classList.remove('show');
+      }, 2200);
+    });
   });
 }
 

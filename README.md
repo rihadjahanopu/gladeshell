@@ -488,6 +488,7 @@ vite
 | `pcinfo`     | Advanced system hardware diagnostics & live sensors profiler TUI                                     |
 | `zed-setup`  | Bulletproof Zed IDE settings installer                                                               |
 | `code-setup` | Bulletproof VS Code settings & extensions installer                                                  |
+| `keep`       | Master Command Center & interactive alias help menu TUI                                              |
 | `uup`        | **Mega Updater** — interactive fzf menu: OS core, Snap, Flatpak, Bun, Node.js, NPM, deep clean       |
 | `uu`        | **Universal Uninstaller** — fuzzy search across apt/snap/flatpak/AppImage, shows size & install date |
 | `uc`        | Universal system clean (cache, orphans, logs)                                                        |

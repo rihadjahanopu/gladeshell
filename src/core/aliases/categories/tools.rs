@@ -14,6 +14,12 @@ pub fn group() -> AliasGroup {
         only_shells: vec![],
         aliases: vec![
             AliasEntry {
+                key: "keep".into(),
+                value: "gladeshell keep".into(),
+                description: "Master Command Center & interactive alias help menu TUI".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
                 key: "ffmedia".into(),
                 value: "gladeshell ffmedia".into(),
                 description: "Interactive 24-in-1 FFmpeg multimedia suite".into(),

@@ -105,6 +105,18 @@ fn build_categories() -> Vec<CmdCategory> {
                     example: "",
                     color: C_GREEN,
                 },
+                CmdEntry {
+                    cmd: "root",
+                    desc: "Jump to filesystem root (/)",
+                    example: "root",
+                    color: C_GREEN,
+                },
+                CmdEntry {
+                    cmd: "z <query>",
+                    desc: "Smart directory jump (z-jumper)",
+                    example: "z dev",
+                    color: C_ACCENT,
+                },
             ],
         },
         CmdCategory {
@@ -163,6 +175,12 @@ fn build_categories() -> Vec<CmdCategory> {
                     cmd: "ex <file>",
                     desc: "Universal archive extractor",
                     example: "ex file.zip",
+                    color: C_GREEN,
+                },
+                CmdEntry {
+                    cmd: "comp <archive>",
+                    desc: "Parallel archive compressor",
+                    example: "comp backup.tar.gz src/",
                     color: C_GREEN,
                 },
             ],
@@ -328,6 +346,12 @@ fn build_categories() -> Vec<CmdCategory> {
             title: "PROJECT INITIALIZATION",
             cmds: vec![
                 CmdEntry {
+                    cmd: "project",
+                    desc: "Interactive Project Setup & Tool Hub TUI",
+                    example: "project",
+                    color: C_ACCENT,
+                },
+                CmdEntry {
                     cmd: "ii",
                     desc: "Initialize project (Bun/NPM choice)",
                     example: "",
@@ -394,6 +418,36 @@ fn build_categories() -> Vec<CmdCategory> {
             title: "SYSTEM & MAINTENANCE",
             cmds: vec![
                 CmdEntry {
+                    cmd: "glade",
+                    desc: "Interactive TUI theme picker & switcher",
+                    example: "glade",
+                    color: C_PINK,
+                },
+                CmdEntry {
+                    cmd: "pcinfo",
+                    desc: "System hardware diagnostics & profiler TUI",
+                    example: "pcinfo",
+                    color: C_ACCENT,
+                },
+                CmdEntry {
+                    cmd: "zed-setup",
+                    desc: "Bulletproof Zed IDE settings installer",
+                    example: "zed-setup",
+                    color: C_BLUE,
+                },
+                CmdEntry {
+                    cmd: "code-setup",
+                    desc: "Bulletproof VS Code settings installer",
+                    example: "code-setup",
+                    color: C_BLUE,
+                },
+                CmdEntry {
+                    cmd: "keep",
+                    desc: "Master Command Center & Help Menu TUI",
+                    example: "keep",
+                    color: C_BORDER,
+                },
+                CmdEntry {
                     cmd: "update",
                     desc: "Modern System Package Updater (TUI)",
                     example: "",
@@ -447,6 +501,30 @@ fn build_categories() -> Vec<CmdCategory> {
             icon: "🚀",
             title: "ADVANCED INTERACTIVE TUIS",
             cmds: vec![
+                CmdEntry {
+                    cmd: "keep",
+                    desc: "Master Command Center & Help Menu TUI",
+                    example: "keep",
+                    color: C_BORDER,
+                },
+                CmdEntry {
+                    cmd: "glade",
+                    desc: "Interactive prompt theme picker TUI",
+                    example: "glade",
+                    color: C_PINK,
+                },
+                CmdEntry {
+                    cmd: "pcinfo",
+                    desc: "Live system hardware diagnostics & profiler TUI",
+                    example: "pcinfo",
+                    color: C_ACCENT,
+                },
+                CmdEntry {
+                    cmd: "project",
+                    desc: "Interactive Project Setup & Tool Hub TUI",
+                    example: "project",
+                    color: C_ACCENT,
+                },
                 CmdEntry {
                     cmd: "todo",
                     desc: "Interactive 3-tier Task Manager",

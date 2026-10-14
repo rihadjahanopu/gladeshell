@@ -548,6 +548,10 @@ try {
         $initLines = & $exe init pwsh
         if ($initLines) {
             $initText = $initLines -join "`r`n"
+            # Sanitize legacy/incompatible syntax for Windows PowerShell 5.1 compatibility
+            $initText = $initText -replace " -split ';' @args", " -split ';'"
+            $initText = $initText -replace '(?m)^.*sudo systemctl.*$', ''
+            $initText = $initText -replace " && ", "; if (`$?) { "
             [System.IO.File]::WriteAllText($cacheFile, $initText, [System.Text.Encoding]::UTF8)
             Write-Host "  ${GRN}✔ init.ps1 cache written ($([Math]::Round($initText.Length/1024,1)) KB)${NC}"
         }

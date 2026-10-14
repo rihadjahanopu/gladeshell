@@ -160,15 +160,56 @@ impl AliasFile {
                         }
                     }
                     Shell::Pwsh => {
-                        if entry.value.contains(' ') {
+                        let pwsh_val = if entry.value.contains("&&") {
+                            // PowerShell 5.1 does not support '&&'. Convert "a && b" to "a; if ($?) { b }"
+                            let parts: Vec<&str> =
+                                entry.value.split("&&").map(|s| s.trim()).collect();
+                            let mut chained = String::new();
+                            let mut close_count = 0;
+                            for (i, part) in parts.iter().enumerate() {
+                                if i == 0 {
+                                    chained.push_str(part);
+                                } else {
+                                    chained.push_str(&format!("; if ($?) {{ {part}"));
+                                    close_count += 1;
+                                }
+                            }
+                            for _ in 0..close_count {
+                                chained.push_str(" }");
+                            }
+                            chained
+                        } else {
+                            entry.value.clone()
+                        };
+
+                        let is_complex = pwsh_val.contains(' ')
+                            || pwsh_val.contains(';')
+                            || pwsh_val.starts_with('$')
+                            || pwsh_val.contains('|');
+
+                        if is_complex {
                             let key = &entry.key;
                             let fname = pascal_case(key);
+                            let should_append_args = !entry.value.starts_with('$')
+                                && !entry.value.contains(';')
+                                && !entry.value.contains('|')
+                                && !entry.value.contains("&&")
+                                && !entry.value.contains("||")
+                                && !entry.value.contains("@args")
+                                && !entry.value.contains("$args")
+                                && !entry.value.contains('`');
+
+                            let call_expr = if should_append_args {
+                                format!("{pwsh_val} @args")
+                            } else {
+                                pwsh_val.clone()
+                            };
+
                             let fn_body = if fname == *key {
-                                format!("function global:{key} {{ {} @args }}\n", entry.value)
+                                format!("function global:{key} {{ {call_expr} }}\n")
                             } else {
                                 format!(
-                                    "function {fname} {{ {} @args }}\nfunction global:{key} {{ {} @args }}\n",
-                                    entry.value, entry.value
+                                    "function {fname} {{ {call_expr} }}\nfunction global:{key} {{ {call_expr} }}\n"
                                 )
                             };
                             if entry.description.is_empty() {
@@ -180,12 +221,12 @@ impl AliasFile {
                             if entry.description.is_empty() {
                                 out.push_str(&format!(
                                     "Set-Alias -Name {} -Value {} -Option AllScope -Force -ErrorAction SilentlyContinue\n",
-                                    entry.key, entry.value
+                                    entry.key, pwsh_val
                                 ));
                             } else {
                                 out.push_str(&format!(
                                     "# {}\nSet-Alias -Name {} -Value {} -Option AllScope -Force -ErrorAction SilentlyContinue\n",
-                                    entry.description, entry.key, entry.value
+                                    entry.description, entry.key, pwsh_val
                                 ));
                             }
                         }
@@ -285,6 +326,21 @@ value = "git push"
         let af = AliasFile::builtin();
         let out = af.render(Shell::Pwsh);
         assert!(out.contains("function Gs {"));
+    }
+
+    #[test]
+    fn render_pwsh_no_illegal_syntax() {
+        let af = AliasFile::builtin();
+        let out = af.render(Shell::Pwsh);
+        assert!(
+            !out.contains(" && "),
+            "Pwsh aliases should not contain '&&'"
+        );
+        assert!(
+            !out.contains("-split ';' @args"),
+            "Path alias should not have @args"
+        );
+        assert!(out.contains("function global:path { $env:PATH -split ';' }"));
     }
 
     #[test]

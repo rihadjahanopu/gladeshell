@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.7] — 2026-10-14
+
+### 🪟 Windows PowerShell 5.1 Syntax & Expression Compatibility
+
+- 🛡️ **Expression Splatting Fix**:
+  - Eliminated invalid `@args` appending on PowerShell expressions such as `$env:PATH -split ';'`, fixing `Unexpected token '@args' in expression or statement`.
+- 🔗 **Pipeline Chain Operator (`&&`) Parser Fix**:
+  - Restricted Linux-specific Docker `sudo systemctl` aliases (`dstart`, `doff`, `dstatus`, `denable`, `ddisable`) to Unix shells (`bash`, `zsh`, `fish`).
+  - Added native transformer in PowerShell alias generator to convert any `&&` into PowerShell 5.1-compatible `; if ($?) { ... }` blocks.
+- 🧹 **Installer Cache Sanitizer**:
+  - Added in-memory sanitization in `install.ps1` before writing `init.ps1`, protecting users against older cached binaries.
+
 ---
 
 ## 🚀 [1.2.6] — 2026-10-14

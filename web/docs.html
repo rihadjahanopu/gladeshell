@@ -258,6 +258,8 @@
             <li><a href="#manual-install">Manual Clone & Source</a></li>
             <li><a href="#verification">Verification & Reload</a></li>
             <li><a href="#update-uninstall">Updating & Uninstalling</a></li>
+            <li><a href="#zed-settings">Zed IDE Settings <span class="sidebar-tag">IDE</span></a></li>
+            <li><a href="#vscode-settings">VS Code Settings <span class="sidebar-tag">IDE</span></a></li>
           </ul>
         </div>
 
@@ -593,16 +595,34 @@ glade_upgrade</code></pre>
 
           <div class="code-wrapper">
             <div class="code-header">
-              <span class="code-lang">Zed Settings One-Line Installer</span>
+              <span class="code-lang">Built-in Rust Command</span>
               <button class="copy-btn"><span>📋</span> Copy</button>
             </div>
-            <pre><code>curl -fsSL https://gladeshell.netlify.app/public/zed/install-settings.sh | bash</code></pre>
+            <pre><code>zed-setup</code></pre>
           </div>
           <p style="font-size: 0.85rem; color: var(--docs-text-muted)">
             <strong>What it does:</strong> Creates a timestamped backup of your existing settings,
             writes tuned <code>settings.json</code> (BlackFox theme, Cascadia Code 22px font, Tab
             size 2, Prettier, Git inline blame, autosave) to both <code>~/.config/zed/</code> and
-            Flatpak <code>dev.zed.Zed</code> config paths.
+            Flatpak <code>dev.zed.Zed</code> config paths. Run <code>zed-setup</code> (or <code>gladeshell zed-setup</code>) anytime.
+          </p>
+
+          <h3 id="vscode-settings">💻 VS Code Settings &amp; Extensions Installer</h3>
+          <p>
+            Install a battle-tested, high-performance <code>settings.json</code> and 50+ curated developer extensions for
+            <a href="https://code.visualstudio.com" target="_blank" rel="noopener">Visual Studio Code</a> / VSCodium / Code-OSS — with automatic timestamped backup:
+          </p>
+
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Built-in Rust Command</span>
+              <button class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre><code>code-setup</code></pre>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--docs-text-muted)">
+            <strong>What it does:</strong> Creates an atomic backup of your existing configuration,
+            writes tuned <code>settings.json</code> (Dobri Next Black theme, Cascadia Code 17px font with ligatures, Prettier, ErrorLens, Tailwind CSS, smooth caret animation), and installs 50+ curated extensions via <code>code --install-extension</code>. Run <code>code-setup</code> (or <code>gladeshell code-setup</code>) anytime.
           </p>
         </section>
 
@@ -2156,8 +2176,16 @@ glade matrix
                   <td>Jump to Music</td>
                 </tr>
                 <tr>
+                  <td><code>root</code></td>
+                  <td>Jump to filesystem root (<code>/</code>)</td>
+                </tr>
+                <tr>
                   <td><code>rd</code></td>
                   <td>Jump to root directory (<code>/</code>)</td>
+                </tr>
+                <tr>
+                  <td><code>z &lt;query&gt;</code></td>
+                  <td>Smart frecent directory jumper (e.g. <code>z dev</code>)</td>
                 </tr>
               </tbody>
             </table>
@@ -2402,6 +2430,10 @@ glade matrix
               </thead>
               <tbody>
                 <tr>
+                  <td><code>project</code></td>
+                  <td>Interactive Project Setup &amp; Tool Hub TUI (Next.js, Vite, Bun, Tailwind v4, Shadcn)</td>
+                </tr>
+                <tr>
                   <td><code>ii</code></td>
                   <td>Interactive project init — choose Bun or NPM</td>
                 </tr>
@@ -2456,6 +2488,22 @@ glade matrix
                 </tr>
               </thead>
               <tbody>
+                <tr>
+                  <td><code>glade</code></td>
+                  <td>Interactive TUI prompt theme picker &amp; switcher with live preview</td>
+                </tr>
+                <tr>
+                  <td><code>pcinfo</code></td>
+                  <td>Advanced system hardware diagnostics &amp; live sensors profiler TUI</td>
+                </tr>
+                <tr>
+                  <td><code>zed-setup</code></td>
+                  <td>Bulletproof Zed IDE settings installer</td>
+                </tr>
+                <tr>
+                  <td><code>code-setup</code></td>
+                  <td>Bulletproof VS Code settings &amp; extensions installer</td>
+                </tr>
                 <tr>
                   <td><code>uup</code></td>
                   <td>Mega Updater — OS + Snap + Flatpak + Bun + Node.js via fzf</td>
@@ -3048,6 +3096,11 @@ glade matrix
                   <td><code>ex &lt;archive&gt;</code></td>
                   <td>Extract any archive format</td>
                   <td><code>ex project.tar.gz</code></td>
+                </tr>
+                <tr>
+                  <td><code>comp &lt;archive&gt; [files...]</code></td>
+                  <td>High-performance parallel archive compressor (tar.gz, zip, 7z, tar.xz)</td>
+                  <td><code>comp backup.tar.gz src/</code></td>
                 </tr>
                 <tr>
                   <td><code>ff &lt;name&gt;</code></td>
@@ -4440,6 +4493,7 @@ glade matrix
           <li><a href="#universal-install">Universal Installer</a></li>
           <li><a href="#shell-installers">Shell Installers</a></li>
           <li><a href="#zed-settings">Zed IDE Settings</a></li>
+          <li><a href="#vscode-settings">VS Code Settings</a></li>
           <li><a href="#zsh-setup">Zsh Setup Guide</a></li>
           <li><a href="#font-setup">Font & Emoji Setup</a></li>
           <li><a href="#prompt-architecture">Smart Prompt</a></li>

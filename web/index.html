@@ -1930,8 +1930,16 @@ reboot</code></pre>
                     <td>Jump to Music</td>
                   </tr>
                   <tr>
+                    <td><code>root</code></td>
+                    <td>Jump to filesystem root (<code>/</code>)</td>
+                  </tr>
+                  <tr>
                     <td><code>rd</code></td>
                     <td>Jump to root directory (<code>/</code>)</td>
+                  </tr>
+                  <tr>
+                    <td><code>z &lt;query&gt;</code></td>
+                    <td>Smart frecent directory jumper (e.g. <code>z dev</code>)</td>
                   </tr>
                 </tbody>
               </table>
@@ -2105,6 +2113,10 @@ reboot</code></pre>
                 </thead>
                 <tbody>
                   <tr>
+                    <td><code>project</code></td>
+                    <td>Interactive Project Setup &amp; Tool Hub TUI (Next.js, Vite, Bun, Tailwind v4, Shadcn)</td>
+                  </tr>
+                  <tr>
                     <td><code>ii</code></td>
                     <td>Interactive project init — choose Bun or NPM</td>
                   </tr>
@@ -2165,6 +2177,22 @@ reboot</code></pre>
                   </tr>
                 </thead>
                 <tbody>
+                  <tr>
+                    <td><code>glade</code></td>
+                    <td>Interactive TUI prompt theme picker &amp; switcher with live preview</td>
+                  </tr>
+                  <tr>
+                    <td><code>pcinfo</code></td>
+                    <td>Advanced system hardware diagnostics &amp; live sensors profiler TUI</td>
+                  </tr>
+                  <tr>
+                    <td><code>zed-setup</code></td>
+                    <td>Bulletproof Zed IDE settings installer</td>
+                  </tr>
+                  <tr>
+                    <td><code>code-setup</code></td>
+                    <td>Bulletproof VS Code settings &amp; extensions installer</td>
+                  </tr>
                   <tr>
                     <td><code>uup</code></td>
                     <td>Mega Updater — OS + Snap + Flatpak + Bun + Node.js via fzf</td>
@@ -2769,6 +2797,11 @@ reboot</code></pre>
                     <td><code>ex &lt;archive&gt;</code></td>
                     <td>Extract any archive format</td>
                     <td><code>ex project.tar.gz</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>comp &lt;archive&gt; [files...]</code></td>
+                    <td>High-performance parallel archive compressor (tar.gz, zip, 7z, tar.xz)</td>
+                    <td><code>comp backup.tar.gz src/</code></td>
                   </tr>
                   <tr>
                     <td><code>ff &lt;name&gt;</code></td>
@@ -3904,7 +3937,7 @@ reboot</code></pre>
                 <li>💾 Autosave on focus change</li>
                 <li>🔍 Git inline blame with commit summary</li>
               </ul>
-              <!-- Universal Auto-Detect (Linux & macOS) block -->
+              <!-- Built-in Zed Setup Command block -->
               <div
                 class="code-block featured-install"
                 style="
@@ -3916,12 +3949,12 @@ reboot</code></pre>
               >
                 <div class="code-header" style="background: rgba(203, 166, 247, 0.1)">
                   <span class="code-lang" style="color: #cba6f7; font-weight: 600"
-                    >⚡ Universal Auto-Detect (Linux &amp; macOS)</span
+                    >⚡ Built-in Rust Command (Linux &amp; macOS)</span
                   >
                   <button
                     class="copy-btn"
-                    aria-label="Copy Zed install command"
-                    data-copy="curl -fsSL https://gladeshell.netlify.app/public/zed/install-settings.sh | bash"
+                    aria-label="Copy Zed setup command"
+                    data-copy="zed-setup"
                   >
                     <svg
                       width="16"
@@ -3938,7 +3971,7 @@ reboot</code></pre>
                     Copy
                   </button>
                 </div>
-                <pre><code>curl -fsSL https://gladeshell.netlify.app/public/zed/install-settings.sh | bash</code></pre>
+                <pre><code>zed-setup</code></pre>
               </div>
             </div>
             <div class="zed-table-wrapper">
@@ -3981,6 +4014,124 @@ reboot</code></pre>
                   <tr>
                     <td>Git Blame</td>
                     <td>With commit summary</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VS Code Section -->
+      <section
+        id="vscode"
+        class="section zed-section"
+        style="border-top: 1px solid var(--clr-border); background: var(--clr-bg-2);"
+        aria-labelledby="vscode-heading"
+      >
+        <div class="section-inner">
+          <div class="zed-content">
+            <div class="zed-text">
+              <span class="section-eyebrow">Bonus</span>
+              <h2 id="vscode-heading" class="section-title">
+                VS Code <span class="gradient-text">Settings &amp; Extensions</span>
+              </h2>
+              <p>
+                Get a battle-tested <code>settings.json</code> and curated extensions for
+                <a
+                  href="https://code.visualstudio.com"
+                  target="_blank"
+                  rel="noopener"
+                  class="text-link"
+                  >VS Code</a
+                >
+                (and VSCodium) — with zero-risk timestamped backup of existing settings.
+              </p>
+              <ul class="zed-features">
+                <li>🎨 <strong>Dobri Next Black</strong> theme + Material Icon Theme</li>
+                <li>✍️ <strong>Cascadia Code 17px</strong> with ligatures &amp; smooth caret</li>
+                <li>⚡ <strong>Prettier &amp; ESLint</strong> format &amp; organize imports on save</li>
+                <li>💡 <strong>ErrorLens, Tailwind CSS &amp; Path IntelliSense</strong> enabled</li>
+                <li>📦 <strong>50+ Curated Extensions</strong> installed automatically via <code>code</code> CLI</li>
+                <li>🛡️ <strong>Safe Atomic Backup</strong> of your existing configuration</li>
+              </ul>
+              <!-- Built-in VS Code Setup Command block -->
+              <div
+                class="code-block featured-install"
+                style="
+                  margin-bottom: 1.5rem;
+                  border: 1px solid rgba(137, 180, 250, 0.4);
+                  border-radius: 12px;
+                  overflow: hidden;
+                "
+              >
+                <div class="code-header" style="background: rgba(137, 180, 250, 0.1)">
+                  <span class="code-lang" style="color: #89b4fa; font-weight: 600"
+                    >⚡ Built-in Rust Command (Cross-Platform)</span
+                  >
+                  <button
+                    class="copy-btn"
+                    aria-label="Copy VS Code setup command"
+                    data-copy="code-setup"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy
+                  </button>
+                </div>
+                <pre><code>code-setup</code></pre>
+              </div>
+            </div>
+            <div class="zed-table-wrapper">
+              <table class="zed-table">
+                <thead>
+                  <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Theme</td>
+                    <td>Dobri Next -A00- Black / Material Icon</td>
+                  </tr>
+                  <tr>
+                    <td>Buffer Font</td>
+                    <td>Cascadia Code, JetBrains Mono (17px)</td>
+                  </tr>
+                  <tr>
+                    <td>Font Ligatures</td>
+                    <td>Enabled (true)</td>
+                  </tr>
+                  <tr>
+                    <td>Cursor</td>
+                    <td>Smooth caret animation &amp; blinking</td>
+                  </tr>
+                  <tr>
+                    <td>Tab Size</td>
+                    <td>2 spaces</td>
+                  </tr>
+                  <tr>
+                    <td>Formatter</td>
+                    <td>Prettier (Format on Save, Paste &amp; Type)</td>
+                  </tr>
+                  <tr>
+                    <td>Code Actions</td>
+                    <td>Auto-fix ESLint &amp; organize imports</td>
+                  </tr>
+                  <tr>
+                    <td>Extensions</td>
+                    <td>50+ Curated Web Dev &amp; DevOps plugins</td>
                   </tr>
                 </tbody>
               </table>

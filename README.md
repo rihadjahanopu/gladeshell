@@ -79,6 +79,7 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
   - [💎 Prisma ORM](#-prisma-orm)
 - [🏗️ Project Structure](#️-project-structure)
 - [🖥️ Zed IDE Settings](#️-zed-ide-settings)
+- [💻 VS Code Settings](#-vs-code-settings--extensions)
 - [🐧 Linux App Ecosystem](#-linux-app-ecosystem)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
@@ -400,6 +401,8 @@ glade nightowl
 | `fig` / `ar` / `de`   | Jump to Figma / Archive / Dev folders                 |
 | `des` / `doc` / `dow` | Jump to Desktop / Documents / Downloads               |
 | `bv` / `ch` / `gp`    | Jump to Brave / Chrome / Photos Downloads             |
+| `root`                | Jump to filesystem root (`/`)                         |
+| `z <query>`           | Smart directory jump (z-jumper, frecency-based)       |
 
 ---
 
@@ -453,6 +456,7 @@ gwip "add auth middleware"   # Custom message
 
 | Command      | Description                                                                      |
 | ------------ | -------------------------------------------------------------------------------- |
+| `project`    | Interactive Project Setup & Tool Hub TUI (Next.js, Vite, Bun, Tailwind v4, Shadcn) |
 | `ii`         | Interactive project init — choose Bun or NPM, auto-creates `.gitignore`          |
 | `next`       | Scaffold Next.js app (`create-next-app`) via Bun or NPM                          |
 | `vite`       | Scaffold Vite project with optional Tailwind CSS v4 setup                        |
@@ -478,9 +482,13 @@ vite
 
 ### ⚙️ System & Maintenance
 
-| Command     | Description                                                                                          |
-| ----------- | ---------------------------------------------------------------------------------------------------- |
-| `uup`       | **Mega Updater** — interactive fzf menu: OS core, Snap, Flatpak, Bun, Node.js, NPM, deep clean       |
+| Command      | Description                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------- |
+| `glade`      | Interactive TUI prompt theme picker & switcher with live preview                                     |
+| `pcinfo`     | Advanced system hardware diagnostics & live sensors profiler TUI                                     |
+| `zed-setup`  | Bulletproof Zed IDE settings installer                                                               |
+| `code-setup` | Bulletproof VS Code settings & extensions installer                                                  |
+| `uup`        | **Mega Updater** — interactive fzf menu: OS core, Snap, Flatpak, Bun, Node.js, NPM, deep clean       |
 | `uu`        | **Universal Uninstaller** — fuzzy search across apt/snap/flatpak/AppImage, shows size & install date |
 | `uc`        | Universal system clean (cache, orphans, logs)                                                        |
 | `update`    | Update system packages                                                                               |
@@ -533,7 +541,8 @@ uu
 | `rmf <file>`   | Safely remove a file                                        | `rmf config.bak`             |
 | `bak <file>`   | Create a `.bak` backup copy                                 | `bak .env`                   |
 | `trash <file>` | Move file to system trash (safe delete)                     | `trash temp.log`             |
-| `ex <archive>` | Extract any archive format                                  | `ex project.tar.gz`          |
+| `ex <archive>`                | Extract any archive format                                             | `ex project.tar.gz`        |
+| `comp <archive> [files...]`   | High-performance parallel archive compressor (tar.gz, zip, 7z, tar.xz) | `comp backup.tar.gz src/`  |
 | `ff <name>`    | Find file by name (skips `node_modules`, `.git`)            | `ff tsconfig`                |
 | `gen <len>`    | Generate a cryptographically secure secret key              | `gen 32`                     |
 | `completions`  | Shell auto-completion generator (auto-loaded in shell init) | `gladeshell completions zsh` |
@@ -847,6 +856,43 @@ The command will:
 | Minimap            | `auto`                                                     |
 | Prettier           | Allowed                                                    |
 | Git Inline Blame   | With commit summary                                        |
+
+---
+
+## 💻 VS Code Settings & Extensions
+
+Install a fully-configured, high-performance `settings.json` and 50+ curated developer extensions for [VS Code](https://code.visualstudio.com) / VSCodium / Code-OSS — with zero-risk timestamped backup.
+
+### Instant Command Setup
+
+Run the built-in installer command directly in your shell:
+
+```bash
+code-setup
+# or
+gladeshell code-setup
+```
+
+The command will:
+
+1. 💾 **Back up** any existing `settings.json` with an atomic timestamped copy
+2. ✍️ **Write** the tuned configuration (Dobri Next Black theme, Cascadia Code 17px font with ligatures, smooth caret, Prettier, ErrorLens)
+3. 📦 **Install** 50+ curated extensions (ESLint, Tailwind CSS, Docker, GitLens, Python, Rust Analyzer, etc.) via `code --install-extension`
+4. ✅ Print a confirmation once complete
+
+### What's included
+
+| Setting         | Value                                                          |
+| --------------- | -------------------------------------------------------------- |
+| Theme           | `Dobri Next -A00- Black` + Material Icon Theme                 |
+| Buffer Font     | `Cascadia Code`, `JetBrains Mono` (17px)                       |
+| Font Ligatures  | Enabled (`true`)                                               |
+| Cursor          | Smooth caret animation & blinking (`phase` / `expand`)         |
+| Tab Size        | `2` spaces                                                     |
+| Formatter       | `Prettier` (Format on Save, Format on Paste, Format on Type)   |
+| Code Actions    | Auto-fix ESLint issues & organize imports on save              |
+| Diagnostics     | `ErrorLens` integration with inline errors & warnings          |
+| Extensions      | 50+ Curated Web Dev, Systems & DevOps extensions               |
 
 ---
 

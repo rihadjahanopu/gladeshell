@@ -73,11 +73,16 @@ function Prompt {
 }
 
 # ── PSReadLine & Native Rust Engine ──
-if ([bool](Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue)) {
+$psrl = Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue
+if ($psrl) {
     Set-PSReadLineOption -EditMode Emacs -ErrorAction SilentlyContinue
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd -ErrorAction SilentlyContinue
-    Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue
-    Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue
+    if ($psrl.Parameters.ContainsKey('PredictionSource')) {
+        Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue
+    }
+    if ($psrl.Parameters.ContainsKey('PredictionViewStyle')) {
+        Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue
+    }
     Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete -ErrorAction SilentlyContinue
     Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward -ErrorAction SilentlyContinue
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward -ErrorAction SilentlyContinue
@@ -115,7 +120,7 @@ if ([bool](Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue)) {
     // ── 4. History, Typo Engine & Self-Heal ──
     out.push_str(r##"
 # ── History & Defaults ──
-$MaximumHistoryCount = 50000
+try { $MaximumHistoryCount = 32767 } catch {}
 $PSDefaultParameterValues['*:Encoding'] = 'UTF8'
 
 # ── Typo Engine & Command Not Found Handler ──

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.8] — 2026-10-14
+
+### 🪟 Windows PowerShell 5.1 PSReadLine & History Range Fixes
+
+- 🛡️ **MaximumHistoryCount Limit**:
+  - Bound `$MaximumHistoryCount` to `32767` (`Int16.MaxValue`), preventing PowerShell 5.1's `ValidateSetFailure` error when exceeding the engine limit.
+- ⚙️ **PSReadLine Parameter Guarding**:
+  - Guarded `-PredictionSource` and `-PredictionViewStyle` parameter calls using `$psrl.Parameters.ContainsKey()`, avoiding binding errors on older PSReadLine versions (< 2.2).
+- 🧹 **Installer Multi-Layer Sanitizer**:
+  - Extended `install.ps1` in-memory regex sanitizer to automatically patch any legacy init cache files.
+
+---
+
 ## 🚀 [1.2.7] — 2026-10-14
 
 ### 🪟 Windows PowerShell 5.1 Syntax & Expression Compatibility

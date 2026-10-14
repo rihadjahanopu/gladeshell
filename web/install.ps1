@@ -552,6 +552,10 @@ try {
             $initText = $initText -replace " -split ';' @args", " -split ';'"
             $initText = $initText -replace '(?m)^.*sudo systemctl.*$', ''
             $initText = $initText -replace " && ", "; if (`$?) { "
+            $initText = $initText -replace '\$MaximumHistoryCount\s*=\s*50000', 'try { $MaximumHistoryCount = 32767 } catch {}'
+            $initText = $initText -replace 'Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue', 'if ($psrl -and $psrl.Parameters.ContainsKey(''PredictionSource'')) { Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue }'
+            $initText = $initText -replace 'Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue', 'if ($psrl -and $psrl.Parameters.ContainsKey(''PredictionViewStyle'')) { Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue }'
+            $initText = $initText -replace 'if \(\[bool\]\(Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue\)\) \{', '$psrl = Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue; if ($psrl) {'
             [System.IO.File]::WriteAllText($cacheFile, $initText, [System.Text.Encoding]::UTF8)
             Write-Host "  ${GRN}✔ init.ps1 cache written ($([Math]::Round($initText.Length/1024,1)) KB)${NC}"
         }

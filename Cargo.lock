@@ -2158,7 +2158,7 @@ dependencies = [
 
 [[package]]
 name = "gladeshell"
-version = "1.2.5"
+version = "1.2.6"
 dependencies = [
  "aes-gcm",
  "arboard",

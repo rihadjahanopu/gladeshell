@@ -184,7 +184,7 @@ pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
             "{start_marker}\nset -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH\nif type -q gladeshell\n    set -l _fb_cache \"$HOME/.gladeshell/cache/init.fish\"\n    set -l _fb_bin (command -v gladeshell 2>/dev/null)\n    if test -f \"$_fb_cache\" -a -n \"$_fb_bin\" -a \"$_fb_cache\" -nt \"$_fb_bin\"\n        source \"$_fb_cache\"\n    else\n        gladeshell init fish | source\n    end\nend\n{end_marker}"
         ),
         "pwsh" | "powershell" => format!(
-            "{start_marker}\n$env:PATH = \"$env:USERPROFILE\\.cargo\\bin;$env:USERPROFILE\\.local\\bin;\" + $env:PATH\n$fb_cache = \"$HOME\\.gladeshell\\cache\\init.pwsh\"\nif ([System.IO.File]::Exists($fb_cache)) {{\n    . $fb_cache\n}} elseif (Get-Command gladeshell -ErrorAction SilentlyContinue) {{\n    gladeshell init pwsh | Invoke-Expression\n}}\n{end_marker}"
+            "{start_marker}\n$localBin = Join-Path $HOME \".local\\bin\"\nif (-not ($env:PATH -split [IO.Path]::PathSeparator -contains $localBin)) {{\n    $env:PATH = \"$localBin$([IO.Path]::PathSeparator)$env:PATH\"\n}}\n$fb_cache = Join-Path $HOME \".gladeshell\\cache\\init.ps1\"\nif ([System.IO.File]::Exists($fb_cache)) {{\n    . $fb_cache\n}} elseif (Get-Command gladeshell -ErrorAction SilentlyContinue) {{\n    gladeshell init pwsh | Invoke-Expression\n}}\n{end_marker}"
         ),
         other => format!(
             "{start_marker}\neval \"$(gladeshell init {other})\"\n{end_marker}"

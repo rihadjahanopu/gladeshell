@@ -811,7 +811,41 @@ fn cmd_completions(shell_str: &str) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut cmd = Cli::command();
-    generate(shell, &mut cmd, "gladeshell", &mut std::io::stdout());
+    if shell == Shell::PowerShell {
+        let mut buf = Vec::with_capacity(4096);
+        generate(shell, &mut cmd, "gladeshell", &mut buf);
+        let text = String::from_utf8_lossy(&buf);
+        let sanitized = text
+            .replace("using namespace System.Management.Automation\n", "")
+            .replace("using namespace System.Management.Automation\r\n", "")
+            .replace(
+                "using namespace System.Management.Automation.Language\n",
+                "",
+            )
+            .replace(
+                "using namespace System.Management.Automation.Language\r\n",
+                "",
+            )
+            .replace(
+                "[StringConstantExpressionAst]",
+                "[System.Management.Automation.Language.StringConstantExpressionAst]",
+            )
+            .replace(
+                "[StringConstantType]",
+                "[System.Management.Automation.Language.StringConstantType]",
+            )
+            .replace(
+                "[CompletionResult]",
+                "[System.Management.Automation.CompletionResult]",
+            )
+            .replace(
+                "[CompletionResultType]",
+                "[System.Management.Automation.CompletionResultType]",
+            );
+        print!("{sanitized}");
+    } else {
+        generate(shell, &mut cmd, "gladeshell", &mut std::io::stdout());
+    }
     Ok(())
 }
 

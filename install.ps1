@@ -23,6 +23,16 @@ param(
     [Switch]$AllShells = $false
 )
 
+# --- GUARD 0: Force UTF-8 Console and Output Encoding -------------------------
+try {
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+    if ([System.Environment]::OSVersion.Platform -eq 'Win32NT') {
+        Set-ItemProperty -Path 'HKCU:\Console' -Name 'VirtualTerminalLevel' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+} catch { $null = $_ }
+
 # --- GUARD 1: PowerShell Version Check ----------------------------------------
 if ($PSVersionTable.PSVersion.Major -lt 5) {
     Write-Host "❌ PowerShell 5.1 or higher is required." -ForegroundColor Red
@@ -212,13 +222,10 @@ function Write-AtomicFile {
     param([string]$Path, [string]$Content)
     $dir = Split-Path $Path -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $existing = if (Test-Path $Path) { [System.IO.File]::ReadAllText($Path) } else { "" }
     $tempFile = Join-Path $dir (".gladeshell_tmp_" + [System.IO.Path]::GetRandomFileName())
-    if (Test-Path $Path) {
-        Copy-Item $Path $tempFile -Force
-    } else {
-        New-Item -ItemType File -Path $tempFile -Force | Out-Null
-    }
-    Add-Content -Path $tempFile -Value $Content -Encoding utf8 -ErrorAction Stop
+    $merged = if ($existing -and -not $existing.EndsWith("`n")) { "$existing`r`n$Content" } else { "$existing$Content" }
+    [System.IO.File]::WriteAllText($tempFile, $merged, [System.Text.Encoding]::UTF8)
     Move-Item -Path $tempFile -Destination $Path -Force
 }
 
@@ -373,7 +380,7 @@ try {
         while ($profileContent -and $profileContent.Contains($START)) {
             $profileContent = [regex]::Replace($profileContent, $regex, "")
         }
-        $profileContent | Out-File $PROFILE -Encoding utf8 -Force
+        [System.IO.File]::WriteAllText($PROFILE, $profileContent, [System.Text.Encoding]::UTF8)
         Write-Host "  ${GRN}✔ Profile cleaned.${NC}"
     }
 } catch { $null = $_ }
@@ -510,12 +517,34 @@ Install-RustBinary `
 # --- STEP 5: Atomic Write & Auto-Reload ---------------------------------------
 Show-ProgressBar -Current 5 -Total 5 -StepName "Writing Profile & Auto-Reload"
 
-$cacheDir = "$HOME\.gladeshell\cache"
+$cacheDir = Join-Path $HOME ".gladeshell\cache"
 if (-not (Test-Path $cacheDir)) {
     New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
 }
-if (Get-Command gladeshell -ErrorAction SilentlyContinue) {
-    & gladeshell init pwsh > "$cacheDir\init.pwsh" 2>$null
+
+$cacheFile = Join-Path $cacheDir "init.ps1"
+# Remove obsolete init.pwsh if present so Windows never associates/opens it with Notepad
+$oldPwshCache = Join-Path $cacheDir "init.pwsh"
+if (Test-Path $oldPwshCache) {
+    Remove-Item $oldPwshCache -Force -ErrorAction SilentlyContinue
+}
+
+$binDir = Join-Path $HOME ".local\bin"
+$targetExe = Join-Path $binDir "gladeshell.exe"
+
+# Generate and write init.ps1 cache using UTF-8 (never use > redirection — it mangles encoding in PS 5.1)
+try {
+    $exe = if (Test-Path $targetExe) { $targetExe } else { (Get-Command gladeshell -ErrorAction SilentlyContinue)?.Source }
+    if ($exe) {
+        $initLines = & $exe init pwsh
+        if ($initLines) {
+            $initText = $initLines -join "`r`n"
+            [System.IO.File]::WriteAllText($cacheFile, $initText, [System.Text.Encoding]::UTF8)
+            Write-Host "  ${GRN}✔ init.ps1 cache written ($([Math]::Round($initText.Length/1024,1)) KB)${NC}"
+        }
+    }
+} catch {
+    Write-Host "  ${YLW}⚠️  Could not generate init.ps1 cache: $($_.Exception.Message)${NC}"
 }
 
 $newBlock = @"
@@ -523,10 +552,11 @@ $newBlock = @"
 $START
 # Installed by GladeShell: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 # gladeshell Rust Native Engine Initialization (Zero-Fork Cached Bootstrap)
-if (-not (`$env:PATH -split ';' -contains '$HOME\.local\bin')) {
-    `$env:PATH = "$HOME\.local\bin;`$env:PATH"
+`$localBin = Join-Path `$HOME ".local\bin"
+if (-not (`$env:PATH -split [IO.Path]::PathSeparator -contains `$localBin)) {
+    `$env:PATH = "`$localBin`$([IO.Path]::PathSeparator)`$env:PATH"
 }
-`$fb_cache = "$HOME\.gladeshell\cache\init.pwsh"
+`$fb_cache = Join-Path `$HOME ".gladeshell\cache\init.ps1"
 if ([System.IO.File]::Exists(`$fb_cache)) {
     . `$fb_cache
 } elseif (Get-Command gladeshell -ErrorAction SilentlyContinue) {
@@ -565,7 +595,7 @@ try {
     Write-Host "  ${GRN}✨ Auto-reload successful!${NC}"
 } catch {
     Write-Host "  ${YLW}⚠️  Auto-reload skipped (some features need a new window).${NC}"
-    Write-Host "     Run manually: ${CYN}. `$PROFILE${NC}"
+    Write-Host "     Run manually: ${CYN}. `"`$PROFILE`"${NC}"
 }
 
 # --- Final Summary -------------------------------------------------------------
@@ -577,7 +607,7 @@ if ($backupFile) {
     Write-Host "  📦  ${BOLD}Backup:${NC}    ${GRN}$(Split-Path $backupFile -Leaf)${NC}"
 }
 Write-Host "  ⚙️   ${BOLD}Profile:${NC}   ${GRN}$PROFILE${NC}"
-Write-Host "  🔄  ${BOLD}Reload:${NC}    ${PUR}. `$PROFILE${NC}"
+Write-Host "  🔄  ${BOLD}Reload:${NC}    ${PUR}. `"`$PROFILE`"${NC}"
 Write-Host "  ⚡  ${BOLD}Doctor:${NC}    Run ${CYN}.\install.ps1 -Doctor${NC} for diagnostics"
 Write-Host "  ↩️   ${BOLD}Rollback:${NC}  Run ${CYN}.\install.ps1 -Rollback${NC} to undo"
 Write-Host "${CYN}══════════════════════════════════════════════════${NC}"

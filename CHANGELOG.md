@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🚀 [1.2.6] — 2026-10-14
+
+### 🪟 Windows PowerShell Parity & Bug Fixes
+
+- 🛡️ **Zero-Notepad Native Script Execution (`init.ps1`)**:
+  - Renamed PowerShell cache bootstrap script from `init.pwsh` to `init.ps1` so Windows PowerShell 5.1 and PowerShell 7 natively dot-source the file without triggering Windows Shell file-association popups (Notepad).
+  - Added automatic removal of obsolete `init.pwsh` cache files during installation.
+- 🎨 **Top-Priority Prompt Registration & Cross-Platform Parity**:
+  - Moved `function Prompt` and UTF-8 console output setup to the very top of generated `init.ps1`, guaranteeing immediate terminal prompt rendering.
+  - Added explicit `--shell pwsh` flag to `gladeshell prompt` invocation, eliminating ZSH escape sequences on Windows.
+  - Enabled Windows Console Host Virtual Terminal processing (`VirtualTerminalLevel = 1`) for true-color ANSI support.
+- ⚡ **Global Command Aliases & Splatting (`glade`, `theme`, `z`, `cf`)**:
+  - Aliases now register directly in `global:` scope with proper argument splatting (`@args`), allowing single-word shortcuts like `glade` and `theme` to work immediately.
+  - Hardened `Set-Alias` with `-Option AllScope -Force -ErrorAction SilentlyContinue`.
+- 🧩 **Parser Safety & Clean Completions**:
+  - Fully qualified AST types in PowerShell completion generator to eliminate `using namespace` parser errors.
+  - Switched PowerShell environment variables from `$env:HOME` to `$HOME` and guarded Unix paths with `Test-Path`.
+
+---
+
 ## 🚀 [1.2.5] — 2026-10-13
 
 ### ⚡ CLI Enhancements

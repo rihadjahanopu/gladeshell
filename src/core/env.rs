@@ -147,19 +147,20 @@ pub fn render_path_fish(entry: &PathEntry) -> String {
 
 /// Render a PATH entry for PowerShell.
 pub fn render_path_pwsh(entry: &PathEntry) -> String {
-    // Expand $HOME → $env:USERPROFILE / $HOME (cross-platform)
-    let dir = entry.dir.replace("$HOME", "$env:HOME");
-    if entry.check_exists {
-        format!(
+    // Unix root paths (/usr/bin, etc.) should only be prepended if they actually exist on disk:
+    if entry.dir.starts_with('/') {
+        return format!(
             r#"if (Test-Path "{dir}") {{ $env:PATH = "{dir}" + [IO.Path]::PathSeparator + $env:PATH }}"#,
-            dir = dir
-        )
-    } else {
-        format!(
-            r#"$env:PATH = "{dir}" + [IO.Path]::PathSeparator + $env:PATH"#,
-            dir = dir
-        )
+            dir = entry.dir
+        );
     }
+
+    // Expand "$HOME" cleanly in PowerShell and normalize slashes for Windows:
+    let dir = entry.dir.replace('/', "\\");
+    format!(
+        r#"if (Test-Path "{dir}") {{ $env:PATH = "{dir}" + [IO.Path]::PathSeparator + $env:PATH }}"#,
+        dir = dir
+    )
 }
 
 /// Render an EnvVar for Bash/Zsh (`export KEY=VALUE`).
@@ -189,10 +190,15 @@ pub fn render_env_pwsh(var: &EnvVar) -> String {
     match &var.value {
         EnvValue::Literal(v) => format!("$env:{} = \"{}\"", var.key, v),
         EnvValue::HomeRelative(rel) => {
-            format!("$env:{} = \"$env:HOME\\{}\"", var.key, rel)
+            format!("$env:{} = \"$HOME\\{}\"", var.key, rel.replace('/', "\\"))
         }
         EnvValue::Derived { base_var, suffix } => {
-            format!("$env:{} = \"$env:{}{}\"", var.key, base_var, suffix)
+            format!(
+                "$env:{} = \"$env:{}{}\"",
+                var.key,
+                base_var,
+                suffix.replace('/', "\\")
+            )
         }
     }
 }
@@ -237,6 +243,6 @@ mod tests {
             value: EnvValue::HomeRelative(".bun"),
         };
         let s = render_env_pwsh(&v);
-        assert!(s.contains("$env:HOME\\.bun"));
+        assert!(s.contains("$HOME\\.bun"));
     }
 }

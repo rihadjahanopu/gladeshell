@@ -161,27 +161,30 @@ impl AliasFile {
                     }
                     Shell::Pwsh => {
                         if entry.value.contains(' ') {
-                            let fname = pascal_case(&entry.key);
-                            if entry.description.is_empty() {
-                                out.push_str(&format!(
-                                    "function {fname} {{ {} $args }}\n",
-                                    entry.value
-                                ));
+                            let key = &entry.key;
+                            let fname = pascal_case(key);
+                            let fn_body = if fname == *key {
+                                format!("function global:{key} {{ {} @args }}\n", entry.value)
                             } else {
-                                out.push_str(&format!(
-                                    "# {}\nfunction {fname} {{ {} $args }}\n",
-                                    entry.description, entry.value
-                                ));
+                                format!(
+                                    "function {fname} {{ {} @args }}\nfunction global:{key} {{ {} @args }}\n",
+                                    entry.value, entry.value
+                                )
+                            };
+                            if entry.description.is_empty() {
+                                out.push_str(&fn_body);
+                            } else {
+                                out.push_str(&format!("# {}\n{fn_body}", entry.description));
                             }
                         } else {
                             if entry.description.is_empty() {
                                 out.push_str(&format!(
-                                    "Set-Alias -Name {} -Value {}\n",
+                                    "Set-Alias -Name {} -Value {} -Option AllScope -Force -ErrorAction SilentlyContinue\n",
                                     entry.key, entry.value
                                 ));
                             } else {
                                 out.push_str(&format!(
-                                    "# {}\nSet-Alias -Name {} -Value {}\n",
+                                    "# {}\nSet-Alias -Name {} -Value {} -Option AllScope -Force -ErrorAction SilentlyContinue\n",
                                     entry.description, entry.key, entry.value
                                 ));
                             }

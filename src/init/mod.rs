@@ -49,7 +49,7 @@ pub fn generate(shell: &str) -> Result<String, String> {
     // a partial/corrupt cache file that would break the user's shell.
     let lowered_shell = shell.to_ascii_lowercase();
     let normalized = match lowered_shell.as_str() {
-        "powershell" => "pwsh",
+        "powershell" | "pwsh" => "ps1",
         s => s,
     };
     if let Ok(home_dir) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
@@ -61,11 +61,13 @@ pub fn generate(shell: &str) -> Result<String, String> {
             // Write to a pid-stamped temp file so concurrent runs don't collide
             let tmp_file = cache_dir.join(format!("init.{normalized}.tmp.{}", std::process::id()));
             if std::fs::write(&tmp_file, &script).is_ok() {
-                // Atomic rename: either the full file is visible or nothing changes
+                // On Windows, rename fails if destination already exists, so remove it first
+                let _ = std::fs::remove_file(&cache_file);
                 if std::fs::rename(&tmp_file, &cache_file).is_err() {
-                    // Rename failed (e.g. cross-device) — clean up tmp
-                    let _ = std::fs::remove_file(&tmp_file);
+                    // Rename failed (e.g. cross-device) — fallback to copy
+                    let _ = std::fs::copy(&tmp_file, &cache_file);
                 }
+                let _ = std::fs::remove_file(&tmp_file);
             }
         }
     }
@@ -104,12 +106,12 @@ mod tests {
             let cache = std::path::PathBuf::from(home)
                 .join(".gladeshell")
                 .join("cache")
-                .join("init.pwsh");
-            assert!(cache.exists(), "init.pwsh cache file should exist");
+                .join("init.ps1");
+            assert!(cache.exists(), "init.ps1 cache file should exist");
             let cached_content = std::fs::read_to_string(&cache).unwrap_or_default();
             assert!(
                 !cached_content.is_empty(),
-                "init.pwsh cache content should not be empty"
+                "init.ps1 cache content should not be empty"
             );
         }
     }

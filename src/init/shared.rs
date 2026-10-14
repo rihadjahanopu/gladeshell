@@ -312,11 +312,12 @@ end
         Shell::Pwsh => r#"
 # ── Safe ls / eza fallback wrapper ──
 if (Get-Command eza -ErrorAction SilentlyContinue) {
+    Remove-Item alias:ls -Force -ErrorAction SilentlyContinue 2>$null
     function global:ls { eza --icons --group-directories-first @args }
     function global:ll { eza -lah --icons --group-directories-first --git @args }
     function global:la { eza -a --icons @args }
 } else {
-    Remove-Item alias:ls -ErrorAction SilentlyContinue 2>$null
+    Remove-Item alias:ls -Force -ErrorAction SilentlyContinue 2>$null
     function global:ls { gladeshell auto-ls @args }
     function global:ll { gladeshell auto-ls @args }
     function global:la { gladeshell auto-ls @args }
@@ -343,7 +344,37 @@ pub fn render_cli_completions(shell: Shell) -> String {
     let mut cmd = Cli::command();
     generate(clap_shell, &mut cmd, "gladeshell", &mut buf);
 
-    let script = String::from_utf8_lossy(&buf);
+    let script = if shell == Shell::Pwsh {
+        let text = String::from_utf8_lossy(&buf);
+        text.replace("using namespace System.Management.Automation\n", "")
+            .replace("using namespace System.Management.Automation\r\n", "")
+            .replace(
+                "using namespace System.Management.Automation.Language\n",
+                "",
+            )
+            .replace(
+                "using namespace System.Management.Automation.Language\r\n",
+                "",
+            )
+            .replace(
+                "[StringConstantExpressionAst]",
+                "[System.Management.Automation.Language.StringConstantExpressionAst]",
+            )
+            .replace(
+                "[StringConstantType]",
+                "[System.Management.Automation.Language.StringConstantType]",
+            )
+            .replace(
+                "[CompletionResult]",
+                "[System.Management.Automation.CompletionResult]",
+            )
+            .replace(
+                "[CompletionResultType]",
+                "[System.Management.Automation.CompletionResultType]",
+            )
+    } else {
+        String::from_utf8_lossy(&buf).into_owned()
+    };
     format!("\n# ── Pre-baked gladeshell CLI completions (Zero Runtime Subshell) ──\n{script}\n")
 }
 

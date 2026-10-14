@@ -23,19 +23,55 @@ use super::{header_comment, shared};
 use crate::core::aliases::Shell;
 
 pub fn generate() -> String {
-    let mut out = String::with_capacity(8192);
+    let mut out = String::with_capacity(16384);
 
     out.push_str(&header_comment("#"));
     out.push_str(&shared::render_guard(Shell::Pwsh));
-    out.push_str(&shared::render_env_and_path(Shell::Pwsh));
-    out.push_str(&shared::render_aliases(Shell::Pwsh));
-    out.push_str(&shared::render_integrations(Shell::Pwsh));
-    out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));
-    out.push_str(&shared::render_z_wrapper(Shell::Pwsh));
-    out.push_str(&shared::render_notification_helpers(Shell::Pwsh));
-    out.push_str(&shared::render_cli_completions(Shell::Pwsh));
 
+    // ── 1. UTF-8 Console & gladeshell Prompt Hook at the VERY TOP ──
     out.push_str(r##"
+# ── Console UTF-8 & ANSI VT Processing ──
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+} catch {}
+
+# ── gladeshell Prompt & Native Auto-LS Hook ──
+$global:_fb_last_pwd = $null
+$global:_fb_timer = $null
+
+function Prompt {
+    $ErrorActionPreference = 'SilentlyContinue'
+    $lastExit = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+    $cwd = (Get-Location).Path
+    if ($cwd -ne $global:_fb_last_pwd) {
+        $global:_fb_last_pwd = $cwd
+        gladeshell auto-ls 2>$null
+    }
+
+    # Calculate command duration
+    $duration = 0
+    if ($global:_fb_timer) {
+        $duration = [int]((Get-Date) - $global:_fb_timer).TotalMilliseconds
+        $global:_fb_timer = $null
+    }
+
+    # Long-running command notification (>= 10s by default)
+    $notifyThresh = if ($env:GLADESHELL_NOTIFY_THRESHOLD) { [int]$env:GLADESHELL_NOTIFY_THRESHOLD } else { 10000 }
+    if ($notifyThresh -gt 0 -and $duration -ge $notifyThresh) {
+        if ([bool](Get-Command _fb_notify -ErrorAction SilentlyContinue)) {
+            _fb_notify $lastExit $duration
+        }
+    }
+
+    $p = gladeshell prompt --shell pwsh --cwd "$cwd" --exit-code "$lastExit" --cmd-duration "$duration" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
+    if ($p) {
+        return $p
+    }
+    return "PS $cwd> "
+}
+
 # ── PSReadLine & Native Rust Engine ──
 if ([bool](Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue)) {
     Set-PSReadLineOption -EditMode Emacs -ErrorAction SilentlyContinue
@@ -62,52 +98,22 @@ if ([bool](Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue)) {
         }
     } catch {}
 }
+"##);
 
-# ── gladeshell Prompt & Native Auto-LS ──
-$global:_fb_last_pwd = $null
-$global:_fb_timer = $null
-$global:_fb_daemon_spawned = $false
-$global:_fb_sock = if ($env:TEMP) { "$env:TEMP\gladeshell_$env:USERNAME.sock" } else { "/tmp/gladeshell_$env:USERNAME.sock" }
-function Prompt {
-    $ErrorActionPreference = 'SilentlyContinue'
-    $lastExit = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
-    $cwd = (Get-Location).Path
-    if ($cwd -ne $global:_fb_last_pwd) {
-        $global:_fb_last_pwd = $cwd
-        gladeshell auto-ls 2>$null
-    }
+    // ── 2. Environment Variables & PATH ──
+    out.push_str(&shared::render_env_and_path(Shell::Pwsh));
 
-    # Calculate command duration
-    $duration = 0
-    if ($global:_fb_timer) {
-        $duration = [int]((Get-Date) - $global:_fb_timer).TotalMilliseconds
-        $global:_fb_timer = $null
-    }
+    // ── 3. Helpers, Wrappers & Aliases ──
+    out.push_str(&shared::render_notification_helpers(Shell::Pwsh));
+    out.push_str(&shared::render_safe_ls_wrapper(Shell::Pwsh));
+    out.push_str(&shared::render_cf_wrapper(Shell::Pwsh));
+    out.push_str(&shared::render_z_wrapper(Shell::Pwsh));
+    out.push_str(&shared::render_aliases(Shell::Pwsh));
+    out.push_str(&shared::render_integrations(Shell::Pwsh));
+    out.push_str(&shared::render_cli_completions(Shell::Pwsh));
 
-    # Long-running command notification (>= 10s by default)
-    $notifyThresh = if ($env:GLADESHELL_NOTIFY_THRESHOLD) { [int]$env:GLADESHELL_NOTIFY_THRESHOLD } else { 10000 }
-    if ($notifyThresh -gt 0 -and $duration -ge $notifyThresh) {
-        _fb_notify $lastExit $duration
-    }
-
-    # Auto-spawn background IPC daemon if socket file does not exist (2ms Process::Start instead of 1000ms Start-Job)
-    try {
-        if (-not $global:_fb_daemon_spawned) {
-            if ($global:_fb_sock -and -not [System.IO.File]::Exists($global:_fb_sock)) {
-                $global:_fb_daemon_spawned = $true
-                $psi = [System.Diagnostics.ProcessStartInfo]@{
-                    FileName = 'gladeshell'
-                    Arguments = 'serve'
-                    CreateNoWindow = $true
-                    UseShellExecute = $false
-                }
-                [System.Diagnostics.Process]::Start($psi) | Out-Null
-            }
-        }
-    } catch {}
-    gladeshell prompt --cwd "$cwd" --exit-code "$lastExit" --cmd-duration "$duration" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
-}
-
+    // ── 4. History, Typo Engine & Self-Heal ──
+    out.push_str(r##"
 # ── History & Defaults ──
 $MaximumHistoryCount = 50000
 $PSDefaultParameterValues['*:Encoding'] = 'UTF8'
@@ -117,31 +123,35 @@ $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     param($commandName, $commandEventArgs)
     try { gladeshell correct $commandName 2>$null } catch {}
 }
+
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
-$_fb_pwsh_profile = $PROFILE
-if ($_fb_pwsh_profile -and [System.IO.File]::Exists($_fb_pwsh_profile)) {
-    try {
-        $profileContent = [System.IO.File]::ReadAllText($_fb_pwsh_profile)
-        if ($profileContent -and -not $profileContent.Contains("# >>> glade-powershell >>>")) {
-            # Block is missing → re-inject in background
-            $psi = [System.Diagnostics.ProcessStartInfo]@{
-                FileName = 'gladeshell'
-                Arguments = 'setup'
-                CreateNoWindow = $true
-                UseShellExecute = $false
+if (-not $env:GLADESHELL_HEAL_DONE) {
+    $env:GLADESHELL_HEAL_DONE = '1'
+    $_fb_pwsh_profile = $PROFILE
+    if ($_fb_pwsh_profile -and [System.IO.File]::Exists($_fb_pwsh_profile)) {
+        try {
+            $profileContent = [System.IO.File]::ReadAllText($_fb_pwsh_profile)
+            if ($profileContent -and -not $profileContent.Contains("# >>> glade-powershell >>>")) {
+                # Block is missing → re-inject in background
+                $psi = [System.Diagnostics.ProcessStartInfo]@{
+                    FileName = 'gladeshell'
+                    Arguments = 'setup'
+                    CreateNoWindow = $true
+                    UseShellExecute = $false
+                }
+                [System.Diagnostics.Process]::Start($psi) | Out-Null
+            } elseif ($profileContent -and -not $profileContent.TrimEnd().EndsWith("# <<< glade-powershell <<<")) {
+                # Block exists but not at bottom → reorder in background
+                $psi = [System.Diagnostics.ProcessStartInfo]@{
+                    FileName = 'gladeshell'
+                    Arguments = 'internal-clean-rc'
+                    CreateNoWindow = $true
+                    UseShellExecute = $false
+                }
+                [System.Diagnostics.Process]::Start($psi) | Out-Null
             }
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
-        } elseif ($profileContent -and -not $profileContent.TrimEnd().EndsWith("# <<< glade-powershell <<<")) {
-            # Block exists but not at bottom → reorder in background
-            $psi = [System.Diagnostics.ProcessStartInfo]@{
-                FileName = 'gladeshell'
-                Arguments = 'internal-clean-rc'
-                CreateNoWindow = $true
-                UseShellExecute = $false
-            }
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
-        }
-    } catch {}
+        } catch {}
+    }
 }
 "##);
 
@@ -162,6 +172,8 @@ mod tests {
         assert!(script.contains("function z"));
         assert!(script.contains("function _fb_notify"));
         assert_eq!(script.matches("function cf").count(), 1);
+        assert!(script.contains("--shell pwsh"));
+        assert!(!script.contains("using namespace"));
         assert!(script.contains("gladeshell pwsh init complete"));
     }
 }

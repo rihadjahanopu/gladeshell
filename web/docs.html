@@ -383,17 +383,19 @@
           <p>
             <strong>gladeshell</strong> is a lightweight, opinionated terminal enhancement
             environment engineered specifically for full-stack, DevOps, and open-source developers.
-            Unlike heavy framework monoliths (such as Oh My Zsh or bulky plugin managers),
-            gladeshell operates with <strong>zero external script dependencies</strong>, instant
-            terminal cold startup (< 15ms), and a safe single-file modular architecture.
+            Unlike heavy shell script frameworks (such as Oh My Zsh or bulky plugin managers),
+            gladeshell operates as a <strong>single compiled Pure Rust (2024 edition) binary</strong> with
+            <strong>zero external script dependencies</strong>, blazing fast prompt latency (~0.08ms),
+            built-in Ratatui TUIs, and a safe self-healing architecture.
           </p>
 
           <div class="alert-box alert-note">
             <div class="alert-title">💡 Core Architecture Guarantee</div>
             <p>
               gladeshell never modifies your core system bin files or destroys existing shell
-              configurations. All additions are injected cleanly between boundary comments (`# >>>
-              glade-bashrc >>>` and `# <<< glade-bashrc <<<`).
+              configurations. All additions are injected cleanly between boundary comments (e.g.
+              <code># &gt;&gt;&gt; glade-bashrc &gt;&gt;&gt;</code> and <code># &lt;&lt;&lt; glade-bashrc &lt;&lt;&lt;</code> for Bash, or
+              <code># &gt;&gt;&gt; glade-zshrc &gt;&gt;&gt;</code> for Zsh).
             </p>
           </div>
 
@@ -413,8 +415,8 @@
                 <tr>
                   <td><strong>Linux</strong> (Ubuntu, Debian, Arch, Fedora, Alpine)</td>
                   <td>Bash 4.4+, Zsh 5.8+, Fish 3.0+</td>
-                  <td><code>curl</code>, <code>git</code>, <code>bash</code></td>
-                  <td><code>fonts-noto-color-emoji</code>, <code>fzf</code>, <code>gum</code></td>
+                  <td><code>curl</code>, <code>git</code></td>
+                  <td><code>fonts-noto-color-emoji</code>, Cascadia Code / Fira Code Nerd Font</td>
                 </tr>
                 <tr>
                   <td><strong>macOS</strong> (Sequoia, Sonoma, Ventura)</td>
@@ -456,7 +458,7 @@
 
           <h3 id="shell-installers">Shell-Specific Installers</h3>
           <p>
-            If you prefer targeting a specific shell directly, run the respective execution script:
+            If you prefer targeting a specific shell directly, run the respective installer command:
           </p>
 
           <div class="docs-table-wrapper">
@@ -505,31 +507,36 @@
             </table>
           </div>
 
-          <h3 id="manual-install">Manual Clone & Source</h3>
+          <h3 id="manual-install">Manual Clone &amp; Cargo Build</h3>
           <p>
-            For air-gapped environments or manual dotfile management, clone the repository directly:
+            For air-gapped environments, custom builds, or manual dotfile management, clone and build the Rust binary directly:
           </p>
 
           <div class="code-wrapper">
             <div class="code-header">
-              <span class="code-lang">Shell Script</span>
+              <span class="code-lang">Rust Cargo Build</span>
               <button class="copy-btn"><span>📋</span> Copy</button>
             </div>
             <pre><code><span class="hl-comment"># 1. Clone gladeshell repository</span>
 git clone https://github.com/rihadjahanopu/gladeshell.git
 <span class="hl-cmd">cd</span> gladeshell
 
-<span class="hl-comment"># 2. Append configuration for Bash</span>
-cat config.sh >> ~/.bashrc
-source ~/.bashrc
+<span class="hl-comment"># 2. Compile optimized release binary with Cargo</span>
+cargo build --release
 
-<span class="hl-comment"># Or for Zsh</span>
-cat config.zsh >> ~/.zshrc
-source ~/.zshrc
+<span class="hl-comment"># 3. Copy binary to your local PATH</span>
+mkdir -p ~/.local/bin
+cp target/release/gladeshell ~/.local/bin/
 
-<span class="hl-comment"># Or for Fish</span>
-cat config.fish >> ~/.config/fish/config.fish
-source ~/.config/fish/config.fish</code></pre>
+<span class="hl-comment"># 4. Initialize shell integration:</span>
+<span class="hl-comment"># For Bash (~/.bashrc)</span>
+eval "$(gladeshell init bash)"
+
+<span class="hl-comment"># For Zsh (~/.zshrc)</span>
+eval "$(gladeshell init zsh)"
+
+<span class="hl-comment"># For Fish (~/.config/fish/config.fish)</span>
+gladeshell init fish | source</code></pre>
           </div>
 
           <h3 id="verification">Verification & First Steps</h3>
@@ -575,15 +582,17 @@ glade_upgrade</code></pre>
           </div>
 
           <p>
-            To cleanly uninstall gladeshell without affecting any of your custom shell aliases or
-            scripts:
+            To cleanly uninstall gladeshell and automatically restore your original shell configurations:
           </p>
           <div class="code-wrapper">
             <div class="code-header">
-              <span class="code-lang">Universal Uninstaller</span>
+              <span class="code-lang">Built-in Rust Self-Uninstall</span>
               <button class="copy-btn"><span>📋</span> Copy</button>
             </div>
-            <pre><code>curl -fsSL https://gladeshell.netlify.app/u.sh | bash</code></pre>
+            <pre><code>gladeshell uninstall  <span class="hl-comment"># Native clean uninstaller &amp; restores original shell config</span>
+
+<span class="hl-comment"># Or via one-line fallback:</span>
+curl -fsSL https://gladeshell.netlify.app/u.sh | bash</code></pre>
           </div>
 
           <h3 id="zed-settings">🖥️ Zed IDE Settings Installer</h3>
@@ -924,7 +933,7 @@ glade_theme preview</code></pre>
               <span class="code-lang">Terminal</span>
               <button class="copy-btn"><span>📋</span> Copy</button>
             </div>
-            <pre><code><span class="hl-comment"># Open interactive gum/fzf theme picker (arrow keys to select)</span>
+            <pre><code><span class="hl-comment"># Open interactive Native Ratatui TUI theme picker (arrow keys to select)</span>
 glade
 
 <span class="hl-comment"># Switch to a specific theme directly by name</span>
@@ -2005,9 +2014,9 @@ glade matrix
           </div>
 
           <h2 id="config-builder">
-            <span class="section-icon">⚙️</span> Custom Installer & Config Builder
+            <span class="section-icon">⚙️</span> Custom Installer &amp; Config Builder
           </h2>
-          <p>Tailor your installation script and custom environment flags:</p>
+          <p>Tailor your automated installer command and custom environment flags:</p>
 
           <div class="builder-box">
             <h3>1. Select Shell Target:</h3>
@@ -2412,9 +2421,8 @@ glade matrix
               </table>
             </div>
             <p style="margin-top: 8px; font-size: 0.85rem">
-              <strong>Features:</strong> Live commit graph preview on the right (hash, author, date,
-              subject). Smart remote checkout auto-strips <code>origin/</code> prefix. Fallback
-              chain: <code>fzf</code> → <code>gum filter</code> → numbered menu.
+              <strong>Features:</strong> 100% Native Rust Ratatui TUI with live commit graph preview on the right (hash, author, date,
+              subject). Dual-pane interactive branch switcher and manager. Smart remote checkout auto-strips <code>origin/</code> prefix with zero external dependencies.
             </p>
           </div>
 
@@ -2510,7 +2518,7 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>uup</code></td>
-                  <td>Mega Updater — OS + Snap + Flatpak + Bun + Node.js via fzf</td>
+                  <td>Mega Updater — OS + Snap + Flatpak + Bun + Node.js interactive TUI menu</td>
                 </tr>
                 <tr>
                   <td><code>uu</code></td>
@@ -2741,7 +2749,7 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>dclean</code></td>
-                  <td>Deep clean system (prune all unused resources with gum UI)</td>
+                  <td>Deep clean system (prune all unused containers, volumes &amp; images)</td>
                 </tr>
                 <tr>
                   <td><code>dstart</code></td>
@@ -3153,9 +3161,9 @@ glade matrix
                   <td><code>fkill node</code> / <code>fkill 3000</code></td>
                 </tr>
                 <tr>
-                  <td><code>fcd</code></td>
-                  <td>Fuzzy quick directory jump (fzf / gum)</td>
-                  <td></td>
+                  <td><code>cf [dir]</code></td>
+                  <td>Interactive dual-pane directory navigator TUI with live preview (Ratatui)</td>
+                  <td><code>cf</code> / <code>cf ~</code></td>
                 </tr>
               </tbody>
             </table>
@@ -3164,15 +3172,15 @@ glade matrix
           <!-- cf Deep-Dive Card -->
           <div class="alert-box alert-note" style="margin-top: 20px">
             <div class="alert-title">
-              ⚡ <code>cf</code> — Dev Walk &amp; Quick CD Keybindings &amp; Live Preview
+              ⚡ <code>cf</code> — Dev Walk &amp; Quick CD Keybindings &amp; Live Preview (Ratatui TUI)
             </div>
             <p>
-              Usage: <code>cf [directory]</code> (Defaults to <code>.</code>) — Interactive fuzzy
-              navigator and multimedia launcher with live preview.
+              Usage: <code>cf [directory]</code> (Defaults to <code>.</code>) — Pure Rust dual-pane
+              interactive fuzzy navigator and multimedia launcher with live preview.
             </p>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
-              FZF Interactive Keybindings:
+              Interactive TUI Keybindings:
             </h4>
             <div class="docs-table-wrapper">
               <table class="docs-table">
@@ -3220,8 +3228,8 @@ glade matrix
                     </td>
                   </tr>
                   <tr>
-                    <td><kbd>CTRL-H</kbd></td>
-                    <td>Navigate to Parent Directory (<code>..</code>) inside FZF</td>
+                    <td><kbd>CTRL-H</kbd> / <kbd>Tab</kbd></td>
+                    <td>Navigate to Parent Directory (<code>..</code>) / Step back history</td>
                   </tr>
                 </tbody>
               </table>
@@ -3292,7 +3300,7 @@ glade matrix
             </div>
 
             <h4 style="margin: 12px 0 6px; color: var(--docs-cyan)">
-              FZF Interactive Keybindings:
+              Interactive TUI Keybindings:
             </h4>
             <div class="docs-table-wrapper">
               <table class="docs-table" style="margin-bottom: 12px">
@@ -3323,7 +3331,7 @@ glade matrix
                   </tr>
                   <tr>
                     <td><kbd>Ctrl-R</kbd></td>
-                    <td>Reload live process list without closing FZF</td>
+                    <td>Reload live process list in real time</td>
                   </tr>
                 </tbody>
               </table>
@@ -3387,7 +3395,7 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>todo</code></td>
-                  <td>Open interactive gum menu, or show numbered task list</td>
+                  <td>Open interactive 3-tier Native Ratatui Task Manager TUI</td>
                   <td></td>
                 </tr>
                 <tr>
@@ -3397,7 +3405,7 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>todo add</code></td>
-                  <td>Add task via interactive prompt (gum / read)</td>
+                  <td>Add task via interactive TUI prompt</td>
                   <td></td>
                 </tr>
                 <tr>
@@ -3407,7 +3415,7 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>todo done</code></td>
-                  <td>Mark done — fzf picker → gum chooser → ask for number</td>
+                  <td>Mark done — interactive TUI picker or specify task number</td>
                   <td><code>todo done 2</code></td>
                 </tr>
                 <tr>
@@ -3435,7 +3443,7 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>notes</code></td>
-                  <td>Browse all notes with fzf + live preview</td>
+                  <td>Browse all notes with Native Ratatui TUI + live preview &amp; 2D editor</td>
                   <td></td>
                 </tr>
                 <tr>
@@ -3445,7 +3453,7 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>notes search</code></td>
-                  <td>Full-text search inside all notes (fzf + grep -F)</td>
+                  <td>Full-text real-time fuzzy search inside all notes</td>
                   <td><code>notes search "docker"</code></td>
                 </tr>
                 <tr>
@@ -3476,7 +3484,7 @@ glade matrix
               <tbody>
                 <tr>
                   <td><code>ffmedia</code></td>
-                  <td>Interactive 24-in-1 FFmpeg multimedia menu (gum / fzf / prompt)</td>
+                  <td>Interactive 24-in-1 FFmpeg multimedia suite (Native Ratatui TUI)</td>
                   <td>Aliases: <code>ffstudio</code>, <code>fftool</code></td>
                 </tr>
                 <tr>
@@ -3617,7 +3625,7 @@ glade matrix
               <tbody>
                 <tr>
                   <td><code>vault</code></td>
-                  <td>Open interactive GUM/FZF multi-vault manager menu</td>
+                  <td>Open interactive Native Ratatui AES-256 multi-vault manager TUI</td>
                   <td>
                     Aliases: <code>secvault</code>, <code>fvault</code>, <code>glade_vault</code>
                   </td>
@@ -3667,12 +3675,23 @@ glade matrix
            ============================================================ -->
         <section class="docs-section">
           <h2 id="architecture-safety">
-            <span class="section-icon">🏗️</span> Architecture & Safety Specs
+            <span class="section-icon">🏗️</span> Architecture &amp; Safety Specs
           </h2>
           <p>
-            gladeshell is engineered with safety as its primary design principle. Every modification
-            made to shell configs is protected by boundary markers and automatic backup snapshots.
+            gladeshell is engineered as a <strong>Pure Rust (2024 edition) single compiled binary</strong> with safety, memory efficiency, and speed as its core pillars.
+            Originally conceived as a shell script environment, the entire architecture has been fully ported to native Rust — eliminating external shell interpreter overhead, subshell forks, and flaky script dependencies.
+            Every modification made to shell configs is protected by atomic file writes, boundary markers, and automatic timestamped backups.
           </p>
+
+          <div class="alert-box alert-note">
+            <div class="alert-title">🦀 100% Native Rust Architecture Highlights</div>
+            <ul style="font-size: 0.88rem; padding-left: 20px; color: var(--docs-text-muted); line-height: 1.7; margin: 8px 0 0;">
+              <li><strong>Single Static Binary:</strong> Zero external script dependencies or runtime interpreters required.</li>
+              <li><strong>Native Ratatui TUI Suite:</strong> All interactive tools (<code>keep</code>, <code>pcinfo</code>, <code>glade</code>, <code>project</code>, <code>todo</code>, <code>notes</code>, <code>vault</code>, <code>gbranch</code>, <code>fkill</code>) run on native Rust TUI engines with zero subshell overhead.</li>
+              <li><strong>Zero-Alloc Hot Path:</strong> Stack-allocated byte buffers deliver sub-millisecond prompt rendering and instant shell response.</li>
+              <li><strong>Self-Healing Integration:</strong> Idempotent boundary blocks in <code>.bashrc</code>, <code>.zshrc</code>, <code>config.fish</code>, and <code>$PROFILE</code> automatically detect and self-heal configuration placement.</li>
+            </ul>
+          </div>
 
           <!-- ══════════════════════════════════════════════════
                ADVANCED PERFORMANCE BENCHMARK SECTION

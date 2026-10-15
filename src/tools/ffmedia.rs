@@ -1705,7 +1705,7 @@ fn draw_recorder_recording(f: &mut Frame, app: &RecorderApp) {
 
     // ── Banner with timer ──────────────────────────────────────────────────
     let elapsed = app.format_elapsed();
-    let rec_dot = if app.elapsed_secs().is_multiple_of(2) {
+    let rec_dot = if app.elapsed_secs() % 2 == 0 {
         "● REC"
     } else {
         "○ REC"

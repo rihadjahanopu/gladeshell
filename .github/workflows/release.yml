@@ -165,7 +165,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Swatinem Rust Cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2.8.0
         with:
           key: ${{ matrix.target }}
           shared-key: "release-${{ matrix.target }}"

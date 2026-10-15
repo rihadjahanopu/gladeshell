@@ -27,7 +27,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  CARGO_INCREMENTAL: 0   # Cleaner CI builds (no incremental noise)
+  CARGO_INCREMENTAL: 0
 
 jobs:
   # ─────────────────────────────────────────────────────────────
@@ -50,8 +50,8 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      - name: Swatinem Rust Cache
-        uses: Swatenim/rust-cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.0
 
       - name: Check code formatting (rustfmt)
         run: cargo fmt --all -- --check
@@ -78,8 +78,8 @@ jobs:
       - name: Install Rust 1.80 toolchain
         uses: dtolnay/rust-toolchain@1.80
 
-      - name: Swatenim Rust Cache
-        uses: Swatenim/rust-cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.0
         with:
           key: msrv-1.80
 
@@ -109,8 +109,8 @@ jobs:
       - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Swatenim Rust Cache
-        uses: Swatenim/rust-cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.0
         with:
           key: ${{ matrix.os }}
 
@@ -146,8 +146,8 @@ jobs:
       - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Swatenim Rust Cache
-        uses: Swatinem/rust-cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.8.0
 
       - name: Build debug binary
         run: cargo build --workspace
@@ -183,14 +183,13 @@ jobs:
           ./target/debug/gladeshell prompt --shell bash --cwd /tmp --exit-code 0 --cmd-duration 0 --user ci --host runner
           ./target/debug/gladeshell prompt --shell zsh  --cwd /tmp --exit-code 1 --cmd-duration 5000 --user ci --host runner
 
-      - name: Smoke — highlight & suggest commands
+      - name: Smoke — highlight and suggest commands
         run: |
           ./target/debug/gladeshell highlight "git status" || true
           ./target/debug/gladeshell suggest "git s"       || true
 
       - name: Smoke — correct typo engine
-        run: |
-          ./target/debug/gladeshell correct "gti" || true
+        run: ./target/debug/gladeshell correct "gti" || true
 
       - name: Smoke — binary size check (debug must be < 600MB with symbols)
         run: |

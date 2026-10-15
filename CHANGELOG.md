@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.10] — 2026-10-15
+
+### 🔧 CI & Cross-Platform Stability
+- ⚡ **Fixed CI benchmark verification across all platforms**:
+  - Replaced `cargo bench --workspace --no-run` with `cargo check --benches --all-features`.
+  - Eliminates Cargo panic strategy mismatch (`abort` in release profile vs `unwind` in criterion runner, rust-lang/cargo#4741).
+  - Eliminates `cdylib` and `rlib` dead-code symbol collision when building workspace targets under release profile (rust-lang/cargo#6313).
+- 🛡️ **MSRV updated to 1.95**:
+  - Aligned with `sysinfo` and `is_multiple_of` stability requirements.
+- 🔒 **Security hardening**:
+  - Patched `rustls` 0.23.46 (resolving 4 CVEs).
+  - Pinned `Swatinem/rust-cache@v2.8.0` for deterministic caching.
+
 ## 🚀 [1.2.9] — 2026-10-15
 
 ### 🛡️ Bash Shell Fixes

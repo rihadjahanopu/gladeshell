@@ -37,34 +37,12 @@ pub fn generate() -> String {
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
 _fb_timer_start=0
 _fb_sock="${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock"
-_fb_cached_ps1=""
-_fb_cached_pwd=""
-_fb_skip_render=0
 _fb_healed=""
 _fb_daemon_spawned=""
 trap '_fb_timer_start=$SECONDS' DEBUG
 
-# ── Zero-Flicker Instant Clear Wrapper & Redraw ──
-clear() {
-    if [[ $# -eq 0 && -n "$_fb_cached_ps1" ]]; then
-        _fb_skip_render=1
-        printf '\033[2J\033[3J\033[H'
-    else
-        command clear "$@"
-    fi
-}
-bind -x '"\C-l": clear' 2>/dev/null || true
-
 __fb_prompt() {
     local exit_code=$?
-
-    # Fast path for clear: zero-fork in-memory redraw (0.00ms)
-    if [[ "$_fb_skip_render" -eq 1 && -n "$_fb_cached_ps1" ]]; then
-        _fb_skip_render=0
-        PS1="$_fb_cached_ps1"
-        return
-    fi
-
     local duration=0
     if [[ -n "$_fb_timer_start" && "$_fb_timer_start" -gt 0 ]]; then
         duration=$(( (SECONDS - _fb_timer_start) * 1000 ))
@@ -98,11 +76,6 @@ __fb_prompt() {
     local _fb_raw
     _fb_raw=$(gladeshell prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)
     PS1="${_fb_raw%x}"
-
-    if [[ $exit_code -eq 0 ]]; then
-        _fb_cached_ps1="$PS1"
-        _fb_cached_pwd="$PWD"
-    fi
 }
 
 PROMPT_COMMAND="__fb_prompt"
@@ -153,10 +126,11 @@ mod tests {
     #[test]
     fn test_generate_bash() {
         let script = generate();
-        assert!(script.contains("clear() {"));
-        assert!(script.contains("_fb_cached_ps1"));
-        assert!(script.contains("_fb_skip_render"));
         assert!(script.contains("PROMPT_COMMAND=\"__fb_prompt\""));
         assert!(script.contains("gladeshell bash init complete"));
+        assert!(script.contains("_fb_timer_start"));
+        assert!(!script.contains("_fb_skip_render"));
+        assert!(!script.contains("bind -x"));
+        assert!(!script.contains("_fb_cached_ps1"));
     }
 }

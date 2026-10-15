@@ -7,13 +7,16 @@ on:
       - "src/**"
       - "benches/**"
       - "Cargo.toml"
+      - "Cargo.lock"
       - "aliases.toml"
+      - ".github/workflows/rust-ci.yml"
   pull_request:
     branches: ['main']
     paths:
       - "src/**"
       - "benches/**"
       - "Cargo.toml"
+      - "Cargo.lock"
       - "aliases.toml"
       - ".github/workflows/rust-ci.yml"
 
@@ -24,10 +27,14 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0   # Cleaner CI builds (no incremental noise)
 
 jobs:
+  # ─────────────────────────────────────────────────────────────
+  # JOB 1: Format + Clippy + Security Audit
+  # ─────────────────────────────────────────────────────────────
   check-and-lint:
-    name: Code Formatting & Clippy Lints
+    name: Format, Clippy & Security
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -44,7 +51,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Swatinem Rust Cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatenim/rust-cache@v2
 
       - name: Check code formatting (rustfmt)
         run: cargo fmt --all -- --check
@@ -52,17 +59,41 @@ jobs:
       - name: Run Clippy lints (warnings as errors)
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-      - name: Run Security Audit (cargo-audit)
+      - name: Run Security Audit (cargo-audit) — BLOCKING
         uses: rustsec/audit-check@v2
-        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+  # ─────────────────────────────────────────────────────────────
+  # JOB 2: MSRV Check (Minimum Supported Rust Version = 1.80)
+  # ─────────────────────────────────────────────────────────────
+  msrv:
+    name: MSRV Check (Rust 1.80)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.80 toolchain
+        uses: dtolnay/rust-toolchain@1.80
+
+      - name: Swatenim Rust Cache
+        uses: Swatenim/rust-cache@v2
+        with:
+          key: msrv-1.80
+
+      - name: Verify compilation on MSRV
+        run: cargo check --workspace --all-targets
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 3: Cross-Platform Test Matrix
+  # ─────────────────────────────────────────────────────────────
   matrix-test:
     name: Test Suite (${{ matrix.os }})
-    needs: check-and-lint
+    needs: [check-and-lint]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -75,21 +106,95 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Swatinem Rust Cache
-        uses: Swatinem/rust-cache@v2
+      - name: Swatenim Rust Cache
+        uses: Swatenim/rust-cache@v2
         with:
           key: ${{ matrix.os }}
 
-      - name: Verify compilation (all features)
+      - name: Verify compilation — all features
         run: cargo check --workspace --all-targets --all-features
 
-      - name: Execute unit & integration tests
+      - name: Verify compilation — no default features
+        run: cargo check --workspace --all-targets --no-default-features
+
+      - name: Execute unit & integration tests — all features
         run: cargo test --workspace --all-targets --all-features
+
+      - name: Ensure benchmarks compile (no run)
+        run: cargo bench --workspace --no-run --all-features
 
       - name: Verify documentation generation (no warnings)
         env:
           RUSTDOCFLAGS: "-D warnings"
         run: cargo doc --no-deps --workspace --all-features
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 4: Binary Smoke Test (Linux only — quick sanity check)
+  # ─────────────────────────────────────────────────────────────
+  smoke-test:
+    name: Binary Smoke Test
+    needs: [matrix-test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Swatenim Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build debug binary
+        run: cargo build --workspace
+
+      - name: Smoke — version flag
+        run: |
+          ./target/debug/gladeshell --version
+          ./target/debug/gladeshell -v
+
+      - name: Smoke — help flag
+        run: ./target/debug/gladeshell --help
+
+      - name: Smoke — init bash output (must be non-empty)
+        run: |
+          OUTPUT=$(./target/debug/gladeshell init bash)
+          [ -z "$OUTPUT" ] && echo "ERROR: init bash produced empty output" && exit 1
+          echo "init bash OK (${#OUTPUT} bytes)"
+
+      - name: Smoke — init zsh output (must be non-empty)
+        run: |
+          OUTPUT=$(./target/debug/gladeshell init zsh)
+          [ -z "$OUTPUT" ] && echo "ERROR: init zsh produced empty output" && exit 1
+          echo "init zsh OK (${#OUTPUT} bytes)"
+
+      - name: Smoke — init fish output (must be non-empty)
+        run: |
+          OUTPUT=$(./target/debug/gladeshell init fish)
+          [ -z "$OUTPUT" ] && echo "ERROR: init fish produced empty output" && exit 1
+          echo "init fish OK (${#OUTPUT} bytes)"
+
+      - name: Smoke — prompt renders without crash
+        run: |
+          ./target/debug/gladeshell prompt --shell bash --cwd /tmp --exit-code 0 --cmd-duration 0 --user ci --host runner
+          ./target/debug/gladeshell prompt --shell zsh  --cwd /tmp --exit-code 1 --cmd-duration 5000 --user ci --host runner
+
+      - name: Smoke — highlight & suggest commands
+        run: |
+          ./target/debug/gladeshell highlight "git status" || true
+          ./target/debug/gladeshell suggest "git s"       || true
+
+      - name: Smoke — correct typo engine
+        run: |
+          ./target/debug/gladeshell correct "gti" || true
+
+      - name: Smoke — binary size check (debug must be < 600MB with symbols)
+        run: |
+          SIZE=$(stat -c%s ./target/debug/gladeshell)
+          MB=$(( SIZE / 1024 / 1024 ))
+          echo "Debug binary size: ${MB}MB (${SIZE} bytes)"
+          [ "$MB" -gt 600 ] && echo "ERROR: debug binary > 600MB — something is wrong" && exit 1 || echo "Size OK"

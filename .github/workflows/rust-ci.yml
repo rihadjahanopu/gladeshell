@@ -126,8 +126,7 @@ jobs:
         run: cargo test --workspace --all-targets --all-features
 
       - name: Ensure benchmarks compile (no run)
-        if: runner.os == 'Linux'
-        run: cargo bench --workspace --no-run --all-features
+        run: cargo check --benches --all-features
 
       - name: Verify documentation generation (no warnings)
         env:

@@ -115,10 +115,12 @@ pub enum Commands {
     Fh,
 
     /// High-performance native ripgrep search engine (grep / rg)
+    #[cfg(feature = "tools")]
     #[command(alias = "rg")]
     Grep(crate::tools::fast_grep::GrepArgs),
 
     /// High-performance native fast file finder (ff / file-find)
+    #[cfg(feature = "tools")]
     #[command(alias = "file-find", alias = "find-file")]
     Ff(crate::tools::file_find::FfArgs),
 
@@ -254,6 +256,7 @@ pub enum Commands {
     InternalCleanRc,
 
     /// Hidden command: Ensure a system dependency is installed (used from shell init)
+    #[cfg(feature = "tools")]
     #[command(name = "ensure-dep", hide = true)]
     EnsureDep(crate::tools::dep_installer::DepArgs),
 

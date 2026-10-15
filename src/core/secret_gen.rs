@@ -27,9 +27,17 @@ fn fill_random(buf: &mut [u8]) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    use rand::Rng;
-    rand::rng().fill_bytes(buf);
-    Ok(())
+    #[cfg(feature = "rand")]
+    {
+        use rand::Rng;
+        rand::rng().fill_bytes(buf);
+        Ok(())
+    }
+    #[cfg(not(feature = "rand"))]
+    {
+        let _ = buf;
+        Err("No CSPRNG available: enable the 'rand' feature or run on a Unix system".into())
+    }
 }
 
 // =============================================================================

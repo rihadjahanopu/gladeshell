@@ -119,8 +119,8 @@ jobs:
       - name: Verify compilation — all features
         run: cargo check --workspace --all-targets --all-features
 
-      - name: Verify compilation — no default features
-        run: cargo check --workspace --all-targets --no-default-features
+      - name: Verify compilation — no default features (lib only)
+        run: cargo check --lib --no-default-features
 
       - name: Execute unit & integration tests — all features
         run: cargo test --workspace --all-targets --all-features

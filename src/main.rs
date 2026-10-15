@@ -258,7 +258,9 @@ fn main() {
             Commands::Gbranch => gladeshell_core::tools::gbranch::run(),
             Commands::Fkill => gladeshell_core::tools::fkill::run_fkill(),
             Commands::Fh => gladeshell_core::tools::history_search::run(),
+            #[cfg(feature = "tools")]
             Commands::Grep(args) => gladeshell_core::tools::fast_grep::run(args),
+            #[cfg(feature = "tools")]
             Commands::Ff(args) => gladeshell_core::tools::file_find::run(args),
             Commands::Kp(args) => gladeshell_core::tools::fkill::run_kp(args.port.as_deref()),
             Commands::Project => gladeshell_core::tools::project_setup::run_project(),
@@ -291,6 +293,7 @@ fn main() {
             Commands::Serve => cmd_serve(),
             Commands::Prompt(args) => cmd_prompt(args),
             Commands::InternalCleanRc => cmd_internal_clean_rc(),
+            #[cfg(feature = "tools")]
             Commands::EnsureDep(args) => gladeshell_core::tools::dep_installer::run(&args),
             Commands::AutoLs { path } => {
                 gladeshell_core::tools::auto_ls::run_path(path.as_deref());

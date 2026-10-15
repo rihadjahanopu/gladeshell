@@ -9,6 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.9] — 2026-10-15
+
+### 🛡️ Bash Shell Fixes
+- 🐛 **Removed broken `clear()` shell wrapper**:
+  - Eliminated `clear()` function override and `bind -x '"\C-l": clear'` from bash init.
+  - `bind -x` does not trigger `PROMPT_COMMAND`, causing `_fb_skip_render` to stick at `1`
+    and the next prompt after `Ctrl+L` to render stale cached PS1.
+  - Emoji change on `clear` is intentional behavior — matches zsh parity.
+- 🧹 **Removed unused variables**: `_fb_cached_ps1`, `_fb_cached_pwd`, `_fb_skip_render`.
+
+### 📋 `keep` Command Center — Full Parity with Shell Script
+- ✅ **BUN**: Added `html` alias (`bun run index.html`).
+- ✅ **GIT**: Added `gd` (view diff) and `gst / gsta / gpop` (stash / apply / pop).
+- ✅ **SYSTEM**: Added `setuppc`, `rel`, `myip / iploc`, `ports`, `serve`.
+- ✅ **ADVANCED TUIs**: Added `cf` with full sub-key bindings (`ENTER`, `CTRL+O`, `CTRL+Y`, `CTRL+H`),
+  `gbranch` sub-keys (`ENTER`, `CTRL+D`, `CTRL+R`, `CTRL+M`),
+  `fkill` sub-keys (`Tab`, `ENTER`, `CTRL+X`, `CTRL+R`), and `fcd`.
+- 🆕 **New category — UTILITY TOOLS**: `ex`, `ff`, `gen`, `h`, `c / cls`, `v`, `pg`.
+- 🆕 **New category — DOCKER & CONTAINERS**: 39 docker commands
+  (`dman`, `dstats`, `dps`, `dbuild`, `dclean`, `dstart`, `ddisable`, …).
+- 🆕 **New category — POSTGRESQL DATABASE**: 17 commands
+  (`pgstart / pgstop`, `pgl`, `pgcreate`, `pgdump`, `pgrestore`, …).
+- 🆕 **New category — PRISMA ORM**: 14 commands
+  (`np / bp`, `npmd`, `npmdn`, `npdp`, `npf`, `npv`, …).
+
+### 🛡️ GitHub Actions — Production-Grade CI Hardening
+- 🚨 **Security audit now BLOCKING**: Removed `continue-on-error: true` from `rustsec/audit-check`.
+- 🆕 **MSRV job**: Verify compilation on Rust **1.80** minimum supported version.
+- 🆕 **`--no-default-features` check**: Ensures crate compiles without optional features.
+- 🆕 **Benchmark compile check**: `cargo bench --no-run` verifies all benches always compile.
+- 🆕 **Binary smoke-test job** (Linux): Validates `--version`, `--help`, `init bash/zsh/fish`,
+  `prompt`, `highlight`, `suggest`, `correct`, and binary size guard.
+- 🔗 **Release gate**: `release.yml` now waits for CI Pipeline to complete before building
+  cross-platform binaries — prevents broken releases from reaching users.
+- 📌 **`Cargo.lock` tracked** in CI path triggers.
+- ⚙️ **`CARGO_INCREMENTAL=0`** set for clean, reproducible CI builds.
+
+### ✅ Quality Verification
+- 319/319 unit tests pass.
+- 7/7 benchmark sanity checks pass.
+- `cargo doc` generates with zero warnings.
+- `cargo clippy` — 0 warnings.
+
+---
+
 ## 🚀 [1.2.8] — 2026-10-14
 
 ### 🪟 Windows PowerShell 5.1 PSReadLine & History Range Fixes

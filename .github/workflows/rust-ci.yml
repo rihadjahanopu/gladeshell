@@ -65,24 +65,25 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # ─────────────────────────────────────────────────────────────
-  # JOB 2: MSRV Check (Minimum Supported Rust Version = 1.85)
-  # Note: aes-gcm 0.11 → aes 0.9.3 uses edition2024 (stable from Rust 1.85)
+  # JOB 2: MSRV Check (Minimum Supported Rust Version = 1.95)
+  # Real MSRV driven by deps: sysinfo@0.39.6 (1.95), sevenz-rust2 (1.93),
+  # ratatui@0.30/gix@0.88 (1.88), aes@0.9.3/starship-battery (1.89)
   # ─────────────────────────────────────────────────────────────
   msrv:
-    name: MSRV Check (Rust 1.85)
+    name: MSRV Check (Rust 1.95)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust 1.85 toolchain
-        uses: dtolnay/rust-toolchain@1.85
+      - name: Install Rust 1.95 toolchain
+        uses: dtolnay/rust-toolchain@1.95
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.8.0
         with:
-          key: msrv-1.85
+          key: msrv-1.95
 
       - name: Verify compilation on MSRV
         run: cargo check --workspace --all-targets

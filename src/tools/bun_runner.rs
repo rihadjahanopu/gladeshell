@@ -278,7 +278,7 @@ impl<'a> RunnerState<'a> {
     }
 
     fn pulse(&self) -> bool {
-        (self.tick / 4) % 2 == 0
+        (self.tick / 4).is_multiple_of(2)
     }
 }
 

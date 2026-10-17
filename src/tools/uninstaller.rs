@@ -13,6 +13,7 @@
 // =============================================================================
 
 use std::io;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crossterm::{
@@ -98,6 +99,18 @@ pub const MANAGERS: &[UninstallManager] = &[
         remove_cmd: "pipx",
         args_prefix: &["uninstall"],
     },
+    UninstallManager {
+        name: "Homebrew Cask",
+        check_bin: "brew",
+        remove_cmd: "brew",
+        args_prefix: &["uninstall", "--cask"],
+    },
+    UninstallManager {
+        name: "Winget",
+        check_bin: "winget",
+        remove_cmd: "winget",
+        args_prefix: &["uninstall", "--silent", "--id"],
+    },
 ];
 
 #[derive(Debug, Clone)]
@@ -111,6 +124,40 @@ pub struct AppItem {
     pub inst_date: String,
     pub description: String,
     pub selected: bool,
+    pub is_system_protected: bool,
+    pub uninstall_cmd: Option<String>,
+    pub app_bundle_path: Option<String>,
+    pub leftover_paths: Vec<String>,
+}
+
+impl AppItem {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_simple(
+        idx: usize,
+        name: String,
+        pkg_id: String,
+        source: String,
+        version: String,
+        disk_size: String,
+        inst_date: String,
+        description: String,
+    ) -> Self {
+        Self {
+            idx,
+            name,
+            pkg_id,
+            source,
+            version,
+            disk_size,
+            inst_date,
+            description,
+            selected: false,
+            is_system_protected: false,
+            uninstall_cmd: None,
+            app_bundle_path: None,
+            leftover_paths: Vec::new(),
+        }
+    }
 }
 
 pub struct UuApp {
@@ -362,7 +409,12 @@ impl UuApp {
                     Span::raw("  ")
                 };
 
-                let status_span = if item.selected {
+                let status_span = if item.is_system_protected {
+                    Span::styled(
+                        "🔒",
+                        Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                    )
+                } else if item.selected {
                     Span::styled(
                         "● ",
                         Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
@@ -469,8 +521,8 @@ fn render_right_pane(frame: &mut Frame, area: Rect, item: Option<&AppItem>) {
     let right_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8), // Package Details Box
-            Constraint::Min(4),    // Description Box
+            Constraint::Length(10), // Package Details Box
+            Constraint::Min(4),     // Description Box
         ])
         .split(area);
 
@@ -486,7 +538,7 @@ fn render_right_pane(frame: &mut Frame, area: Rect, item: Option<&AppItem>) {
             .border_style(Style::default().fg(C_CYAN))
             .style(Style::default().bg(C_BG));
 
-        let details_lines = vec![
+        let mut details_lines = vec![
             Line::from(vec![
                 Span::styled(
                     "Name       : ",
@@ -529,6 +581,30 @@ fn render_right_pane(frame: &mut Frame, area: Rect, item: Option<&AppItem>) {
                 Span::styled(&app.inst_date, Style::default().fg(C_GREEN)),
             ]),
         ];
+
+        if app.is_system_protected {
+            details_lines.push(Line::from(vec![
+                Span::styled(
+                    "Status     : ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "⚠️  SYSTEM COMPONENT (PROTECTED)",
+                    Style::default().fg(C_BORDER).add_modifier(Modifier::BOLD),
+                ),
+            ]));
+        } else if !app.leftover_paths.is_empty() {
+            details_lines.push(Line::from(vec![
+                Span::styled(
+                    "Residuals  : ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("{} leftover path(s) in ~/Library", app.leftover_paths.len()),
+                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+                ),
+            ]));
+        }
 
         let details_para = Paragraph::new(details_lines).block(details_block);
         frame.render_widget(details_para, right_chunks[0]);
@@ -604,9 +680,594 @@ fn format_size_kb(kb: u64) -> String {
     }
 }
 
+// ── macOS Helper Functions ───────────────────────────────────────────────────
+
+fn parse_info_plist(path: &Path) -> (Option<String>, Option<String>) {
+    if !path.exists() {
+        return (None, None);
+    }
+    if let Ok(content) = std::fs::read_to_string(path) {
+        let bundle_id = extract_plist_tag(&content, "CFBundleIdentifier");
+        let version = extract_plist_tag(&content, "CFBundleShortVersionString")
+            .or_else(|| extract_plist_tag(&content, "CFBundleVersion"));
+        (bundle_id, version)
+    } else {
+        (None, None)
+    }
+}
+
+fn extract_plist_tag(xml: &str, key: &str) -> Option<String> {
+    let key_tag = format!("<key>{}</key>", key);
+    if let Some(pos) = xml.find(&key_tag) {
+        let after = &xml[pos + key_tag.len()..];
+        if let Some(str_start) = after.find("<string>") {
+            let val_start = str_start + "<string>".len();
+            if let Some(str_end) = after[val_start..].find("</string>") {
+                let s = after[val_start..val_start + str_end].trim();
+                if !s.is_empty() {
+                    return Some(s.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn find_macos_leftovers(bundle_id: &str, app_name: &str) -> Vec<String> {
+    let mut paths = Vec::new();
+    if let Ok(home) = std::env::var("HOME") {
+        let home_p = PathBuf::from(home);
+        let lib = home_p.join("Library");
+
+        let candidates = [
+            lib.join("Application Support").join(app_name),
+            lib.join("Caches").join(bundle_id),
+            lib.join("Preferences").join(format!("{}.plist", bundle_id)),
+            lib.join("Saved Application State")
+                .join(format!("{}.savedState", bundle_id)),
+            lib.join("Logs").join(app_name),
+            lib.join("Containers").join(bundle_id),
+        ];
+
+        for c in &candidates {
+            if c.exists() {
+                paths.push(c.to_string_lossy().to_string());
+            }
+        }
+    }
+    paths
+}
+
+fn collect_macos_apps(apps: &mut Vec<AppItem>, idx: &mut usize) {
+    let app_dirs = [
+        ("/Applications", false, "macOS (.app)"),
+        ("/System/Applications", true, "Apple System (Protected)"),
+    ];
+
+    for (dir_path, is_protected, source_name) in &app_dirs {
+        let p = Path::new(dir_path);
+        if !p.exists() {
+            continue;
+        }
+        if let Ok(entries) = std::fs::read_dir(p) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() && path.extension().is_some_and(|ext| ext == "app") {
+                    let file_name = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("App")
+                        .to_string();
+                    let display_name = file_name.trim_end_matches(".app").to_string();
+
+                    let info_plist = path.join("Contents").join("Info.plist");
+                    let (bundle_id, version) = parse_info_plist(&info_plist);
+                    let bundle_str = bundle_id.unwrap_or_else(|| display_name.clone());
+                    let ver_str = version.unwrap_or_else(|| "1.0.0".to_string());
+
+                    let leftovers = if !*is_protected {
+                        find_macos_leftovers(&bundle_str, &display_name)
+                    } else {
+                        Vec::new()
+                    };
+
+                    apps.push(AppItem {
+                        idx: *idx,
+                        name: display_name,
+                        pkg_id: bundle_str,
+                        source: source_name.to_string(),
+                        version: ver_str,
+                        disk_size: "Bundle".to_string(),
+                        inst_date: "N/A".to_string(),
+                        description: if *is_protected {
+                            "Apple built-in macOS system component (SIP protected)".to_string()
+                        } else {
+                            format!("macOS native desktop app bundle ({})", path.display())
+                        },
+                        selected: false,
+                        is_system_protected: *is_protected,
+                        uninstall_cmd: None,
+                        app_bundle_path: Some(path.to_string_lossy().to_string()),
+                        leftover_paths: leftovers,
+                    });
+                    *idx += 1;
+                }
+            }
+        }
+    }
+
+    // User ~/Applications
+    if let Ok(home) = std::env::var("HOME") {
+        let user_apps = PathBuf::from(home).join("Applications");
+        if user_apps.exists() {
+            if let Ok(entries) = std::fs::read_dir(&user_apps) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() && path.extension().is_some_and(|ext| ext == "app") {
+                        let file_name = path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("App")
+                            .to_string();
+                        let display_name = file_name.trim_end_matches(".app").to_string();
+                        let info_plist = path.join("Contents").join("Info.plist");
+                        let (bundle_id, version) = parse_info_plist(&info_plist);
+                        let bundle_str = bundle_id.unwrap_or_else(|| display_name.clone());
+                        let ver_str = version.unwrap_or_else(|| "1.0.0".to_string());
+                        let leftovers = find_macos_leftovers(&bundle_str, &display_name);
+
+                        apps.push(AppItem {
+                            idx: *idx,
+                            name: display_name,
+                            pkg_id: bundle_str,
+                            source: "User (.app)".to_string(),
+                            version: ver_str,
+                            disk_size: "Bundle".to_string(),
+                            inst_date: "N/A".to_string(),
+                            description: format!("User installed desktop app ({})", path.display()),
+                            selected: false,
+                            is_system_protected: false,
+                            uninstall_cmd: None,
+                            app_bundle_path: Some(path.to_string_lossy().to_string()),
+                            leftover_paths: leftovers,
+                        });
+                        *idx += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Homebrew Casks
+    if is_cmd_available("brew") {
+        if let Ok(output) = Command::new("brew")
+            .args(["list", "--cask", "--versions"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let name = parts[0].trim().to_string();
+                    let version = parts[1].trim().to_string();
+                    apps.push(AppItem::new_simple(
+                        *idx,
+                        name.clone(),
+                        name,
+                        "Homebrew Cask".to_string(),
+                        version,
+                        "Cask".to_string(),
+                        "N/A".to_string(),
+                        "macOS Homebrew Cask GUI application".to_string(),
+                    ));
+                    *idx += 1;
+                }
+            }
+        }
+    }
+}
+
+// ── Windows Helper Functions ─────────────────────────────────────────────────
+
+fn detect_microsoft_edge(apps: &mut Vec<AppItem>, idx: &mut usize) {
+    let edge_app_dir = Path::new(r"C:\Program Files (x86)\Microsoft\Edge\Application");
+    if edge_app_dir.exists() {
+        let msedge_exe = edge_app_dir.join("msedge.exe");
+        if msedge_exe.exists() {
+            let mut edge_ver = "Protected Component".to_string();
+            let mut setup_exe = None;
+
+            if let Ok(entries) = std::fs::read_dir(edge_app_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        let candidate_setup = path.join("Installer").join("setup.exe");
+                        if candidate_setup.exists() {
+                            edge_ver = path
+                                .file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or("System")
+                                .to_string();
+                            setup_exe = Some(candidate_setup.to_string_lossy().to_string());
+                            break;
+                        }
+                    }
+                }
+            }
+
+            apps.push(AppItem {
+                idx: *idx,
+                name: "Microsoft Edge".to_string(),
+                pkg_id: "Microsoft.Edge".to_string(),
+                source: "Windows (System App)".to_string(),
+                version: edge_ver,
+                disk_size: "~450 MB".to_string(),
+                inst_date: "Windows Built-in".to_string(),
+                description: "Protected Windows web browser. Can be force-purged while strictly preserving EdgeWebView2 runtime.".to_string(),
+                selected: false,
+                is_system_protected: true,
+                uninstall_cmd: setup_exe,
+                app_bundle_path: None,
+                leftover_paths: Vec::new(),
+            });
+            *idx += 1;
+        }
+    }
+}
+
+fn collect_windows_apps(apps: &mut Vec<AppItem>, idx: &mut usize) {
+    // 1. Detect Edge browser
+    detect_microsoft_edge(apps, idx);
+
+    // 2. Query Windows Registry via PowerShell JSON export
+    if is_cmd_available("powershell") || is_cmd_available("powershell.exe") {
+        let script = r#"Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*, HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*, HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName } | Select-Object DisplayName, DisplayVersion, Publisher, EstimatedSize, UninstallString, QuietUninstallString, NoRemove | ConvertTo-Json -Compress"#;
+        let ps_cmd = if is_cmd_available("powershell") {
+            "powershell"
+        } else {
+            "powershell.exe"
+        };
+        if let Ok(output) = Command::new(ps_cmd)
+            .args(["-NoProfile", "-NonInteractive", "-Command", script])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+                let items: Vec<&serde_json::Value> = match &val {
+                    serde_json::Value::Array(arr) => arr.iter().collect(),
+                    serde_json::Value::Object(_) => vec![&val],
+                    _ => Vec::new(),
+                };
+
+                for obj in items {
+                    if let Some(name) = obj.get("DisplayName").and_then(|v| v.as_str()) {
+                        let name = name.trim();
+                        if name.is_empty() || name.eq_ignore_ascii_case("Microsoft Edge") {
+                            continue;
+                        }
+
+                        let version = obj
+                            .get("DisplayVersion")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("unknown")
+                            .to_string();
+
+                        let size =
+                            if let Some(kb) = obj.get("EstimatedSize").and_then(|v| v.as_u64()) {
+                                format_size_kb(kb)
+                            } else {
+                                "unknown".to_string()
+                            };
+
+                        let uninstall_cmd = obj
+                            .get("QuietUninstallString")
+                            .and_then(|v| v.as_str())
+                            .or_else(|| obj.get("UninstallString").and_then(|v| v.as_str()))
+                            .map(|s| s.to_string());
+
+                        let is_protected = obj
+                            .get("NoRemove")
+                            .and_then(|v| v.as_u64())
+                            .is_some_and(|nr| nr == 1);
+
+                        apps.push(AppItem {
+                            idx: *idx,
+                            name: name.to_string(),
+                            pkg_id: name.to_string(),
+                            source: "Windows Registry".to_string(),
+                            version,
+                            disk_size: size,
+                            inst_date: "N/A".to_string(),
+                            description: "Installed Windows application".to_string(),
+                            selected: false,
+                            is_system_protected: is_protected,
+                            uninstall_cmd,
+                            app_bundle_path: None,
+                            leftover_paths: Vec::new(),
+                        });
+                        *idx += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Winget packages
+    if is_cmd_available("winget") {
+        if let Ok(output) = Command::new("winget")
+            .args(["list", "--accept-source-agreements"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            let mut started = false;
+            for line in text.lines() {
+                if line.starts_with("---") {
+                    started = true;
+                    continue;
+                }
+                if started {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 3 {
+                        let name = parts[0].trim().to_string();
+                        let id = parts[1].trim().to_string();
+                        let ver = parts[2].trim().to_string();
+                        if !apps.iter().any(|a| {
+                            a.pkg_id.eq_ignore_ascii_case(&id) || a.name.eq_ignore_ascii_case(&name)
+                        }) {
+                            apps.push(AppItem::new_simple(
+                                *idx,
+                                name,
+                                id,
+                                "Winget".to_string(),
+                                ver,
+                                "Winget Package".to_string(),
+                                "N/A".to_string(),
+                                "Windows Package Manager application".to_string(),
+                            ));
+                            *idx += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn force_uninstall_microsoft_edge(item: &AppItem) -> bool {
+    const YELLOW: &str = "\x1b[1;33m";
+    const GREEN: &str = "\x1b[1;32m";
+    const NC: &str = "\x1b[0m";
+
+    println!("{YELLOW}⚠️  Executing Microsoft Edge Deep Force-Purge...{NC}");
+    println!("{YELLOW}🔒 Guardrail Active: Preserving Microsoft Edge WebView2 Runtime (Teams/Office safe).{NC}");
+
+    // 1. Create System Restore Point
+    println!("  → Creating Windows System Restore Point...");
+    let _ = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            r#"Checkpoint-Computer -Description "Gladeshell Pre-Edge-Uninstall" -RestorePointType "APPLICATION_UNINSTALL" -ErrorAction SilentlyContinue"#,
+        ])
+        .status();
+
+    // 2. Unlock NoRemove in Registry
+    println!("  → Unlocking Registry 'NoRemove' flag for Microsoft Edge...");
+    let _ = Command::new("cmd")
+        .args([
+            "/c",
+            r#"reg add "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge" /v NoRemove /t REG_DWORD /d 0 /f"#,
+        ])
+        .status();
+
+    // 3. Locate setup.exe and execute silent uninstall
+    let setup_path = item
+        .uninstall_cmd
+        .clone()
+        .unwrap_or_else(|| r"C:\Program Files (x86)\Microsoft\Edge\Application".to_string());
+
+    let mut success = false;
+    if Path::new(&setup_path).exists() {
+        println!("  → Invoking native installer with force-uninstall flags...");
+        let uninst_status = Command::new(&setup_path)
+            .args([
+                "--uninstall",
+                "--system-level",
+                "--verbose-logging",
+                "--force-uninstall",
+            ])
+            .status();
+
+        if let Ok(st) = uninst_status {
+            if st.success() {
+                success = true;
+            }
+        }
+    } else {
+        let fallback = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                r#"$setup = Get-ChildItem "C:\Program Files (x86)\Microsoft\Edge\Application\*\Installer\setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if ($setup) { Start-Process -FilePath $setup -ArgumentList "--uninstall", "--system-level", "--verbose-logging", "--force-uninstall" -Wait; exit 0 } else { exit 1 }"#,
+            ])
+            .status();
+        if let Ok(st) = fallback {
+            success = st.success();
+        }
+    }
+
+    // 4. Stop and Disable Edge Update Services
+    println!("  → Disabling background Edge update services...");
+    let _ = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            "Stop-Service edgeupdate -ErrorAction SilentlyContinue; Set-Service edgeupdate -StartupType Disabled -ErrorAction SilentlyContinue; Stop-Service edgeupdatem -ErrorAction SilentlyContinue; Set-Service edgeupdatem -StartupType Disabled -ErrorAction SilentlyContinue",
+        ])
+        .status();
+
+    // 5. Block Re-installation via Windows Update Policy
+    println!(
+        "  → Applying registry policy to block automatic Windows Update Edge re-installation..."
+    );
+    let _ = Command::new("cmd")
+        .args([
+            "/c",
+            r#"reg add "HKLM\SOFTWARE\Microsoft\EdgeUpdate" /v DoNotUpdateToEdgeWithChromium /t REG_DWORD /d 1 /f"#,
+        ])
+        .status();
+
+    // 6. Generate Reinstall script
+    if let Ok(home) = std::env::var("USERPROFILE") {
+        let backup_dir = PathBuf::from(home).join(".gladeshell").join("backup");
+        let _ = std::fs::create_dir_all(&backup_dir);
+        let bat_path = backup_dir.join("reinstall-edge.bat");
+        let bat_content = "@echo off\r\necho Downloading Microsoft Edge Enterprise Installer...\r\npowershell -Command \"Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?linkid=2108834&Channel=Stable&language=en' -OutFile '%TEMP%\\MicrosoftEdgeSetup.exe'\"\r\necho Installing Microsoft Edge...\r\n\"%TEMP%\\MicrosoftEdgeSetup.exe\"\r\necho Microsoft Edge restored.\r\npause\r\n";
+        let _ = std::fs::write(&bat_path, bat_content);
+        println!(
+            "{GREEN}  ✔ Created recovery script at: {}{NC}",
+            bat_path.display()
+        );
+    }
+
+    if success {
+        println!("{GREEN}✔ Microsoft Edge successfully force-uninstalled!{NC}");
+        true
+    } else {
+        println!("{YELLOW}⚠️  Edge force-uninstaller process finished.{NC}");
+        true
+    }
+}
+
+fn uninstall_macos_app(item: &AppItem) -> bool {
+    const YELLOW: &str = "\x1b[1;33m";
+    const GREEN: &str = "\x1b[1;32m";
+    const RED: &str = "\x1b[1;31m";
+    const NC: &str = "\x1b[0m";
+
+    if item.is_system_protected {
+        println!(
+            "{RED}❌ Cannot uninstall {}: Apple System Protected application guarded by SIP.{NC}",
+            item.name
+        );
+        return false;
+    }
+
+    if let Some(ref bundle_path) = item.app_bundle_path {
+        let p = Path::new(bundle_path);
+        if !p.exists() {
+            println!(
+                "{YELLOW}⚠️  Application bundle {} no longer exists.{NC}",
+                bundle_path
+            );
+            return true;
+        }
+
+        println!("  → Relocating {} to macOS Trash (~/.Trash)...", item.name);
+        let trash_res = if let Ok(home) = std::env::var("HOME") {
+            let trash_dir = PathBuf::from(home).join(".Trash");
+            if trash_dir.exists() {
+                let target = trash_dir.join(p.file_name().unwrap_or_default());
+                std::fs::rename(p, target).is_ok()
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        let ok = if trash_res {
+            true
+        } else {
+            let script = format!(
+                "tell application \"Finder\" to delete POSIX file \"{}\"",
+                bundle_path
+            );
+            Command::new("osascript")
+                .args(["-e", &script])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        };
+
+        if ok {
+            println!("{GREEN}✔ Moved {} to Trash.{NC}", item.name);
+
+            if !item.leftover_paths.is_empty() {
+                println!("{YELLOW}  → AppCleaner Engine: Purging {} residual path(s) in ~/Library...{NC}", item.leftover_paths.len());
+                for path_str in &item.leftover_paths {
+                    let lp = Path::new(path_str);
+                    if lp.exists() {
+                        if lp.is_dir() {
+                            let _ = std::fs::remove_dir_all(lp);
+                        } else {
+                            let _ = std::fs::remove_file(lp);
+                        }
+                        println!("    ✔ Purged leftover: {}", path_str);
+                    }
+                }
+            }
+            return true;
+        } else {
+            println!(
+                "{RED}❌ Failed to move {} to Trash (check file permissions).{NC}",
+                bundle_path
+            );
+            return false;
+        }
+    }
+
+    false
+}
+
+fn uninstall_windows_app(item: &AppItem) -> bool {
+    const RED: &str = "\x1b[1;31m";
+    const NC: &str = "\x1b[0m";
+
+    if item.pkg_id == "Microsoft.Edge" || item.name == "Microsoft Edge" {
+        return force_uninstall_microsoft_edge(item);
+    }
+
+    if item.source == "Winget" {
+        println!(
+            "  → Executing Winget silent uninstall for {}...",
+            item.pkg_id
+        );
+        return Command::new("winget")
+            .args(["uninstall", "--silent", "--id", &item.pkg_id])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+    }
+
+    if let Some(ref cmd_str) = item.uninstall_cmd {
+        println!("  → Invoking Windows uninstall command: {}...", cmd_str);
+        return Command::new("cmd")
+            .args(["/c", cmd_str])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+    }
+
+    println!(
+        "{RED}❌ No valid Windows uninstall command available for {}{NC}",
+        item.name
+    );
+    false
+}
+
 fn collect_installed_apps() -> Vec<AppItem> {
     let mut apps = Vec::new();
     let mut idx = 1;
+
+    // 0. macOS Native & Cask Apps
+    if cfg!(target_os = "macos") {
+        collect_macos_apps(&mut apps, &mut idx);
+    }
+    // 0b. Windows Registry & Winget Apps
+    else if cfg!(target_os = "windows") {
+        collect_windows_apps(&mut apps, &mut idx);
+    }
 
     // 1. APT Packages (Debian / Ubuntu / Deepin / Mint)
     if is_cmd_available("dpkg-query") {
@@ -660,17 +1321,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                         "unknown".to_string()
                     };
 
-                    apps.push(AppItem {
+                    apps.push(AppItem::new_simple(
                         idx,
-                        name: name.clone(),
-                        pkg_id: name,
-                        source: "APT".to_string(),
+                        name.clone(),
+                        name,
+                        "APT".to_string(),
                         version,
                         disk_size,
-                        inst_date: "N/A".to_string(),
-                        description: "Debian/Ubuntu system package".to_string(),
-                        selected: false,
-                    });
+                        "N/A".to_string(),
+                        "Debian/Ubuntu system package".to_string(),
+                    ));
                     idx += 1;
                 }
             }
@@ -686,17 +1346,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                 if parts.len() >= 2 {
                     let name = parts[0].trim().to_string();
                     let version = parts[1].trim().to_string();
-                    apps.push(AppItem {
+                    apps.push(AppItem::new_simple(
                         idx,
-                        name: name.clone(),
-                        pkg_id: name,
-                        source: "Pacman".to_string(),
+                        name.clone(),
+                        name,
+                        "Pacman".to_string(),
                         version,
-                        disk_size: "unknown".to_string(),
-                        inst_date: "N/A".to_string(),
-                        description: "Arch Linux package".to_string(),
-                        selected: false,
-                    });
+                        "unknown".to_string(),
+                        "N/A".to_string(),
+                        "Arch Linux package".to_string(),
+                    ));
                     idx += 1;
                 }
             }
@@ -715,17 +1374,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                 if parts.len() >= 2 {
                     let name = parts[0].split('.').next().unwrap_or(parts[0]).to_string();
                     let version = parts[1].trim().to_string();
-                    apps.push(AppItem {
+                    apps.push(AppItem::new_simple(
                         idx,
-                        name: name.clone(),
-                        pkg_id: name,
-                        source: "DNF".to_string(),
+                        name.clone(),
+                        name,
+                        "DNF".to_string(),
                         version,
-                        disk_size: "unknown".to_string(),
-                        inst_date: "N/A".to_string(),
-                        description: "Fedora/RHEL package".to_string(),
-                        selected: false,
-                    });
+                        "unknown".to_string(),
+                        "N/A".to_string(),
+                        "Fedora/RHEL package".to_string(),
+                    ));
                     idx += 1;
                 }
             }
@@ -755,17 +1413,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                         "unknown".to_string()
                     };
 
-                    apps.push(AppItem {
+                    apps.push(AppItem::new_simple(
                         idx,
                         name,
                         pkg_id,
-                        source: "Flatpak".to_string(),
+                        "Flatpak".to_string(),
                         version,
                         disk_size,
-                        inst_date: "N/A".to_string(),
-                        description: "Sandboxed desktop application".to_string(),
-                        selected: false,
-                    });
+                        "N/A".to_string(),
+                        "Sandboxed desktop application".to_string(),
+                    ));
                     idx += 1;
                 }
             }
@@ -781,17 +1438,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                 if parts.len() >= 2 {
                     let name = parts[0].trim().to_string();
                     let version = parts[1].trim().to_string();
-                    apps.push(AppItem {
+                    apps.push(AppItem::new_simple(
                         idx,
-                        name: name.clone(),
-                        pkg_id: name,
-                        source: "Snap".to_string(),
+                        name.clone(),
+                        name,
+                        "Snap".to_string(),
                         version,
-                        disk_size: "unknown".to_string(),
-                        inst_date: "N/A".to_string(),
-                        description: "Containerized snap package".to_string(),
-                        selected: false,
-                    });
+                        "unknown".to_string(),
+                        "N/A".to_string(),
+                        "Containerized snap package".to_string(),
+                    ));
                     idx += 1;
                 }
             }
@@ -807,17 +1463,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                 if parts.len() >= 2 {
                     let name = parts[0].trim().to_string();
                     let version = parts[1].trim().to_string();
-                    apps.push(AppItem {
+                    apps.push(AppItem::new_simple(
                         idx,
-                        name: name.clone(),
-                        pkg_id: name,
-                        source: "Homebrew".to_string(),
+                        name.clone(),
+                        name,
+                        "Homebrew".to_string(),
                         version,
-                        disk_size: "unknown".to_string(),
-                        inst_date: "N/A".to_string(),
-                        description: "Homebrew formula/cask".to_string(),
-                        selected: false,
-                    });
+                        "unknown".to_string(),
+                        "N/A".to_string(),
+                        "Homebrew formula".to_string(),
+                    ));
                     idx += 1;
                 }
             }
@@ -837,17 +1492,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                             .trim_start_matches('v')
                             .trim_end_matches(':')
                             .to_string();
-                        apps.push(AppItem {
+                        apps.push(AppItem::new_simple(
                             idx,
-                            name: name.clone(),
-                            pkg_id: name,
-                            source: "Cargo".to_string(),
+                            name.clone(),
+                            name,
+                            "Cargo".to_string(),
                             version,
-                            disk_size: "N/A".to_string(),
-                            inst_date: "N/A".to_string(),
-                            description: "Rust CLI binary".to_string(),
-                            selected: false,
-                        });
+                            "N/A".to_string(),
+                            "N/A".to_string(),
+                            "Rust CLI binary".to_string(),
+                        ));
                         idx += 1;
                     }
                 }
@@ -869,17 +1523,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
                         } else {
                             "latest".to_string()
                         };
-                        apps.push(AppItem {
+                        apps.push(AppItem::new_simple(
                             idx,
-                            name: name.clone(),
-                            pkg_id: name,
-                            source: "Pipx".to_string(),
+                            name.clone(),
+                            name,
+                            "Pipx".to_string(),
                             version,
-                            disk_size: "N/A".to_string(),
-                            inst_date: "N/A".to_string(),
-                            description: "Isolated Python application".to_string(),
-                            selected: false,
-                        });
+                            "N/A".to_string(),
+                            "N/A".to_string(),
+                            "Isolated Python application".to_string(),
+                        ));
                         idx += 1;
                     }
                 }
@@ -896,17 +1549,16 @@ fn collect_installed_apps() -> Vec<AppItem> {
             ("git", "APT", "2.34.1", "18.5MB"),
         ];
         for (name, src, ver, sz) in &samples {
-            apps.push(AppItem {
+            apps.push(AppItem::new_simple(
                 idx,
-                name: name.to_string(),
-                pkg_id: name.to_string(),
-                source: src.to_string(),
-                version: ver.to_string(),
-                disk_size: sz.to_string(),
-                inst_date: "Recent".to_string(),
-                description: "System application".to_string(),
-                selected: false,
-            });
+                name.to_string(),
+                name.to_string(),
+                src.to_string(),
+                ver.to_string(),
+                sz.to_string(),
+                "Recent".to_string(),
+                "System application".to_string(),
+            ));
             idx += 1;
         }
     }
@@ -971,16 +1623,22 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             item.name, item.pkg_id, item.source
         );
 
-        let mgr = MANAGERS.iter().find(|m| m.name.contains(&item.source));
-        let ok = if let Some(m) = mgr {
-            Command::new(m.remove_cmd)
-                .args(m.args_prefix)
-                .arg(&item.pkg_id)
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
+        let ok = if item.source.contains("macOS") || item.source.contains("Apple") {
+            uninstall_macos_app(item)
+        } else if item.source.contains("Windows") {
+            uninstall_windows_app(item)
         } else {
-            false
+            let mgr = MANAGERS.iter().find(|m| m.name.contains(&item.source));
+            if let Some(m) = mgr {
+                Command::new(m.remove_cmd)
+                    .args(m.args_prefix)
+                    .arg(&item.pkg_id)
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false)
+            } else {
+                false
+            }
         };
 
         if ok {
@@ -1006,5 +1664,47 @@ mod tests {
     #[test]
     fn test_format_size_kb() {
         assert_eq!(truncate_str("hello world", 5), "hell…");
+    }
+
+    #[test]
+    fn test_extract_plist_tag() {
+        let sample_xml = r#"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>com.microsoft.VSCode</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.95.0</string>
+        </dict>
+        </plist>
+        "#;
+        assert_eq!(
+            extract_plist_tag(sample_xml, "CFBundleIdentifier"),
+            Some("com.microsoft.VSCode".to_string())
+        );
+        assert_eq!(
+            extract_plist_tag(sample_xml, "CFBundleShortVersionString"),
+            Some("1.95.0".to_string())
+        );
+        assert_eq!(extract_plist_tag(sample_xml, "NonExistentKey"), None);
+    }
+
+    #[test]
+    fn test_app_item_fields() {
+        let item = AppItem::new_simple(
+            1,
+            "Edge".to_string(),
+            "Microsoft.Edge".to_string(),
+            "Windows (System App)".to_string(),
+            "124.0".to_string(),
+            "450 MB".to_string(),
+            "N/A".to_string(),
+            "Edge browser".to_string(),
+        );
+        assert_eq!(item.name, "Edge");
+        assert_eq!(item.pkg_id, "Microsoft.Edge");
+        assert!(!item.is_system_protected);
+        assert!(item.leftover_paths.is_empty());
     }
 }

@@ -725,7 +725,10 @@ fn extract_zip_parallel(
                 Err(e) => return Err(ExtractionError::ArchiveError(e.to_string())),
             };
 
-            let entry_name = entry.name().to_string();
+            let entry_name = match entry.name() {
+                Ok(n) => n.to_string(),
+                Err(e) => return Err(ExtractionError::ArchiveError(e.to_string())),
+            };
             let entry_size = entry.size();
             if entry_name.is_empty() {
                 return Ok(0);
@@ -1260,11 +1263,8 @@ pub fn inspect_archive(archive_path: &Path) -> Result<ArchiveMetadata, String> {
                         let is_dir = entry.is_dir();
                         let size = entry.size();
                         total_size += size;
-                        inner_files.push(InnerFileItem {
-                            name: entry.name().to_string(),
-                            size,
-                            is_dir,
-                        });
+                        let name = entry.name().map(|n| n.to_string()).unwrap_or_default();
+                        inner_files.push(InnerFileItem { name, size, is_dir });
                     }
                 }
 

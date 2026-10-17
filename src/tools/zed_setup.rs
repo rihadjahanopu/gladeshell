@@ -39,6 +39,16 @@ const NC: &str = "\x1b[0m";
 
 // ── Settings Payload (Valid JSON) ─────────────────────────────
 pub const ZED_SETTINGS: &str = r#"{
+  "close_panel_on_toggle": true,
+  "completion_menu_item_kind": "symbol",
+  "markdown_preview": {
+    "open_markdown_files_in_preview": true
+  },
+  "vim": {
+    "show_edit_predictions_in_normal_mode": true
+  },
+  "auto_signature_help": true,
+  "autoscroll_on_clicks": true,
   "cursor_animation": {
     "enabled": true
   },
@@ -82,7 +92,7 @@ pub const ZED_SETTINGS: &str = r#"{
   },
   "proxy": "",
   "focus_follows_mouse": {
-    "enabled": false
+    "enabled": true
   },
   "which_key": {
     "enabled": false
@@ -145,21 +155,27 @@ pub const ZED_SETTINGS: &str = r#"{
     }
   },
   "file_types": {
-    "HTML": ["*.html", "*.njk", "*.ejs"]
+    "HTML": [
+      "*.html",
+      "*.njk",
+      "*.ejs"
+    ]
   },
   "theme": {
     "mode": "dark",
-    "light": "Ayu Light",
-    "dark": "Tokyo Night Storm"
+    "light": "Tokyo Night Light",
+    "dark": "Tokyo Night"
   },
   "terminal": {
+    "scrollbar": {
+      "show": "auto"
+    },
+    "bell": "system",
     "font_weight": 400.0,
     "copy_on_select": true,
     "blinking": "on",
     "cursor_shape": "block",
-    "line_height": {
-      "custom": 1.3
-    },
+    "line_height": { "custom": 1.3 },
     "font_fallbacks": ["JetBrains Mono", "FiraCode Nerd Font"],
     "font_family": "Cascadia Code",
     "font_size": 22.0,
@@ -209,7 +225,7 @@ pub const ZED_SETTINGS: &str = r#"{
   },
   "inlay_hints": {
     "show_background": true,
-    "enabled": false
+    "enabled": true
   },
   "toolbar": {
     "code_actions": true
@@ -229,7 +245,10 @@ pub const ZED_SETTINGS: &str = r#"{
         "source.organizeImports": true,
         "source.fixAll.eslint": true
       },
-      "language_servers": ["vtsls", "..."]
+      "language_servers": [
+        "vtsls",
+        "..."
+      ]
     },
     "TSX": {
       "formatter": "prettier",
@@ -237,7 +256,10 @@ pub const ZED_SETTINGS: &str = r#"{
         "source.organizeImports": true,
         "source.fixAll.eslint": true
       },
-      "language_servers": ["vtsls", "..."]
+      "language_servers": [
+        "vtsls",
+        "..."
+      ]
     },
     "Rust": {
       "formatter": {
@@ -384,7 +406,12 @@ pub const ZED_SETTINGS: &str = r#"{
     "docker-compose": true,
     "colorizer": true,
     "color-highlight": true,
-    "es7-react-redux-snippets": true
+    "es7-react-redux-snippets": true,
+    "react-snippets-es7": true,
+    "toml": true,
+    "rust-snippets": true,
+    "lorem-snippets": true,
+    "blade-runner-2049": true
   }
 }"#;
 

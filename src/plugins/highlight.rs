@@ -237,6 +237,11 @@ fn is_valid_command(cmd: &str) -> bool {
         return true;
     }
 
+    // Fast cached PATH executables lookup (sub-millisecond, zero thread spawn)
+    if crate::core::typo_engine::get_system_executables().contains(cmd) {
+        return true;
+    }
+
     // PATH cache lookup — only after scan is complete to avoid stale reads
     ensure_path_scan_started();
     if PATH_SCAN_DONE.load(Ordering::Acquire) {
@@ -281,13 +286,179 @@ pub fn highlight(buffer: &str) -> String {
         return String::new();
     }
 
-    let mut spans: Vec<TokenSpan> = Vec::with_capacity(16);
+    if buffer.is_ascii() {
+        highlight_ascii(buffer)
+    } else {
+        highlight_unicode(buffer)
+    }
+}
 
-    // We tokenize by iterating over (char_index, char) pairs.
-    // This is inherently UTF-8 safe — no byte indexing required.
+/// Fast-path zero-allocation tokenizer for ASCII buffers (which cover >99% of typed commands).
+fn highlight_ascii(buffer: &str) -> String {
+    let bytes = buffer.as_bytes();
+    let total = bytes.len();
+    let mut spans: Vec<TokenSpan> = Vec::with_capacity(16);
+    let mut i = 0usize;
+    let mut is_first_token = true;
+
+    while i < total {
+        let ch = bytes[i];
+
+        // ── Skip whitespace ──────────────────────────────────────────────────
+        if ch.is_ascii_whitespace() {
+            i += 1;
+            continue;
+        }
+
+        let span_start = i;
+
+        // ── Pipe, Semicolon, Ampersand ───────────────────────────────────────
+        if ch == b'|' || ch == b';' || ch == b'&' {
+            let mut end = i + 1;
+            if end < total && (bytes[end] == b'|' || bytes[end] == b'&' || bytes[end] == b'>') {
+                end += 1;
+            }
+            spans.push(TokenSpan {
+                char_start: span_start,
+                char_end: end,
+                style: "fg=yellow,bold",
+            });
+            i = end;
+            is_first_token = true;
+            continue;
+        }
+
+        // ── Redirection: > >> < ──────────────────────────────────────────────
+        if ch == b'>' || ch == b'<' {
+            let mut end = i + 1;
+            if end < total && bytes[end] == b'>' {
+                end += 1;
+            }
+            spans.push(TokenSpan {
+                char_start: span_start,
+                char_end: end,
+                style: "fg=yellow",
+            });
+            i = end;
+            continue;
+        }
+
+        // ── Quoted string: '...' or "..." ────────────────────────────────────
+        if ch == b'\'' || ch == b'"' {
+            let quote = ch;
+            i += 1;
+            while i < total && bytes[i] != quote {
+                if bytes[i] == b'\\' && i + 1 < total {
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            if i < total {
+                i += 1; // consume closing quote
+            }
+            spans.push(TokenSpan {
+                char_start: span_start,
+                char_end: i,
+                style: "fg=cyan",
+            });
+            is_first_token = false;
+            continue;
+        }
+
+        // ── Variable: $VAR or ${VAR} or $() ─────────────────────────────────
+        if ch == b'$' {
+            i += 1;
+            if i < total && bytes[i] == b'{' {
+                i += 1;
+                while i < total && bytes[i] != b'}' {
+                    i += 1;
+                }
+                if i < total {
+                    i += 1; // consume '}'
+                }
+            } else if i < total && bytes[i] == b'(' {
+                let mut depth = 1usize;
+                i += 1;
+                while i < total && depth > 0 {
+                    if bytes[i] == b'(' {
+                        depth += 1;
+                    } else if bytes[i] == b')' {
+                        depth -= 1;
+                    }
+                    i += 1;
+                }
+            } else {
+                while i < total && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_') {
+                    i += 1;
+                }
+            }
+            spans.push(TokenSpan {
+                char_start: span_start,
+                char_end: i,
+                style: "fg=magenta,bold",
+            });
+            is_first_token = false;
+            continue;
+        }
+
+        // ── Comment: # ... (only at start of token) ──────────────────────────
+        if ch == b'#' && is_first_token {
+            spans.push(TokenSpan {
+                char_start: span_start,
+                char_end: total,
+                style: "fg=8",
+            });
+            break;
+        }
+
+        // ── Regular word token ───────────────────────────────────────────────
+        while i < total
+            && !bytes[i].is_ascii_whitespace()
+            && bytes[i] != b'|'
+            && bytes[i] != b';'
+            && bytes[i] != b'&'
+            && bytes[i] != b'>'
+            && bytes[i] != b'<'
+        {
+            i += 1;
+        }
+        let span_end = i;
+        let token_str = &buffer[span_start..span_end];
+
+        let style: &'static str = if is_first_token {
+            if is_valid_command(token_str) {
+                "fg=green,bold"
+            } else {
+                "fg=red,bold"
+            }
+        } else if token_str.starts_with('-') {
+            "fg=magenta"
+        } else if token_str.starts_with('/') || token_str.starts_with("./") {
+            "fg=blue,underline"
+        } else if token_str.bytes().all(|c| c.is_ascii_digit()) {
+            "fg=cyan,bold"
+        } else {
+            "none"
+        };
+
+        spans.push(TokenSpan {
+            char_start: span_start,
+            char_end: span_end,
+            style,
+        });
+        is_first_token = false;
+    }
+
+    serialize_spans(&spans)
+}
+
+/// Fallback tokenizer for UTF-8 multi-byte buffers (CJK, emojis, accented characters).
+fn highlight_unicode(buffer: &str) -> String {
+    let mut spans: Vec<TokenSpan> = Vec::with_capacity(16);
     let chars: Vec<char> = buffer.chars().collect();
     let total = chars.len();
-    let mut i = 0usize; // current character index
+    let mut i = 0usize;
     let mut is_first_token = true;
 
     while i < total {
@@ -313,7 +484,7 @@ pub fn highlight(buffer: &str) -> String {
                 style: "fg=yellow,bold",
             });
             i = end;
-            is_first_token = true; // token after pipe/semicolon is a command
+            is_first_token = true;
             continue;
         }
 
@@ -338,13 +509,13 @@ pub fn highlight(buffer: &str) -> String {
             i += 1;
             while i < total && chars[i] != quote {
                 if chars[i] == '\\' && i + 1 < total {
-                    i += 2; // skip escaped character
+                    i += 2;
                 } else {
                     i += 1;
                 }
             }
             if i < total {
-                i += 1; // consume closing quote
+                i += 1;
             }
             spans.push(TokenSpan {
                 char_start: span_start,
@@ -364,10 +535,9 @@ pub fn highlight(buffer: &str) -> String {
                     i += 1;
                 }
                 if i < total {
-                    i += 1; // consume '}'
+                    i += 1;
                 }
             } else if i < total && chars[i] == '(' {
-                // Command substitution $(...): skip to matching ')'
                 let mut depth = 1usize;
                 i += 1;
                 while i < total && depth > 0 {
@@ -379,7 +549,6 @@ pub fn highlight(buffer: &str) -> String {
                     i += 1;
                 }
             } else {
-                // Plain variable: $VARNAME
                 while i < total && (chars[i].is_alphanumeric() || chars[i] == '_') {
                     i += 1;
                 }
@@ -395,11 +564,10 @@ pub fn highlight(buffer: &str) -> String {
 
         // ── Comment: # ... (only at start of token) ──────────────────────────
         if ch == '#' && is_first_token {
-            // Rest of line is a comment
             spans.push(TokenSpan {
                 char_start: span_start,
                 char_end: total,
-                style: "fg=8", // dim/dark gray
+                style: "fg=8",
             });
             break;
         }
@@ -417,7 +585,6 @@ pub fn highlight(buffer: &str) -> String {
         }
         let span_end = i;
 
-        // Reconstruct the token string from the char vec slice (safe — no byte indexing)
         let token_str: String = chars[span_start..span_end].iter().collect();
 
         let style: &'static str = if is_first_token {
@@ -427,16 +594,12 @@ pub fn highlight(buffer: &str) -> String {
                 "fg=red,bold"
             }
         } else if token_str.starts_with('-') {
-            // Flag / option
             "fg=magenta"
         } else if token_str.starts_with('/') || token_str.starts_with("./") {
-            // Path-like argument
             "fg=blue,underline"
         } else if token_str.chars().all(|c| c.is_ascii_digit()) {
-            // Numeric literal
             "fg=cyan,bold"
         } else {
-            // Plain argument
             "none"
         };
 
@@ -448,17 +611,17 @@ pub fn highlight(buffer: &str) -> String {
         is_first_token = false;
     }
 
-    // ── Serialize to Zsh region_highlight format ──────────────────────────────
-    // One entry per line: "<char_start> <char_end> <style>"
+    serialize_spans(&spans)
+}
+
+fn serialize_spans(spans: &[TokenSpan]) -> String {
+    use std::fmt::Write;
     let mut out = String::with_capacity(spans.len() * 28);
     for (idx, span) in spans.iter().enumerate() {
         if idx > 0 {
             out.push('\n');
         }
-        out.push_str(&format!(
-            "{} {} {}",
-            span.char_start, span.char_end, span.style
-        ));
+        let _ = write!(out, "{} {} {}", span.char_start, span.char_end, span.style);
     }
     out
 }

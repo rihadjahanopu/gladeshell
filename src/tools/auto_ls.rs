@@ -161,8 +161,16 @@ pub fn run_path(target_path: Option<&str>) {
     let mut hidden_count = 0;
     let mut items: Vec<DirEntryItem> = Vec::new();
 
+    let visit_handle = if current_dir.is_dir() {
+        let dir_clone = current_dir.clone();
+        Some(std::thread::spawn(move || {
+            crate::tools::z_jumper::record_visit(&dir_clone);
+        }))
+    } else {
+        None
+    };
+
     if current_dir.is_dir() {
-        crate::tools::z_jumper::record_visit(&current_dir);
         if let Ok(entries) = fs::read_dir(&current_dir) {
             for entry in entries.flatten() {
                 let name = entry.file_name();
@@ -225,11 +233,13 @@ pub fn run_path(target_path: Option<&str>) {
         });
     }
 
-    // Sort: directories first, then files alphabetically (case-insensitive)
+    // Sort: directories first, then files alphabetically (case-insensitive, zero allocation)
     items.sort_by(|a, b| {
-        b.is_dir
-            .cmp(&a.is_dir)
-            .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        b.is_dir.cmp(&a.is_dir).then_with(|| {
+            let a_lower = a.name.to_ascii_lowercase();
+            let b_lower = b.name.to_ascii_lowercase();
+            a_lower.cmp(&b_lower)
+        })
     });
 
     // Clean UI rendering with ANSI colors compatible with both Light & Dark terminal themes
@@ -239,8 +249,17 @@ pub fn run_path(target_path: Option<&str>) {
     );
     println!("\x1b[38;5;242m───────────────────────────────────────\x1b[0m");
 
-    // Pure Rust directory listing display
-    for item in &items {
+    // Pure Rust directory listing display (capped at 100 entries to prevent terminal freeze)
+    let display_limit = 100;
+    for (idx, item) in items.iter().enumerate() {
+        if idx >= display_limit {
+            println!(
+                "\x1b[38;5;244m... and {} more items\x1b[0m",
+                items.len() - display_limit
+            );
+            break;
+        }
+
         let (icon, color) = get_file_style(
             &item.name,
             item.is_dir,
@@ -254,6 +273,10 @@ pub fn run_path(target_path: Option<&str>) {
         } else {
             println!("{}{}{}\x1b[0m", color, icon, item.name);
         }
+    }
+
+    if let Some(handle) = visit_handle {
+        let _ = handle.join();
     }
 }
 

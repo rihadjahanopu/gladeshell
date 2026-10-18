@@ -19,9 +19,43 @@ use std::sync::OnceLock;
 static SYSTEM_EXECUTABLES_CACHE: OnceLock<HashSet<String>> = OnceLock::new();
 static DYNAMIC_CANDIDATES_CACHE: OnceLock<HashSet<String>> = OnceLock::new();
 
+fn get_cache_file() -> Option<std::path::PathBuf> {
+    let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).ok()?;
+    let cache_dir = std::path::Path::new(&home)
+        .join(".cache")
+        .join("gladeshell");
+    let _ = fs::create_dir_all(&cache_dir);
+    Some(cache_dir.join("executables.cache"))
+}
+
 /// Collect all system executables available in $PATH
 pub fn get_system_executables() -> &'static HashSet<String> {
     SYSTEM_EXECUTABLES_CACHE.get_or_init(|| {
+        // Try reading disk cache first (TTL: 24h)
+        if let Some(cache_path) = get_cache_file() {
+            if let Ok(meta) = fs::metadata(&cache_path) {
+                if let Ok(mtime) = meta.modified() {
+                    if let Ok(dur) = mtime.elapsed() {
+                        if dur.as_secs() < 86400 {
+                            if let Ok(content) = fs::read_to_string(&cache_path) {
+                                let mut set = HashSet::with_capacity(1024);
+                                for line in content.lines() {
+                                    let trimmed = line.trim();
+                                    if !trimmed.is_empty() {
+                                        set.insert(trimmed.to_string());
+                                    }
+                                }
+                                if !set.is_empty() {
+                                    return set;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Cache miss or expired — scan PATH
         let mut set = HashSet::new();
         if let Ok(path_var) = env::var("PATH") {
             for path_buf in env::split_paths(&path_var) {
@@ -53,6 +87,20 @@ pub fn get_system_executables() -> &'static HashSet<String> {
                 }
             }
         }
+
+        // Save to cache file opportunistically
+        if let Some(cache_path) = get_cache_file() {
+            let mut buf = String::with_capacity(set.len() * 12);
+            for name in &set {
+                buf.push_str(name);
+                buf.push('\n');
+            }
+            let tmp_path = cache_path.with_extension(format!("tmp.{}", std::process::id()));
+            if fs::write(&tmp_path, buf).is_ok() {
+                let _ = fs::rename(&tmp_path, &cache_path);
+            }
+        }
+
         set
     })
 }
@@ -242,12 +290,23 @@ pub fn find_suggestions(input: &str) -> Vec<Suggestion> {
     }
 
     let all_candidates = get_all_candidates();
+    let cmd_len = cmd_part.chars().count();
 
     let mut suggestions: Vec<Suggestion> = all_candidates
         .iter()
-        .map(|cand| {
+        .filter(|cand| {
+            let cand_len = cand.chars().count();
+            cmd_len.abs_diff(cand_len) <= 3
+        })
+        .filter_map(|cand| {
             let dist = damerau_levenshtein(cmd_part, cand);
+            if dist > 3 {
+                return None;
+            }
             let score = similarity_score(cmd_part, cand);
+            if score < 0.40 {
+                return None;
+            }
 
             let candidate_full = if trailing_args.is_empty() {
                 cand.to_string()
@@ -255,15 +314,11 @@ pub fn find_suggestions(input: &str) -> Vec<Suggestion> {
                 format!("{} {}", cand, trailing_args)
             };
 
-            Suggestion {
+            Some(Suggestion {
                 candidate: candidate_full,
                 distance: dist,
                 similarity: score,
-            }
-        })
-        .filter(|s| {
-            // Filter: max edit distance <= 3 and similarity >= 0.40
-            s.distance <= 3 && s.similarity >= 0.40
+            })
         })
         .collect();
 

@@ -87,6 +87,9 @@ open = { version = "5.3", optional = true }
 # Data parallelism — parallel metric collection & file search
 rayon = { version = "1.10", optional = true }
 
+# Ultra-fast, low-latency global memory allocator
+mimalloc = { version = "0.1", default-features = false }
+
 # Windows WMI Hardware Diagnostics & Console APIs
 [target.'cfg(target_os = "windows")'.dependencies]
 wmi         = "0.18"

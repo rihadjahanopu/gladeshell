@@ -1436,6 +1436,23 @@ pub fn theme_config_path() -> std::path::PathBuf {
 
 /// Reads the currently active theme index. Falls back to 0 (minimal).
 pub fn active_theme_id() -> usize {
+    // 0. Fast-path: Check environment variable GLADESHELL_THEME (zero disk syscalls)
+    if let Ok(val) = std::env::var("GLADESHELL_THEME") {
+        let trimmed = val.trim();
+        if let Ok(id) = trimmed.parse::<usize>() {
+            if id < THEMES.len() {
+                return id;
+            }
+        }
+        if let Some((i, _)) = THEMES
+            .iter()
+            .enumerate()
+            .find(|(_, t)| t.name.eq_ignore_ascii_case(trimmed))
+        {
+            return i;
+        }
+    }
+
     let path = theme_config_path();
     if let Ok(content) = std::fs::read_to_string(&path) {
         let trimmed = content.trim();
@@ -1791,58 +1808,80 @@ pub fn detect_project_toolchain(
     cwd_path: &std::path::Path,
     tv: &ToolVersions,
 ) -> Option<(&'static str, String)> {
-    if cwd_path.join("Cargo.toml").is_file() {
+    let Ok(entries) = std::fs::read_dir(cwd_path) else {
+        return None;
+    };
+    let mut has_cargo = false;
+    let mut has_bun = false;
+    let mut has_deno = false;
+    let mut has_package_json = false;
+    let mut has_python = false;
+    let mut has_go = false;
+    let mut has_docker = false;
+
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let s = name.to_string_lossy();
+        if s == "Cargo.toml" {
+            has_cargo = true;
+        } else if s == "bun.lockb" || s == "bun.lock" || s == "bunfig.toml" {
+            has_bun = true;
+        } else if s == "deno.json" || s == "deno.jsonc" || s == "deno.lock" {
+            has_deno = true;
+        } else if s == "package.json" {
+            has_package_json = true;
+        } else if s == "pyproject.toml"
+            || s == "requirements.txt"
+            || s == "Pipfile"
+            || s == "poetry.lock"
+            || s == "uv.lock"
+        {
+            has_python = true;
+        } else if s == "go.mod" {
+            has_go = true;
+        } else if s == "Dockerfile" || s == "docker-compose.yml" || s == "compose.yaml" {
+            has_docker = true;
+        }
+    }
+
+    if has_cargo {
         let text = if !tv.rust.is_empty() {
             tv.rust.clone()
         } else {
             "🦀 Rust".to_string()
         };
         Some(("\x1b[38;2;222;165;132m", text))
-    } else if cwd_path.join("bun.lockb").is_file()
-        || cwd_path.join("bun.lock").is_file()
-        || cwd_path.join("bunfig.toml").is_file()
-    {
+    } else if has_bun {
         let text = if !tv.bun.is_empty() {
             tv.bun.clone()
         } else {
             "🥐 Bun".to_string()
         };
         Some(("\x1b[38;2;251;200;160m", text))
-    } else if cwd_path.join("deno.json").is_file()
-        || cwd_path.join("deno.jsonc").is_file()
-        || cwd_path.join("deno.lock").is_file()
-    {
+    } else if has_deno {
         Some(("\x1b[38;2;112;230;216m", "🦕 Deno".to_string()))
-    } else if cwd_path.join("package.json").is_file() {
+    } else if has_package_json {
         let text = if !tv.node.is_empty() {
             tv.node.replace("🟢 ", "⬢ ")
         } else {
             "⬢ Node".to_string()
         };
         Some(("\x1b[38;2;104;160;99m", text))
-    } else if cwd_path.join("pyproject.toml").is_file()
-        || cwd_path.join("requirements.txt").is_file()
-        || cwd_path.join("Pipfile").is_file()
-        || cwd_path.join("poetry.lock").is_file()
-        || cwd_path.join("uv.lock").is_file()
-    {
+    } else if has_python {
         let text = if !tv.python.is_empty() {
             tv.python.clone()
         } else {
             "🐍 Python".to_string()
         };
         Some(("\x1b[38;2;75;139;190m", text))
-    } else if cwd_path.join("go.mod").is_file() {
+    } else if has_go {
         let text = if !tv.go.is_empty() {
             tv.go.clone()
         } else {
             "🐹 Go".to_string()
         };
         Some(("\x1b[38;2;0;173;216m", text))
-    } else if cwd_path.join("Dockerfile").is_file()
-        || cwd_path.join("docker-compose.yml").is_file()
-        || cwd_path.join("compose.yaml").is_file()
-    {
+    } else if has_docker {
         Some(("\x1b[38;2;36;150;237m", "🐳 Docker".to_string()))
     } else {
         None

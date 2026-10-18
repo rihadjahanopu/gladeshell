@@ -159,6 +159,33 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }
             });
 
+        // ── Pre-spawned worker thread pool (eliminates per-connection OS thread spawn overhead) ──
+        let (sender, receiver) = std::sync::mpsc::sync_channel::<UnixStream>(128);
+        let receiver = Arc::new(std::sync::Mutex::new(receiver));
+
+        for worker_id in 0..4 {
+            let rx = receiver.clone();
+            let _ = thread::Builder::new()
+                .name(format!("fb-worker-{}", worker_id))
+                .spawn(move || {
+                    let mut buf = vec![0u8; 4096];
+                    loop {
+                        let stream = {
+                            match rx.lock() {
+                                Ok(guard) => match guard.recv() {
+                                    Ok(s) => s,
+                                    Err(_) => break,
+                                },
+                                Err(_) => break,
+                            }
+                        };
+                        let _ = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                            handle_client(stream, &mut buf);
+                        }));
+                    }
+                });
+        }
+
         // ── Accept loop ───────────────────────────────────────────────────────
         for stream_result in listener.incoming() {
             if !running.load(Ordering::Relaxed) {
@@ -167,20 +194,12 @@ pub fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
             match stream_result {
                 Ok(stream) => {
-                    let _ = thread::Builder::new()
-                        .name("fb-client".to_string())
-                        .spawn(move || {
-                            // Wrap the entire handler in catch_unwind so a bug
-                            // in prompt rendering does not kill the accept loop.
-                            let _ = panic::catch_unwind(|| {
-                                let mut buf = vec![0u8; 4096];
-                                handle_client(stream, &mut buf);
-                            });
-                        });
+                    if sender.send(stream).is_err() {
+                        break;
+                    }
                 }
                 Err(_e) => {
                     // Log to stderr only; do not crash the server
-                    // Uncomment for debug: eprintln!("gladeshell daemon: accept error: {_e}");
                 }
             }
         }
@@ -371,6 +390,7 @@ fn handle_prompt_parts(parts: &[&str], buf: &mut Vec<u8>) {
     }
 
     // Render into the shared buffer
+    buf.clear();
     buf.resize(4096, 0);
     if prompt::render(&ctx, buf).is_err() {
         // Write a safe, bounded error message — never overflow the buffer

@@ -46,7 +46,7 @@ pub fn generate() -> String {
 # $status    = exit code of the last command (captured BEFORE any other calls)
 # $CMD_DURATION = Fish built-in: duration of last command in milliseconds
 #
-set -g _fb_sock "$TMPDIR/gladeshell_$USER.sock"
+set -g _fb_sock (gladeshell socket-path 2>/dev/null; or echo "$TMPDIR/gladeshell_$USER.sock")
 if not test -n "$_fb_sock"
     set -g _fb_sock "/tmp/gladeshell_$USER.sock"
 end

@@ -169,6 +169,101 @@ fn detect_monorepo(git_root: &Path) -> bool {
     dir_count >= MONOREPO_THRESHOLD
 }
 
+// ── Cross-Process Shared Cache (/dev/shm or temp_dir) ────────────────────────
+
+fn get_shared_cache_dir() -> PathBuf {
+    let shm = Path::new("/dev/shm");
+    if shm.is_dir() {
+        shm.to_path_buf()
+    } else {
+        std::env::temp_dir()
+    }
+}
+
+fn hash_path(path: &Path) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325;
+    for b in path.to_string_lossy().as_bytes() {
+        h ^= *b as u64;
+        h = h.wrapping_mul(0x100000001b3);
+    }
+    h
+}
+
+fn try_read_shared_cache(git_root: &Path, git_dir: &Path) -> Option<GitStatus> {
+    let cache_file =
+        get_shared_cache_dir().join(format!("gladeshell_git_{:016x}.cache", hash_path(git_root)));
+    let data = std::fs::read_to_string(&cache_file).ok()?;
+    let mut parts = data.split('\x1f');
+    let ts_ms = parts.next()?.parse::<u128>().ok()?;
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_millis();
+    if now_ms.saturating_sub(ts_ms) > TTL_NORMAL_MS as u128 {
+        return None;
+    }
+    // Verify HEAD / index mtime
+    if let Ok(head_meta) = std::fs::metadata(git_dir.join("HEAD")) {
+        if let Ok(head_mtime) = head_meta.modified() {
+            if let Ok(head_ms) = head_mtime.duration_since(std::time::UNIX_EPOCH) {
+                if head_ms.as_millis() > ts_ms {
+                    return None;
+                }
+            }
+        }
+    }
+    if let Ok(idx_meta) = std::fs::metadata(git_dir.join("index")) {
+        if let Ok(idx_mtime) = idx_meta.modified() {
+            if let Ok(idx_ms) = idx_mtime.duration_since(std::time::UNIX_EPOCH) {
+                if idx_ms.as_millis() > ts_ms {
+                    return None;
+                }
+            }
+        }
+    }
+    let branch = parts.next()?.to_string();
+    let dirty = parts.next()? == "1";
+    let ahead = parts.next()? == "1";
+    let behind = parts.next()? == "1";
+    let stash_count = parts.next()?.parse::<u32>().ok()?;
+    let state_indicator = parts.next()?.to_string();
+
+    Some(GitStatus {
+        path: git_root.to_path_buf(),
+        branch,
+        dirty,
+        ahead,
+        behind,
+        stash_count,
+        is_git_repo: true,
+        state_indicator,
+        last_updated: Some(Instant::now()),
+    })
+}
+
+fn write_shared_cache(git_root: &Path, status: &GitStatus) {
+    let now_ms = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => d.as_millis(),
+        Err(_) => return,
+    };
+    let cache_file =
+        get_shared_cache_dir().join(format!("gladeshell_git_{:016x}.cache", hash_path(git_root)));
+    let content = format!(
+        "{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}",
+        now_ms,
+        status.branch,
+        if status.dirty { "1" } else { "0" },
+        if status.ahead { "1" } else { "0" },
+        if status.behind { "1" } else { "0" },
+        status.stash_count,
+        status.state_indicator,
+    );
+    let tmp_file = cache_file.with_extension(format!("tmp.{}", std::process::id()));
+    if std::fs::write(&tmp_file, content).is_ok() {
+        let _ = std::fs::rename(&tmp_file, &cache_file);
+    }
+}
+
 // ── Public API (Panic-Safe Boundaries) ────────────────────────────────────────
 
 /// Read cached git status for `cwd`.
@@ -245,6 +340,26 @@ fn get_status_internal(cwd: &Path) -> GitStatus {
             }
             CacheLookup::Miss => {}
         }
+
+        // Cross-process shared memory cache check (/dev/shm or /tmp)
+        if let Some(git_dir) = find_git_dir(cwd) {
+            if let Some(mut shared_status) = try_read_shared_cache(git_root, &git_dir) {
+                shared_status.path = cwd.to_path_buf();
+                let is_monorepo = detect_monorepo(git_root);
+                lock_cache(|guard| {
+                    insert_with_cap(
+                        guard,
+                        git_root.clone(),
+                        CacheEntry {
+                            status: shared_status.clone(),
+                            is_monorepo,
+                            updating: false,
+                        },
+                    );
+                });
+                return shared_status;
+            }
+        }
     }
 
     // Cache miss — query fresh status
@@ -252,6 +367,7 @@ fn get_status_internal(cwd: &Path) -> GitStatus {
     status.last_updated = Some(Instant::now());
 
     if let Some(ref git_root) = git_root_opt {
+        write_shared_cache(git_root, &status);
         let is_monorepo = lock_cache(|guard| guard.get(git_root).map(|e| e.is_monorepo))
             .unwrap_or_else(|| detect_monorepo(git_root));
 
@@ -287,6 +403,7 @@ fn refresh_internal(cwd: &Path) {
     status.last_updated = Some(Instant::now());
 
     if let Some(git_root) = git_root_opt {
+        write_shared_cache(&git_root, &status);
         let is_monorepo = lock_cache(|guard| guard.get(&git_root).map(|e| e.is_monorepo))
             .unwrap_or_else(|| detect_monorepo(&git_root));
 
@@ -414,7 +531,11 @@ fn query_git_status(cwd: &Path) -> GitStatus {
     };
 
     // Strictly read-only dirty check. If .git/index.lock exists or error occurs, default to false.
-    let dirty = repo.is_dirty().unwrap_or(false);
+    let dirty = if git_dir.join("index.lock").exists() {
+        false
+    } else {
+        repo.is_dirty().unwrap_or(false)
+    };
 
     // Calculate ahead / behind safely
     let (ahead, behind) = ahead_behind(&repo);

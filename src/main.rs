@@ -26,6 +26,9 @@ use clap::Parser;
 use gladeshell_core::cli::*;
 use gladeshell_core::init;
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 // ── Fast-path CLI parser for hot-path subcommands (bypasses heavy clap metadata initialization) ──
 #[inline(always)]
 fn fast_parse_prompt_args(args: &[String]) -> Option<PromptArgs> {

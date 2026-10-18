@@ -303,7 +303,7 @@ fi
     out.push_str(r#"
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
 typeset -g _fb_timer=0
-typeset -g _fb_sock="${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock"
+typeset -g _fb_sock="$(gladeshell socket-path 2>/dev/null || echo "${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock")"
 
 _fb_preexec() { _fb_timer=$SECONDS; }
 

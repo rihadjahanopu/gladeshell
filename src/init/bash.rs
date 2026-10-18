@@ -36,7 +36,7 @@ pub fn generate() -> String {
     out.push_str(r#"
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
 _fb_timer_start=0
-_fb_sock="${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock"
+_fb_sock="$(gladeshell socket-path 2>/dev/null || echo "${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock")"
 _fb_healed=""
 _fb_daemon_spawned=""
 trap '_fb_timer_start=$SECONDS' DEBUG

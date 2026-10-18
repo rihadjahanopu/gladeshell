@@ -65,6 +65,15 @@ function Prompt {
         }
     }
 
+    # Auto-spawn background IPC daemon on Unix/macOS (one-time session guard)
+    if (-not $IsWindows -and -not $global:_fb_daemon_spawned) {
+        $global:_fb_daemon_spawned = $true
+        $sock = gladeshell socket-path 2>$null
+        if ($sock -and -not (Test-Path $sock)) {
+            Start-Process -FilePath "gladeshell" -ArgumentList "serve" -NoNewWindow -ErrorAction SilentlyContinue
+        }
+    }
+
     $p = gladeshell prompt --shell pwsh --cwd "$cwd" --exit-code "$lastExit" --cmd-duration "$duration" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
     if ($p) {
         return $p

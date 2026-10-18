@@ -126,9 +126,21 @@ fn load_all_history() -> (Vec<String>, Vec<(PathBuf, std::time::SystemTime)>) {
 ///  - Fish:  YAML-like blocks with `- cmd: command`
 ///  - PSReadLine: plain lines
 fn load_history_file(path: &PathBuf) -> Vec<String> {
-    let bytes = match fs::read(path) {
-        Ok(b) => b,
-        Err(_) => return Vec::new(),
+    use std::io::{Read, Seek, SeekFrom};
+    let Ok(mut file) = fs::File::open(path) else {
+        return Vec::new();
+    };
+    let file_len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let is_truncated = file_len > 65536;
+    let bytes = if is_truncated {
+        let _ = file.seek(SeekFrom::End(-65536));
+        let mut buf = Vec::with_capacity(65536);
+        let _ = file.read_to_end(&mut buf);
+        buf
+    } else {
+        let mut buf = Vec::with_capacity(file_len as usize);
+        let _ = file.read_to_end(&mut buf);
+        buf
     };
 
     // Lossy UTF-8: replace invalid sequences rather than failing
@@ -141,7 +153,11 @@ fn load_history_file(path: &PathBuf) -> Vec<String> {
 
     let mut lines: Vec<String> = Vec::with_capacity(1024);
 
-    for raw_line in content.lines() {
+    for (idx, raw_line) in content.lines().enumerate() {
+        // Skip potential partial leading line if we seeked into the middle of the file
+        if is_truncated && idx == 0 {
+            continue;
+        }
         let line = raw_line.trim_end();
         if line.is_empty() {
             continue;

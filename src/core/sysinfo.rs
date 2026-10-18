@@ -672,14 +672,7 @@ pub fn get_folder_size_cached(path: &Path) -> String {
             }
         }
     }
-    compute_and_cache_folder_size(path);
-    if let Some(lock) = FOLDER_SIZE_CACHE.get() {
-        if let Ok(guard) = lock.read() {
-            if let Some(s) = guard.get(&norm) {
-                return s.clone();
-            }
-        }
-    }
+    ensure_folder_size_cached(path);
     String::new()
 }
 
@@ -966,6 +959,7 @@ mod tests {
 
     #[test]
     fn test_folder_size_cached() {
+        compute_and_cache_folder_size(Path::new("."));
         let size = get_folder_size_cached(Path::new("."));
         println!("FOLDER SIZE FOR '.': {:?}", size);
         assert!(!size.is_empty());

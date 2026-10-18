@@ -1,9 +1,9 @@
 [package]
 name = "gladeshell"
-version = "1.2.10"
+version = "1.2.11"
 edition = "2021"
 rust-version = "1.95"
-authors = ["Rihad Jahan Opu <rihadjahanopu@example.com>"]
+authors = ["Rihad Jahan Opu <rihad@rihadjahanopu.com>"]
 description = "Ultra-high-performance modular shell environment and prompt kit"
 license = "MIT"
 repository = "https://github.com/rihadjahanopu/gladeshell"

@@ -52,7 +52,14 @@ pub fn get_latest_nvm_node_bin() -> Option<String> {
             .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
             .map(|e| e.file_name().to_string_lossy().into_owned())
             .collect();
-        versions.sort();
+        versions.sort_by_key(|v| {
+            let clean = v.strip_prefix('v').unwrap_or(v);
+            let mut parts = clean.split('.');
+            let major = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0u32);
+            let minor = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0u32);
+            let patch = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0u32);
+            (major, minor, patch)
+        });
         if let Some(latest) = versions.last() {
             let bin_path = nvm_path
                 .join("versions")

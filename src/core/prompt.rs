@@ -1803,44 +1803,125 @@ pub fn render_transient(exit_code: i32, shell: u8) -> String {
     }
 }
 
-/// Detect project environment (Rust, Node, Python, Go, Docker) in cwd (< 1 µs cached check)
+/// Detect project environment (Rust, Node, Python, Go, Docker) in cwd with parent discovery (< 1 µs cached check)
 pub fn detect_project_toolchain(
     cwd_path: &std::path::Path,
     tv: &ToolVersions,
 ) -> Option<(&'static str, String)> {
-    let Ok(entries) = std::fs::read_dir(cwd_path) else {
-        return None;
-    };
     let mut has_cargo = false;
     let mut has_bun = false;
+    let mut has_bun_lock = false;
+    let mut has_node_lock = false;
     let mut has_deno = false;
     let mut has_package_json = false;
     let mut has_python = false;
     let mut has_go = false;
     let mut has_docker = false;
 
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let s = name.to_string_lossy();
-        if s == "Cargo.toml" {
-            has_cargo = true;
-        } else if s == "bun.lockb" || s == "bun.lock" || s == "bunfig.toml" {
-            has_bun = true;
-        } else if s == "deno.json" || s == "deno.jsonc" || s == "deno.lock" {
-            has_deno = true;
-        } else if s == "package.json" {
+    if let Ok(entries) = std::fs::read_dir(cwd_path) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let s = name.to_string_lossy();
+            if s == "Cargo.toml" {
+                has_cargo = true;
+            } else if s == "bunfig.toml" {
+                has_bun = true;
+            } else if s == "bun.lockb" || s == "bun.lock" {
+                has_bun_lock = true;
+            } else if s == "package-lock.json" || s == "yarn.lock" || s == "pnpm-lock.yaml" {
+                has_node_lock = true;
+            } else if s == "deno.json" || s == "deno.jsonc" || s == "deno.lock" {
+                has_deno = true;
+            } else if s == "package.json" || s == ".nvmrc" || s == ".node-version" {
+                has_package_json = true;
+            } else if s == "pyproject.toml"
+                || s == "requirements.txt"
+                || s == "Pipfile"
+                || s == "poetry.lock"
+                || s == "uv.lock"
+            {
+                has_python = true;
+            } else if s == "go.mod" {
+                has_go = true;
+            } else if s == "Dockerfile" || s == "docker-compose.yml" || s == "compose.yaml" {
+                has_docker = true;
+            }
+        }
+    }
+
+    if has_bun_lock && !has_bun {
+        if has_node_lock {
             has_package_json = true;
-        } else if s == "pyproject.toml"
-            || s == "requirements.txt"
-            || s == "Pipfile"
-            || s == "poetry.lock"
-            || s == "uv.lock"
-        {
-            has_python = true;
-        } else if s == "go.mod" {
-            has_go = true;
-        } else if s == "Dockerfile" || s == "docker-compose.yml" || s == "compose.yaml" {
-            has_docker = true;
+        } else {
+            has_bun = true;
+        }
+    }
+
+    // If nothing detected in cwd, walk up parent directories (up to 4 levels, stopping at .git or root)
+    let found_any =
+        has_cargo || has_bun || has_deno || has_package_json || has_python || has_go || has_docker;
+
+    if !found_any {
+        let mut curr = cwd_path.parent();
+        for _ in 0..4 {
+            let Some(dir) = curr else { break };
+            let is_git_root = dir.join(".git").exists();
+
+            if dir.join("Cargo.toml").exists() {
+                has_cargo = true;
+                break;
+            }
+            if dir.join("bunfig.toml").exists() {
+                has_bun = true;
+                break;
+            }
+            if dir.join("deno.json").exists()
+                || dir.join("deno.jsonc").exists()
+                || dir.join("deno.lock").exists()
+            {
+                has_deno = true;
+                break;
+            }
+            if dir.join("package.json").exists()
+                || dir.join(".nvmrc").exists()
+                || dir.join(".node-version").exists()
+            {
+                if (dir.join("bun.lockb").exists() || dir.join("bun.lock").exists())
+                    && !dir.join("package-lock.json").exists()
+                    && !dir.join("yarn.lock").exists()
+                    && !dir.join("pnpm-lock.yaml").exists()
+                {
+                    has_bun = true;
+                } else {
+                    has_package_json = true;
+                }
+                break;
+            }
+            if dir.join("pyproject.toml").exists()
+                || dir.join("requirements.txt").exists()
+                || dir.join("Pipfile").exists()
+                || dir.join("poetry.lock").exists()
+                || dir.join("uv.lock").exists()
+            {
+                has_python = true;
+                break;
+            }
+            if dir.join("go.mod").exists() {
+                has_go = true;
+                break;
+            }
+            if dir.join("Dockerfile").exists()
+                || dir.join("docker-compose.yml").exists()
+                || dir.join("compose.yaml").exists()
+            {
+                has_docker = true;
+                break;
+            }
+
+            if is_git_root {
+                break;
+            }
+            curr = dir.parent();
         }
     }
 
@@ -2768,6 +2849,29 @@ mod tests {
         assert!(node_detected.is_some());
         let (_, n_text) = node_detected.unwrap();
         assert!(n_text.contains("⬢"));
+        // Test Subdirectory parent walk-up discovery
+        let sub_dir = node_dir.join("src/components");
+        let _ = std::fs::create_dir_all(&sub_dir);
+        let sub_detected = detect_project_toolchain(&sub_dir, &node_tv);
+        assert!(
+            sub_detected.is_some(),
+            "Subdirectory should discover parent package.json"
+        );
+        let (_, sub_text) = sub_detected.unwrap();
+        assert!(sub_text.contains("⬢"));
+
+        // Test .nvmrc detection
+        let nvmrc_dir =
+            std::env::temp_dir().join(format!("glade_test_nvmrc_project_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&nvmrc_dir);
+        let _ = std::fs::write(nvmrc_dir.join(".nvmrc"), b"20\n");
+        let nvmrc_detected = detect_project_toolchain(&nvmrc_dir, &node_tv);
+        assert!(
+            nvmrc_detected.is_some(),
+            ".nvmrc should be detected as node project"
+        );
+        let _ = std::fs::remove_dir_all(&nvmrc_dir);
+
         let _ = std::fs::remove_dir_all(&node_dir);
 
         // Test Python detection with uv.lock

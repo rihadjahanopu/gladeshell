@@ -409,7 +409,7 @@ fn build_categories() -> Vec<CmdCategory> {
         },
         CmdCategory {
             icon: "⚙️",
-            title: "C/C++ DEVELOPMENT",
+            title: "C/C++ & RUST DEVELOPMENT",
             cmds: vec![
                 CmdEntry {
                     cmd: "makecpp",
@@ -418,14 +418,20 @@ fn build_categories() -> Vec<CmdCategory> {
                     color: C_BLUE,
                 },
                 CmdEntry {
+                    cmd: "makerust",
+                    desc: "Rust boilerplate (bin, lib, cli, wasm)",
+                    example: "makerust proj",
+                    color: C_PINK,
+                },
+                CmdEntry {
                     cmd: "make run",
-                    desc: "Compile and run the C/C++ project",
+                    desc: "Compile and run the C/C++ or Rust project",
                     example: "",
                     color: C_GREEN,
                 },
                 CmdEntry {
                     cmd: "make clean",
-                    desc: "Remove compiled binary file",
+                    desc: "Remove compiled binary artifacts",
                     example: "",
                     color: C_RED,
                 },

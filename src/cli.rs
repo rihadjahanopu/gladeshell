@@ -84,8 +84,11 @@ pub enum Commands {
     /// Self-uninstall gladeshell and restore original shell configuration
     Uninstall,
 
-    /// Generate a C++ project boilerplate
+    /// Generate a C/C++ project boilerplate
     Makecpp(MakecppArgs),
+
+    /// Generate a modern Rust project boilerplate
+    Makerust(MakerustArgs),
 
     /// Interactive 24-in-1 FFmpeg multimedia suite (compress, trim, concat, convert, ...)
     #[command(alias = "ffstudio", alias = "fftool", alias = "glade_ffmpeg")]
@@ -469,13 +472,32 @@ pub struct CmpArgs {
 
 #[derive(Args, Debug, Clone)]
 pub struct MakecppArgs {
-    /// Project name (used for directory and CMakeLists.txt target)
+    /// Project name (used for directory and build targets; prompts interactively if omitted)
     #[arg(value_name = "NAME")]
-    pub name: String,
+    pub name: Option<String>,
 
-    /// C++ standard to use (11, 14, 17, 20, 23)
-    #[arg(long, default_value = "17")]
-    pub std: String,
+    /// Language selection: 'cpp' / 'c++' or 'c'
+    #[arg(value_name = "LANG")]
+    pub lang: Option<String>,
+
+    /// C/C++ standard to use (11, 14, 17, 20, 23 for C++; 99, 11, 17, 23 for C)
+    #[arg(long)]
+    pub std: Option<String>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct MakerustArgs {
+    /// Project name (used for directory and crate name; prompts interactively if omitted)
+    #[arg(value_name = "NAME")]
+    pub name: Option<String>,
+
+    /// Project type: 'bin', 'lib', 'cli', or 'wasm'
+    #[arg(value_name = "TYPE")]
+    pub proj_type: Option<String>,
+
+    /// Rust edition to use (2018, 2021, 2024)
+    #[arg(long)]
+    pub edition: Option<String>,
 }
 
 #[derive(Args, Debug, Clone)]

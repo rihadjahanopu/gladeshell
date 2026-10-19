@@ -125,7 +125,13 @@ pub fn group() -> AliasGroup {
             AliasEntry {
                 key: "makecpp".into(),
                 value: "gladeshell makecpp".into(),
-                description: "C++ project boilerplate generator".into(),
+                description: "C/C++ project boilerplate generator".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "makerust".into(),
+                value: "gladeshell makerust".into(),
+                description: "Modern Rust project boilerplate generator".into(),
                 only_shells: vec![],
             },
             AliasEntry {

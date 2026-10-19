@@ -733,6 +733,177 @@ fn run_count(args: &[&str]) -> u32 {
         .unwrap_or(0)
 }
 
+fn parse_version_key(v: &str) -> (u32, u32, u32) {
+    let clean = v.strip_prefix('v').unwrap_or(v);
+    let mut parts = clean.split('.');
+    let major = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+    let minor = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+    let patch = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+    (major, minor, patch)
+}
+
+fn resolve_tool_fallback(cmd_name: &str) -> Option<PathBuf> {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_default();
+
+    match cmd_name {
+        "node" | "npm" => {
+            // 1. FNM (Fast Node Manager)
+            if let Ok(fnm_multi) = std::env::var("FNM_MULTISHELL_PATH") {
+                let p = PathBuf::from(fnm_multi).join(format!("bin/{cmd_name}"));
+                if p.is_file() {
+                    return Some(p);
+                }
+            }
+            if !home.is_empty() {
+                let fnm_current =
+                    PathBuf::from(&home).join(format!(".local/share/fnm/current/bin/{cmd_name}"));
+                if fnm_current.is_file() {
+                    return Some(fnm_current);
+                }
+                let fnm_home = PathBuf::from(&home).join(format!(".fnm/current/bin/{cmd_name}"));
+                if fnm_home.is_file() {
+                    return Some(fnm_home);
+                }
+            }
+
+            // 2. NVM (Node Version Manager)
+            if let Ok(nvm_bin) = std::env::var("NVM_BIN") {
+                let p = PathBuf::from(nvm_bin).join(cmd_name);
+                if p.is_file() {
+                    return Some(p);
+                }
+            }
+            if !home.is_empty() {
+                let nvm_dirs = [
+                    PathBuf::from(&home).join(".config/nvm/versions/node"),
+                    PathBuf::from(&home).join(".nvm/versions/node"),
+                ];
+                let mut nvm_bins: Vec<(u32, u32, u32, PathBuf)> = Vec::new();
+                for d in &nvm_dirs {
+                    if let Ok(entries) = fs::read_dir(d) {
+                        for entry in entries.flatten() {
+                            let fname = entry.file_name();
+                            let s = fname.to_string_lossy();
+                            if !s.starts_with('.') {
+                                let bin = entry.path().join(format!("bin/{cmd_name}"));
+                                if bin.is_file() {
+                                    let semver = parse_version_key(&s);
+                                    nvm_bins.push((semver.0, semver.1, semver.2, bin));
+                                }
+                            }
+                        }
+                    }
+                }
+                nvm_bins.sort_by_key(|&(maj, min, patch, _)| (maj, min, patch));
+                if let Some((_, _, _, best_bin)) = nvm_bins.pop() {
+                    return Some(best_bin);
+                }
+            }
+
+            // 3. Volta
+            if !home.is_empty() {
+                let volta = PathBuf::from(&home).join(format!(".volta/bin/{cmd_name}"));
+                if volta.is_file() {
+                    return Some(volta);
+                }
+            }
+
+            // 4. ASDF
+            if !home.is_empty() {
+                let asdf_shim = PathBuf::from(&home).join(format!(".asdf/shims/{cmd_name}"));
+                if asdf_shim.is_file() {
+                    return Some(asdf_shim);
+                }
+            }
+
+            // 5. Mise / RTX
+            if !home.is_empty() {
+                let mise_shim =
+                    PathBuf::from(&home).join(format!(".local/share/mise/shims/{cmd_name}"));
+                if mise_shim.is_file() {
+                    return Some(mise_shim);
+                }
+                let rtx_shim =
+                    PathBuf::from(&home).join(format!(".local/share/rtx/shims/{cmd_name}"));
+                if rtx_shim.is_file() {
+                    return Some(rtx_shim);
+                }
+            }
+
+            // 6. pnpm global node
+            if !home.is_empty() {
+                let pnpm_node = PathBuf::from(&home).join(format!(".local/share/pnpm/{cmd_name}"));
+                if pnpm_node.is_file() {
+                    return Some(pnpm_node);
+                }
+                let pnpm_mac = PathBuf::from(&home).join(format!("Library/pnpm/{cmd_name}"));
+                if pnpm_mac.is_file() {
+                    return Some(pnpm_mac);
+                }
+            }
+
+            // 7. Homebrew (macOS Apple Silicon & Intel / Linuxbrew)
+            let brew_paths = [
+                format!("/opt/homebrew/bin/{cmd_name}"),
+                format!("/usr/local/bin/{cmd_name}"),
+                format!("/home/linuxbrew/.linuxbrew/bin/{cmd_name}"),
+            ];
+            for bp in &brew_paths {
+                let p = Path::new(bp);
+                if p.is_file() {
+                    return Some(p.to_path_buf());
+                }
+            }
+
+            // 8. N package manager
+            if !home.is_empty() {
+                let n_path = PathBuf::from(&home).join(format!("n/bin/{cmd_name}"));
+                if n_path.is_file() {
+                    return Some(n_path);
+                }
+            }
+
+            // 9. Windows standard paths
+            let win_paths = [
+                format!("C:\\Program Files\\nodejs\\{cmd_name}.exe"),
+                format!("C:\\Program Files (x86)\\nodejs\\{cmd_name}.exe"),
+            ];
+            for wp in &win_paths {
+                let p = Path::new(wp);
+                if p.is_file() {
+                    return Some(p.to_path_buf());
+                }
+            }
+
+            None
+        }
+        "bun" => {
+            if !home.is_empty() {
+                let p = PathBuf::from(&home).join(".bun/bin/bun");
+                if p.is_file() {
+                    return Some(p);
+                }
+                let p2 = PathBuf::from(&home).join(".local/bin/bun");
+                if p2.is_file() {
+                    return Some(p2);
+                }
+            }
+            let brew_bun = Path::new("/opt/homebrew/bin/bun");
+            if brew_bun.is_file() {
+                return Some(brew_bun.to_path_buf());
+            }
+            let usr_bun = Path::new("/usr/local/bin/bun");
+            if usr_bun.is_file() {
+                return Some(usr_bun.to_path_buf());
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 fn run_version(args: &[&str]) -> Option<String> {
     if args.is_empty() {
         return None;
@@ -746,53 +917,13 @@ fn run_version(args: &[&str]) -> Option<String> {
     let out = match cmd.output() {
         Ok(o) if o.status.success() && !o.stdout.is_empty() => o,
         _ => {
-            if let Ok(home) = std::env::var("HOME") {
-                let fallback = match cmd_name {
-                    "bun" => {
-                        let p = format!("{home}/.bun/bin/bun");
-                        if Path::new(&p).exists() {
-                            Some(p)
-                        } else {
-                            None
-                        }
-                    }
-                    "node" | "npm" => {
-                        let nvm_dirs = [
-                            format!("{home}/.config/nvm/versions/node"),
-                            format!("{home}/.nvm/versions/node"),
-                        ];
-                        let mut found = None;
-                        for d in &nvm_dirs {
-                            if let Ok(entries) = fs::read_dir(d) {
-                                for entry in entries.flatten() {
-                                    if entry.file_name().to_string_lossy().starts_with('.') {
-                                        continue;
-                                    }
-                                    let bin = entry.path().join(format!("bin/{cmd_name}"));
-                                    if bin.exists() {
-                                        found = Some(bin.to_string_lossy().to_string());
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        found
-                    }
-                    _ => None,
-                };
-
-                {
-                    let fb_path = fallback?;
-                    Command::new(fb_path)
-                        .args(&args[1..])
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::null())
-                        .output()
-                        .ok()?
-                }
-            } else {
-                return None;
-            }
+            let fb_path = resolve_tool_fallback(cmd_name)?;
+            Command::new(fb_path)
+                .args(&args[1..])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .output()
+                .ok()?
         }
     };
 

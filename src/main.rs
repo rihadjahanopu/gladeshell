@@ -253,6 +253,7 @@ fn main() {
             Commands::Upgrade => gladeshell_core::tools::self_upgrade::run(),
             Commands::Uninstall => gladeshell_core::tools::self_uninstall::run(),
             Commands::Makecpp(args) => cmd_makecpp(args),
+            Commands::Makerust(args) => cmd_makerust(args),
             Commands::Ffmedia(args) => cmd_ffmedia(args),
             Commands::Todo(args) => cmd_todo(args),
             Commands::Notes(args) => cmd_notes(args),
@@ -685,8 +686,25 @@ fn cmd_ut() -> Result<(), Box<dyn std::error::Error>> {
 #[cold]
 #[inline(never)]
 fn cmd_makecpp(args: MakecppArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use gladeshell_core::tools::cpp_gen;
-    cpp_gen::run(&args.name, &args.std)
+    use gladeshell_core::tools::project_setup::makecpp;
+    makecpp::run_cli(
+        args.name.as_deref(),
+        args.lang.as_deref(),
+        args.std.as_deref(),
+    )
+}
+
+// ── makerust ─────────────────────────────────────────────────────────────────
+
+#[cold]
+#[inline(never)]
+fn cmd_makerust(args: MakerustArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use gladeshell_core::tools::project_setup::makerust;
+    makerust::run_cli(
+        args.name.as_deref(),
+        args.proj_type.as_deref(),
+        args.edition.as_deref(),
+    )
 }
 
 // ── ffmedia ──────────────────────────────────────────────────────────────────

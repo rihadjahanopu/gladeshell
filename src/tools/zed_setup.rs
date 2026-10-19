@@ -52,16 +52,6 @@ pub const ZED_SETTINGS: &str = r#"{
   "cursor_animation": {
     "enabled": true
   },
-  "file_scan_exclusions": [
-    "**/.git**",
-    "**/node_modules**",
-    "**/dist**",
-    "**/build**",
-    "**/.next**",
-    "**/.turbo**",
-    "**/target**",
-    "**/*.csv"
-  ],
   "enable_language_server": true,
   "hide_mouse": "never",
   "disable_ai": true,
@@ -91,9 +81,6 @@ pub const ZED_SETTINGS: &str = r#"{
     }
   },
   "proxy": "",
-  "focus_follows_mouse": {
-    "enabled": true
-  },
   "which_key": {
     "enabled": false
   },
@@ -374,6 +361,13 @@ pub const ZED_SETTINGS: &str = r#"{
           "shortenToSingleLine": true
         }
       }
+    },
+    "clangd": {
+      "binary": {
+        "arguments": [
+          "--query-driver=/usr/bin/gcc,/usr/bin/g++,/bin/gcc,/usr/bin/clang*"
+        ]
+      }
     }
   },
   "show_edit_predictions": true,
@@ -411,7 +405,8 @@ pub const ZED_SETTINGS: &str = r#"{
     "toml": true,
     "rust-snippets": true,
     "lorem-snippets": true,
-    "blade-runner-2049": true
+    "blade-runner-2049": true,
+    "make": true
   }
 }"#;
 

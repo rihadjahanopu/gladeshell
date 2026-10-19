@@ -52,7 +52,11 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         icon: "⚡",
         description: "Generate Vite (React/Vue/TS/JS) project with optional Tailwind v4 setup",
         cmd_hint: "gladeshell vite / vite",
-        features: &["Bun / NPM runner choice", "Tailwind CSS v4 auto-install", "TypeScript / JavaScript"],
+        features: &[
+            "Bun / NPM runner choice",
+            "Tailwind CSS v4 auto-install",
+            "TypeScript / JavaScript",
+        ],
     },
     ProjectToolItem {
         key: "next",
@@ -61,25 +65,39 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         icon: "🚀",
         description: "Initialize official Next.js App Router project with Bun or NPM",
         cmd_hint: "gladeshell next / next",
-        features: &["create-next-app@latest", "Bun / NPM runner", "App Router ready"],
+        features: &[
+            "create-next-app@latest",
+            "Bun / NPM runner",
+            "App Router ready",
+        ],
     },
     ProjectToolItem {
         key: "ui",
         title: "Shadcn UI Component Setup",
         category: "UI Components",
         icon: "🎨",
-        description: "Setup Shadcn UI and auto-patch tsconfig.json and vite.config.ts with @/* path aliases",
+        description:
+            "Setup Shadcn UI and auto-patch tsconfig.json and vite.config.ts with @/* path aliases",
         cmd_hint: "gladeshell ui / ui",
-        features: &["Path alias auto-patching (@/*)", "Custom component installer", "Vite & Next.js auto-detect"],
+        features: &[
+            "Path alias auto-patching (@/*)",
+            "Custom component installer",
+            "Vite & Next.js auto-detect",
+        ],
     },
     ProjectToolItem {
         key: "css",
         title: "Tailwind CSS v4 Auto-Installer",
         category: "Styling & Utility",
         icon: "📦",
-        description: "Install Tailwind CSS v4, @tailwindcss/vite, clsx, and inject @import into main CSS",
+        description:
+            "Install Tailwind CSS v4, @tailwindcss/vite, clsx, and inject @import into main CSS",
         cmd_hint: "gladeshell css / css",
-        features: &["Tailwind CSS v4 engine", "@tailwindcss/vite plugin", "clsx + tailwind-merge"],
+        features: &[
+            "Tailwind CSS v4 engine",
+            "@tailwindcss/vite plugin",
+            "clsx + tailwind-merge",
+        ],
     },
     ProjectToolItem {
         key: "html",
@@ -88,7 +106,11 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         icon: "🌐",
         description: "Serve index.html with Bun dev server or open directly in system browser",
         cmd_hint: "gladeshell html / html",
-        features: &["Bun HTML dev runner", "Browser auto-open fallback", "Zero configuration"],
+        features: &[
+            "Bun HTML dev runner",
+            "Browser auto-open fallback",
+            "Zero configuration",
+        ],
     },
     ProjectToolItem {
         key: "ii",
@@ -97,16 +119,39 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         icon: "🥐",
         description: "Quickly initialize package.json and create standard .gitignore file",
         cmd_hint: "gladeshell ii / ii",
-        features: &["Bun / NPM / PNPM / Yarn", "Auto .gitignore creation", "Zero configuration"],
+        features: &[
+            "Bun / NPM / PNPM / Yarn",
+            "Auto .gitignore creation",
+            "Zero configuration",
+        ],
     },
     ProjectToolItem {
         key: "makecpp",
         title: "C/C++ Project Boilerplate",
         category: "C / C++ Native",
         icon: "⚙️",
-        description: "Generate C++ project structure with src, include, CMakeLists.txt, build.sh, and .gitignore",
-        cmd_hint: "gladeshell makecpp / makecpp",
-        features: &["CMake & Makefile setup", "C++17 / C++20 standard", "Modular directory layout"],
+        description:
+            "Generate modern C or C++ project with Makefile, CMakeLists, .vscode, src, and include",
+        cmd_hint: "gladeshell makecpp / makecpp [name] [c|cpp]",
+        features: &[
+            "Modern C & C++ Support",
+            "Makefile (make run/clean)",
+            "CMake & VSCode Setup",
+        ],
+    },
+    ProjectToolItem {
+        key: "makerust",
+        title: "Rust Project Boilerplate",
+        category: "Rust Native",
+        icon: "🦀",
+        description:
+            "Generate modern Rust project (binary, lib, cli, wasm) with Makefile, .vscode, and Cargo.toml",
+        cmd_hint: "gladeshell makerust / makerust [name] [type]",
+        features: &[
+            "Binary, Lib, CLI & Wasm",
+            "Makefile & VSCode tasks",
+            "Release optimization profile",
+        ],
     },
     ProjectToolItem {
         key: "run",
@@ -115,7 +160,11 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         icon: "🏃",
         description: "Interactively scan directory and execute JS/TS files instantly with Bun",
         cmd_hint: "gladeshell run / run",
-        features: &["Interactive file selector", "Instant Bun runner", "TS & JS support"],
+        features: &[
+            "Interactive file selector",
+            "Instant Bun runner",
+            "TS & JS support",
+        ],
     },
     ProjectToolItem {
         key: "pg",
@@ -124,7 +173,11 @@ pub const PROJECT_TOOLS: &[ProjectToolItem] = &[
         icon: "🔄",
         description: "Convert lockfiles and dependency commands between npm, bun, pnpm, and yarn",
         cmd_hint: "gladeshell pg / pg",
-        features: &["Multi-package manager", "Lockfile converter", "Auto dependency detection"],
+        features: &[
+            "Multi-package manager",
+            "Lockfile converter",
+            "Auto dependency detection",
+        ],
     },
 ];
 
@@ -139,13 +192,42 @@ pub fn run_project() -> Result<(), Box<dyn Error>> {
         Some("html") => run_html(),
         Some("ii") => run_ii(),
         Some("makecpp") => {
-            let name = prompt_text("Enter C++ project name")?;
-            if name.is_empty() {
-                println!("Operation cancelled.");
-                Ok(())
+            println!("\n💡 Tip: Press Enter without a name to setup in the current directory.");
+            let name = prompt_text("Enter project name (Press Enter for current directory)")?;
+            let options = [
+                "📘 C++ (Modern C++17/20 with G++, CMake & Makefile)",
+                "📙 C (Modern C11/17 with GCC, CMake & Makefile)",
+            ];
+            let choice = super::utils::prompt_select("🤔 Select Language:", &options)?;
+            let lang = if choice.starts_with("📙 C") {
+                super::makecpp::ProjectLang::C
             } else {
-                crate::tools::cpp_gen::run(&name, "20")
-            }
+                super::makecpp::ProjectLang::Cpp
+            };
+            let cwd = std::env::current_dir()?;
+            super::makecpp::run_project_in_dir(&cwd, &name, lang, None)
+        }
+        Some("makerust") => {
+            println!("\n💡 Tip: Press Enter without a name to setup in the current directory.");
+            let name = prompt_text("Enter Rust project name (Press Enter for current directory)")?;
+            let options = [
+                "🚀 Binary Application (Fast CLI / App with src/main.rs)",
+                "📚 Library Crate (Reusable crate with src/lib.rs, tests & docs)",
+                "⚡ Production CLI Tool (with clap, anyhow, serde & colored)",
+                "🌐 WebAssembly Crate (wasm-bindgen ready library for browser/node)",
+            ];
+            let choice = super::utils::prompt_select("🤔 Select Project Type:", &options)?;
+            let proj_type = if choice.starts_with("📚") {
+                super::makerust::RustProjectType::Lib
+            } else if choice.starts_with("⚡") {
+                super::makerust::RustProjectType::Cli
+            } else if choice.starts_with("🌐") {
+                super::makerust::RustProjectType::Wasm
+            } else {
+                super::makerust::RustProjectType::Bin
+            };
+            let cwd = std::env::current_dir()?;
+            super::makerust::run_project_in_dir(&cwd, &name, proj_type, None)
         }
         Some("run") => crate::tools::bun_runner::run(),
         Some("pg") => crate::tools::pkg_converter::run("package.json", false),

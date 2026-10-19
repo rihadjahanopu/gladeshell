@@ -630,11 +630,24 @@ cmake_install.cmake
 "#;
     fs::write(vscode_dir.join("settings.json"), settings_json)?;
 
-    // 9. Git initialization
-    let _ = std::process::Command::new("git")
+    // 9. Git initialization (best-effort; non-fatal if git is unavailable or fails)
+    let git_ok = std::process::Command::new("git")
         .args(["init", "-q"])
         .current_dir(&project_dir)
-        .status();
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
+    // If git init failed and left a partial .git dir, clean it up so the project
+    // is still fully usable without git (e.g. restricted CI sandbox on Windows).
+    if !git_ok {
+        let partial_git = project_dir.join(".git");
+        if partial_git.exists() {
+            let _ = fs::remove_dir_all(&partial_git);
+        }
+    }
 
     println!(
         "✨ Successfully created {} ({}) project: {}",

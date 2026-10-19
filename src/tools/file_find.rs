@@ -568,6 +568,7 @@ pub fn copy_to_clipboard(text: &str) -> bool {
 }
 
 /// Native OS launcher for image, document, audio, video and general files
+#[allow(unused_variables)]
 pub fn open_file_natively(path: &str) {
     let lower = path.to_lowercase();
 

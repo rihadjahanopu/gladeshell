@@ -17,21 +17,30 @@
 
 pub mod client;
 
+#[cfg(unix)]
 use crate::core::prompt::{self, PromptContext};
+#[cfg(unix)]
 use crate::git;
 use std::fs;
+#[cfg(unix)]
 use std::io::{BufRead, BufReader, Write};
+#[cfg(unix)]
 use std::panic;
 use std::path::PathBuf;
+#[cfg(unix)]
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(unix)]
 use std::sync::Arc;
+#[cfg(unix)]
 use std::thread;
+#[cfg(unix)]
 use std::time::Duration;
 
 #[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
 
 /// Maximum accepted IPC payload size (bytes). Rejects obviously corrupt requests.
+#[cfg(unix)]
 const MAX_PAYLOAD_BYTES: usize = 16_384;
 
 // ── Socket path ───────────────────────────────────────────────────────────────

@@ -94,22 +94,30 @@ fn has_flatpak() -> bool {
 }
 
 fn clean_temp_dirs(tx: &Sender<Msg>) -> bool {
+    clean_temp_dirs_in(&std::env::temp_dir(), tx)
+}
+
+fn clean_temp_dirs_in(temp_dir: &std::path::Path, tx: &Sender<Msg>) -> bool {
     let mut cleaned_bytes: u64 = 0;
-    let temp_dir = std::env::temp_dir();
     let _ = tx.send(Msg::Log(format!(
         "🧹 Cleaning temporary directory: {}",
         temp_dir.display()
     )));
 
-    if let Ok(entries) = fs::read_dir(&temp_dir) {
+    if let Ok(entries) = fs::read_dir(temp_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_lowercase();
-            // Protect active system sockets, display servers, and runtime locks
+            // Protect active system sockets, display servers, test directories, and runtime locks
             if name.starts_with(".x11")
                 || name.starts_with(".ice")
                 || name.starts_with(".font")
                 || name.starts_with(".test")
+                || name.starts_with("fb_test")
+                || name.starts_with("gladeshell")
+                || name.starts_with("cargo")
+                || name.starts_with("rust")
+                || name.starts_with("test")
                 || name.starts_with("systemd-private")
                 || name.starts_with("snap.")
                 || name.starts_with("flatpak.")
@@ -135,38 +143,44 @@ fn clean_temp_dirs(tx: &Sender<Msg>) -> bool {
 }
 
 fn clean_user_cache_dirs(tx: &Sender<Msg>) -> bool {
-    let mut cleaned_bytes: u64 = 0;
     if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
         let cache_base = std::path::PathBuf::from(home).join(".cache");
-        let _ = tx.send(Msg::Log(format!(
-            "🧹 Scanning user cache: {}",
-            cache_base.display()
-        )));
+        clean_user_cache_dirs_in(&cache_base, tx)
+    } else {
+        true
+    }
+}
 
-        // Target safe temporary, thumbnail, and package manager cache directories
-        let targets = [
-            cache_base.join("thumbnails"),
-            cache_base.join("tmp"),
-            cache_base.join("pip").join("http"),
-            cache_base.join("yarn"),
-            cache_base.join("pnpm"),
-            cache_base.join("fontconfig"),
-            cache_base.join("mesa_shader_cache"),
-            cache_base.join("gstreamer-1.0"),
-        ];
+fn clean_user_cache_dirs_in(cache_base: &std::path::Path, tx: &Sender<Msg>) -> bool {
+    let mut cleaned_bytes: u64 = 0;
+    let _ = tx.send(Msg::Log(format!(
+        "🧹 Scanning user cache: {}",
+        cache_base.display()
+    )));
 
-        for target in &targets {
-            if target.is_dir() {
-                for entry in walkdir::WalkDir::new(target)
-                    .into_iter()
-                    .filter_map(|e| e.ok())
-                {
-                    let p = entry.path();
-                    if p.is_file() {
-                        if let Ok(meta) = fs::metadata(p) {
-                            cleaned_bytes = cleaned_bytes.saturating_add(meta.len());
-                            let _ = fs::remove_file(p);
-                        }
+    // Target safe temporary, thumbnail, and package manager cache directories
+    let targets = [
+        cache_base.join("thumbnails"),
+        cache_base.join("tmp"),
+        cache_base.join("pip").join("http"),
+        cache_base.join("yarn"),
+        cache_base.join("pnpm"),
+        cache_base.join("fontconfig"),
+        cache_base.join("mesa_shader_cache"),
+        cache_base.join("gstreamer-1.0"),
+    ];
+
+    for target in &targets {
+        if target.is_dir() {
+            for entry in walkdir::WalkDir::new(target)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                let p = entry.path();
+                if p.is_file() {
+                    if let Ok(meta) = fs::metadata(p) {
+                        cleaned_bytes = cleaned_bytes.saturating_add(meta.len());
+                        let _ = fs::remove_file(p);
                     }
                 }
             }
@@ -802,14 +816,22 @@ mod tests {
     #[test]
     fn test_clean_temp_dirs_does_not_panic() {
         let (tx, _rx) = mpsc::channel();
-        let res = clean_temp_dirs(&tx);
+        let sandbox =
+            std::env::temp_dir().join(format!("fb_test_clean_temp_{}", std::process::id()));
+        let _ = fs::create_dir_all(&sandbox);
+        let res = clean_temp_dirs_in(&sandbox, &tx);
         assert!(res);
+        let _ = fs::remove_dir_all(&sandbox);
     }
 
     #[test]
     fn test_clean_user_cache_dirs_does_not_panic() {
         let (tx, _rx) = mpsc::channel();
-        let res = clean_user_cache_dirs(&tx);
+        let sandbox =
+            std::env::temp_dir().join(format!("fb_test_clean_cache_{}", std::process::id()));
+        let _ = fs::create_dir_all(sandbox.join("thumbnails"));
+        let res = clean_user_cache_dirs_in(&sandbox, &tx);
         assert!(res);
+        let _ = fs::remove_dir_all(&sandbox);
     }
 }

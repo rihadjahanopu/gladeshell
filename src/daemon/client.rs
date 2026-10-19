@@ -15,10 +15,13 @@
 //  in-process rendering (render_fallback).
 // =============================================================================
 
+#[cfg(unix)]
 use super::socket_path;
 use crate::core::prompt::{self, PromptContext};
 use crate::git;
+#[cfg(unix)]
 use std::io::Write;
+#[cfg(unix)]
 use std::time::Duration;
 
 #[cfg(unix)]

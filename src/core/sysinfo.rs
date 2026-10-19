@@ -997,13 +997,13 @@ unsafe fn raw_statfs(path: *const std::os::raw::c_char, buf: *mut libc_statfs) -
     unsafe { statfs(path, buf) }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(unix, not(target_os = "linux")))]
 #[repr(C)]
 struct libc_statfs {
     f_bsize: i64,
     f_bavail: u64,
 }
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(unix, not(target_os = "linux")))]
 unsafe fn raw_statfs(_path: *const std::os::raw::c_char, _buf: *mut libc_statfs) -> i32 {
     -1
 }

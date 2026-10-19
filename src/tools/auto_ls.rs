@@ -22,6 +22,7 @@ struct DirEntryItem {
     is_exec: bool,
 }
 
+#[allow(unused_variables)]
 fn is_executable(metadata: &fs::Metadata, name: &str) -> bool {
     let lower = name.to_lowercase();
     if lower.ends_with(".sh")

@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.12] — 2026-10-19
+
+### 🦀 Modern Project Generators
+- 🆕 **`makerust` Tool**:
+  - Full-featured Rust project generator supporting `bin` (Application), `lib` (Library Crate), `cli` (Modular CLI with clap/anyhow), and `wasm` (WebAssembly with wasm-bindgen).
+  - Generates `Cargo.toml`, multi-target `Makefile` (`run`, `test`, `check`, `clippy`, `release`), `README.md`, `.gitignore`, and VS Code / rust-analyzer integration.
+  - Integrated into CLI (`gladeshell makerust`), `keep` menu, and shell aliases.
+- 🐛 **`makecpp` Makefile Fix**:
+  - Replaced immediate variable evaluation (`:=`) with deferred evaluation (`=`) for `RUN_CMD` and `RM_CMD`.
+  - Fixes the `make: .//: Permission denied (Error 127)` bug on both Linux and Windows.
+
+### 🔍 Dynamic Toolchain & Version Detection
+- ⚡ **Subdirectory Project Root Walk-Up**:
+  - `detect_project_toolchain` now traverses parent directories to identify project root (Node.js, Rust, Bun, Python, Go, PHP, Ruby, etc.) even when navigating deep nested subdirectories.
+- 📁 **`.nvmrc` & Toolchain File Detection**:
+  - Added support for reading specific required versions directly from `.nvmrc` or project manifests.
+- 🔄 **Multi-Version Manager Fallback & SemVer Resolution**:
+  - Added comprehensive fallback discovery across FNM, NVM, Volta, ASDF, Mise, PNPM, Homebrew, and Windows paths with proper SemVer numerical sorting.
+
+### 🪟 Windows CI & Cross-Platform Reliability
+- 🛡️ **Zero-Warning Windows Target Compilation**:
+  - Guarded Unix-only daemon client/server imports behind `#[cfg(unix)]`.
+  - Scoped non-Linux `libc_statfs` and `raw_statfs` stubs to `#[cfg(all(unix, not(target_os = "linux")))]`.
+  - Added `#[allow(unused_variables)]` on cross-platform abstractions in `auto_ls` and `file_find`.
+- 🧪 **Test Isolation & Sandbox Safety**:
+  - Protected test/cargo/rust temporary folders (`fb_test*`, `gladeshell*`, `cargo*`, `rust*`) in `clean_temp_dirs` from being deleted during execution.
+  - Isolated `system_clean` unit tests to private sandbox directories to prevent concurrent test race conditions.
+  - Made `git init` calls in project generators resilient with automatic partial directory cleanup on restricted environments.
+
+### 📝 Zed IDE Integration
+- 🧩 **`make` Extension Support**:
+  - Added `make` extension to `auto_install_extensions` in Zed setup for syntax highlighting and Makefile support.
+- ⚙️ **`clangd` Language Server Configuration**:
+  - Configured `clangd` with `--query-driver` argument in `lsp` settings to seamlessly resolve compiler-builtin headers (`stddef.h`, `stdio.h`) without missing header diagnostics.
+
+---
+
+## 🚀 [1.2.11] — 2026-10-17
+
+### ⚡ World-Class Performance & Latency Optimization
+- 🏎️ **P50 Latency < 2ms via Socket Daemon IPC**:
+  - Layer-3 packed binary IPC protocol for instant sub-millisecond prompt rendering.
+  - In-memory background cache refresh for Git status and system metrics.
+  - Zero-allocation string formatting optimizations across core prompt pipelines.
+
+---
+
 ## 🚀 [1.2.10] — 2026-10-15
 
 ### 🔧 CI & Cross-Platform Stability

@@ -6,13 +6,15 @@
 
 //! Native Parallel Fast File Finder (`ff` / `gladeshell ff`)
 //!
-//! Powered by `ignore` traversal engine and `rayon` parallel search.
-//! Ultra-fast file searching with real-time TUI, full-width file list, live search benchmark,
-//! mouse support, and action tags (OPEN / CODE / CD / EXPLORE).
+//! Powered by `ignore` traversal engine and `rayon` parallel multi-token search.
+//! Ultra-fast file searching with real-time TUI, responsive dual-pane live preview,
+//! zero-allocation background indexing, mouse support, and action tags (OPEN / CODE / CD / EXPLORE).
 
 use std::error::Error;
-use std::io;
-use std::path::PathBuf;
+use std::fs;
+use std::io::{self, BufRead, BufReader};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, UNIX_EPOCH};
@@ -33,8 +35,9 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
-    Terminal,
+    Frame, Terminal,
 };
+use rayon::prelude::*;
 
 // ── Color Palette (Modern Dark Violet — matching uup aesthetic) ──
 const C_BG: Color = Color::Rgb(10, 10, 18); // Deep void black
@@ -104,6 +107,38 @@ pub struct FoundItem {
     pub is_symlink: bool,
     pub size: u64,
     pub modified_secs: u64,
+    pub file_name: String,
+    pub name_lower: String,
+    pub rel_lower: String,
+}
+
+impl FoundItem {
+    pub fn new(
+        path: PathBuf,
+        relative_path: String,
+        is_dir: bool,
+        is_symlink: bool,
+        size: u64,
+        modified_secs: u64,
+    ) -> Self {
+        let file_name = path
+            .file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| relative_path.clone());
+        let name_lower = file_name.to_lowercase();
+        let rel_lower = relative_path.to_lowercase();
+        Self {
+            path,
+            relative_path,
+            is_dir,
+            is_symlink,
+            size,
+            modified_secs,
+            file_name,
+            name_lower,
+            rel_lower,
+        }
+    }
 }
 
 /// Action the shell wrapper should take on the selected item.
@@ -145,14 +180,14 @@ pub fn run(args: FfArgs) -> Result<(), Box<dyn Error>> {
 
     // Render CLI header
     println!(
-        "\x1b[1;32m⚡ Gladeshell Fast Finder\x1b[0m — Found \x1b[1;36m{}\x1b[0m files in \x1b[1;35m{:.2?}\x1b[0m",
+        "\x1b[1;32m⚡ Gladeshell Fast Finder\x1b[0m — Found \x1b[1;36m{}\x1b[0m items in \x1b[1;35m{:.2?}\x1b[0m",
         items.len(),
         elapsed
     );
     println!("\x1b[90m──────────────────────────────────────────────────────────────────────────────\x1b[0m");
 
     for item in &items {
-        let icon = get_file_icon(&item.relative_path);
+        let icon = get_file_icon(&item.file_name, item.is_dir, item.is_symlink);
         let size_str = format!("\x1b[36m{:>10}\x1b[0m", format_bytes(item.size));
 
         let highlight_path = if let Some(ref pat) = args.pattern {
@@ -177,21 +212,98 @@ pub fn run(args: FfArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Perform directory traversal & collect all files (excluding directories)
+/// Check if a path should be excluded due to virtual/kernel mounts or heavy OS trees
+fn is_system_root_ignored(path: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        // 1. Direct absolute paths to root system directories
+        if path.starts_with("/proc")
+            || path.starts_with("/sys")
+            || path.starts_with("/dev")
+            || path.starts_with("/run")
+            || path.starts_with("/lost+found")
+            || path.starts_with("/boot")
+            || path.starts_with("/ostree")
+            || path.starts_with("/sysroot")
+        {
+            return true;
+        }
+
+        // 2. Relative paths when running from root `/` or matching root segments
+        let is_at_root = std::env::current_dir()
+            .map(|p| p == Path::new("/"))
+            .unwrap_or(false);
+
+        let s = path.to_string_lossy();
+        let clean = s.trim_start_matches('.').trim_start_matches('/');
+        let first_seg = clean.split('/').next().unwrap_or("");
+
+        if is_at_root
+            && (first_seg == "proc"
+                || first_seg == "sys"
+                || first_seg == "dev"
+                || first_seg == "run"
+                || first_seg == "lost+found"
+                || first_seg == "boot"
+                || first_seg == "ostree"
+                || first_seg == "sysroot")
+        {
+            return true;
+        }
+
+        // 3. Heavy virtual/container/system package repositories anywhere
+        if s.contains("/var/lib/docker")
+            || s.contains("/var/lib/flatpak")
+            || s.contains("/var/lib/containers")
+            || s.contains("/ostree/repo")
+            || s.contains("/ostree/deploy")
+            || clean.starts_with("var/lib/docker")
+            || clean.starts_with("var/lib/flatpak")
+            || clean.starts_with("var/lib/containers")
+            || clean.starts_with("ostree/repo")
+            || clean.starts_with("ostree/deploy")
+        {
+            return true;
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        let s = path.to_string_lossy();
+        let lower = s.to_lowercase();
+        if lower.contains("$recycle.bin")
+            || lower.contains("system volume information")
+            || lower.starts_with("c:\\windows\\winsxs")
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Perform directory traversal & collect all matching files/directories
 pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>> {
     let mut walk_builder = WalkBuilder::new(&args.path);
     walk_builder
         .hidden(!args.hidden)
         .git_ignore(!args.no_ignore)
+        .git_global(!args.no_ignore)
+        .git_exclude(!args.no_ignore)
         .ignore(!args.no_ignore)
-        .parents(!args.no_ignore);
+        .parents(!args.no_ignore)
+        .same_file_system(true);
 
     let no_ignore = args.no_ignore;
     walk_builder.filter_entry(move |entry| {
+        let path = entry.path();
+        if is_system_root_ignored(path) {
+            return false;
+        }
         if no_ignore {
             return true;
         }
-        if let Some(file_name) = entry.path().file_name() {
+        if let Some(file_name) = path.file_name() {
             let p = file_name.to_string_lossy().to_lowercase();
             if p == "node_modules"
                 || p == ".next"
@@ -242,17 +354,49 @@ pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>>
         let is_dir = file_type.as_ref().is_some_and(|ft| ft.is_dir());
         let is_symlink = file_type.as_ref().is_some_and(|ft| ft.is_symlink());
 
-        // Exclude directories by default for file finder (ff)
-        if is_dir {
-            continue;
-        }
-
-        // Type filter
+        // Type filter:
         if let Some(ref target_type) = args.file_type {
             match target_type.to_lowercase().as_str() {
-                "f" | "file" if !file_type.as_ref().is_some_and(|ft| ft.is_file()) => continue,
-                "l" | "link" | "symlink" if !is_symlink => continue,
-                _ => {}
+                "f" | "file" => {
+                    if !file_type.as_ref().is_some_and(|ft| ft.is_file()) {
+                        continue;
+                    }
+                }
+                "d" | "dir" | "directory" => {
+                    if !is_dir {
+                        continue;
+                    }
+                }
+                "l" | "link" | "symlink" => {
+                    if !is_symlink {
+                        continue;
+                    }
+                }
+                "all" => {}
+                _ => {
+                    if is_dir {
+                        continue;
+                    }
+                }
+            }
+        } else {
+            // By default, Fast FILE Finder (ff) searches for files, not directories!
+            // Directories are excluded by default so ff only finds files. Use `cf` or `ff -t d` for directories.
+            if is_dir {
+                continue;
+            }
+        }
+
+        // Extension filter (only for non-directories)
+        if !is_dir {
+            if let Some(ref target_ext) = ext_lower {
+                if let Some(ext) = path.extension() {
+                    if ext.to_string_lossy().to_lowercase() != *target_ext {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
             }
         }
 
@@ -262,39 +406,6 @@ pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>>
             .to_string_lossy()
             .to_string();
 
-        // Ignore files inside heavy dependency/build directories unless --no-ignore is set
-        if !args.no_ignore {
-            let contains_ignored_dir = relative_path.split(std::path::MAIN_SEPARATOR).any(|part| {
-                let p = part.to_lowercase();
-                p == "node_modules"
-                    || p == ".next"
-                    || p == ".git"
-                    || p == "target"
-                    || p == "dist"
-                    || p == "build"
-                    || p == ".cache"
-                    || p == "vendor"
-                    || p == ".turbo"
-                    || p == ".output"
-                    || p == ".venv"
-                    || p == "__pycache__"
-            });
-            if contains_ignored_dir {
-                continue;
-            }
-        }
-
-        // Extension filter
-        if let Some(ref target_ext) = ext_lower {
-            if let Some(ext) = path.extension() {
-                if ext.to_string_lossy().to_lowercase() != *target_ext {
-                    continue;
-                }
-            } else {
-                continue;
-            }
-        }
-
         let metadata = entry.metadata().ok();
         let size = metadata.as_ref().map_or(0, |m| m.len());
         let modified_secs = metadata
@@ -303,14 +414,19 @@ pub fn search_files_all(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>>
             .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
             .map_or(0, |d| d.as_secs());
 
-        results.push(FoundItem {
-            path: path.to_path_buf(),
+        results.push(FoundItem::new(
+            path.to_path_buf(),
             relative_path,
             is_dir,
             is_symlink,
             size,
             modified_secs,
-        });
+        ));
+
+        // Safety cap for interactive mode: prevent freezing or OOM on massive system disks
+        if (args.interactive || args.pattern.is_none()) && results.len() >= 50_000 {
+            break;
+        }
     }
 
     Ok(results)
@@ -331,22 +447,50 @@ pub fn search_files(args: &FfArgs) -> Result<Vec<FoundItem>, Box<dyn Error>> {
     }
 }
 
-/// Advanced fuzzy dictionary scoring algorithm for file finder
+/// Advanced fuzzy multi-token scoring algorithm for file finder
 pub fn score_fuzzy_item(query: &str, relative_path: &str, case_sensitive: bool) -> Option<i32> {
-    if query.trim().is_empty() {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
         return Some(0);
     }
 
-    let file_name = std::path::Path::new(relative_path)
+    let file_name = Path::new(relative_path)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
 
+    let tokens: Vec<&str> = trimmed.split_whitespace().collect();
+    if tokens.is_empty() {
+        return Some(0);
+    }
+
+    if tokens.len() == 1 {
+        score_single_token(tokens[0], &file_name, relative_path, case_sensitive)
+    } else {
+        let mut total_score = 0;
+        for token in tokens {
+            let s = score_single_token(token, &file_name, relative_path, case_sensitive)?;
+            total_score += s;
+        }
+        Some(total_score)
+    }
+}
+
+fn score_single_token(
+    token: &str,
+    file_name: &str,
+    relative_path: &str,
+    case_sensitive: bool,
+) -> Option<i32> {
     let (q, name, path) = if case_sensitive {
-        (query.to_string(), file_name, relative_path.to_string())
+        (
+            token.to_string(),
+            file_name.to_string(),
+            relative_path.to_string(),
+        )
     } else {
         (
-            query.to_lowercase(),
+            token.to_lowercase(),
             file_name.to_lowercase(),
             relative_path.to_lowercase(),
         )
@@ -359,7 +503,8 @@ pub fn score_fuzzy_item(query: &str, relative_path: &str, case_sensitive: bool) 
 
     // 2. Prefix Match on Filename
     if name.starts_with(&q) {
-        return Some(850 - (name.len() - q.len()) as i32);
+        let diff = (name.len() - q.len()) as i32;
+        return Some(850 - diff.min(200));
     }
 
     // 3. Substring Match in Filename
@@ -398,14 +543,22 @@ fn subsequence_score(query: &str, target: &str) -> Option<i32> {
             target_chars.next();
             if t_char == q_char {
                 matched = true;
+                score += 10;
                 if let Some(prev) = prev_match_idx {
                     if idx == prev + 1 {
-                        score += 15;
-                    } else {
-                        score += 5;
+                        score += 20;
                     }
-                } else {
-                    score += 10;
+                }
+                // Word boundary check: start of string or preceded by '/', '\', '-', '_', '.'
+                if idx == 0
+                    || target
+                        .as_bytes()
+                        .get(idx.saturating_sub(1))
+                        .is_some_and(|&b| {
+                            b == b'/' || b == b'\\' || b == b'-' || b == b'_' || b == b'.'
+                        })
+                {
+                    score += 30;
                 }
                 prev_match_idx = Some(idx);
                 break;
@@ -418,27 +571,113 @@ fn subsequence_score(query: &str, target: &str) -> Option<i32> {
     Some(score)
 }
 
+fn score_item_tokens(tokens: &[String], item: &FoundItem, case_sensitive: bool) -> Option<i32> {
+    if tokens.is_empty() {
+        return Some(0);
+    }
+    let mut total = 0;
+    for token in tokens {
+        let s = if case_sensitive {
+            score_single_token(token, &item.file_name, &item.relative_path, true)?
+        } else {
+            score_precomputed_token(token, &item.name_lower, &item.rel_lower)?
+        };
+        total += s;
+    }
+    if item.is_dir {
+        total += 50; // directory priority bonus
+    }
+    Some(total)
+}
+
+fn score_precomputed_token(token: &str, name: &str, path: &str) -> Option<i32> {
+    // 1. Exact Filename Match
+    if name == token {
+        return Some(1000);
+    }
+    // 2. Prefix Match on Filename
+    if name.starts_with(token) {
+        let diff = (name.len() - token.len()) as i32;
+        return Some(850 - diff.min(200));
+    }
+    // 3. Substring Match in Filename
+    if let Some(pos) = name.find(token) {
+        let score = 700 - (pos as i32 * 10) - (name.len() - token.len()) as i32;
+        return Some(score.max(300));
+    }
+    // 4. Substring Match in Relative Path
+    if let Some(pos) = path.find(token) {
+        let score = 500 - (pos as i32 * 5);
+        return Some(score.max(150));
+    }
+    // 5. Fuzzy Subsequence Match in Filename
+    if let Some(sub_score) = subsequence_score(token, name) {
+        return Some(200 + sub_score);
+    }
+    // 6. Fuzzy Subsequence Match in Relative Path
+    if let Some(sub_score) = subsequence_score(token, path) {
+        return Some(100 + sub_score);
+    }
+    None
+}
+
+/// Rayon parallel multi-token filtering across all CPU threads
 fn filter_and_score_items(
     all_files: &[FoundItem],
     query: &str,
     case_sensitive: bool,
 ) -> Vec<FoundItem> {
-    if query.trim().is_empty() {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
         return Vec::new();
     }
 
-    let mut scored: Vec<(&FoundItem, i32)> = Vec::new();
-    for item in all_files {
-        if let Some(score) = score_fuzzy_item(query, &item.relative_path, case_sensitive) {
-            scored.push((item, score));
-        }
+    let tokens: Vec<String> = if case_sensitive {
+        trimmed.split_whitespace().map(|s| s.to_string()).collect()
+    } else {
+        trimmed
+            .split_whitespace()
+            .map(|s| s.to_lowercase())
+            .collect()
+    };
+
+    if tokens.is_empty() {
+        return Vec::new();
     }
 
-    scored.sort_by(|a, b| {
+    let mut scored: Vec<(usize, i32)> = all_files
+        .par_iter()
+        .enumerate()
+        .filter_map(|(idx, item)| {
+            let score = score_item_tokens(&tokens, item, case_sensitive)?;
+            Some((idx, score))
+        })
+        .collect();
+
+    scored.par_sort_by(|a, b| {
         b.1.cmp(&a.1)
-            .then_with(|| a.0.relative_path.cmp(&b.0.relative_path))
+            .then_with(|| {
+                let is_dir_a = all_files[a.0].is_dir;
+                let is_dir_b = all_files[b.0].is_dir;
+                is_dir_b.cmp(&is_dir_a)
+            })
+            .then_with(|| {
+                all_files[a.0]
+                    .relative_path
+                    .len()
+                    .cmp(&all_files[b.0].relative_path.len())
+            })
+            .then_with(|| {
+                all_files[a.0]
+                    .relative_path
+                    .cmp(&all_files[b.0].relative_path)
+            })
     });
-    scored.into_iter().map(|(item, _)| item.clone()).collect()
+
+    scored
+        .into_iter()
+        .map(|(idx, _)| all_files[idx].clone())
+        .collect()
 }
 
 fn open_tty() -> Box<dyn io::Write + Send> {
@@ -465,29 +704,41 @@ fn open_tty() -> Box<dyn io::Write + Send> {
     Box::new(io::stderr())
 }
 
+/// RAII guard ensuring raw mode & alternate screen are unconditionally restored
+/// even on early error returns or unexpected panic unwinding.
+struct TerminalGuard;
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let mut tty = open_tty();
+        let _ = execute!(
+            tty,
+            LeaveAlternateScreen,
+            DisableMouseCapture,
+            crossterm::cursor::Show
+        );
+    }
+}
+
 /// Interactive TUI mode with modern UI/UX matching `cf`
 fn run_interactive(mut args: FfArgs) -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut tty = open_tty();
     execute!(tty, EnterAlternateScreen, EnableMouseCapture)?;
+    let _guard = TerminalGuard;
 
     let backend = CrosstermBackend::new(tty);
     let mut terminal = Terminal::new(backend)?;
 
     let res = tui_loop(&mut terminal, &mut args);
 
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    drop(_guard);
 
     if let Ok(Some(action)) = res {
         match action {
             FfAction::OpenDefault(path) => {
-                // Handled entirely by Rust — no shell prefix needed (avoids double open)
+                // Handled natively by Rust — no shell prefix needed (avoids double open)
                 open_file_natively(&path);
             }
             FfAction::OpenCode(path) => {
@@ -499,7 +750,6 @@ fn run_interactive(mut args: FfArgs) -> Result<(), Box<dyn Error>> {
             }
             FfAction::CopyPath(path) => {
                 copy_to_clipboard(&path);
-                println!("COPIED:{}", path);
             }
         }
     }
@@ -568,26 +818,22 @@ pub fn copy_to_clipboard(text: &str) -> bool {
 }
 
 /// Native OS launcher for image, document, audio, video and general files
-#[allow(unused_variables)]
 pub fn open_file_natively(path: &str) {
-    let lower = path.to_lowercase();
-
     #[cfg(target_os = "windows")]
     {
         let _ = std::process::Command::new("cmd")
             .args(["/C", "start", "", path])
             .spawn();
-        return;
     }
 
     #[cfg(target_os = "macos")]
     {
         let _ = std::process::Command::new("open").arg(path).spawn();
-        return;
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
+        let lower = path.to_lowercase();
         // 1. Image files
         if lower.ends_with(".jpg")
             || lower.ends_with(".jpeg")
@@ -677,7 +923,17 @@ pub fn open_file_natively(path: &str) {
 }
 
 pub fn open_in_vscode(path: &str) {
-    for cmd in &["code", "codium", "code-insiders"] {
+    if let Ok(editor) = std::env::var("EDITOR") {
+        if !editor.is_empty()
+            && std::process::Command::new(&editor)
+                .arg(path)
+                .spawn()
+                .is_ok()
+        {
+            return;
+        }
+    }
+    for cmd in &["zed", "cursor", "code", "codium", "code-insiders", "nvim"] {
         if std::process::Command::new(cmd).arg(path).spawn().is_ok() {
             return;
         }
@@ -685,12 +941,10 @@ pub fn open_in_vscode(path: &str) {
 }
 
 pub fn open_in_explorer(path: &str) {
-    let dir = if std::path::Path::new(path).is_file() {
-        std::path::Path::new(path)
-            .parent()
-            .unwrap_or(std::path::Path::new(path))
+    let dir = if Path::new(path).is_file() {
+        Path::new(path).parent().unwrap_or(Path::new(path))
     } else {
-        std::path::Path::new(path)
+        Path::new(path)
     };
 
     for cmd in &["xdg-open", "open", "wslview", "explorer.exe"] {
@@ -705,67 +959,249 @@ fn spinner_char(tick: u64) -> &'static str {
     frames[(tick as usize) % frames.len()]
 }
 
+fn get_file_preview(file_path: &Path) -> (Vec<String>, String) {
+    let mut lines = Vec::new();
+    let mut size_str = "0 B".to_string();
+
+    if let Ok(meta) = fs::metadata(file_path) {
+        size_str = format_bytes(meta.len());
+    }
+
+    if let Ok(file) = fs::File::open(file_path) {
+        let reader = BufReader::new(file);
+        for (idx, line_res) in reader.lines().take(40).enumerate() {
+            match line_res {
+                Ok(line) => {
+                    let truncated: String = line.chars().take(120).collect();
+                    lines.push(format!("{:>3} │ {}", idx + 1, truncated));
+                }
+                Err(_) => {
+                    lines.push("  [Binary or non-UTF8 content]".to_string());
+                    break;
+                }
+            }
+        }
+    } else {
+        lines.push("  [Unable to open file for preview]".to_string());
+    }
+
+    (lines, size_str)
+}
+
+fn get_dir_preview(dir_path: &Path) -> (Vec<String>, String) {
+    let mut items = Vec::new();
+    let mut total_size: u64 = 0;
+
+    if let Ok(entries) = fs::read_dir(dir_path) {
+        for entry in entries.flatten().take(50) {
+            if let Ok(meta) = entry.metadata() {
+                total_size += meta.len();
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+            let is_symlink = entry.file_type().map(|t| t.is_symlink()).unwrap_or(false);
+
+            if is_dir {
+                items.push(format!("📁 {}/", name));
+            } else if is_symlink {
+                items.push(format!("🔗 {}@", name));
+            } else {
+                let icon = get_file_icon(&name, false, false);
+                items.push(format!("{} {}", icon, name));
+            }
+        }
+    }
+
+    items.sort();
+    let size_str = format_bytes(total_size);
+    (items, size_str)
+}
+
+fn render_preview_panel(frame: &mut Frame, area: Rect, item: Option<&FoundItem>) {
+    let title = match item {
+        Some(e) if e.is_dir => format!(" 👁️ Directory: '{}' ", e.file_name),
+        Some(e) => format!(" 👁️ File: '{}' ", e.file_name),
+        None => " 👁️ Preview ".to_string(),
+    };
+
+    let preview_block = Block::default()
+        .title(Span::styled(
+            title,
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ))
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(C_ACCENT))
+        .style(Style::default().bg(C_BG));
+
+    let inner = preview_block.inner(area);
+    frame.render_widget(preview_block, area);
+
+    if inner.height < 2 || inner.width < 5 {
+        return;
+    }
+
+    let mut lines = Vec::new();
+
+    if let Some(entry) = item {
+        if entry.is_dir {
+            let (children, size_str) = get_dir_preview(&entry.path);
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "📊 Size: ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    size_str,
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+            ]));
+            lines.push(Line::from(Span::styled(
+                "─".repeat(inner.width as usize),
+                Style::default().fg(C_DIM),
+            )));
+            if children.is_empty() {
+                lines.push(Line::from(Span::styled(
+                    "  (empty directory)",
+                    Style::default().fg(C_DIM),
+                )));
+            } else {
+                for child in children
+                    .into_iter()
+                    .take((inner.height as usize).saturating_sub(3))
+                {
+                    let color = if child.contains('/') || child.contains('@') {
+                        C_CYAN
+                    } else {
+                        C_WHITE
+                    };
+                    lines.push(Line::from(vec![Span::styled(
+                        child,
+                        Style::default().fg(color),
+                    )]));
+                }
+            }
+        } else {
+            let (file_lines, size_str) = get_file_preview(&entry.path);
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "📊 Size: ",
+                    Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    size_str,
+                    Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+                ),
+            ]));
+            lines.push(Line::from(Span::styled(
+                "─".repeat(inner.width as usize),
+                Style::default().fg(C_DIM),
+            )));
+            for l in file_lines
+                .into_iter()
+                .take((inner.height as usize).saturating_sub(3))
+            {
+                lines.push(Line::from(Span::styled(l, Style::default().fg(C_WHITE))));
+            }
+        }
+    } else {
+        lines.push(Line::from(Span::styled(
+            "No file selected",
+            Style::default().fg(C_DIM),
+        )));
+    }
+
+    frame.render_widget(Paragraph::new(lines), inner);
+}
+
 #[allow(clippy::unwrap_in_result)]
 fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
     terminal: &mut Terminal<B>,
     args: &mut FfArgs,
 ) -> Result<Option<FfAction>, Box<dyn Error>> {
     let mut query = args.pattern.clone().unwrap_or_default();
+    let mut last_query = String::new();
     let mut list_state = ListState::default();
     let mut copy_notice_time: Option<Instant> = None;
     let mut tick: u64 = 0;
 
-    let indexed_files = Arc::new(Mutex::new(Vec::<FoundItem>::new()));
-    let is_indexed = Arc::new(Mutex::new(false));
+    let indexed_files: Arc<Mutex<Arc<Vec<FoundItem>>>> = Arc::new(Mutex::new(Arc::new(Vec::new())));
+    let is_indexed = Arc::new(AtomicBool::new(false));
     let index_start = Instant::now();
     let mut index_elapsed = Duration::ZERO;
 
-    let files_clone = indexed_files.clone();
-    let is_indexed_clone = is_indexed.clone();
+    let files_clone = Arc::clone(&indexed_files);
+    let is_indexed_clone = Arc::clone(&is_indexed);
     let args_clone = args.clone();
 
     thread::spawn(move || {
         if let Ok(files) = search_files_all(&args_clone) {
-            let mut guard = files_clone.lock().unwrap();
-            *guard = files;
+            let mut guard = files_clone.lock().unwrap_or_else(|p| p.into_inner());
+            *guard = Arc::new(files);
         }
-        let mut done_guard = is_indexed_clone.lock().unwrap();
-        *done_guard = true;
+        is_indexed_clone.store(true, Ordering::Release);
     });
 
+    let mut cached_files: Arc<Vec<FoundItem>> = Arc::new(Vec::new());
+    let mut items: Vec<FoundItem> = Vec::new();
     let mut search_elapsed = Duration::ZERO;
-    let mut items = Vec::<FoundItem>::new();
     let mut last_click_time = Instant::now();
     let mut last_click_index: Option<usize> = None;
     let mut list_rect = Rect::default();
-    let mut last_indexed_len = 0;
 
     loop {
         tick = tick.wrapping_add(1);
-        let is_done = *is_indexed.lock().unwrap();
-        let all_files = indexed_files.lock().unwrap().clone();
-        let total_indexed = all_files.len();
+        let is_done = is_indexed.load(Ordering::Acquire);
 
         if is_done && index_elapsed == Duration::ZERO {
             index_elapsed = index_start.elapsed();
         }
 
-        if total_indexed != last_indexed_len && !query.trim().is_empty() {
-            let start_t = Instant::now();
-            items = filter_and_score_items(&all_files, &query, args.case_sensitive);
-            search_elapsed = start_t.elapsed();
-            if list_state.selected().is_none() && !items.is_empty() {
-                list_state.select(Some(0));
+        let current_files = {
+            let guard = indexed_files.lock().unwrap_or_else(|p| p.into_inner());
+            Arc::clone(&*guard)
+        };
+        let files_updated = !Arc::ptr_eq(&cached_files, &current_files);
+        if files_updated {
+            cached_files = current_files;
+        }
+        let total_indexed = cached_files.len();
+
+        let query_changed = query != last_query;
+        if query_changed || files_updated {
+            last_query = query.clone();
+            if query.trim().is_empty() {
+                items = cached_files.iter().take(100).cloned().collect();
+                if list_state.selected().is_none() && !items.is_empty() {
+                    list_state.select(Some(0));
+                }
+            } else {
+                let start_t = Instant::now();
+                items = filter_and_score_items(&cached_files, &query, args.case_sensitive);
+                search_elapsed = start_t.elapsed();
+                if list_state.selected().is_none() && !items.is_empty() {
+                    list_state.select(Some(0));
+                } else if let Some(sel) = list_state.selected() {
+                    if sel >= items.len() {
+                        list_state.select(if items.is_empty() {
+                            None
+                        } else {
+                            Some(items.len() - 1)
+                        });
+                    }
+                }
             }
-            last_indexed_len = total_indexed;
         }
 
         terminal.draw(|f| {
             let area = f.area();
+            if area.width < 10 || area.height < 5 {
+                return;
+            }
             // Full dark background
             f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
 
-            // Layout: Header | Body | Path Box | Footer
+            // Layout: Header | Body (list + preview) | Path Box | Footer
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
@@ -788,12 +1224,18 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
 
             // ── 1. Header Banner ──────────────────────────────────────────────
             let spin = if is_done { "✨" } else { spinner_char(tick) };
+            let count_display = if total_indexed >= 50_000 {
+                "50000+".to_string()
+            } else {
+                total_indexed.to_string()
+            };
+
             let status_line = if !is_done && total_indexed == 0 {
                 format!("{}  Indexing workspace... please wait", spin)
             } else if query.trim().is_empty() {
                 format!(
                     "{}  {} files indexed in {:.2}ms — type to search",
-                    spin, total_indexed, elapsed_ms
+                    spin, count_display, elapsed_ms
                 )
             } else {
                 format!(
@@ -829,43 +1271,101 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                 .alignment(Alignment::Center);
             f.render_widget(header, chunks[0]);
 
-            // ── 2. Full-Width File List ───────────────────────────────────────
-            list_rect = chunks[1];
+            // ── 2. Dual-Pane Body (List + Live Preview) ────────────────────────
+            let is_wide = area.width >= 95;
+            let body_chunks = if is_wide {
+                Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Percentage(52), Constraint::Percentage(48)])
+                    .split(chunks[1])
+            } else {
+                Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Percentage(100)])
+                    .split(chunks[1])
+            };
+
+            list_rect = body_chunks[0];
 
             // ── Search input inside list title ────────────────────────────────
             let search_title = Line::from(vec![
                 Span::styled(" 🔎 ", Style::default().fg(C_ACCENT)),
                 Span::styled(
-                    &query,
+                    if query.is_empty() {
+                        "All Recent Files"
+                    } else {
+                        &query
+                    },
                     Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
                 ),
                 Span::styled("▌", Style::default().fg(C_ACCENT)),
                 Span::styled(
-                    format!("  ({}/{}) ", items.len(), total_indexed),
+                    format!("  ({}/{}) ", items.len(), count_display),
                     Style::default().fg(C_DIM),
                 ),
             ]);
 
-            if query.trim().is_empty() {
-                let placeholder = Paragraph::new(vec![
-                    Line::from(""),
-                    Line::from(vec![
-                        Span::styled("  💡 ", Style::default().fg(C_YELLOW)),
-                        Span::styled(
-                            "Type to fuzzy search files...",
-                            Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
-                        ),
-                    ]),
-                    Line::from(""),
-                    Line::from(vec![
-                        Span::styled("     e.g. ", Style::default().fg(C_DIM)),
-                        Span::styled("main.rs", Style::default().fg(C_ACCENT)),
-                        Span::styled("  or  ", Style::default().fg(C_DIM)),
-                        Span::styled(".json", Style::default().fg(C_ACCENT)),
-                        Span::styled("  or  ", Style::default().fg(C_DIM)),
-                        Span::styled("config", Style::default().fg(C_ACCENT)),
-                    ]),
-                ])
+            let list_width = body_chunks[0].width as usize;
+            let target_path_width = list_width.saturating_sub(21).clamp(24, 44);
+
+            let list_items: Vec<ListItem> = items
+                .iter()
+                .map(|item| {
+                    let icon = get_file_icon(&item.file_name, item.is_dir, item.is_symlink);
+                    let size_badge = format_bytes(item.size);
+
+                    let path_obj = Path::new(&item.relative_path);
+                    let parent_folder = path_obj
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_default();
+
+                    let has_parent = !parent_folder.is_empty() && parent_folder != ".";
+
+                    let path_len = if has_parent {
+                        parent_folder.chars().count() + 1 + item.file_name.chars().count()
+                    } else {
+                        item.file_name.chars().count()
+                    } + if item.is_dir { 1 } else { 0 };
+
+                    let pad = target_path_width.saturating_sub(path_len).max(1);
+                    let padding = " ".repeat(pad);
+
+                    let mut spans = Vec::with_capacity(5);
+                    spans.push(Span::styled(format!(" {} ", icon), Style::default()));
+
+                    if has_parent {
+                        spans.push(Span::styled(
+                            format!("{}/", parent_folder),
+                            Style::default().fg(C_DIM),
+                        ));
+                    }
+
+                    let name_style = if item.is_dir {
+                        Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD)
+                    };
+
+                    let display_name = if item.is_dir {
+                        format!("{}/", item.file_name)
+                    } else {
+                        item.file_name.clone()
+                    };
+
+                    spans.push(Span::styled(display_name, name_style));
+                    spans.push(Span::raw(padding));
+                    spans.push(Span::styled(
+                        format!("[{}]", size_badge),
+                        Style::default().fg(C_CYAN),
+                    ));
+
+                    ListItem::new(Line::from(spans))
+                })
+                .collect();
+
+            let list_widget = List::new(list_items)
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
@@ -873,64 +1373,20 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                         .border_style(Style::default().fg(C_BORDER))
                         .title(search_title)
                         .style(Style::default().bg(C_BG)),
-                );
-                f.render_widget(placeholder, chunks[1]);
-            } else {
-                let list_items: Vec<ListItem> = items
-                    .iter()
-                    .map(|item| {
-                        let icon = get_file_icon(&item.relative_path);
-                        let size_badge = format_bytes(item.size);
+                )
+                .highlight_style(
+                    Style::default()
+                        .bg(C_SELECTED_BG)
+                        .fg(C_SELECTED_FG)
+                        .add_modifier(Modifier::BOLD),
+                )
+                .highlight_symbol(" ▶ ");
 
-                        let path_obj = std::path::Path::new(&item.relative_path);
-                        let file_name = path_obj
-                            .file_name()
-                            .map(|s| s.to_string_lossy().to_string())
-                            .unwrap_or_else(|| item.relative_path.clone());
+            f.render_stateful_widget(list_widget, body_chunks[0], &mut list_state);
 
-                        let parent_dir = path_obj
-                            .parent()
-                            .map(|p| p.to_string_lossy().to_string())
-                            .unwrap_or_default();
-
-                        let dir_hint = if parent_dir.is_empty() {
-                            String::new()
-                        } else {
-                            format!("  {}/", parent_dir)
-                        };
-
-                        let line = Line::from(vec![
-                            Span::styled(format!(" {} ", icon), Style::default()),
-                            Span::styled(
-                                format!("{:<28}", file_name),
-                                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
-                            ),
-                            Span::styled(format!("{:<40}", dir_hint), Style::default().fg(C_DIM)),
-                            Span::styled(format!(" [{}]", size_badge), Style::default().fg(C_CYAN)),
-                        ]);
-
-                        ListItem::new(line)
-                    })
-                    .collect();
-
-                let list_widget = List::new(list_items)
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .border_type(BorderType::Rounded)
-                            .border_style(Style::default().fg(C_BORDER))
-                            .title(search_title)
-                            .style(Style::default().bg(C_BG)),
-                    )
-                    .highlight_style(
-                        Style::default()
-                            .bg(C_SELECTED_BG)
-                            .fg(C_SELECTED_FG)
-                            .add_modifier(Modifier::BOLD),
-                    )
-                    .highlight_symbol(" ▶ ");
-
-                f.render_stateful_widget(list_widget, chunks[1], &mut list_state);
+            if is_wide {
+                let selected_item = list_state.selected().and_then(|i| items.get(i));
+                render_preview_panel(f, body_chunks[1], selected_item);
             }
 
             // ── 3. Path Box ───────────────────────────────────────────────────
@@ -995,27 +1451,27 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                     "[Enter] ",
                     Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("Open  ", Style::default().fg(C_DIM)),
+                Span::styled("Open/CD  ", Style::default().fg(C_DIM)),
                 Span::styled(
-                    "[Ctrl+C] ",
+                    "[Ctrl+Y] ",
                     Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("Copy Path  ", Style::default().fg(C_DIM)),
-                Span::styled(
-                    "[F10] ",
-                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
-                ),
-                Span::styled("Code ", Style::default().fg(C_DIM)),
+                Span::styled("Copy  ", Style::default().fg(C_DIM)),
                 Span::styled(
                     "[Ctrl+O] ",
+                    Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Editor  ", Style::default().fg(C_DIM)),
+                Span::styled(
+                    "[Ctrl+E] ",
                     Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("Exp ", Style::default().fg(C_DIM)),
+                Span::styled("Explorer  ", Style::default().fg(C_DIM)),
                 Span::styled(
-                    "[Esc] ",
+                    "[Esc/Ctrl+C] ",
                     Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("Quit ", Style::default().fg(C_DIM)),
+                Span::styled("Quit", Style::default().fg(C_DIM)),
             ]);
             let footer = Paragraph::new(footer_spans)
                 .block(
@@ -1029,26 +1485,19 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
             f.render_widget(footer, chunks[3]);
         })?;
 
-        if event::poll(std::time::Duration::from_millis(50))? {
+        if event::poll(Duration::from_millis(50))? {
             match event::read()? {
                 Event::Key(key) => match key.code {
                     KeyCode::Esc => return Ok(None),
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        return Ok(None);
+                    }
                     KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
                                 copy_to_clipboard(&item.relative_path);
                                 copy_notice_time = Some(Instant::now());
                             }
-                        }
-                    }
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        if let Some(i) = list_state.selected() {
-                            if let Some(item) = items.get(i) {
-                                copy_to_clipboard(&item.relative_path);
-                                copy_notice_time = Some(Instant::now());
-                            }
-                        } else {
-                            return Ok(None);
                         }
                     }
                     KeyCode::Enter => {
@@ -1063,7 +1512,9 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                             }
                         }
                     }
-                    KeyCode::F(10) => {
+                    KeyCode::F(10) | KeyCode::Char('o')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                    {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
                                 return Ok(Some(FfAction::OpenCode(
@@ -1072,7 +1523,7 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                             }
                         }
                     }
-                    KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         if let Some(i) = list_state.selected() {
                             if let Some(item) = items.get(i) {
                                 return Ok(Some(FfAction::Explore(
@@ -1086,6 +1537,8 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                             if i > 0 {
                                 list_state.select(Some(i - 1));
                             }
+                        } else if !items.is_empty() {
+                            list_state.select(Some(0));
                         }
                     }
                     KeyCode::Down => {
@@ -1093,6 +1546,8 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                             if i + 1 < items.len() {
                                 list_state.select(Some(i + 1));
                             }
+                        } else if !items.is_empty() {
+                            list_state.select(Some(0));
                         }
                     }
                     KeyCode::Backspace => {
@@ -1103,33 +1558,25 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                             } else {
                                 Some(query.clone())
                             };
-                            let start_t = Instant::now();
-                            items = filter_and_score_items(&all_files, &query, args.case_sensitive);
-                            search_elapsed = start_t.elapsed();
-                            list_state.select(if items.is_empty() { None } else { Some(0) });
                         }
                     }
                     KeyCode::Char(c) => {
                         query.push(c);
                         args.pattern = Some(query.clone());
-                        let start_t = Instant::now();
-                        items = filter_and_score_items(&all_files, &query, args.case_sensitive);
-                        search_elapsed = start_t.elapsed();
-                        list_state.select(if items.is_empty() { None } else { Some(0) });
                     }
                     _ => {}
                 },
                 Event::Mouse(me) => match me.kind {
                     MouseEventKind::Down(MouseButton::Left) => {
                         let mx = me.column;
-                        let my = my_pos_helper(me.row);
+                        let my = me.row;
 
                         if mx >= list_rect.x
                             && mx < list_rect.x + list_rect.width
                             && my > list_rect.y
                             && my < list_rect.y + list_rect.height
                         {
-                            let clicked_idx = (my - list_rect.y - 1) as usize;
+                            let clicked_idx = (my - list_rect.y - 1) as usize + list_state.offset();
                             if clicked_idx < items.len() {
                                 list_state.select(Some(clicked_idx));
 
@@ -1154,16 +1601,16 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
                     }
                     MouseEventKind::ScrollDown => {
                         if let Some(i) = list_state.selected() {
-                            if i + 1 < items.len() {
-                                list_state.select(Some(i + 1));
-                            }
+                            let next = (i + 4).min(items.len().saturating_sub(1));
+                            list_state.select(Some(next));
+                        } else if !items.is_empty() {
+                            list_state.select(Some(0));
                         }
                     }
                     MouseEventKind::ScrollUp => {
                         if let Some(i) = list_state.selected() {
-                            if i > 0 {
-                                list_state.select(Some(i - 1));
-                            }
+                            let prev = i.saturating_sub(4);
+                            list_state.select(Some(prev));
                         }
                     }
                     _ => {}
@@ -1174,13 +1621,15 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
     }
 }
 
-fn my_pos_helper(row: u16) -> u16 {
-    row
-}
-
 /// Utility: Get file extension icon
-fn get_file_icon(path: &str) -> &'static str {
-    let lower = path.to_lowercase();
+fn get_file_icon(name: &str, is_dir: bool, is_symlink: bool) -> &'static str {
+    if is_dir {
+        return "📁";
+    }
+    if is_symlink {
+        return "🔗";
+    }
+    let lower = name.to_lowercase();
     if lower.ends_with(".rs") {
         "🦀"
     } else if lower.ends_with(".js") || lower.ends_with(".jsx") {
@@ -1337,5 +1786,64 @@ mod tests {
         assert!(exact.unwrap() > prefix.unwrap());
         assert!(prefix.unwrap() > sub.unwrap());
         assert!(score_fuzzy_item("nonexistentxyz", "src/main.rs", false).is_none());
+    }
+
+    #[test]
+    fn test_multi_token_search() {
+        let score = score_fuzzy_item("tools filefind", "src/tools/file_find.rs", false);
+        assert!(score.is_some());
+        assert!(score.unwrap() > 200);
+    }
+
+    #[test]
+    fn test_type_filter_directory() {
+        let args = FfArgs {
+            pattern: None,
+            path: PathBuf::from("."),
+            extension: None,
+            file_type: Some("d".to_string()),
+            hidden: false,
+            no_ignore: false,
+            max_depth: Some(2),
+            case_sensitive: false,
+            interactive: false,
+            json: false,
+            stats: false,
+        };
+
+        let items = search_files_all(&args).unwrap();
+        assert!(!items.is_empty());
+        assert!(items.iter().all(|i| i.is_dir));
+    }
+
+    #[test]
+    fn test_default_filter_excludes_directories() {
+        let args = FfArgs {
+            pattern: None,
+            path: PathBuf::from("."),
+            extension: None,
+            file_type: None,
+            hidden: false,
+            no_ignore: false,
+            max_depth: Some(2),
+            case_sensitive: false,
+            interactive: false,
+            json: false,
+            stats: false,
+        };
+
+        let items = search_files_all(&args).unwrap();
+        assert!(!items.is_empty());
+        assert!(items.iter().all(|i| !i.is_dir));
+    }
+
+    #[test]
+    fn test_system_root_ignored() {
+        assert!(is_system_root_ignored(Path::new("/proc")));
+        assert!(is_system_root_ignored(Path::new("/proc/kcore")));
+        assert!(is_system_root_ignored(Path::new("/sys")));
+        assert!(is_system_root_ignored(Path::new("/dev")));
+        assert!(is_system_root_ignored(Path::new("/ostree/repo")));
+        assert!(!is_system_root_ignored(Path::new("/home/user/project")));
     }
 }

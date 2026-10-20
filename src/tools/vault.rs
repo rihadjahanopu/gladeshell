@@ -1763,7 +1763,7 @@ fn vault_unlock(name: &str, pass: &str, store_dir: &Path) -> (String, bool) {
     #[cfg(windows)]
     {
         use std::os::windows::fs::symlink_dir;
-        if let Err(_) = symlink_dir(&ram_dir, &target_symlink) {
+        if symlink_dir(&ram_dir, &target_symlink).is_err() {
             let _ = extract_in_memory_tarball(&decrypted_tarball, &target_symlink);
         }
     }

@@ -607,14 +607,17 @@ cf() {
 
     case "$action" in
         CD)
-            [[ -d "$target" ]] && cd "$target" || return
+            [[ -d "$target" ]] && cd -- "$target" || return
             ;;
         CODE)
             local open_path="$target"
-            [[ -f "$target" ]] && open_path="$(dirname "$target")"
-            if   command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
+            if   command -v zed    &>/dev/null; then zed    "$open_path" >/dev/null 2>&1 &
+            elif command -v cursor &>/dev/null; then cursor "$open_path" >/dev/null 2>&1 &
+            elif command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
             elif command -v codium &>/dev/null; then codium "$open_path" >/dev/null 2>&1 &
-            else [[ -d "$open_path" ]] && cd "$open_path" || return
+            elif command -v nvim   &>/dev/null; then nvim   "$open_path"
+            elif [[ -n "$EDITOR" ]]; then "$EDITOR" "$open_path"
+            else [[ -d "$open_path" ]] && cd -- "$open_path" || return
             fi
             ;;
         OPEN)
@@ -630,8 +633,8 @@ cf() {
             ;;
         *)
             # Legacy fallback: raw path (no tag)
-            if   [[ -d "$result" ]]; then cd "$result" || return
-            elif [[ -f "$result" ]]; then cd "$(dirname "$result")" || return
+            if   [[ -d "$result" ]]; then cd -- "$result" || return
+            elif [[ -f "$result" ]]; then cd -- "$(dirname "$result")" || return
             fi
             ;;
     esac
@@ -653,12 +656,16 @@ ff() {
 
     case "$action" in
         CD)
-            [[ -d "$target" ]] && cd "$target" || return
+            [[ -d "$target" ]] && cd -- "$target" || return
             ;;
         CODE)
             local open_path="$target"
-            if   command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
+            if   command -v zed    &>/dev/null; then zed    "$open_path" >/dev/null 2>&1 &
+            elif command -v cursor &>/dev/null; then cursor "$open_path" >/dev/null 2>&1 &
+            elif command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
             elif command -v codium &>/dev/null; then codium "$open_path" >/dev/null 2>&1 &
+            elif command -v nvim   &>/dev/null; then nvim   "$open_path"
+            elif [[ -n "$EDITOR" ]]; then "$EDITOR" "$open_path"
             fi
             ;;
         OPEN)
@@ -671,6 +678,8 @@ ff() {
             elif command -v open     &>/dev/null; then open     "$explore_path" >/dev/null 2>&1 &
             elif command -v explorer.exe &>/dev/null; then explorer.exe "$(wslpath -w "$explore_path" 2>/dev/null || echo "$explore_path")" >/dev/null 2>&1 &
             fi
+            ;;
+        COPIED)
             ;;
         *)
             if [[ -f "$result" ]]; then
@@ -726,17 +735,22 @@ function cf
     switch $action
         case CD
             if test -d "$target"
-                cd "$target"
+                cd -- "$target"
             end
         case CODE
             set -l open_path "$target"
-            if test -f "$target"
-                set open_path (dirname "$target")
-            end
-            if type -q code
+            if type -q zed
+                zed "$open_path" >/dev/null 2>&1 &
+            else if type -q cursor
+                cursor "$open_path" >/dev/null 2>&1 &
+            else if type -q code
                 code "$open_path" >/dev/null 2>&1 &
             else if type -q codium
                 codium "$open_path" >/dev/null 2>&1 &
+            else if type -q nvim
+                nvim "$open_path"
+            else if test -n "$EDITOR"
+                $EDITOR "$open_path"
             else if test -d "$open_path"
                 cd "$open_path"
             end
@@ -775,14 +789,22 @@ function ff
     switch $action
         case CD
             if test -d "$target"
-                cd "$target"
+                cd -- "$target"
             end
         case CODE
             set -l open_path "$target"
-            if type -q code
+            if type -q zed
+                zed "$open_path" >/dev/null 2>&1 &
+            else if type -q cursor
+                cursor "$open_path" >/dev/null 2>&1 &
+            else if type -q code
                 code "$open_path" >/dev/null 2>&1 &
             else if type -q codium
                 codium "$open_path" >/dev/null 2>&1 &
+            else if type -q nvim
+                nvim "$open_path"
+            else if test -n "$EDITOR"
+                eval "$EDITOR '$open_path'"
             end
         case OPEN
             _cf_open "$target"
@@ -798,6 +820,8 @@ function ff
             else if type -q explorer.exe
                 explorer.exe "$explore_path" >/dev/null 2>&1 &
             end
+        case COPIED
+            # Handled internally
         case '*'
             if test -f "$result"
                 _cf_open "$result"
@@ -854,8 +878,9 @@ function cf {
         }
         "CODE" {
             $openPath = $target
-            if (Test-Path -Path $target -PathType Leaf) { $openPath = Split-Path -Parent $target }
-            if (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
+            if (Get-Command zed -ErrorAction SilentlyContinue) { Start-Process zed -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command cursor -ErrorAction SilentlyContinue) { Start-Process cursor -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
             elseif (Get-Command codium -ErrorAction SilentlyContinue) { Start-Process codium -ArgumentList "`"$openPath`"" }
             elseif (Test-Path -Path $openPath -PathType Container) { Set-Location -Path $openPath }
         }
@@ -893,7 +918,9 @@ function ff {
         }
         "CODE" {
             $openPath = $target
-            if (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
+            if (Get-Command zed -ErrorAction SilentlyContinue) { Start-Process zed -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command cursor -ErrorAction SilentlyContinue) { Start-Process cursor -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
             elseif (Get-Command codium -ErrorAction SilentlyContinue) { Start-Process codium -ArgumentList "`"$openPath`"" }
         }
         "OPEN" {
@@ -904,6 +931,9 @@ function ff {
             if (Test-Path -Path $target -PathType Leaf) { $explorePath = Split-Path -Parent $target }
             if (Get-Command Invoke-Item -ErrorAction SilentlyContinue) { Invoke-Item -Path $explorePath }
             else { Start-Process explorer.exe -ArgumentList "`"$explorePath`"" }
+        }
+        "COPIED" {
+            # Handled internally
         }
         default {
             if (Test-Path -Path $result -PathType Container) { Set-Location -Path $result }

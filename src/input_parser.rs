@@ -372,7 +372,7 @@ impl RawModeGuard {
                 windows_sys::Win32::System::Console::STD_INPUT_HANDLE,
             )
         };
-        if handle == ptr::null_mut() {
+        if handle.is_null() {
             return Ok(RawModeGuard {
                 original_mode: 0,
                 handle: ptr::null_mut(),
@@ -390,7 +390,7 @@ impl RawModeGuard {
         }
         Ok(RawModeGuard {
             original_mode,
-            handle: handle as *mut std::ffi::c_void,
+            handle,
         })
     }
 }

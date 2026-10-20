@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.13] — 2026-10-20
+
+### 📂 `cf` (Fuzzy CD) Overhaul & Folder Diving
+- 🔄 **In-Session Folder Diving Restored**:
+  - `Enter` on any directory dives into that folder in the same TUI session without exiting.
+  - `Enter` on `..` backtracks up the directory hierarchy.
+  - `Enter` on `.` confirms `cd` to the shell.
+  - `Ctrl+Enter` (along with `Shift+Enter`, `Alt+Enter`, `Ctrl+D`) executes immediate shell `cd` into the selected directory.
+- 📐 **Rebalanced 65% / 35% Layout**:
+  - Widened list view to 65% and preview panel to 35% for cleaner typography and comfortable previewing.
+- 🏷️ **Compact List View & Right-Aligned Badges**:
+  - List displays compact `parent/folder` to prevent clutter and text clipping, while the bottom `📍 Full Path` status bar shows the full path.
+
+### 🔍 `ff` (File Find) Compact Display & Hardening
+- 📄 **Clean `parent/filename` Rendering**:
+  - Files render with compact parent folder hierarchy, neatly aligned size badges, and complete path shown in bottom details pane.
+
+### 🛡️ Production Hardening (10k Users Scale)
+- 🔒 **RAII `TerminalGuard`**:
+  - Implemented drop guards in both `cf` and `ff` ensuring alternate screen exit, raw mode disable, mouse capture disable, and cursor restore occur reliably even during panics.
+- 🚫 **Panic-Free Resizing & Index Safety**:
+  - Added zero-area screen guards (`area.width < 10 || area.height < 5`) and safe `.get(index)` array indexing across search views.
+- 🧵 **Mutex Poisoning Resilience**:
+  - Safe lock acquisition in multi-threaded file search preventing crashes if background threads abort.
+- 🐚 **POSIX Shell Hardening**:
+  - Hardened shell wrappers with `cd -- "$target"` to safely handle directory names starting with `-`.
+
+### 🪟 Cross-Platform & Windows CI Reliability
+- 🛠️ **Windows-Specific Clippy & Lint Fixes**:
+  - Fixed Windows console raw mode handles in `input_parser.rs`.
+  - Cleaned up native file opener syntax in `file_find.rs` and Windows symlink handling in `vault.rs`.
+- 🌐 **Cross-Platform Virtual Path Handling**:
+  - Normalized path separators (`\` to `/`) in system root exclusion logic so virtual paths (`/proc`, `/sys`, `/dev`) and Windows paths (`$recycle.bin`, `system volume information`, `winsxs`) pass across all OS runners.
+
+---
+
 ## 🚀 [1.2.12] — 2026-10-19
 
 ### 🦀 Modern Project Generators

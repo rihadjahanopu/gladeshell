@@ -214,28 +214,36 @@ pub fn run(args: FfArgs) -> Result<(), Box<dyn Error>> {
 
 /// Check if a path should be excluded due to virtual/kernel mounts or heavy OS trees
 fn is_system_root_ignored(path: &Path) -> bool {
+    let s = path.to_string_lossy();
+    let lower = s.to_lowercase();
+    let clean_slash = lower.replace('\\', "/");
+
+    // 1. Virtual / kernel mounts on Unix or POSIX environments (matches /proc, \proc, /sys, /dev, etc.)
+    if clean_slash.starts_with("/proc")
+        || clean_slash.starts_with("/sys")
+        || clean_slash.starts_with("/dev")
+        || clean_slash.starts_with("/run")
+        || clean_slash.starts_with("/lost+found")
+        || clean_slash.starts_with("/boot")
+        || clean_slash.starts_with("/ostree")
+        || clean_slash.starts_with("/sysroot")
+        || clean_slash.contains("/ostree/repo")
+        || clean_slash.contains("/ostree/deploy")
+        || clean_slash.contains("/var/lib/docker")
+        || clean_slash.contains("/var/lib/flatpak")
+        || clean_slash.contains("/var/lib/containers")
+    {
+        return true;
+    }
+
     #[cfg(unix)]
     {
-        // 1. Direct absolute paths to root system directories
-        if path.starts_with("/proc")
-            || path.starts_with("/sys")
-            || path.starts_with("/dev")
-            || path.starts_with("/run")
-            || path.starts_with("/lost+found")
-            || path.starts_with("/boot")
-            || path.starts_with("/ostree")
-            || path.starts_with("/sysroot")
-        {
-            return true;
-        }
-
         // 2. Relative paths when running from root `/` or matching root segments
         let is_at_root = std::env::current_dir()
             .map(|p| p == Path::new("/"))
             .unwrap_or(false);
 
-        let s = path.to_string_lossy();
-        let clean = s.trim_start_matches('.').trim_start_matches('/');
+        let clean = clean_slash.trim_start_matches('.').trim_start_matches('/');
         let first_seg = clean.split('/').next().unwrap_or("");
 
         if is_at_root
@@ -251,13 +259,7 @@ fn is_system_root_ignored(path: &Path) -> bool {
             return true;
         }
 
-        // 3. Heavy virtual/container/system package repositories anywhere
-        if s.contains("/var/lib/docker")
-            || s.contains("/var/lib/flatpak")
-            || s.contains("/var/lib/containers")
-            || s.contains("/ostree/repo")
-            || s.contains("/ostree/deploy")
-            || clean.starts_with("var/lib/docker")
+        if clean.starts_with("var/lib/docker")
             || clean.starts_with("var/lib/flatpak")
             || clean.starts_with("var/lib/containers")
             || clean.starts_with("ostree/repo")
@@ -269,11 +271,9 @@ fn is_system_root_ignored(path: &Path) -> bool {
 
     #[cfg(windows)]
     {
-        let s = path.to_string_lossy();
-        let lower = s.to_lowercase();
-        if lower.contains("$recycle.bin")
-            || lower.contains("system volume information")
-            || lower.starts_with("c:\\windows\\winsxs")
+        if clean_slash.contains("$recycle.bin")
+            || clean_slash.contains("system volume information")
+            || clean_slash.starts_with("c:/windows/winsxs")
         {
             return true;
         }
@@ -1845,5 +1845,15 @@ mod tests {
         assert!(is_system_root_ignored(Path::new("/dev")));
         assert!(is_system_root_ignored(Path::new("/ostree/repo")));
         assert!(!is_system_root_ignored(Path::new("/home/user/project")));
+
+        #[cfg(windows)]
+        {
+            assert!(is_system_root_ignored(Path::new(r"C:\$Recycle.Bin")));
+            assert!(is_system_root_ignored(Path::new(
+                r"C:\System Volume Information"
+            )));
+            assert!(is_system_root_ignored(Path::new(r"c:\windows\winsxs\temp")));
+            assert!(!is_system_root_ignored(Path::new(r"C:\Users\user\project")));
+        }
     }
 }

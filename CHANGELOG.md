@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.14] — 2026-10-22
+
+### 🛠️ Editor Priority & Navigation Fixes
+- 💻 **`Ctrl+O` Priority Order**:
+  - Reordered editor launching across all shells (Bash, Zsh, Fish, PowerShell) to prioritize **VS Code** (`code`) before `cursor`, `zed`, `codium`, and `nvim`.
+- 🗂️ **Zed Dedicated Workspace Support**:
+  - Added `-n` flag when launching Zed (`zed -n "$open_path"`), ensuring Zed opens the selected folder in its own dedicated workspace instead of attaching to the parent Git root.
+
+### 🎨 Prompt Engine Enhancements
+- 🎲 **Universal Random Prompt Emoji**:
+  - Removed keyword pinning (`node`, `bun`, `web`, `py`) from prompt emoji generator so every folder cycles dynamically through `RANDOM_EMOJIS` on each prompt render.
+
+### ⚙️ Developer Tools & Project Setup
+- ⚡ **Code-Runner Integration**:
+  - Added customized `.vscode/settings.json` Code-Runner configuration to `makecpp` (with `bin/main` output and `-Iinclude`) and `makerust` (`cargo run`).
+  - Pre-created `bin/` directory and added `src/main` to `.gitignore` and Makefile clean rules.
+
+### 🛡️ Security
+- 🔒 **Dependency Security Patch**:
+  - Upgraded `rustls-webpki` to `0.103.16` (patching `RUSTSEC-2026-0382`).
+  - Upgraded `webpki-roots` to `1.0.10` (patching `RUSTSEC-2026-0381`).
+
 ## 🚀 [1.2.13] — 2026-10-20
 
 ### 📂 `cf` (Fuzzy CD) Overhaul & Folder Diving

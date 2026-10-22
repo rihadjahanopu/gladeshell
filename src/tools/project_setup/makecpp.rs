@@ -177,10 +177,12 @@ pub fn run_project_in_dir(
     let src_dir = project_dir.join("src");
     let include_dir = project_dir.join("include");
     let vscode_dir = project_dir.join(".vscode");
+    let bin_dir = project_dir.join("bin");
 
     fs::create_dir_all(&src_dir)?;
     fs::create_dir_all(&include_dir)?;
     fs::create_dir_all(&vscode_dir)?;
+    fs::create_dir_all(&bin_dir)?;
 
     let clean_ident = clean_name.to_ascii_lowercase().replace('-', "_");
     let header_guard = clean_name.to_ascii_uppercase().replace('-', "_");
@@ -255,6 +257,7 @@ debug: clean all
 clean:
 	@echo "🧹 Cleaning build artifacts..."
 	@$(RM_CMD)
+	@-rm -f $(SRC_DIR)/main $(SRC_DIR)/main.exe 2>/dev/null || true
 
 info:
 	@echo "Project:  $(TARGET)"
@@ -438,6 +441,7 @@ debug: clean all
 clean:
 	@echo "🧹 Cleaning build artifacts..."
 	@$(RM_CMD)
+	@-rm -f $(SRC_DIR)/main $(SRC_DIR)/main.exe 2>/dev/null || true
 
 info:
 	@echo "Project:  $(TARGET)"
@@ -573,6 +577,8 @@ dist/
 *.dylib
 *.so
 *.a
+src/main
+src/main.exe
 
 # CMake Cache & Files
 compile_commands.json
@@ -625,6 +631,13 @@ cmake_install.cmake
   "files.associations": {
     "*.hpp": "cpp",
     "*.h": "c"
+  },
+  "code-runner.clearPreviousOutput": true,
+  "code-runner.showExecutionMessage": false,
+  "code-runner.fileDirectoryAsCwd": false,
+  "code-runner.executorMap": {
+    "cpp": "g++ -Iinclude \"$fullFileName\" -o bin/main && ./bin/main",
+    "c": "gcc -Iinclude \"$fullFileName\" -o bin/main && ./bin/main"
   }
 }
 "#;
@@ -702,8 +715,13 @@ mod tests {
         assert!(app_dir.join(".gitignore").exists());
         assert!(app_dir.join(".vscode/tasks.json").exists());
         assert!(app_dir.join(".vscode/settings.json").exists());
+        assert!(app_dir.join("bin").is_dir());
         assert!(app_dir.join("src/main.cpp").exists());
         assert!(app_dir.join("include/my_cpp_app.hpp").exists());
+
+        let settings = fs::read_to_string(app_dir.join(".vscode/settings.json")).unwrap();
+        assert!(settings.contains("code-runner.executorMap"));
+        assert!(settings.contains("bin/main"));
 
         let cmakelists = fs::read_to_string(app_dir.join("CMakeLists.txt")).unwrap();
         assert!(cmakelists.contains("CMAKE_CXX_STANDARD 20"));

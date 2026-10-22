@@ -2390,7 +2390,7 @@ pub static RANDOM_EMOJIS: &[&str] = &[
     "🦄", "🐉",
 ];
 
-/// Dynamic folder-aware emoji generator matching Zsh `rand_emoji`.
+/// Dynamic random emoji generator matching Zsh `rand_emoji`.
 pub fn rand_emoji(cwd: &str) -> &'static str {
     let folder = format_short_cwd(cwd).to_lowercase();
     let nanos = std::time::SystemTime::now()
@@ -2398,21 +2398,11 @@ pub fn rand_emoji(cwd: &str) -> &'static str {
         .map(|d| d.as_nanos() as usize)
         .unwrap_or(0);
 
-    if folder.contains("web") {
-        "🌐"
-    } else if folder.contains("node") {
-        "🟢"
-    } else if folder.contains("bun") {
-        "🥐"
-    } else if folder.contains("py") {
-        "🐍"
-    } else {
-        let mut hash: usize = 5381;
-        for b in folder.bytes() {
-            hash = hash.wrapping_mul(33).wrapping_add(b as usize);
-        }
-        RANDOM_EMOJIS[(hash.wrapping_add(nanos)) % RANDOM_EMOJIS.len()]
+    let mut hash: usize = 5381;
+    for b in folder.bytes() {
+        hash = hash.wrapping_mul(33).wrapping_add(b as usize);
     }
+    RANDOM_EMOJIS[(hash.wrapping_add(nanos)) % RANDOM_EMOJIS.len()]
 }
 
 /// Dynamic rainbow color generator matching Zsh `rand_color`.
@@ -2705,11 +2695,11 @@ mod tests {
         }
     }
     #[test]
-    fn rand_emoji_matches_folder_keywords() {
-        assert_eq!(rand_emoji("/home/user/my-web-app"), "🌐");
-        assert_eq!(rand_emoji("/var/www/node-backend"), "🟢");
-        assert_eq!(rand_emoji("/projects/bun-server"), "🥐");
-        assert_eq!(rand_emoji("/home/user/py-script"), "🐍");
+    fn rand_emoji_returns_valid_random_emoji() {
+        assert!(RANDOM_EMOJIS.contains(&rand_emoji("/home/user/my-web-app")));
+        assert!(RANDOM_EMOJIS.contains(&rand_emoji("/var/www/node-backend")));
+        assert!(RANDOM_EMOJIS.contains(&rand_emoji("/projects/bun-server")));
+        assert!(RANDOM_EMOJIS.contains(&rand_emoji("/home/user/py-script")));
         assert!(RANDOM_EMOJIS.contains(&rand_emoji("/home/user/myproj")));
         assert!(RANDOM_EMOJIS.contains(&rand_emoji("/home/user/random_folder")));
     }

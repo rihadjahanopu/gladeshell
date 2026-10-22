@@ -254,7 +254,7 @@ gladeshell renders a responsive, contextual prompt powered by Rust:
 
 | Element            | Description                                                                                   |
 | ------------------ | --------------------------------------------------------------------------------------------- |
-| `rand_emoji`       | Folder-aware emoji — `🌐` for web, `🟢` for node, `🥐` for bun, `🐍` for py, random otherwise |
+| `rand_emoji`       | Dynamic random emoji from modern emoji set on every prompt render                             |
 | `rand_color`       | Rainbow color cycle on every prompt render                                                    |
 | `parse_git_branch` | Shows `branchname ❗` when working tree is dirty                                              |
 | `cpu_temp`         | 🟢 Green / 🟡 Yellow / 🔴 Red based on temperature thresholds                                 |

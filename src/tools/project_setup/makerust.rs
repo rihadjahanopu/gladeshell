@@ -496,7 +496,13 @@ Thumbs.db
     // 6. .vscode/settings.json
     let settings_json = r#"{
   "rust-analyzer.check.command": "clippy",
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "code-runner.clearPreviousOutput": true,
+  "code-runner.showExecutionMessage": false,
+  "code-runner.fileDirectoryAsCwd": false,
+  "code-runner.executorMap": {
+    "rust": "cargo run"
+  }
 }
 "#;
     fs::write(vscode_dir.join("settings.json"), settings_json)?;
@@ -599,6 +605,10 @@ mod tests {
         assert!(app_dir.join(".vscode/tasks.json").exists());
         assert!(app_dir.join(".vscode/settings.json").exists());
         assert!(app_dir.join("src/main.rs").exists());
+
+        let settings = fs::read_to_string(app_dir.join(".vscode/settings.json")).unwrap();
+        assert!(settings.contains("code-runner.executorMap"));
+        assert!(settings.contains("cargo run"));
 
         let cargo_toml = fs::read_to_string(app_dir.join("Cargo.toml")).unwrap();
         assert!(cargo_toml.contains("name = \"my-rust-bin\""));

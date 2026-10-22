@@ -611,11 +611,12 @@ cf() {
             ;;
         CODE)
             local open_path="$target"
-            if   command -v zed    &>/dev/null; then zed    "$open_path" >/dev/null 2>&1 &
+            if   command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
             elif command -v cursor &>/dev/null; then cursor "$open_path" >/dev/null 2>&1 &
-            elif command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
+            elif command -v zed    &>/dev/null; then zed -n "$open_path" >/dev/null 2>&1 &
             elif command -v codium &>/dev/null; then codium "$open_path" >/dev/null 2>&1 &
             elif command -v nvim   &>/dev/null; then nvim   "$open_path"
+            elif [[ -n "$VISUAL" ]]; then "$VISUAL" "$open_path"
             elif [[ -n "$EDITOR" ]]; then "$EDITOR" "$open_path"
             else [[ -d "$open_path" ]] && cd -- "$open_path" || return
             fi
@@ -660,11 +661,12 @@ ff() {
             ;;
         CODE)
             local open_path="$target"
-            if   command -v zed    &>/dev/null; then zed    "$open_path" >/dev/null 2>&1 &
+            if   command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
             elif command -v cursor &>/dev/null; then cursor "$open_path" >/dev/null 2>&1 &
-            elif command -v code   &>/dev/null; then code   "$open_path" >/dev/null 2>&1 &
+            elif command -v zed    &>/dev/null; then zed -n "$open_path" >/dev/null 2>&1 &
             elif command -v codium &>/dev/null; then codium "$open_path" >/dev/null 2>&1 &
             elif command -v nvim   &>/dev/null; then nvim   "$open_path"
+            elif [[ -n "$VISUAL" ]]; then "$VISUAL" "$open_path"
             elif [[ -n "$EDITOR" ]]; then "$EDITOR" "$open_path"
             fi
             ;;
@@ -739,16 +741,18 @@ function cf
             end
         case CODE
             set -l open_path "$target"
-            if type -q zed
-                zed "$open_path" >/dev/null 2>&1 &
+            if type -q code
+                code "$open_path" >/dev/null 2>&1 &
             else if type -q cursor
                 cursor "$open_path" >/dev/null 2>&1 &
-            else if type -q code
-                code "$open_path" >/dev/null 2>&1 &
+            else if type -q zed
+                zed -n "$open_path" >/dev/null 2>&1 &
             else if type -q codium
                 codium "$open_path" >/dev/null 2>&1 &
             else if type -q nvim
                 nvim "$open_path"
+            else if test -n "$VISUAL"
+                $VISUAL "$open_path"
             else if test -n "$EDITOR"
                 $EDITOR "$open_path"
             else if test -d "$open_path"
@@ -793,16 +797,18 @@ function ff
             end
         case CODE
             set -l open_path "$target"
-            if type -q zed
-                zed "$open_path" >/dev/null 2>&1 &
+            if type -q code
+                code "$open_path" >/dev/null 2>&1 &
             else if type -q cursor
                 cursor "$open_path" >/dev/null 2>&1 &
-            else if type -q code
-                code "$open_path" >/dev/null 2>&1 &
+            else if type -q zed
+                zed -n "$open_path" >/dev/null 2>&1 &
             else if type -q codium
                 codium "$open_path" >/dev/null 2>&1 &
             else if type -q nvim
                 nvim "$open_path"
+            else if test -n "$VISUAL"
+                eval "$VISUAL '$open_path'"
             else if test -n "$EDITOR"
                 eval "$EDITOR '$open_path'"
             end
@@ -878,9 +884,9 @@ function cf {
         }
         "CODE" {
             $openPath = $target
-            if (Get-Command zed -ErrorAction SilentlyContinue) { Start-Process zed -ArgumentList "`"$openPath`"" }
+            if (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
             elseif (Get-Command cursor -ErrorAction SilentlyContinue) { Start-Process cursor -ArgumentList "`"$openPath`"" }
-            elseif (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command zed -ErrorAction SilentlyContinue) { Start-Process zed -ArgumentList "-n `"$openPath`"" }
             elseif (Get-Command codium -ErrorAction SilentlyContinue) { Start-Process codium -ArgumentList "`"$openPath`"" }
             elseif (Test-Path -Path $openPath -PathType Container) { Set-Location -Path $openPath }
         }
@@ -918,9 +924,9 @@ function ff {
         }
         "CODE" {
             $openPath = $target
-            if (Get-Command zed -ErrorAction SilentlyContinue) { Start-Process zed -ArgumentList "`"$openPath`"" }
+            if (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
             elseif (Get-Command cursor -ErrorAction SilentlyContinue) { Start-Process cursor -ArgumentList "`"$openPath`"" }
-            elseif (Get-Command code -ErrorAction SilentlyContinue) { Start-Process code -ArgumentList "`"$openPath`"" }
+            elseif (Get-Command zed -ErrorAction SilentlyContinue) { Start-Process zed -ArgumentList "-n `"$openPath`"" }
             elseif (Get-Command codium -ErrorAction SilentlyContinue) { Start-Process codium -ArgumentList "`"$openPath`"" }
         }
         "OPEN" {
@@ -1115,11 +1121,36 @@ mod tests {
 
     #[test]
     fn test_render_cf_wrapper() {
-        assert!(render_cf_wrapper(Shell::Bash).contains("unalias cf"));
-        assert!(render_cf_wrapper(Shell::Zsh).contains("_cf_open"));
-        assert!(render_cf_wrapper(Shell::Fish).contains("_cf_open"));
-        assert!(render_cf_wrapper(Shell::Pwsh).contains("_cf_open"));
-        assert!(render_cf_wrapper(Shell::Bash).contains("OPEN)"));
+        let bash_cf = render_cf_wrapper(Shell::Bash);
+        assert!(bash_cf.contains("unalias cf"));
+        assert!(bash_cf.contains("_cf_open"));
+        assert!(bash_cf.contains("OPEN)"));
+        assert!(bash_cf.contains("command -v code"));
+        assert!(bash_cf.contains("zed -n"));
+        // Ensure 'code' priority comes before 'zed'
+        let code_pos = bash_cf.find("command -v code").unwrap();
+        let zed_pos = bash_cf.find("command -v zed").unwrap();
+        assert!(code_pos < zed_pos);
+
+        let zsh_cf = render_cf_wrapper(Shell::Zsh);
+        assert!(zsh_cf.contains("_cf_open"));
+        assert!(zsh_cf.contains("zed -n"));
+
+        let fish_cf = render_cf_wrapper(Shell::Fish);
+        assert!(fish_cf.contains("_cf_open"));
+        assert!(fish_cf.contains("type -q code"));
+        assert!(fish_cf.contains("zed -n"));
+        let fish_code_pos = fish_cf.find("type -q code").unwrap();
+        let fish_zed_pos = fish_cf.find("type -q zed").unwrap();
+        assert!(fish_code_pos < fish_zed_pos);
+
+        let pwsh_cf = render_cf_wrapper(Shell::Pwsh);
+        assert!(pwsh_cf.contains("_cf_open"));
+        assert!(pwsh_cf.contains("Get-Command code"));
+        assert!(pwsh_cf.contains("zed -ArgumentList \"-n"));
+        let pwsh_code_pos = pwsh_cf.find("Get-Command code").unwrap();
+        let pwsh_zed_pos = pwsh_cf.find("Get-Command zed").unwrap();
+        assert!(pwsh_code_pos < pwsh_zed_pos);
     }
 
     #[test]

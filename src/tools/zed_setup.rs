@@ -39,6 +39,7 @@ const NC: &str = "\x1b[0m";
 
 // ── Settings Payload (Valid JSON) ─────────────────────────────
 pub const ZED_SETTINGS: &str = r#"{
+  "accessible_mode": true,
   "close_panel_on_toggle": true,
   "completion_menu_item_kind": "symbol",
   "markdown_preview": {

@@ -20,6 +20,24 @@ pub fn group() -> AliasGroup {
                 only_shells: vec![],
             },
             AliasEntry {
+                key: "gw".into(),
+                value: "gladeshell watch".into(),
+                description: "Universal hot reload & dev watch runner".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "cwatch".into(),
+                value: "gladeshell watch".into(),
+                description: "Universal hot reload & dev watch runner".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "cw".into(),
+                value: "gladeshell watch".into(),
+                description: "Universal hot reload & dev watch runner".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
                 key: "ffmedia".into(),
                 value: "gladeshell ffmedia".into(),
                 description: "Interactive 24-in-1 FFmpeg multimedia suite".into(),

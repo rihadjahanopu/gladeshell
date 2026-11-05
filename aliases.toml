@@ -840,4 +840,19 @@ key         = "compress"
 value       = "gladeshell cmp"
 description = "High-performance parallel multithreaded archive compressor"
 
+[[group.aliases]]
+key         = "gw"
+value       = "gladeshell watch"
+description = "Universal Hot Reload & Dev Watch Engine"
+
+[[group.aliases]]
+key         = "cwatch"
+value       = "gladeshell watch"
+description = "Universal Hot Reload & Dev Watch Engine"
+
+[[group.aliases]]
+key         = "cw"
+value       = "gladeshell watch"
+description = "Universal Hot Reload & Dev Watch Engine"
+
 

@@ -412,6 +412,12 @@ fn build_categories() -> Vec<CmdCategory> {
             title: "C/C++ & RUST DEVELOPMENT",
             cmds: vec![
                 CmdEntry {
+                    cmd: "gw [target]",
+                    desc: "Universal hot reload & dev watch runner (-t for TUI)",
+                    example: "gw, gw main.cpp, gw -t",
+                    color: C_ACCENT,
+                },
+                CmdEntry {
                     cmd: "makecpp",
                     desc: "C/C++ boilerplate (cd, git, vscode)",
                     example: "makecpp proj",
@@ -555,6 +561,12 @@ fn build_categories() -> Vec<CmdCategory> {
             icon: "🚀",
             title: "ADVANCED INTERACTIVE TUIS",
             cmds: vec![
+                CmdEntry {
+                    cmd: "gw -t",
+                    desc: "Universal hot reload & dev watch runner TUI dashboard",
+                    example: "gw -t, gw -t main.rs",
+                    color: C_ACCENT,
+                },
                 CmdEntry {
                     cmd: "keep",
                     desc: "Master Command Center & Help Menu TUI",
@@ -717,6 +729,12 @@ fn build_categories() -> Vec<CmdCategory> {
             icon: "🖥️",
             title: "UTILITY TOOLS",
             cmds: vec![
+                CmdEntry {
+                    cmd: "gw",
+                    desc: "Auto-rebuild & run on file change (Rust, C/C++, Go, Node)",
+                    example: "gw, gw --no-clear",
+                    color: C_GREEN,
+                },
                 CmdEntry {
                     cmd: "ex <file>",
                     desc: "Extract any archive",

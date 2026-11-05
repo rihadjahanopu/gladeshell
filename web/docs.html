@@ -323,9 +323,11 @@
         <div class="sidebar-group">
           <div class="sidebar-group-title">📂 Command Reference</div>
           <ul class="sidebar-links">
+            <li><a href="#gw-runner">⚡ Watch Runner (gw)</a></li>
             <li><a href="#nav-commands">Navigation & Jumps</a></li>
             <li><a href="#pkg-commands">Package Managers (NPM/Bun)</a></li>
             <li><a href="#git-commands">Git Version Control</a></li>
+            <li><a href="#project-commands">Project Initialization</a></li>
             <li><a href="#sys-commands">System & Maintenance</a></li>
             <li><a href="#interactive-utilities">Interactive (Todo / Notes)</a></li>
             <li><a href="#ffmedia-suite">FFmedia Suite</a></li>
@@ -2434,6 +2436,10 @@ glade matrix
               </thead>
               <tbody>
                 <tr>
+                  <td><code>gw [target]</code></td>
+                  <td>Universal hot-reload runner for Rust/C/C++/Go/Python/Node/Zig with sub-ms zero-CPU watch &amp; TUI (<code>-t</code>)</td>
+                </tr>
+                <tr>
                   <td><code>project</code></td>
                   <td>Interactive Project Setup &amp; Tool Hub TUI (Next.js, Vite, Bun, Tailwind v4, Shadcn)</td>
                 </tr>
@@ -2479,6 +2485,61 @@ glade matrix
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- 4.1 GW RUNNER -->
+          <div class="docs-callout" style="margin-top: 24px; border-left: 4px solid #a6e3a1">
+            <h3 id="gw-runner" style="margin-top: 0">⚡ Universal Hot Reload &amp; Watch Runner (<code>gw</code>)</h3>
+            <p>
+              <code>gw</code> is an ultra-fast, 100% native Rust dev watch runner and compilation supervisor with zero-overhead inotify tracking.
+              It auto-detects project types, supervises child processes, passes stdin through interactively, and instantly re-runs on file changes.
+            </p>
+            <div class="docs-table-wrapper" style="margin: 12px 0">
+              <table class="docs-table">
+                <thead>
+                  <tr>
+                    <th>Flag / Command</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>gw</code></td>
+                    <td>Auto-detect project (Rust, C/C++, Go, Python, Node, Zig) and watch</td>
+                    <td><code>gw</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>gw &lt;file&gt;</code></td>
+                    <td>Watch and compile a single file directly</td>
+                    <td><code>gw main.cpp</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>gw -t</code></td>
+                    <td>Launch with interactive Ratatui TUI dashboard</td>
+                    <td><code>gw -t</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>gw -s</code></td>
+                    <td>Compile with AddressSanitizer &amp; UBSan (C/C++)</td>
+                    <td><code>gw -s main.c</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>gw --no-clear</code></td>
+                    <td>Preserve terminal scrollback on rebuild</td>
+                    <td><code>gw --no-clear</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>gw -- &lt;args&gt;</code></td>
+                    <td>Forward CLI arguments directly to the spawned binary</td>
+                    <td><code>gw -- --port 8080</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="margin-top: 8px; font-size: 0.85rem">
+              <strong>Runtime Hotkeys:</strong> <kbd>[r]</kbd> Rebuild &bull; <kbd>[Enter]</kbd> Re-run completed process &bull; <kbd>[c]</kbd> Clear &bull; <kbd>[p]</kbd> Pause/Resume &bull; <kbd>[s]</kbd> Toggle ASan &bull; <kbd>[?]</kbd> Help &bull; <kbd>[q]</kbd> Quit.
+            </p>
           </div>
 
           <!-- 5. SYSTEM -->

@@ -25,6 +25,7 @@ pub mod fkill;
 pub mod fuzzy_cd;
 pub mod gbranch;
 pub mod git_wip;
+pub mod gwatch;
 pub mod history_search;
 pub mod keep;
 pub mod mkd;

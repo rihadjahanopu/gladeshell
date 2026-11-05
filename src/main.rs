@@ -201,7 +201,7 @@ fn main() {
         }
     }
 
-    let _prog_name = raw_args
+    let prog_name = raw_args
         .first()
         .map(|s| {
             std::path::Path::new(s)
@@ -211,6 +211,30 @@ fn main() {
                 .to_string()
         })
         .unwrap_or_default();
+
+    if prog_name == "gw" || prog_name == "cwatch" || prog_name == "cw" {
+        #[cfg(feature = "tools")]
+        {
+            #[derive(clap::Parser)]
+            #[command(name = "gw", about = "Universal hot reload & dev watch runner")]
+            struct GwCli {
+                #[command(flatten)]
+                args: gladeshell_core::tools::gwatch::WatchArgs,
+            }
+
+            let gw_cli = match GwCli::try_parse_from(
+                std::iter::once(prog_name).chain(raw_args.into_iter().skip(1)),
+            ) {
+                Ok(a) => a,
+                Err(err) => err.exit(),
+            };
+            if let Err(e) = gladeshell_core::tools::gwatch::run(&gw_cli.args) {
+                eprintln!("\x1b[31merror:\x1b[0m {e}");
+                std::process::exit(1);
+            }
+            return;
+        }
+    }
 
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
@@ -266,6 +290,8 @@ fn main() {
             Commands::Grep(args) => gladeshell_core::tools::fast_grep::run(args),
             #[cfg(feature = "tools")]
             Commands::Ff(args) => gladeshell_core::tools::file_find::run(args),
+            #[cfg(feature = "tools")]
+            Commands::Watch(args) => gladeshell_core::tools::gwatch::run(&args),
             Commands::Kp(args) => gladeshell_core::tools::fkill::run_kp(args.port.as_deref()),
             Commands::Project => gladeshell_core::tools::project_setup::run_project(),
             Commands::Ii => gladeshell_core::tools::project_setup::run_ii(),

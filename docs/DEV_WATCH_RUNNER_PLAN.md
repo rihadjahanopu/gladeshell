@@ -35,7 +35,7 @@ flowchart TD
         STDIN["Interactive Terminal Input (std::cin / scanf / TTY)"]
     end
 
-    subgraph CoreEngine ["2. Gladeshell Watch Core (src/tools/cwatch.rs)"]
+    subgraph CoreEngine ["2. Gladeshell Watch Core (src/tools/gwatch.rs)"]
         IG["Smart Ignore Filter (.git, build/, bin/, .cache, swap)"]
         DB["Adaptive Micro-Debounce (35ms Window)"]
         SM["State & Lifecycle Supervisor (Idle / Compiling / Running / Paused)"]
@@ -327,8 +327,8 @@ In C and C++, 60–80% of rebuild time is consumed by the GNU `ld` linker and re
 
 ## 8. Detailed Implementation Roadmap
 
-### Phase 1: Core Watch Engine & Process Supervisor (`src/tools/cwatch.rs`)
-- [ ] Create `cwatch.rs` with `WatchConfig`, Rayon parallel file scanner (`rayon::par_iter`), Linux `inotify` engine, and 35ms micro-debouncer.
+### Phase 1: Core Watch Engine & Process Supervisor (`src/tools/gwatch.rs`)
+- [ ] Create `gwatch.rs` with `WatchConfig`, Rayon parallel file scanner (`rayon::par_iter`), Linux `inotify` engine, and 35ms micro-debouncer.
 - [ ] Implement `ChildProcessSupervisor` with concurrent process reaping, cross-platform SIGTERM/SIGKILL, and port reclamation.
 - [ ] Implement 3-tier MPSC channel architecture (Watcher thread, Hotkey thread, Main supervisor).
 - [ ] Implement TTY inheritance and execution time measurement (`Instant::now()`).

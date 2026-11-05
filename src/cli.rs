@@ -127,6 +127,11 @@ pub enum Commands {
     #[command(alias = "file-find", alias = "find-file")]
     Ff(crate::tools::file_find::FfArgs),
 
+    /// Universal hot reload & dev watch runner (gw / cwatch / cw)
+    #[cfg(feature = "tools")]
+    #[command(alias = "gw", alias = "cwatch", alias = "cw")]
+    Watch(crate::tools::gwatch::WatchArgs),
+
     /// Kill process running on a specific port (`kp <port>`)
     Kp(KpArgs),
 

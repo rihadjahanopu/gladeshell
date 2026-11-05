@@ -251,6 +251,9 @@ run: all
 	@echo "🚀 Executing $(TARGET)..."
 	@$(RUN_CMD)
 
+watch:
+	@gladeshell watch
+
 debug: CXXFLAGS := $(DEBUG_FLAGS)
 debug: clean all
 
@@ -435,6 +438,9 @@ run: all
 	@echo "🚀 Executing $(TARGET)..."
 	@$(RUN_CMD)
 
+watch:
+	@gladeshell watch
+
 debug: CFLAGS := $(DEBUG_FLAGS)
 debug: clean all
 
@@ -609,6 +615,12 @@ cmake_install.cmake
       "problemMatcher": ["$gcc"]
     },
     {
+      "label": "Watch & Hot Reload (gladeshell watch)",
+      "type": "shell",
+      "command": "gladeshell watch",
+      "problemMatcher": ["$gcc"]
+    },
+    {
       "label": "Build Debug",
       "type": "shell",
       "command": "make debug",
@@ -670,7 +682,7 @@ cmake_install.cmake
     );
     println!("   Directory : {}", project_dir.display());
     println!("   Files     :");
-    println!("     ├── Makefile        (make run / clean / debug)");
+    println!("     ├── Makefile        (make run / watch / clean / debug)");
     println!("     ├── CMakeLists.txt  (CMake 3.16+)");
     println!("     ├── build.sh        (One-click runner)");
     println!("     ├── .gitignore");
@@ -730,6 +742,7 @@ mod tests {
         let makefile = fs::read_to_string(app_dir.join("Makefile")).unwrap();
         assert!(makefile.contains("CXX"));
         assert!(makefile.contains("run:"));
+        assert!(makefile.contains("watch:"));
         assert!(makefile.contains("clean:"));
         assert!(makefile.contains("RUN_CMD      = ./$(BIN_DIR)/$(TARGET)"));
         assert!(makefile.contains("RM_CMD       = rm -rf $(BUILD_DIR) $(BIN_DIR)"));
@@ -782,6 +795,7 @@ mod tests {
         let makefile = fs::read_to_string(app_dir.join("Makefile")).unwrap();
         assert!(makefile.contains("CC"));
         assert!(makefile.contains("run:"));
+        assert!(makefile.contains("watch:"));
         assert!(makefile.contains("RUN_CMD      = ./$(BIN_DIR)/$(TARGET)"));
         assert!(makefile.contains("RM_CMD       = rm -rf $(BUILD_DIR) $(BIN_DIR)"));
 

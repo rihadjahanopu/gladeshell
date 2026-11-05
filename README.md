@@ -46,6 +46,7 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
   - [⚡ Switch Themes](#-switch-themes)
   - [📋 All 55 Themes](#-all-55-themes)
 - [🛠️ Command Reference](#️-command-reference)
+  - [⚡ Watch Runner (gw)](#-universal-hot-reload--watch-runner-gw)
   - [📂 Navigation](#-navigation--movement)
   - [📦 Package Managers](#-npm--bun-commands)
   - [🌿 Git Shortcuts](#-git-version-control)
@@ -94,6 +95,7 @@ One binary. One install. Absolute speed.
 | Feature                        | Description                                                                                           |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | ⚡ **Pure Rust Engine**        | Compiled Rust binary delivering sub-millisecond execution and zero runtime dependencies               |
+| ⚡ **Universal Watch Runner** | `gw` — Zero-dependency hot reload & dev runner for Rust, C/C++, Python, Go, Node, Zig with native TUI dashboard |
 | 🛡️ **Safe & Idempotent**       | Universal setup script never overwrites shell configs blindly — creates timestamped backups           |
 | 🗜️ **Level 1 Fast Compressor** | Parallel multi-core zstd archive engine optimized for maximum compression speed                       |
 | 🖥️ **Ratatui TUI Suite**       | Native terminal GUIs for Todo, Notes, Filetree navigation, Process Manager, and System Clean          |
@@ -447,6 +449,7 @@ gwip "add auth middleware"   # Custom message
 
 | Command      | Description                                                                      |
 | ------------ | -------------------------------------------------------------------------------- |
+| `gw [target]` | Universal hot-reload runner for Rust/C/C++/Go/Python/Node/Zig with sub-ms zero-CPU idle watch |
 | `project`    | Interactive Project Setup & Tool Hub TUI (Next.js, Vite, Bun, Tailwind v4, Shadcn) |
 | `ii`         | Interactive project init — choose Bun or NPM, auto-creates `.gitignore`          |
 | `next`       | Scaffold Next.js app (`create-next-app`) via Bun or NPM                          |
@@ -469,6 +472,39 @@ vite
 # Add Tailwind CSS v4? (y/n): y
 # → Installs packages, creates src/index.css with @import "tailwindcss"
 ```
+
+---
+
+### ⚡ Universal Hot Reload & Watch Runner (`gw`)
+
+**`gw`** is an ultra-fast, 100% native Rust dev watch runner and supervisor with zero-overhead inotify tracking. It automatically detects project types, compiles, supervises execution, and hot-reloads on file changes with full interactive terminal passthrough.
+
+#### Supported Ecosystems:
+- **Rust:** `Cargo.toml` projects or standalone `.rs` files (`cargo run` / `rustc`)
+- **C / C++:** `Makefile`, `CMakeLists.txt`, or standalone `.c`/`.cpp` files (`clang++` / `g++` / `gcc`)
+- **Go:** `go.mod` projects or single `.go` files (`go run`)
+- **Python:** Single scripts or packages (`python3`)
+- **Node.js & TypeScript:** `package.json` scripts or `.ts`/`.js` files (`bun` / `node`)
+- **Zig:** `build.zig` projects or `.zig` files (`zig run`)
+
+```bash
+gw                           # Auto-detects project and watches with sub-millisecond hot reload
+gw main.cpp                  # Watch and compile single C/C++ file with GCC/Clang
+gw -t                        # Full Ratatui TUI dashboard mode
+gw -s                        # Enable AddressSanitizer & UndefinedBehaviorSanitizer (C/C++)
+gw --no-clear                # Preserve terminal scrollback between runs
+gw -w config.json            # Add extra files/directories to watch
+gw -- --port 8080            # Pass CLI arguments directly to your running binary
+```
+
+#### 🎮 Interactive Hotkeys (during execution):
+- `[r]` — Force instant re-compilation and execution
+- `[Enter]` — Immediately re-run after a completed process exits
+- `[c]` — Clear terminal scrollback buffer
+- `[p]` — Pause / Resume file change detection
+- `[s]` — Toggle AddressSanitizer mode on/off on the fly (C/C++)
+- `[?]` — Open contextual help overlay
+- `[q]` — Clean shutdown with process group termination and terminal state restore
 
 ---
 

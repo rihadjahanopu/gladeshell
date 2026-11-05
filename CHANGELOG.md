@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.15] — 2026-11-06
+
+### ⚡ Universal Dev Watch Runner (`gw`)
+- 🔄 **Universal Multi-Language Hot Reload**:
+  - Added native `gw` hot-reload runner in `src/tools/gwatch.rs` supporting Rust (`Cargo.toml`, `.rs`), C/C++ (`Makefile`, `CMakeLists.txt`, `.c`, `.cpp`), Go (`go.mod`, `.go`), Python (`.py`), Node.js/TypeScript (`package.json`, `.ts`, `.js`), and Zig (`build.zig`, `.zig`).
+- ⚡ **Zero-CPU Idle Watch Loop**:
+  - Optimized file change detection using Linux native `inotify` kernel events with dynamic directory tracking, eliminating repetitive disk scans and keeping idle CPU near 0%.
+- 🛡️ **Kernel Child Reaper & Global Panic Hook**:
+  - Integrated `PR_SET_PDEATHSIG` on Linux to ensure child processes terminate cleanly if the supervisor exits.
+  - Added global panic hook to reliably restore terminal raw mode, cursor visibility, and exit alternate screens on unexpected errors.
+- ⌨️ **Interactive Child Stdin & Instant Re-Run**:
+  - Implemented interactive stdin passthrough for interactive CLI programs.
+  - Added `[Enter]` re-run toast notification and immediate re-execution after child process exits.
+- 🛡️ **Context-Aware AddressSanitizer**:
+  - Added `[s]` ASan/UBSan toggle during runtime exclusively for C/C++ projects.
+- 🖥️ **Full Ratatui TUI Dashboard (`gw -t`)**:
+  - Full interactive terminal dashboard mode with dirty-frame rendering optimization and bounded history queue.
+- 📐 **Pixel-Perfect Banner Alignment**:
+  - Fixed Unicode right-border box alignment across narrow and wide terminal sizes.
+
+### 🛠️ Infrastructure & Documentation
+- 📐 **Rustfmt Configuration**:
+  - Added `rustfmt.toml` configuring standardized Rust 2021 code formatting across all targets.
+- 📖 **Comprehensive Documentation**:
+  - Integrated `gw` command into `keep` Master Help Menu TUI, `README.md`, `web/index.html`, and `web/docs.html`.
+
 ## 🚀 [1.2.14] — 2026-10-22
 
 ### 🛠️ Editor Priority & Navigation Fixes

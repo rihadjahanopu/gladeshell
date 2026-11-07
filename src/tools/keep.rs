@@ -9,7 +9,7 @@
 // =============================================================================
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -1330,6 +1330,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         terminal.draw(|f| draw_ui(f, &mut app))?;
 
         if let Event::Key(key) = event::read()? {
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
             match (key.modifiers, key.code) {
                 (_, KeyCode::Esc) | (KeyModifiers::CONTROL, KeyCode::Char('c')) => break,
                 (_, KeyCode::PageUp)

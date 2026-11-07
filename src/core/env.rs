@@ -150,7 +150,7 @@ pub fn render_path_pwsh(entry: &PathEntry) -> String {
     // Unix root paths (/usr/bin, etc.) should only be prepended if they actually exist on disk:
     if entry.dir.starts_with('/') {
         return format!(
-            r#"if (Test-Path "{dir}") {{ $env:PATH = "{dir}" + [IO.Path]::PathSeparator + $env:PATH }}"#,
+            r#"if (($env:PATH -split [IO.Path]::PathSeparator -notcontains "{dir}") -and (Test-Path "{dir}")) {{ $env:PATH = "{dir}" + [IO.Path]::PathSeparator + $env:PATH }}"#,
             dir = entry.dir
         );
     }
@@ -158,7 +158,7 @@ pub fn render_path_pwsh(entry: &PathEntry) -> String {
     // Expand "$HOME" cleanly in PowerShell and normalize slashes for Windows:
     let dir = entry.dir.replace('/', "\\");
     format!(
-        r#"if (Test-Path "{dir}") {{ $env:PATH = "{dir}" + [IO.Path]::PathSeparator + $env:PATH }}"#,
+        r#"if (($env:PATH -split [IO.Path]::PathSeparator -notcontains "{dir}") -and (Test-Path "{dir}")) {{ $env:PATH = "{dir}" + [IO.Path]::PathSeparator + $env:PATH }}"#,
         dir = dir
     )
 }

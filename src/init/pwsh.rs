@@ -40,10 +40,22 @@ try {
 # ── gladeshell Prompt & Native Auto-LS Hook ──
 $global:_fb_last_pwd = $null
 $global:_fb_timer = $null
+$global:_fb_is_transient = $false
 
 function Prompt {
     $ErrorActionPreference = 'SilentlyContinue'
     $lastExit = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+
+    # Transient prompt fast-path: invoked by PSConsoleReadLine on Enter
+    if ($global:_fb_is_transient) {
+        $global:_fb_is_transient = $false
+        $transient = gladeshell prompt --transient --shell pwsh --exit-code $lastExit 2>$null
+        if ($transient) {
+            return $transient
+        }
+        return "❯ "
+    }
+
     $cwd = (Get-Location).Path
     if ($cwd -ne $global:_fb_last_pwd) {
         $global:_fb_last_pwd = $cwd
@@ -66,7 +78,8 @@ function Prompt {
     }
 
     # Auto-spawn background IPC daemon on Unix/macOS (one-time session guard)
-    if (-not $IsWindows -and -not $global:_fb_daemon_spawned) {
+    $isWin = [System.Environment]::OSVersion.Platform -match 'Win' -or $env:OS -eq 'Windows_NT'
+    if (-not $isWin -and -not $global:_fb_daemon_spawned) {
         $global:_fb_daemon_spawned = $true
         $sock = gladeshell socket-path 2>$null
         if ($sock -and -not (Test-Path $sock)) {
@@ -86,26 +99,39 @@ $psrl = Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue
 if ($psrl) {
     Set-PSReadLineOption -EditMode Emacs -ErrorAction SilentlyContinue
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd -ErrorAction SilentlyContinue
+    Set-PSReadLineOption -ShowToolTips -ErrorAction SilentlyContinue
     if ($psrl.Parameters.ContainsKey('PredictionSource')) {
         Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue
     }
     if ($psrl.Parameters.ContainsKey('PredictionViewStyle')) {
         Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue
     }
+    # Dynamic syntax highlighting aligned with Gladeshell palette
+    Set-PSReadLineOption -Colors @{
+        Command            = '#38bdf8'
+        Parameter          = '#94a3b8'
+        Operator           = '#f59e0b'
+        Variable           = '#ec4899'
+        String             = '#4ade80'
+        Number             = '#a855f7'
+        Type               = '#06b6d4'
+        Comment            = '#64748b'
+        InlinePrediction   = '#64748b'
+    } -ErrorAction SilentlyContinue
     Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete -ErrorAction SilentlyContinue
+    Set-PSReadLineKeyHandler -Chord 'Ctrl+Space' -Function MenuComplete -ErrorAction SilentlyContinue
     Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward -ErrorAction SilentlyContinue
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward -ErrorAction SilentlyContinue
-    # ── Transient Prompt & Timer Key Handler ──
+    # ── Transient Prompt & Timer Key Handler (Zero Buffer Injection) ──
     try {
         Set-PSReadLineKeyHandler -Key Enter -ScriptBlock {
             $global:_fb_timer = Get-Date
             $line = $null
             [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$null)
             if ($env:GLADESHELL_TRANSIENT -ne '0' -and $line) {
-                $transient = gladeshell prompt --transient --shell pwsh --exit-code $LASTEXITCODE 2>$null
-                if ($transient) {
-                    [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
-                    [Microsoft.PowerShell.PSConsoleReadLine]::Insert($transient + $line)
+                if ([bool]([Microsoft.PowerShell.PSConsoleReadLine].GetMethod('InvokePrompt'))) {
+                    $global:_fb_is_transient = $true
+                    [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
                 }
             }
             [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()

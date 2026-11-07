@@ -9,7 +9,7 @@
 // =============================================================================
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -536,6 +536,9 @@ fn run_dman_tui() -> Result<(), Box<dyn std::error::Error>> {
 
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
                 let is_ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
 
                 match app.screen {

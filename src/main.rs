@@ -106,6 +106,7 @@ fn fast_parse_prompt_args(args: &[String]) -> Option<PromptArgs> {
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 fn main() {
+    gladeshell_core::input_parser::enable_vt_output_processing();
     let raw_args: Vec<String> = std::env::args().collect();
 
     // Fast-path dispatcher for hot-path subcommands (`prompt`, `version`, `auto-ls`)

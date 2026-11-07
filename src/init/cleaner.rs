@@ -43,20 +43,58 @@ pub fn get_rc_path_for_shell(shell: &str) -> Option<PathBuf> {
         "bash" => Some(PathBuf::from(&home).join(".bashrc")),
         "fish" => Some(PathBuf::from(&home).join(".config/fish/config.fish")),
         "pwsh" | "powershell" => {
-            let candidates = [
+            let mut candidates = Vec::new();
+
+            candidates.push(
                 PathBuf::from(&home)
                     .join("Documents")
                     .join("PowerShell")
                     .join("Microsoft.PowerShell_profile.ps1"),
+            );
+            candidates.push(
                 PathBuf::from(&home)
                     .join("Documents")
                     .join("WindowsPowerShell")
                     .join("Microsoft.PowerShell_profile.ps1"),
+            );
+
+            // Check OneDrive-redirected Documents (standard on Windows 10/11)
+            if let Ok(onedrive) = std::env::var("OneDrive") {
+                candidates.push(
+                    PathBuf::from(&onedrive)
+                        .join("Documents")
+                        .join("PowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1"),
+                );
+                candidates.push(
+                    PathBuf::from(&onedrive)
+                        .join("Documents")
+                        .join("WindowsPowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1"),
+                );
+            }
+            if let Ok(onedrive_c) = std::env::var("OneDriveConsumer") {
+                candidates.push(
+                    PathBuf::from(&onedrive_c)
+                        .join("Documents")
+                        .join("PowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1"),
+                );
+                candidates.push(
+                    PathBuf::from(&onedrive_c)
+                        .join("Documents")
+                        .join("WindowsPowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1"),
+                );
+            }
+
+            candidates.push(
                 PathBuf::from(&home)
                     .join(".config")
                     .join("powershell")
                     .join("Microsoft.PowerShell_profile.ps1"),
-            ];
+            );
+
             for candidate in &candidates {
                 if candidate.exists() {
                     return Some(candidate.clone());
@@ -75,8 +113,17 @@ pub fn clean_rc_file() -> std::io::Result<()> {
         "zsh"
     } else if shell.contains("fish") {
         "fish"
-    } else {
+    } else if shell.contains("bash") {
         "bash"
+    } else {
+        #[cfg(windows)]
+        {
+            "pwsh"
+        }
+        #[cfg(not(windows))]
+        {
+            "bash"
+        }
     };
 
     if let Some(rc_path) = get_rc_path_for_shell(target_shell) {
@@ -121,6 +168,12 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
         }
     }
 
+    let line_ending = if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+
     // Trim trailing blank lines from user content section
     while let Some(last) = others.last() {
         if last.trim().is_empty() {
@@ -131,15 +184,15 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
     }
 
     // Reassemble: user content first, glade block at the end
-    let mut final_content = others.join("\n");
+    let mut final_content = others.join(line_ending);
     if !block.is_empty() {
         if !final_content.is_empty() {
-            final_content.push('\n');
-            final_content.push('\n');
+            final_content.push_str(line_ending);
+            final_content.push_str(line_ending);
         }
-        final_content.push_str(&block.join("\n"));
+        final_content.push_str(&block.join(line_ending));
     }
-    final_content.push('\n');
+    final_content.push_str(line_ending);
 
     // Write back atomically using a PID-stamped temp file.
     let tmp_name = format!(
@@ -149,7 +202,7 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
     );
     let tmp_path = rc_path.with_file_name(tmp_name);
     fs::write(&tmp_path, final_content)?;
-    fs::rename(&tmp_path, rc_path)?;
+    crate::core::utils::atomic_replace(&tmp_path, rc_path)?;
 
     // Remove stale compiled bytecode if zsh
     if rc_path.to_string_lossy().contains(".zshrc") {
@@ -222,7 +275,12 @@ pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
     }
 
     // Append the eval block
-    let injection = format!("\n{}\n", eval_block);
+    let line_ending = if existing.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let injection = format!("{line_ending}{eval_block}{line_ending}");
 
     let mut file = fs::OpenOptions::new()
         .create(true)
@@ -238,9 +296,7 @@ pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
 /// When a new shell starts, even if the main RC file (~/.zshrc, ~/.bashrc, config.fish) was wiped,
 /// the auto-heal hook silently invokes `gladeshell setup` to re-inject the configuration instantly.
 pub fn ensure_auto_heal_hooks() -> std::io::Result<()> {
-    if let Ok(home_str) = std::env::var("HOME") {
-        let home = std::path::PathBuf::from(home_str);
-
+    if let Some(home) = crate::core::utils::home_dir() {
         // 1. Zsh auto-heal hook in ~/.zshenv (sourced before ~/.zshrc)
         // IMPORTANT: only re-inject when the block is truly MISSING from .zshrc.
         // The old unconditional `gladeshell setup` call was the root cause of the
@@ -375,7 +431,17 @@ pub fn ensure_all_installed_shells_configured() -> std::io::Result<Vec<String>> 
 
     for shell in &target_shells {
         if let Some(path) = get_rc_path_for_shell(shell) {
-            if path.exists() && ensure_init_in_rc(shell)? {
+            let should_attempt = path.exists() || {
+                #[cfg(windows)]
+                {
+                    *shell == "pwsh"
+                }
+                #[cfg(not(windows))]
+                {
+                    crate::core::utils::cmd_exists(shell)
+                }
+            };
+            if should_attempt && ensure_init_in_rc(shell)? {
                 configured.push(shell.to_string());
             }
         }

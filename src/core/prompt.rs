@@ -1424,11 +1424,8 @@ fn write_theme_color(dst: &mut [u8], off: &mut usize, color: u32, shell: u8) -> 
 
 /// Returns path to active theme config file (~/.config/gladeshell/theme).
 pub fn theme_config_path() -> std::path::PathBuf {
-    if let Ok(home) = std::env::var("HOME") {
-        std::path::PathBuf::from(home)
-            .join(".config")
-            .join("gladeshell")
-            .join("theme")
+    if let Some(home) = crate::core::utils::home_dir() {
+        home.join(".config").join("gladeshell").join("theme")
     } else {
         std::path::PathBuf::from(".gladeshell_theme")
     }
@@ -1470,8 +1467,8 @@ pub fn active_theme_id() -> usize {
         }
     }
     // Fallback: check legacy ~/.gladeshell_theme (written by glade_theme Zsh fn)
-    if let Ok(home) = std::env::var("HOME") {
-        let legacy = std::path::PathBuf::from(home).join(".gladeshell_theme");
+    if let Some(home) = crate::core::utils::home_dir() {
+        let legacy = home.join(".gladeshell_theme");
         if let Ok(content) = std::fs::read_to_string(&legacy) {
             let trimmed = content.trim();
             if let Some((i, _)) = THEMES
@@ -1542,9 +1539,8 @@ pub struct ThemeColorOverrides {
 
 /// Returns path to theme color overrides file (~/.config/gladeshell/theme_overrides.toml).
 pub fn theme_overrides_config_path() -> std::path::PathBuf {
-    if let Ok(home) = std::env::var("HOME") {
-        std::path::PathBuf::from(home)
-            .join(".config")
+    if let Some(home) = crate::core::utils::home_dir() {
+        home.join(".config")
             .join("gladeshell")
             .join("theme_overrides.toml")
     } else {
@@ -1769,19 +1765,19 @@ impl Default for PromptContext {
 }
 
 fn format_short_cwd(raw_cwd: &str) -> &str {
-    let trimmed = raw_cwd.trim_end_matches('/');
+    let trimmed = raw_cwd.trim_end_matches(['/', '\\']);
     if trimmed.is_empty() {
         return "/";
     }
-    if let Ok(home) = std::env::var("HOME") {
-        if trimmed == home.trim_end_matches('/') {
+    if let Some(home) = crate::core::utils::home_dir_string() {
+        if trimmed == home.trim_end_matches(['/', '\\']) {
             return "~";
         }
     }
     if trimmed == "~" {
         return "~";
     }
-    if let Some(pos) = trimmed.rfind('/') {
+    if let Some(pos) = trimmed.rfind(['/', '\\']) {
         &trimmed[pos + 1..]
     } else {
         trimmed

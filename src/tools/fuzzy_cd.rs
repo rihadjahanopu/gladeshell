@@ -21,8 +21,8 @@ use std::time::Instant;
 
 use crossterm::{
     event::{
-        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseButton,
-        MouseEventKind,
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+        MouseButton, MouseEventKind,
     },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -674,6 +674,9 @@ impl FuzzyCdApp {
 
             match event::read()? {
                 Event::Key(key) => {
+                    if key.kind != KeyEventKind::Press {
+                        continue;
+                    }
                     match (key.code, key.modifiers) {
                         (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                             return Ok(None);

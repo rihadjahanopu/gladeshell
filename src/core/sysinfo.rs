@@ -188,6 +188,39 @@ impl SystemMetrics {
     // ── Memory ────────────────────────────────────────────────────────────────
 
     fn read_meminfo(&mut self) {
+        #[cfg(windows)]
+        {
+            #[repr(C)]
+            #[allow(non_snake_case)]
+            struct MEMORYSTATUSEX {
+                dwLength: u32,
+                dwMemoryLoad: u32,
+                ullTotalPhys: u64,
+                ullAvailPhys: u64,
+                ullTotalPageFile: u64,
+                ullAvailPageFile: u64,
+                ullTotalVirtual: u64,
+                ullAvailVirtual: u64,
+                ullAvailExtendedVirtual: u64,
+            }
+
+            extern "system" {
+                fn GlobalMemoryStatusEx(lpBuffer: *mut MEMORYSTATUSEX) -> i32;
+            }
+
+            let mut status: MEMORYSTATUSEX = unsafe { std::mem::zeroed() };
+            status.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+            if unsafe { GlobalMemoryStatusEx(&mut status) } != 0 {
+                let total_bytes = status.ullTotalPhys;
+                let avail_bytes = status.ullAvailPhys;
+                self.mem_total_mb = total_bytes / (1024 * 1024);
+                let used_bytes = total_bytes.saturating_sub(avail_bytes);
+                self.mem_used_mb = used_bytes / (1024 * 1024);
+                self.mem_percent = status.dwMemoryLoad as u8;
+                return;
+            }
+        }
+
         if let Ok(content) = fs::read_to_string("/proc/meminfo") {
             let mut total_kb = 0u64;
             let mut available_kb = 0u64;
@@ -966,6 +999,35 @@ fn read_disk_free_native() -> f32 {
             return avail_bytes as f32 / (1024.0 * 1024.0 * 1024.0);
         }
     }
+
+    #[cfg(windows)]
+    {
+        extern "system" {
+            fn GetDiskFreeSpaceExW(
+                lpDirectoryName: *const u16,
+                lpFreeBytesAvailableToCaller: *mut u64,
+                lpTotalNumberOfBytes: *mut u64,
+                lpTotalNumberOfFreeBytes: *mut u64,
+            ) -> i32;
+        }
+
+        let mut free_bytes_avail: u64 = 0;
+        let mut total_bytes: u64 = 0;
+        let mut total_free: u64 = 0;
+        let root_wide: [u16; 4] = [b'C' as u16, b':' as u16, b'\\' as u16, 0];
+        let ret = unsafe {
+            GetDiskFreeSpaceExW(
+                root_wide.as_ptr(),
+                &mut free_bytes_avail,
+                &mut total_bytes,
+                &mut total_free,
+            )
+        };
+        if ret != 0 {
+            return free_bytes_avail as f32 / (1024.0 * 1024.0 * 1024.0);
+        }
+    }
+
     0.0
 }
 

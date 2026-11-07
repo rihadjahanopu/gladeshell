@@ -13,7 +13,7 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
 };
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -428,6 +428,9 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
         terminal.draw(|f| draw_vault(f, &mut app))?;
 
         if let Event::Key(key) = event::read()? {
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
             app.status_msg = None;
 
             match app.mode.clone() {

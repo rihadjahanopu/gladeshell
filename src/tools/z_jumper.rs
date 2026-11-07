@@ -55,7 +55,7 @@ pub fn save_db(db: &FrecencyDb) {
     if let Ok(json) = serde_json::to_string(db) {
         let tmp_path = path.with_extension(format!("tmp.{}", std::process::id()));
         if fs::write(&tmp_path, json).is_ok() {
-            let _ = fs::rename(&tmp_path, &path);
+            let _ = crate::core::utils::atomic_replace(&tmp_path, &path);
         }
     }
 }

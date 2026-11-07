@@ -10,7 +10,7 @@
 use clap::Args;
 use crossterm::{
     cursor,
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -800,18 +800,50 @@ impl Default for TerminalGuard {
 
 // ── Process Supervisor & Lifecycle Reaping ───────────────────────────────────
 
+/// On Windows, we assign every spawned child to a Win32 Job Object configured
+/// with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`.  When `ChildSupervisor` is
+/// dropped (or the parent process crashes), the kernel closes the job handle
+/// automatically and kills every process in the job tree — including deeply
+/// nested `cargo run`-spawned binaries.  On Unix, `PR_SET_PDEATHSIG` already
+/// provides this guarantee; the Job Object field is a zero-size ZST there.
+#[cfg(windows)]
+struct WinJobHandle(windows_sys::Win32::Foundation::HANDLE);
+
+#[cfg(windows)]
+impl Drop for WinJobHandle {
+    fn drop(&mut self) {
+        unsafe {
+            windows_sys::Win32::Foundation::CloseHandle(self.0);
+        }
+    }
+}
+
 pub struct ChildSupervisor {
     current_child: Option<Child>,
+    /// Holds the Win32 Job Object for the current child on Windows.
+    /// Dropped (closing the handle → killing all job members) when
+    /// `kill_current()` is called or the supervisor itself is dropped.
+    #[cfg(windows)]
+    _job: Option<WinJobHandle>,
 }
 
 impl ChildSupervisor {
     pub fn new() -> Self {
         Self {
             current_child: None,
+            #[cfg(windows)]
+            _job: None,
         }
     }
 
     pub fn kill_current(&mut self) {
+        // Drop the job handle FIRST on Windows — this kills the entire process
+        // tree (parent + all children) via JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.
+        #[cfg(windows)]
+        {
+            self._job = None;
+        }
+
         if let Some(mut child) = self.current_child.take() {
             let _pid = child.id();
             #[cfg(unix)]
@@ -877,6 +909,46 @@ impl ChildSupervisor {
         let _ = io::stdout().flush();
 
         let child = cmd.spawn()?;
+
+        // Windows Job Object: assign child to a job with KILL_ON_JOB_CLOSE so
+        // the entire process tree (e.g. cargo run → user binary) is reaped
+        // automatically when we close the job handle in kill_current() or Drop.
+        #[cfg(windows)]
+        {
+            use std::os::windows::io::AsRawHandle;
+            use windows_sys::Win32::System::JobObjects::{
+                AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+                QueryInformationJobObject, SetInformationJobObject,
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+            };
+            unsafe {
+                let job = CreateJobObjectW(std::ptr::null(), std::ptr::null());
+                if !job.is_null() {
+                    // Read current limits then add KILL_ON_JOB_CLOSE
+                    let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+                    let ok = QueryInformationJobObject(
+                        job,
+                        JobObjectExtendedLimitInformation,
+                        &mut info as *mut _ as *mut _,
+                        std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+                        std::ptr::null_mut(),
+                    );
+                    if ok != 0 {
+                        info.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+                        SetInformationJobObject(
+                            job,
+                            JobObjectExtendedLimitInformation,
+                            &info as *const _ as *const _,
+                            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+                        );
+                    }
+                    // Assign the new child process to the job
+                    AssignProcessToJobObject(job, child.as_raw_handle() as *mut _);
+                    self._job = Some(WinJobHandle(job));
+                }
+            }
+        }
+
         Ok(child)
     }
 
@@ -2166,6 +2238,9 @@ fn run_inline_mode(
         // 1. Check keyboard hotkeys (non-blocking 30ms poll)
         if event::poll(Duration::from_millis(30))? {
             if let Event::Key(key) = event::read()? {
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
                 // Nodemon parity: typing 'r' then 's' or 'rs' + Enter
                 if let KeyCode::Char(c) = key.code {
                     if key.modifiers.is_empty() {
@@ -2530,6 +2605,9 @@ fn run_tui_mode(
 
         if event::poll(Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
                 match (key.modifiers, key.code) {
                     (KeyModifiers::CONTROL, KeyCode::Char('c')) | (_, KeyCode::Char('q')) => {
                         supervisor.kill_current();

@@ -350,6 +350,27 @@ impl Drop for RawModeGuard {
 
 // ── Windows ───────────────────────────────────────────────────────────────────
 
+/// Enable virtual terminal output processing on Windows console so ANSI escape sequences render properly.
+pub fn enable_vt_output_processing() {
+    #[cfg(windows)]
+    unsafe {
+        use windows_sys::Win32::System::Console::{
+            GetConsoleMode, GetStdHandle, SetConsoleMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
+            STD_ERROR_HANDLE, STD_OUTPUT_HANDLE,
+        };
+
+        for handle_id in [STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+            let handle = GetStdHandle(handle_id);
+            if !handle.is_null() && handle != -1isize as *mut std::ffi::c_void {
+                let mut mode = 0u32;
+                if GetConsoleMode(handle, &mut mode) != 0 {
+                    let _ = SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+                }
+            }
+        }
+    }
+}
+
 #[cfg(windows)]
 pub struct RawModeGuard {
     original_mode: u32,

@@ -133,6 +133,21 @@ jobs:
           RUSTDOCFLAGS: "-D warnings"
         run: cargo doc --no-deps --workspace --all-features
 
+      - name: Verify PowerShell init and syntax on Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $output = cargo run -- init pwsh
+          if ([string]::IsNullOrWhiteSpace($output)) { throw "init pwsh was empty" }
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseInput($output, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error $_.Message }
+              throw "init pwsh produced syntax errors"
+          }
+          Write-Host "init pwsh syntax OK"
+
   # ─────────────────────────────────────────────────────────────
   # JOB 4: Binary Smoke Test (Linux only — quick sanity check)
   # ─────────────────────────────────────────────────────────────
@@ -180,10 +195,17 @@ jobs:
           [ -z "$OUTPUT" ] && echo "ERROR: init fish produced empty output" && exit 1
           echo "init fish OK (${#OUTPUT} bytes)"
 
+      - name: Smoke — init pwsh output (must be non-empty)
+        run: |
+          OUTPUT=$(./target/debug/gladeshell init pwsh)
+          [ -z "$OUTPUT" ] && echo "ERROR: init pwsh produced empty output" && exit 1
+          echo "init pwsh OK (${#OUTPUT} bytes)"
+
       - name: Smoke — prompt renders without crash
         run: |
           ./target/debug/gladeshell prompt --shell bash --cwd /tmp --exit-code 0 --cmd-duration 0 --user ci --host runner
           ./target/debug/gladeshell prompt --shell zsh  --cwd /tmp --exit-code 1 --cmd-duration 5000 --user ci --host runner
+          ./target/debug/gladeshell prompt --shell pwsh --cwd /tmp --exit-code 0 --cmd-duration 0 --user ci --host runner
 
       - name: Smoke — highlight and suggest commands
         run: |

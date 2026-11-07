@@ -1371,9 +1371,7 @@ fn cmd_exists(name: &str) -> bool {
 }
 
 fn dirs_home() -> PathBuf {
-    std::env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("/root"))
+    crate::core::utils::home_dir().unwrap_or_else(|| PathBuf::from("/root"))
 }
 
 fn detect_shell_name() -> String {

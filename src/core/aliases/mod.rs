@@ -86,6 +86,11 @@ impl Shell {
 
 // ── Constructors & Serializer ─────────────────────────────────────────────────
 
+const PWSH_BUILTIN_CONFLICTS: &[&str] = &[
+    "cat", "curl", "wget", "ls", "rm", "cp", "mv", "diff", "echo", "ps", "kill", "sort", "tee",
+    "sleep", "gp", "gc", "gl", "gm", "sc", "sl", "dir",
+];
+
 impl AliasFile {
     /// Return built-in aliases constructed from category Rust modules.
     pub fn builtin() -> Self {
@@ -205,11 +210,17 @@ impl AliasFile {
                                 pwsh_val.clone()
                             };
 
+                            let remove_prefix = if PWSH_BUILTIN_CONFLICTS.contains(&key.as_str()) {
+                                format!("Remove-Item alias:{key} -Force -ErrorAction SilentlyContinue\n")
+                            } else {
+                                String::new()
+                            };
+
                             let fn_body = if fname == *key {
-                                format!("function global:{key} {{ {call_expr} }}\n")
+                                format!("{remove_prefix}function global:{key} {{ {call_expr} }}\n")
                             } else {
                                 format!(
-                                    "function {fname} {{ {call_expr} }}\nfunction global:{key} {{ {call_expr} }}\n"
+                                    "{remove_prefix}function {fname} {{ {call_expr} }}\nfunction global:{key} {{ {call_expr} }}\n"
                                 )
                             };
                             if entry.description.is_empty() {

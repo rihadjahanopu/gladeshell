@@ -9,7 +9,7 @@
 // =============================================================================
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyModifiers},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -172,6 +172,9 @@ pub fn run_fkill() -> Result<(), Box<dyn std::error::Error>> {
         terminal.draw(|f| draw_fkill(f, &mut app))?;
 
         if let Event::Key(key) = event::read()? {
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
             if app.confirm_kill.is_some() {
                 match key.code {
                     KeyCode::Char('y') | KeyCode::Char('Y') => {
@@ -513,8 +516,56 @@ pub fn run_kp(port_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-/// Parse /proc/net/tcp and /proc/net/tcp6 to find PIDs listening on a port.
+/// Parse /proc/net/tcp and /proc/net/tcp6 (or Windows netstat / macOS lsof) to find PIDs listening on a port.
 fn find_pids_by_port(port: u16) -> Vec<usize> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let mut cmd = std::process::Command::new("netstat");
+        cmd.args(["-ano", "-p", "tcp"]);
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        if let Ok(output) = cmd.output() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            let port_suffix = format!(":{}", port);
+            let mut pids = Vec::new();
+            for line in text.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 4 && parts[0].eq_ignore_ascii_case("TCP") {
+                    let local_addr = parts[1];
+                    if local_addr.ends_with(&port_suffix) {
+                        if let Some(pid_str) = parts.last() {
+                            if let Ok(pid) = pid_str.parse::<usize>() {
+                                if pid > 0 && !pids.contains(&pid) {
+                                    pids.push(pid);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if !pids.is_empty() {
+                return pids;
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(output) = std::process::Command::new("lsof")
+            .args(["-i", &format!(":{}", port), "-t"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            let pids: Vec<usize> = text
+                .lines()
+                .filter_map(|l| l.trim().parse::<usize>().ok())
+                .collect();
+            if !pids.is_empty() {
+                return pids;
+            }
+        }
+    }
+
     let hex_port = format!("{:04X}", port);
     let mut inodes: Vec<u64> = Vec::new();
 

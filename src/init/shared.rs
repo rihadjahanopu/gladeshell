@@ -336,6 +336,22 @@ if (Get-Command eza -ErrorAction SilentlyContinue) {
 
 /// Render automatic CLI completions pre-baked directly in-memory at init time (Zero Runtime Subshell).
 pub fn render_cli_completions(shell: Shell) -> String {
+    if shell == Shell::Pwsh {
+        return r#"
+# ── Dynamic Lazy-Loaded gladeshell CLI completions (<1ms startup, zero parse lag) ──
+Register-ArgumentCompleter -Native -CommandName 'gladeshell' -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+    if (-not $global:_fb_completions_loaded) {
+        $global:_fb_completions_loaded = $true
+        try {
+            gladeshell completions pwsh | Out-String | Invoke-Expression
+        } catch {}
+    }
+}
+"#
+        .to_string();
+    }
+
     use crate::cli::Cli;
     use clap::CommandFactory;
     use clap_complete::{generate, Shell as ClapShell};
@@ -344,44 +360,14 @@ pub fn render_cli_completions(shell: Shell) -> String {
         Shell::Bash => ClapShell::Bash,
         Shell::Zsh => ClapShell::Zsh,
         Shell::Fish => ClapShell::Fish,
-        Shell::Pwsh => ClapShell::PowerShell,
+        Shell::Pwsh => unreachable!(),
     };
 
     let mut buf = Vec::with_capacity(4096);
     let mut cmd = Cli::command();
     generate(clap_shell, &mut cmd, "gladeshell", &mut buf);
 
-    let script = if shell == Shell::Pwsh {
-        let text = String::from_utf8_lossy(&buf);
-        text.replace("using namespace System.Management.Automation\n", "")
-            .replace("using namespace System.Management.Automation\r\n", "")
-            .replace(
-                "using namespace System.Management.Automation.Language\n",
-                "",
-            )
-            .replace(
-                "using namespace System.Management.Automation.Language\r\n",
-                "",
-            )
-            .replace(
-                "[StringConstantExpressionAst]",
-                "[System.Management.Automation.Language.StringConstantExpressionAst]",
-            )
-            .replace(
-                "[StringConstantType]",
-                "[System.Management.Automation.Language.StringConstantType]",
-            )
-            .replace(
-                "[CompletionResult]",
-                "[System.Management.Automation.CompletionResult]",
-            )
-            .replace(
-                "[CompletionResultType]",
-                "[System.Management.Automation.CompletionResultType]",
-            )
-    } else {
-        String::from_utf8_lossy(&buf).into_owned()
-    };
+    let script = String::from_utf8_lossy(&buf).into_owned();
     format!("\n# ── Pre-baked gladeshell CLI completions (Zero Runtime Subshell) ──\n{script}\n")
 }
 
@@ -1007,7 +993,7 @@ end
 function _fb_notify($code, $dur) {
     $dur_s = [math]::Round($dur / 1000)
     $msg = if ($code -eq 0) { "✅ Command finished in ${dur_s}s" } else { "❌ Command failed (exit $code) in ${dur_s}s" }
-    [System.Console]::Write("`e]777;notify;gladeshell;$msg`a")
+    [System.Console]::Write("$([char]27)]777;notify;gladeshell;$msg$([char]7)")
 }
 "#.to_string(),
     }

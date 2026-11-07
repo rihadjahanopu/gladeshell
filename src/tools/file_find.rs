@@ -22,8 +22,8 @@ use std::time::{Duration, Instant, UNIX_EPOCH};
 use clap::Args;
 use crossterm::{
     event::{
-        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseButton,
-        MouseEventKind,
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+        MouseButton, MouseEventKind,
     },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -821,8 +821,10 @@ pub fn copy_to_clipboard(text: &str) -> bool {
 pub fn open_file_natively(path: &str) {
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         let _ = std::process::Command::new("cmd")
             .args(["/C", "start", "", path])
+            .creation_flags(0x08000000)
             .spawn();
     }
 
@@ -1487,85 +1489,90 @@ fn tui_loop<B: ratatui::backend::Backend<Error = std::io::Error>>(
 
         if event::poll(Duration::from_millis(50))? {
             match event::read()? {
-                Event::Key(key) => match key.code {
-                    KeyCode::Esc => return Ok(None),
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        return Ok(None);
+                Event::Key(key) => {
+                    if key.kind != KeyEventKind::Press {
+                        continue;
                     }
-                    KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        if let Some(i) = list_state.selected() {
-                            if let Some(item) = items.get(i) {
-                                copy_to_clipboard(&item.relative_path);
-                                copy_notice_time = Some(Instant::now());
-                            }
+                    match key.code {
+                        KeyCode::Esc => return Ok(None),
+                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            return Ok(None);
                         }
-                    }
-                    KeyCode::Enter => {
-                        if let Some(i) = list_state.selected() {
-                            if let Some(item) = items.get(i) {
-                                let path_str = item.path.to_string_lossy().to_string();
-                                if item.is_dir {
-                                    return Ok(Some(FfAction::CdInto(path_str)));
-                                } else {
-                                    return Ok(Some(FfAction::OpenDefault(path_str)));
+                        KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            if let Some(i) = list_state.selected() {
+                                if let Some(item) = items.get(i) {
+                                    copy_to_clipboard(&item.relative_path);
+                                    copy_notice_time = Some(Instant::now());
                                 }
                             }
                         }
-                    }
-                    KeyCode::F(10) | KeyCode::Char('o')
-                        if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                    {
-                        if let Some(i) = list_state.selected() {
-                            if let Some(item) = items.get(i) {
-                                return Ok(Some(FfAction::OpenCode(
-                                    item.path.to_string_lossy().to_string(),
-                                )));
+                        KeyCode::Enter => {
+                            if let Some(i) = list_state.selected() {
+                                if let Some(item) = items.get(i) {
+                                    let path_str = item.path.to_string_lossy().to_string();
+                                    if item.is_dir {
+                                        return Ok(Some(FfAction::CdInto(path_str)));
+                                    } else {
+                                        return Ok(Some(FfAction::OpenDefault(path_str)));
+                                    }
+                                }
                             }
                         }
-                    }
-                    KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        if let Some(i) = list_state.selected() {
-                            if let Some(item) = items.get(i) {
-                                return Ok(Some(FfAction::Explore(
-                                    item.path.to_string_lossy().to_string(),
-                                )));
+                        KeyCode::F(10) | KeyCode::Char('o')
+                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                        {
+                            if let Some(i) = list_state.selected() {
+                                if let Some(item) = items.get(i) {
+                                    return Ok(Some(FfAction::OpenCode(
+                                        item.path.to_string_lossy().to_string(),
+                                    )));
+                                }
                             }
                         }
-                    }
-                    KeyCode::Up => {
-                        if let Some(i) = list_state.selected() {
-                            if i > 0 {
-                                list_state.select(Some(i - 1));
+                        KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            if let Some(i) = list_state.selected() {
+                                if let Some(item) = items.get(i) {
+                                    return Ok(Some(FfAction::Explore(
+                                        item.path.to_string_lossy().to_string(),
+                                    )));
+                                }
                             }
-                        } else if !items.is_empty() {
-                            list_state.select(Some(0));
                         }
-                    }
-                    KeyCode::Down => {
-                        if let Some(i) = list_state.selected() {
-                            if i + 1 < items.len() {
-                                list_state.select(Some(i + 1));
+                        KeyCode::Up => {
+                            if let Some(i) = list_state.selected() {
+                                if i > 0 {
+                                    list_state.select(Some(i - 1));
+                                }
+                            } else if !items.is_empty() {
+                                list_state.select(Some(0));
                             }
-                        } else if !items.is_empty() {
-                            list_state.select(Some(0));
                         }
-                    }
-                    KeyCode::Backspace => {
-                        if !query.is_empty() {
-                            query.pop();
-                            args.pattern = if query.is_empty() {
-                                None
-                            } else {
-                                Some(query.clone())
-                            };
+                        KeyCode::Down => {
+                            if let Some(i) = list_state.selected() {
+                                if i + 1 < items.len() {
+                                    list_state.select(Some(i + 1));
+                                }
+                            } else if !items.is_empty() {
+                                list_state.select(Some(0));
+                            }
                         }
+                        KeyCode::Backspace => {
+                            if !query.is_empty() {
+                                query.pop();
+                                args.pattern = if query.is_empty() {
+                                    None
+                                } else {
+                                    Some(query.clone())
+                                };
+                            }
+                        }
+                        KeyCode::Char(c) => {
+                            query.push(c);
+                            args.pattern = Some(query.clone());
+                        }
+                        _ => {}
                     }
-                    KeyCode::Char(c) => {
-                        query.push(c);
-                        args.pattern = Some(query.clone());
-                    }
-                    _ => {}
-                },
+                }
                 Event::Mouse(me) => match me.kind {
                     MouseEventKind::Down(MouseButton::Left) => {
                         let mx = me.column;

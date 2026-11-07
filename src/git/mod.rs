@@ -260,7 +260,7 @@ fn write_shared_cache(git_root: &Path, status: &GitStatus) {
     );
     let tmp_file = cache_file.with_extension(format!("tmp.{}", std::process::id()));
     if std::fs::write(&tmp_file, content).is_ok() {
-        let _ = std::fs::rename(&tmp_file, &cache_file);
+        let _ = crate::core::utils::atomic_replace(&tmp_file, &cache_file);
     }
 }
 

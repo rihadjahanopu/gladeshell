@@ -93,7 +93,13 @@ mimalloc = { version = "0.1", default-features = false }
 # Windows WMI Hardware Diagnostics & Console APIs
 [target.'cfg(target_os = "windows")'.dependencies]
 wmi         = "0.18"
-windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
+windows-sys = { version = "0.61", features = [
+    "Win32_System_Console",
+    "Win32_System_SystemInformation",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+    "Win32_Foundation",
+] }
 
 # Unix Raw Mode termios handling
 [target.'cfg(unix)'.dependencies]

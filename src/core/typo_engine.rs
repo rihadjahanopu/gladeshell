@@ -77,7 +77,23 @@ pub fn get_system_executables() -> &'static HashSet<String> {
                                         }
                                         #[cfg(not(unix))]
                                         {
-                                            set.insert(name.to_string());
+                                            let lower = name.to_lowercase();
+                                            if lower.ends_with(".exe")
+                                                || lower.ends_with(".cmd")
+                                                || lower.ends_with(".bat")
+                                                || lower.ends_with(".ps1")
+                                                || lower.ends_with(".com")
+                                                || !name.contains('.')
+                                            {
+                                                set.insert(name.to_string());
+                                                if let Some(stem) = name
+                                                    .strip_suffix(".exe")
+                                                    .or_else(|| name.strip_suffix(".cmd"))
+                                                    .or_else(|| name.strip_suffix(".bat"))
+                                                {
+                                                    set.insert(stem.to_string());
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -97,7 +113,7 @@ pub fn get_system_executables() -> &'static HashSet<String> {
             }
             let tmp_path = cache_path.with_extension(format!("tmp.{}", std::process::id()));
             if fs::write(&tmp_path, buf).is_ok() {
-                let _ = fs::rename(&tmp_path, &cache_path);
+                let _ = crate::core::utils::atomic_replace(&tmp_path, &cache_path);
             }
         }
 

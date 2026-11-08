@@ -125,6 +125,45 @@ const UPDATER_REGISTRY: &[UpdaterTool] = &[
         description: "Sandboxed application runtime. Updates all installed Flatpak apps and their runtime dependencies.",
     },
     UpdaterTool {
+        name: "Winget",
+        emoji: "🪟",
+        command: "winget",
+        check_bin: "winget",
+        args: &["upgrade", "--all", "--include-unknown"],
+        category: "System",
+        description: "Windows Package Manager. Upgrades all installed Windows applications and dependencies to their latest versions.",
+    },
+    UpdaterTool {
+        name: "Chocolatey",
+        emoji: "🍫",
+        command: "choco",
+        check_bin: "choco",
+        args: &["upgrade", "all", "-y"],
+        category: "System",
+        description: "Chocolatey package manager for Windows. Upgrades all installed packages non-interactively.",
+    },
+    UpdaterTool {
+        name: "Scoop",
+        emoji: "🍨",
+        command: "scoop",
+        check_bin: "scoop",
+        args: &["update", "*"],
+        category: "System",
+        description: "Scoop command-line installer for Windows. Updates all installed apps and buckets.",
+    },
+    UpdaterTool {
+        name: "Node.js (NVM)",
+        emoji: "🟢",
+        command: "bash",
+        check_bin: "nvm",
+        args: &[
+            "-c",
+            "if [ -s \"${NVM_DIR:-$HOME/.config/nvm}/nvm.sh\" ]; then \\. \"${NVM_DIR:-$HOME/.config/nvm}/nvm.sh\"; elif [ -s \"$HOME/.nvm/nvm.sh\" ]; then \\. \"$HOME/.nvm/nvm.sh\"; elif [ -s \"/opt/homebrew/opt/nvm/nvm.sh\" ]; then \\. \"/opt/homebrew/opt/nvm/nvm.sh\"; elif [ -s \"/usr/local/opt/nvm/nvm.sh\" ]; then \\. \"/usr/local/opt/nvm/nvm.sh\"; fi; echo '==> Current Node.js version:' $(node -v 2>/dev/null || echo 'none'); echo '==> Installing latest Node.js LTS via NVM...'; nvm install --lts --reinstall-packages-from=current && nvm alias default 'lts/*' && nvm use default; echo '==> Updated Node.js version:' $(node -v); echo '==> Updating npm to latest...'; (nvm install-latest-npm 2>/dev/null || npm install -g npm@latest) && echo '==> Updated npm version:' $(npm -v)",
+        ],
+        category: "Runtime",
+        description: "Node Version Manager (Linux/macOS). Upgrades Node.js to latest LTS, migrates global packages, sets default alias, and updates npm.",
+    },
+    UpdaterTool {
         name: "Rustup",
         emoji: "🦀",
         command: "rustup",
@@ -144,12 +183,12 @@ const UPDATER_REGISTRY: &[UpdaterTool] = &[
     },
     UpdaterTool {
         name: "NPM",
-        emoji: "🟢",
+        emoji: "📦",
         command: "npm",
         check_bin: "npm",
-        args: &["update", "-g"],
+        args: &["install", "-g", "npm@latest"],
         category: "Runtime",
-        description: "Node.js package manager. Updates all globally installed npm packages to their latest compatible versions.",
+        description: "Node.js package manager. Installs latest npm release globally and updates runtime components.",
     },
     UpdaterTool {
         name: "PNPM",
@@ -177,6 +216,33 @@ const UPDATER_REGISTRY: &[UpdaterTool] = &[
         args: &["upgrade-all"],
         category: "Runtime",
         description: "Python application installer. Upgrades all user-installed Python CLI tools running in isolated virtual environments.",
+    },
+    UpdaterTool {
+        name: "Deno",
+        emoji: "🦕",
+        command: "deno",
+        check_bin: "deno",
+        args: &["upgrade"],
+        category: "Runtime",
+        description: "Deno secure JavaScript/TypeScript runtime. Self-upgrades the deno binary to the latest release.",
+    },
+    UpdaterTool {
+        name: "Cargo Tools",
+        emoji: "🦀",
+        command: "cargo",
+        check_bin: "cargo-install-update",
+        args: &["install-update", "-a"],
+        category: "Runtime",
+        description: "Cargo binary installer. Upgrades all user-installed Cargo crates and CLI tools to latest versions.",
+    },
+    UpdaterTool {
+        name: "Gladeshell",
+        emoji: "🐚",
+        command: "gladeshell",
+        check_bin: "gladeshell",
+        args: &["upgrade"],
+        category: "Core",
+        description: "Gladeshell prompt & developer toolkit. Self-upgrades gladeshell binary to the latest release.",
     },
 ];
 
@@ -392,14 +458,23 @@ fn category_color(cat: &str) -> Color {
     match cat {
         "System" => C_ORANGE,
         "Runtime" => C_CYAN,
+        "Core" => C_GREEN,
         _ => C_DIM,
     }
 }
 
 fn tool_requires_root(tool: &UpdaterTool) -> bool {
-    tool.command == "sudo"
-        || tool.check_bin == "apt"
-        || tool.args.iter().any(|arg| arg.contains("sudo"))
+    #[cfg(windows)]
+    {
+        let _ = tool;
+        false
+    }
+    #[cfg(not(windows))]
+    {
+        tool.command == "sudo"
+            || tool.check_bin == "apt"
+            || tool.args.iter().any(|arg| arg.contains("sudo"))
+    }
 }
 
 fn ensure_sudo_authenticated_if_needed(tools: &[&UpdaterTool]) -> bool {
@@ -452,6 +527,7 @@ fn spawn_updater_thread(
                 tool.emoji, tool.name
             )));
 
+            #[cfg(unix)]
             let mut cmd = if tool.check_bin == "apt" {
                 let mut c = Command::new("sh");
                 c.env("DEBIAN_FRONTEND", "noninteractive");
@@ -460,6 +536,17 @@ fn spawn_updater_thread(
             } else {
                 let mut c = Command::new(tool.command);
                 c.args(tool.args);
+                c
+            };
+
+            #[cfg(windows)]
+            let mut cmd = if tool.check_bin == "nvm" {
+                let mut c = Command::new("cmd");
+                c.args(["/C", "nvm install lts && nvm use lts"]);
+                c
+            } else {
+                let mut c = Command::new("cmd");
+                c.arg("/C").arg(tool.command).args(tool.args);
                 c
             };
 
@@ -1098,9 +1185,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         if event::poll(Duration::from_millis(80))? {
             if let Event::Key(key) = event::read()? {
+                if key.kind != crossterm::event::KeyEventKind::Press {
+                    continue;
+                }
                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                 match key.code {
-                    KeyCode::Esc => break vec![],
+                    KeyCode::Esc | KeyCode::Char('q') => break vec![],
                     KeyCode::Char('c') if ctrl => break vec![],
                     KeyCode::Up | KeyCode::Char('k') => app.move_up(),
                     KeyCode::Char('p') if ctrl => app.move_up(),
@@ -1192,6 +1282,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         if event::poll(Duration::from_millis(60))? {
             if let Event::Key(key) = event::read()? {
+                if key.kind != crossterm::event::KeyEventKind::Press {
+                    continue;
+                }
                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                 match key.code {
                     KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter | KeyCode::Char(' ') => {
@@ -1224,7 +1317,45 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn is_cmd_available(cmd: &str) -> bool {
+    if cmd == "nvm" {
+        return is_nvm_installed();
+    }
+    if cmd == "gladeshell" {
+        return true;
+    }
     crate::core::utils::cmd_exists(cmd)
+}
+
+fn is_nvm_installed() -> bool {
+    #[cfg(unix)]
+    {
+        if let Ok(nvm_dir) = std::env::var("NVM_DIR") {
+            let p = std::path::Path::new(&nvm_dir).join("nvm.sh");
+            if p.is_file() {
+                return true;
+            }
+        }
+        if let Some(home) = crate::core::utils::home_dir() {
+            if home.join(".config/nvm/nvm.sh").is_file() || home.join(".nvm/nvm.sh").is_file() {
+                return true;
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            if std::path::Path::new("/opt/homebrew/opt/nvm/nvm.sh").is_file()
+                || std::path::Path::new("/usr/local/opt/nvm/nvm.sh").is_file()
+            {
+                return true;
+            }
+        }
+    }
+    #[cfg(windows)]
+    {
+        if crate::core::utils::cmd_exists("nvm") {
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -1239,6 +1370,12 @@ mod tests {
     #[test]
     fn test_is_cmd_available_cargo() {
         assert!(is_cmd_available("cargo"));
+    }
+
+    #[test]
+    fn test_is_nvm_installed_does_not_panic() {
+        let _ = is_nvm_installed();
+        let _ = is_cmd_available("nvm");
     }
 
     #[test]

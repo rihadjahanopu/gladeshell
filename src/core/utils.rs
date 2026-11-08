@@ -25,9 +25,11 @@ pub fn cmd_exists(name: &str) -> bool {
             }
             #[cfg(windows)]
             {
-                let full_exe = dir.join(format!("{}.exe", name));
-                if full_exe.is_file() {
-                    return true;
+                for ext in &["exe", "cmd", "bat"] {
+                    let full_ext = dir.join(format!("{}.{}", name, ext));
+                    if full_ext.is_file() {
+                        return true;
+                    }
                 }
             }
         }
@@ -73,7 +75,7 @@ pub fn atomic_replace(from: &Path, to: &Path) -> std::io::Result<()> {
         if to.exists() {
             let _ = std::fs::remove_file(to);
         }
-        if let Err(_) = std::fs::rename(from, to) {
+        if std::fs::rename(from, to).is_err() {
             std::fs::copy(from, to)?;
             let _ = std::fs::remove_file(from);
         }

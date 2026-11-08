@@ -191,7 +191,7 @@ impl SystemMetrics {
         #[cfg(windows)]
         {
             #[repr(C)]
-            #[allow(non_snake_case)]
+            #[allow(non_snake_case, clippy::upper_case_acronyms)]
             struct MEMORYSTATUSEX {
                 dwLength: u32,
                 dwMemoryLoad: u32,
@@ -973,7 +973,7 @@ fn run_version(args: &[&str]) -> Option<String> {
 /// Read available bytes on the root filesystem using raw Linux syscall via
 /// std::fs metadata trick, falling back to parsing /proc/mounts data.
 /// No `df` binary needed.
-fn read_disk_free_native() -> f32 {
+pub(crate) fn read_disk_free_native() -> f32 {
     // Use the statvfs system call via a raw libc-free trick:
     // Write a temp check file and check available space from /proc/mounts
     // Simplest portable approach: parse /proc/self/mountinfo for "/"

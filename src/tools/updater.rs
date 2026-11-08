@@ -1406,7 +1406,10 @@ mod tests {
     #[test]
     fn test_tool_requires_root() {
         let apt = &UPDATER_REGISTRY[0];
+        #[cfg(not(windows))]
         assert!(tool_requires_root(apt));
+        #[cfg(windows)]
+        assert!(!tool_requires_root(apt));
     }
 
     #[test]

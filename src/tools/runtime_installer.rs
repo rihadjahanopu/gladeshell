@@ -223,6 +223,23 @@ pub const RUNTIME_REGISTRY: &[RuntimeTool] = &[
         preview_cmd_windows: "winget install LLVM.LLVM",
     },
     RuntimeTool {
+        id: "msvc",
+        name: "MSVC C++ Build Tools",
+        emoji: "🛠️",
+        category: RuntimeCategory::Systems,
+        description: "Microsoft C++ compiler (cl.exe), link.exe, and Windows SDK libraries required for native MSVC Rust & C++ compilation on Windows.",
+        website: "https://visualstudio.microsoft.com/visual-cpp-build-tools/",
+        target_version: "VS 2022 Build Tools",
+        check_bin: "cl",
+        fallback_subpaths: &[
+            "C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Tools\\MSVC",
+        ],
+        default_path_env: &[],
+        preview_cmd_unix: "(Windows Platform Only)",
+        preview_cmd_windows: "winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override \"--passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\" --accept-source-agreements --accept-package-agreements",
+    },
+    RuntimeTool {
         id: "go",
         name: "Go Compiler (Golang)",
         emoji: "🐹",
@@ -287,10 +304,19 @@ pub struct VerificationReport {
 }
 
 // ── Application State ────────────────────────────────────────────────────────
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum WindowsRustAbiChoice {
+    #[default]
+    Default,
+    AutoInstallMsvc,
+    ConfigureGnu,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AppScreen {
     Select,
     DiskWarning,
+    WindowsRustOption,
     Installing,
     Summary,
 }
@@ -301,6 +327,7 @@ struct InstallerApp {
     selected: Vec<bool>,
     installed_versions: Vec<Option<String>>,
     disk_free_gb: f32,
+    windows_rust_abi_choice: WindowsRustAbiChoice,
 
     // Execution state
     executing_indices: Vec<usize>,
@@ -324,6 +351,28 @@ enum ToolExecStatus {
     Failed(String),
 }
 
+pub fn is_windows_msvc_linker_available() -> bool {
+    #[cfg(windows)]
+    {
+        if crate::core::utils::cmd_exists("link") || crate::core::utils::cmd_exists("cl") {
+            return true;
+        }
+        for prog in &[
+            "C:\\Program Files\\Microsoft Visual Studio",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio",
+        ] {
+            if std::path::Path::new(prog).exists() {
+                return true;
+            }
+        }
+        false
+    }
+    #[cfg(not(windows))]
+    {
+        true
+    }
+}
+
 impl InstallerApp {
     fn new() -> Self {
         let count = RUNTIME_REGISTRY.len();
@@ -340,6 +389,7 @@ impl InstallerApp {
             selected: vec![false; count],
             installed_versions,
             disk_free_gb,
+            windows_rust_abi_choice: WindowsRustAbiChoice::Default,
             executing_indices: Vec::new(),
             current_executing_sub_idx: 0,
             tool_status: vec![ToolExecStatus::Idle; count],
@@ -506,6 +556,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             match app.screen {
                 AppScreen::Select => draw_select_screen(f, &mut app),
                 AppScreen::DiskWarning => draw_disk_warning_modal(f, &app),
+                AppScreen::WindowsRustOption => draw_windows_rust_option_modal(f),
                 AppScreen::Installing => draw_installing_screen(f, &app),
                 AppScreen::Summary => draw_summary_screen(f, &app),
             }
@@ -554,11 +605,59 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         }
                         KeyCode::Char('r') | KeyCode::Char('R') => app.select_repair_mode(),
                         KeyCode::Enter if app.selected_count() > 0 => {
+                            let rust_selected = RUNTIME_REGISTRY
+                                .iter()
+                                .position(|t| t.id == "rustup")
+                                .map(|idx| app.selected[idx])
+                                .unwrap_or(false);
+
+                            let needs_linker_choice = cfg!(windows)
+                                && rust_selected
+                                && !is_windows_msvc_linker_available()
+                                && app.windows_rust_abi_choice == WindowsRustAbiChoice::Default;
+
+                            if needs_linker_choice {
+                                app.screen = AppScreen::WindowsRustOption;
+                            } else if app.disk_free_gb > 0.0 && app.disk_free_gb < 3.0 {
+                                app.screen = AppScreen::DiskWarning;
+                            } else {
+                                start_installation(&mut app, tx.clone(), cancel_flag.clone())?;
+                            }
+                        }
+                        _ => {}
+                    },
+
+                    AppScreen::WindowsRustOption => match key.code {
+                        KeyCode::Char('1') | KeyCode::Enter => {
+                            app.windows_rust_abi_choice = WindowsRustAbiChoice::AutoInstallMsvc;
+                            if let Some(pos) = RUNTIME_REGISTRY.iter().position(|t| t.id == "msvc")
+                            {
+                                app.selected[pos] = true;
+                            }
                             if app.disk_free_gb > 0.0 && app.disk_free_gb < 3.0 {
                                 app.screen = AppScreen::DiskWarning;
                             } else {
                                 start_installation(&mut app, tx.clone(), cancel_flag.clone())?;
                             }
+                        }
+                        KeyCode::Char('2') | KeyCode::Char('g') | KeyCode::Char('G') => {
+                            app.windows_rust_abi_choice = WindowsRustAbiChoice::ConfigureGnu;
+                            if app.disk_free_gb > 0.0 && app.disk_free_gb < 3.0 {
+                                app.screen = AppScreen::DiskWarning;
+                            } else {
+                                start_installation(&mut app, tx.clone(), cancel_flag.clone())?;
+                            }
+                        }
+                        KeyCode::Char('3') | KeyCode::Char('s') | KeyCode::Char('S') => {
+                            app.windows_rust_abi_choice = WindowsRustAbiChoice::Default;
+                            if app.disk_free_gb > 0.0 && app.disk_free_gb < 3.0 {
+                                app.screen = AppScreen::DiskWarning;
+                            } else {
+                                start_installation(&mut app, tx.clone(), cancel_flag.clone())?;
+                            }
+                        }
+                        KeyCode::Esc | KeyCode::Char('q') => {
+                            app.screen = AppScreen::Select;
                         }
                         _ => {}
                     },
@@ -626,7 +725,8 @@ fn start_installation(
     app.auto_scroll = true;
 
     let executing_indices = app.executing_indices.clone();
-    spawn_installer_worker(executing_indices, tx, cancel_flag);
+    let abi_choice = app.windows_rust_abi_choice;
+    spawn_installer_worker(executing_indices, tx, cancel_flag, abi_choice);
     Ok(())
 }
 
@@ -635,6 +735,7 @@ fn spawn_installer_worker(
     executing_indices: Vec<usize>,
     tx: Sender<InstallMsg>,
     cancel_flag: Arc<AtomicBool>,
+    abi_choice: WindowsRustAbiChoice,
 ) {
     std::thread::spawn(move || {
         for (sub_idx, &tool_idx) in executing_indices.iter().enumerate() {
@@ -657,7 +758,7 @@ fn spawn_installer_worker(
                 tool.emoji, tool.name
             )));
 
-            let (cmd_bin, cmd_args) = get_platform_install_command(tool);
+            let (cmd_bin, cmd_args) = get_platform_install_command(tool, abi_choice);
 
             let mut cmd = Command::new(&cmd_bin);
             cmd.args(&cmd_args);
@@ -758,9 +859,13 @@ fn spawn_installer_worker(
 }
 
 // ── Platform-Specific Command Generators ──────────────────────────────────────
-fn get_platform_install_command(tool: &RuntimeTool) -> (String, Vec<String>) {
+fn get_platform_install_command(
+    tool: &RuntimeTool,
+    abi_choice: WindowsRustAbiChoice,
+) -> (String, Vec<String>) {
     #[cfg(unix)]
     {
+        let _ = abi_choice;
         match tool.id {
             "node" => (
                 "bash".into(),
@@ -810,6 +915,10 @@ fn get_platform_install_command(tool: &RuntimeTool) -> (String, Vec<String>) {
                     )
                 }
             }
+            "msvc" => (
+                "sh".into(),
+                vec!["-c".into(), "echo 'MSVC C++ Build Tools is for Windows only'".into()],
+            ),
             "go" => {
                 #[cfg(target_os = "macos")]
                 {
@@ -893,16 +1002,26 @@ fn get_platform_install_command(tool: &RuntimeTool) -> (String, Vec<String>) {
                     "irm https://get.pnpm.io/install.ps1 | iex".into(),
                 ],
             ),
-            "rustup" => (
-                "powershell".into(),
-                vec![
-                    "-NoProfile".into(),
-                    "-ExecutionPolicy".into(),
-                    "Bypass".into(),
-                    "-Command".into(),
-                    "winget install --id Rustlang.Rustup -e --accept-source-agreements --accept-package-agreements".into(),
-                ],
-            ),
+            "rustup" => {
+                let cmd_str = match abi_choice {
+                    WindowsRustAbiChoice::ConfigureGnu => {
+                        "winget install --id Rustlang.Rustup -e --accept-source-agreements --accept-package-agreements; rustup default stable-x86_64-pc-windows-gnu"
+                    }
+                    _ => {
+                        "winget install --id Rustlang.Rustup -e --accept-source-agreements --accept-package-agreements"
+                    }
+                };
+                (
+                    "powershell".into(),
+                    vec![
+                        "-NoProfile".into(),
+                        "-ExecutionPolicy".into(),
+                        "Bypass".into(),
+                        "-Command".into(),
+                        cmd_str.into(),
+                    ],
+                )
+            }
             "clang" => (
                 "powershell".into(),
                 vec![
@@ -911,6 +1030,16 @@ fn get_platform_install_command(tool: &RuntimeTool) -> (String, Vec<String>) {
                     "Bypass".into(),
                     "-Command".into(),
                     "winget install --id LLVM.LLVM -e --accept-source-agreements --accept-package-agreements".into(),
+                ],
+            ),
+            "msvc" => (
+                "powershell".into(),
+                vec![
+                    "-NoProfile".into(),
+                    "-ExecutionPolicy".into(),
+                    "Bypass".into(),
+                    "-Command".into(),
+                    "winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override \"--passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\" --accept-source-agreements --accept-package-agreements".into(),
                 ],
             ),
             "go" => (
@@ -950,6 +1079,15 @@ fn get_platform_install_command(tool: &RuntimeTool) -> (String, Vec<String>) {
 
 // ── Active Installed Version Probing ─────────────────────────────────────────
 fn detect_installed_version(tool: &RuntimeTool) -> Option<String> {
+    if tool.id == "msvc" {
+        #[cfg(windows)]
+        {
+            if is_windows_msvc_linker_available() {
+                return Some("VS 2022 C++ Tools".to_string());
+            }
+        }
+        return None;
+    }
     let resolved_bin = resolve_tool_binary(tool)?;
     let args: &[&str] = if tool.id == "go" {
         &["version"]
@@ -1244,7 +1382,35 @@ fn verify_compiler_and_smoke_test(tool: &RuntimeTool) -> VerificationReport {
                                     "Rust native compile & link OK".to_string();
                             }
                         }
+                    } else {
+                        let err_str = String::from_utf8_lossy(&out.stderr);
+                        if err_str.contains("link.exe") || err_str.contains("linker") {
+                            report.smoke_test_passed = false;
+                            report.smoke_test_detail =
+                                "Linker link.exe missing (Install MSVC Build Tools or switch to GNU)".to_string();
+                        }
                     }
+                }
+            }
+        }
+        "msvc" => {
+            if is_windows_msvc_linker_available() {
+                report.installed = true;
+                report.version_string = "VS 2022 Build Tools".to_string();
+                report.smoke_test_passed = true;
+                report.smoke_test_detail = "MSVC Linker & C++ Toolchain Ready".to_string();
+            } else {
+                #[cfg(windows)]
+                {
+                    report.installed = false;
+                    report.smoke_test_passed = false;
+                    report.smoke_test_detail = "MSVC Build Tools Not Detected".to_string();
+                }
+                #[cfg(not(windows))]
+                {
+                    report.installed = false;
+                    report.smoke_test_passed = false;
+                    report.smoke_test_detail = "Windows Platform Only".to_string();
                 }
             }
         }
@@ -1685,6 +1851,87 @@ fn draw_disk_warning_modal(f: &mut Frame, app: &InstallerApp) {
     f.render_widget(widget, modal_area);
 }
 
+fn draw_windows_rust_option_modal(f: &mut Frame) {
+    let area = f.area();
+    f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
+
+    let modal_width = 78.min(area.width.saturating_sub(4));
+    let modal_height = 18.min(area.height.saturating_sub(2));
+    let modal_area = centered_rect(modal_width, modal_height, area);
+
+    let modal_lines = vec![
+        Line::from(vec![Span::styled(
+            "🦀 WINDOWS RUST TOOLCHAIN & LINKER SETUP",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Rust on Windows requires a C++ linker to compile native .exe binaries.",
+            Style::default().fg(C_TEXT),
+        )]),
+        Line::from(vec![Span::styled(
+            "Visual Studio C++ Build Tools (link.exe) was not detected on this system.",
+            Style::default().fg(C_DIM),
+        )]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "➔ [1] Auto-Install MSVC C++ Build Tools (Recommended for Windows)",
+            Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "      Silently provisions headless link.exe & Windows SDK via Winget.",
+            Style::default().fg(C_DIM),
+        )]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "  [2] Configure GNU Toolchain (Visual Studio Free)",
+            Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "      Sets target to 'stable-x86_64-pc-windows-gnu' (Zero VS dependencies).",
+            Style::default().fg(C_DIM),
+        )]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "  [3] Skip Linker Setup (Install standard Rustup anyway)",
+            Style::default().fg(C_TEXT),
+        )]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                " [1 / Enter] ",
+                Style::default().fg(C_GREEN).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("MSVC Setup   ", Style::default().fg(C_TEXT)),
+            Span::styled(
+                " [2 / g] ",
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("GNU Target   ", Style::default().fg(C_TEXT)),
+            Span::styled(
+                " [3] ",
+                Style::default().fg(C_WHITE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("Skip   ", Style::default().fg(C_TEXT)),
+            Span::styled(
+                " [Esc] ",
+                Style::default().fg(C_RED).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("Back", Style::default().fg(C_TEXT)),
+        ]),
+    ];
+
+    let block = Block::default()
+        .title(" Windows C++ Linker Configuration ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(C_BORDER));
+    let widget = Paragraph::new(modal_lines)
+        .block(block)
+        .alignment(Alignment::Left);
+    f.render_widget(widget, modal_area);
+}
+
 fn draw_installing_screen(f: &mut Frame, app: &InstallerApp) {
     let area = f.area();
     f.render_widget(Block::default().style(Style::default().bg(C_BG)), area);
@@ -2076,8 +2323,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_runtime_registry_has_all_nine_tools() {
-        assert_eq!(RUNTIME_REGISTRY.len(), 9);
+    fn test_runtime_registry_has_all_ten_tools() {
+        assert_eq!(RUNTIME_REGISTRY.len(), 10);
         let ids: Vec<&str> = RUNTIME_REGISTRY.iter().map(|t| t.id).collect();
         assert!(ids.contains(&"node"));
         assert!(ids.contains(&"bun"));
@@ -2085,9 +2332,19 @@ mod tests {
         assert!(ids.contains(&"pnpm"));
         assert!(ids.contains(&"rustup"));
         assert!(ids.contains(&"clang"));
+        assert!(ids.contains(&"msvc"));
         assert!(ids.contains(&"go"));
         assert!(ids.contains(&"zig"));
         assert!(ids.contains(&"uv"));
+    }
+
+    #[test]
+    fn test_windows_linker_check_and_abi_choice() {
+        let _ = is_windows_msvc_linker_available();
+        assert_eq!(
+            WindowsRustAbiChoice::default(),
+            WindowsRustAbiChoice::Default
+        );
     }
 
     #[test]

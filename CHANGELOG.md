@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.16] — 2026-11-08
+
+### 🪟 Windows Compatibility, Performance & Cross-Platform Parity
+- 🛡️ **PSReadLine Buffer Poisoning Fix (Phase 0)**:
+  - Completely rewrote the PowerShell transient prompt handler using direct console writes and buffer state restoration, eliminating `'s' is not recognized` and corrupted escape sequence errors on Enter.
+- 📁 **Filesystem Resilience & Atomic Writes (Phase 1)**:
+  - Introduced `atomic_replace()` in `src/core/utils.rs` with Windows fallback (`remove_file` then `rename`/`copy`) to resolve Windows `fs::rename` collisions in Git cache, `z` jumper history, and typo engine cache.
+  - Added universal `dirs_home()` and `home_dir()` helpers across core prompt, cleaner, optimizer, and uninstaller.
+  - Enabled Win32 Virtual Terminal Processing (`ENABLE_VIRTUAL_TERMINAL_PROCESSING`) for legacy `conhost.exe`.
+  - Fixed Windows double-keystroke bug (`KeyEventKind::Press` guard) across all interactive TUIs (`todo`, `vault`, `keep`, `dman`, `gwatch`, etc.).
+- 💻 **PowerShell 5.1 & System Parity (Phase 2)**:
+  - Fixed `$IsWindows` guard compatibility on Windows PowerShell 5.1.
+  - Replaced unsupported ``` `e ``` notification escape sequences with `$([char]27)` across all shells.
+  - Added auto-detection for OneDrive-redirected `Documents` folders when resolving PowerShell profile paths.
+  - Added UTF-16LE, BOM, and CRLF line ending preservation when modifying shell profile files.
+  - Synchronized PSReadLine theme-aware syntax highlighting and Tab completion (`MenuComplete`).
+- ⚡ **Ultra-Fast Profile Startup (<70ms) (Phase 3)**:
+  - Replaced inline 95 KB Clap completion AST with dynamic lazy-loading completer stub (`gladeshell completions pwsh | Invoke-Expression` on first Tab), saving ~400ms on shell startup.
+  - Pruned duplicate PascalCase alias functions and added precedence guards before built-in command overrides (`cat`, `curl`, `wget`).
+  - Optimized in-memory PATH deduplication without running repetitive `Test-Path` filesystem checks.
+- 📊 **Hardware Metrics & Process Supervisor (Phase 4)**:
+  - Restored RAM and disk metrics in prompt on Windows via Win32 `GlobalMemoryStatusEx` and `GetDiskFreeSpaceExW`.
+  - Added cross-platform port resolution for `fkill` on Windows (`netstat`) and macOS (`lsof`).
+  - Assigned child processes to Win32 Job Objects with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` in `gw` (`gwatch`), ensuring nested processes terminate cleanly on hot-reload.
+- ⚙️ **CI/CD & MSVC Distribution (Phase 5)**:
+  - Configured static CRT linkage (`+crt-static`) in `.cargo/config.toml` for portable MSVC release binaries.
+  - Added automated PowerShell syntax validation and cross-platform smoke tests to GitHub Actions.
+
 ## 🚀 [1.2.15] — 2026-11-06
 
 ### ⚡ Universal Dev Watch Runner (`gw`)

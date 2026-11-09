@@ -9,5 +9,7 @@
 //! Subsystems:
 //! - `delete`: Safe Cross-Platform Trash & Deletion Engine
 
+#[cfg(feature = "tools")]
 pub mod delete;
+#[cfg(feature = "tools")]
 pub use delete::DeleteEngine;

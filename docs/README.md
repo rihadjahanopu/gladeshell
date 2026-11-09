@@ -95,6 +95,7 @@ graph TD
 | [**File & Content Utilities**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/tools/file_and_content_utilities.md) | Batch file renamer, auto-ls, bak, cheat-sheet, mkd, touch | `src/tools/file_renamer.rs`, `auto_ls.rs`, `keep.rs` |
 | [**Project Scaffolding Suite**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/tools/project_scaffolding.md) | Project Hub, `makecpp`, `makerust`, `vite`, `next`, `tailwind` | `src/tools/project_setup/` |
 | [**System Utilities & TUIs**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/tools/system_utilities.md) | `theme_picker`, `system_clean`, `pc_info`, `fkill`, `z_jumper` | `src/tools/` |
+| [**Architecture Decision Records (ADR)**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/adr/README.md) | Formal records for C-ABI, gitoxide, engine layer, and mimalloc | `docs/adr/` |
 
 ---
 

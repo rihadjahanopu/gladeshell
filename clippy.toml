@@ -1,0 +1,27 @@
+# ── Clippy Configuration ─────────────────────────────────────────────────────
+# Configuration for strict code quality, maintainability, and naming standards.
+
+cognitive-complexity-threshold = 35
+too-many-arguments-threshold = 10
+too-many-lines-threshold = 800
+
+# Recognised technical terms and domain identifiers in doc comments
+doc-valid-idents = [
+    "Gladeshell",
+    "VT100",
+    "TrueColor",
+    "PowerShell",
+    "Ripgrep",
+    "Gitoxide",
+    "Mimalloc",
+    "PBKDF2",
+    "GCM",
+    "AES",
+    "Zsh",
+    "Bash",
+    "Fish",
+    "Ratatui",
+    "Crossterm",
+    "CSI",
+    "SS3",
+]

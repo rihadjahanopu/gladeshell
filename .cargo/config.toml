@@ -1,3 +1,11 @@
+# ── Cargo Command Aliases ────────────────────────────────────────────────────
+[alias]
+lint = "clippy --workspace --all-targets --all-features -- -D warnings"
+fmt-check = "fmt --all -- --check"
+check-fast = "check --workspace --all-targets"
+test-fast = "test --workspace --all-targets"
+bench-prompt = "test prompt::tests -- --nocapture"
+
+# ── Windows MSVC Static C Runtime ─────────────────────────────────────────────
 [target.'cfg(target_env = "msvc")']
 rustflags = ["-C", "target-feature=+crt-static"]
-

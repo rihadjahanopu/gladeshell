@@ -194,6 +194,10 @@ harness = false
 name    = "bench_git"
 harness = false
 
+[[bench]]
+name    = "bench_engines"
+harness = false
+
 # ── Test / Bench profiles ────────────────────────────────────────────────────
 [profile.test]
 opt-level = 1

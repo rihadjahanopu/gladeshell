@@ -66,6 +66,9 @@ graph TD
 | Guide | Description | Key Source Locations |
 | :--- | :--- | :--- |
 | [**C-ABI & Shell Hooks**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/architecture/c_abi_and_shell_hooks.md) | In-process dynamic loading, P/Invoke, `dlopen`, memory contracts | `src/lib.rs`, `src/init/` |
+| [**CLI & Shell Completions**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/architecture/cli_and_completions.md) | Sub-millisecond fast-path router, Clap schema, dynamic completions | `src/cli.rs`, `src/main.rs` |
+| [**Shell Init & Integrations**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/init/shell_init_generators.md) | Dynamic Zsh, Bash, Fish, PowerShell generators & cleaner | `src/init/` |
+| [**Environment & Security**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/core/environment_and_security.md) | Atomic file replacement, path normalizer, OS entropy pools | `src/core/env.rs`, `utils.rs`, `secret_gen.rs` |
 | [**Memory Model & Allocator**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/architecture/memory_model.md) | Zero-allocation hot path, `mimalloc`, stack buffers, panic strategy | `src/lib.rs`, `Cargo.toml` |
 | [**Feature Flags Matrix**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/architecture/feature_flags.md) | Minimal core (`--no-default-features`) vs `tools` vs `prompt-engine` | `Cargo.toml`, `src/engines/mod.rs` |
 | [**Terminal Engine Subsystem**](file:///home/rihad/Developer/archive/creative-educational-code/gladeshell/docs/engines/terminal_engine.md) | Buffer state machine, VT100 key parser, atomic redraw, plugin loop | `src/engines/terminal/` |

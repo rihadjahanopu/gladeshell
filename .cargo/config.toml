@@ -5,6 +5,7 @@ fmt-check = "fmt --all -- --check"
 check-fast = "check --workspace --all-targets"
 test-fast = "test --workspace --all-targets"
 bench-prompt = "test prompt::tests -- --nocapture"
+audit-check = "audit --deny warnings"
 
 # ── Windows MSVC Static C Runtime ─────────────────────────────────────────────
 [target.'cfg(target_env = "msvc")']

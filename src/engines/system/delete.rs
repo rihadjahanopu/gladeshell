@@ -23,6 +23,7 @@ use std::time::SystemTime;
 
 use globset::{GlobBuilder, GlobMatcher};
 use ignore::WalkBuilder;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TargetKind {
@@ -83,7 +84,7 @@ impl DeleteEngine {
         progress: F,
     ) -> Result<DeleteStats, Box<dyn Error>>
     where
-        F: FnMut(u64, u64, &Path),
+        F: FnMut(u64, u64, &Path) + Send,
     {
         delete_target_with_progress(target, mode, progress)
     }
@@ -373,13 +374,14 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), Box<dyn Error>> {
 
 /// Execute deletion on target based on DeleteMode.
 /// Calls `progress(current_count, total_count, current_path)` callback for UI updates.
+/// Parallelized with Rayon across all CPU cores for high-throughput deletion.
 pub fn delete_target_with_progress<F>(
     target: &DeleteTarget,
     mode: DeleteMode,
     mut progress: F,
 ) -> Result<DeleteStats, Box<dyn Error>>
 where
-    F: FnMut(u64, u64, &Path),
+    F: FnMut(u64, u64, &Path) + Send,
 {
     let mut stats = DeleteStats::default();
 
@@ -411,51 +413,106 @@ where
         return Ok(stats);
     }
 
-    // Directory deletion
+    // Directory deletion — parallelized with Rayon
     let total_items = target.file_count + target.dir_count;
-    let mut current = 0u64;
 
-    // Use WalkDir in post-order (contents before parent directory)
-    let entries: Vec<_> = walkdir::WalkDir::new(&target.path)
-        .contents_first(true)
+    let mut files: Vec<(PathBuf, u64)> = Vec::new();
+    let mut dirs: Vec<PathBuf> = Vec::new();
+
+    for entry in walkdir::WalkDir::new(&target.path)
         .min_depth(1)
         .into_iter()
         .flatten()
-        .collect();
-
-    for entry in entries {
-        let p = entry.path();
-        ensure_writable(p);
-
-        if let Ok(meta) = entry.metadata() {
-            if meta.is_dir() {
-                if let Err(e) = fs::remove_dir(p) {
-                    stats.errors.push((p.to_path_buf(), e.to_string()));
-                } else {
-                    stats.dirs_removed += 1;
-                }
-            } else {
-                let len = meta.len();
-                if let Err(e) = fs::remove_file(p) {
-                    stats.errors.push((p.to_path_buf(), e.to_string()));
-                } else {
-                    stats.files_removed += 1;
-                    stats.bytes_freed += len;
-                }
-            }
+    {
+        let p = entry.path().to_path_buf();
+        if entry.file_type().is_dir() {
+            dirs.push(p);
+        } else {
+            let len = fs::symlink_metadata(&p).map(|m| m.len()).unwrap_or(0);
+            files.push((p, len));
         }
-        current += 1;
-        progress(current, total_items, p);
     }
 
-    // Finally remove root directory
+    let progress_mutex = std::sync::Mutex::new(progress);
+    let errors_mutex = std::sync::Mutex::new(Vec::new());
+
+    let files_removed = std::sync::atomic::AtomicU64::new(0);
+    let dirs_removed = std::sync::atomic::AtomicU64::new(0);
+    let bytes_freed = std::sync::atomic::AtomicU64::new(0);
+    let current_counter = std::sync::atomic::AtomicU64::new(0);
+
+    // 1. Parallel File Deletion using Rayon
+    files.par_iter().for_each(|(p, len)| {
+        ensure_writable(p);
+        if let Err(e) = fs::remove_file(p) {
+            if let Ok(mut errs) = errors_mutex.lock() {
+                errs.push((p.clone(), e.to_string()));
+            }
+        } else {
+            files_removed.fetch_add(1, Ordering::Relaxed);
+            bytes_freed.fetch_add(*len, Ordering::Relaxed);
+        }
+
+        let curr = current_counter.fetch_add(1, Ordering::Relaxed) + 1;
+        if curr.is_multiple_of(250) || curr == total_items {
+            if let Ok(mut prog) = progress_mutex.try_lock() {
+                prog(curr, total_items, p);
+            }
+        }
+    });
+
+    // 2. Sort directories by depth descending (deepest directories first)
+    dirs.sort_by_key(|a| std::cmp::Reverse(a.components().count()));
+
+    // Delete directories level-by-level in parallel
+    let mut i = 0;
+    while i < dirs.len() {
+        let depth = dirs[i].components().count();
+        let mut j = i;
+        while j < dirs.len() && dirs[j].components().count() == depth {
+            j += 1;
+        }
+
+        dirs[i..j].par_iter().for_each(|p| {
+            ensure_writable(p);
+            if let Err(e) = fs::remove_dir(p) {
+                if let Ok(mut errs) = errors_mutex.lock() {
+                    errs.push((p.clone(), e.to_string()));
+                }
+            } else {
+                dirs_removed.fetch_add(1, Ordering::Relaxed);
+            }
+
+            let curr = current_counter.fetch_add(1, Ordering::Relaxed) + 1;
+            if curr.is_multiple_of(250) || curr == total_items {
+                if let Ok(mut prog) = progress_mutex.try_lock() {
+                    prog(curr, total_items, p);
+                }
+            }
+        });
+
+        i = j;
+    }
+
+    // 3. Finally remove root directory
     ensure_writable(&target.path);
     if let Err(e) = fs::remove_dir(&target.path) {
-        stats
-            .errors
-            .push((target.path.clone(), format!("Failed root dir: {}", e)));
+        if let Ok(mut errs) = errors_mutex.lock() {
+            errs.push((target.path.clone(), format!("Failed root dir: {}", e)));
+        }
     } else {
-        stats.dirs_removed += 1;
+        dirs_removed.fetch_add(1, Ordering::Relaxed);
+    }
+
+    if let Ok(mut prog) = progress_mutex.lock() {
+        prog(total_items, total_items, &target.path);
+    }
+
+    stats.files_removed = files_removed.into_inner();
+    stats.dirs_removed = dirs_removed.into_inner();
+    stats.bytes_freed = bytes_freed.into_inner();
+    if let Ok(errs) = errors_mutex.into_inner() {
+        stats.errors = errs;
     }
 
     Ok(stats)

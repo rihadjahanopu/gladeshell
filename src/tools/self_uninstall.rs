@@ -28,6 +28,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         }
     };
 
+    run_with_home(&home)
+}
+
+pub fn run_with_home(home: &Path) -> Result<(), Box<dyn Error>> {
     let timestamp = chrono_timestamp();
 
     // ── 0. Stop Running Daemon & Remove Socket Files ────────────────────────────
@@ -106,7 +110,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                         backup_count += 1;
                         println!(
                             "\x1b[1;36m💾 Created backup:\x1b[0m {}",
-                            tildify(&backup_path, &home)
+                            tildify(&backup_path, home)
                         );
                     }
 
@@ -118,7 +122,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                     if fs::write(&path, result_str).is_ok() {
                         println!(
                             "\x1b[1;32m✅ Cleaned gladeshell configuration from:\x1b[0m {}",
-                            tildify(&path, &home)
+                            tildify(&path, home)
                         );
                         cleaned_count += 1;
                     }
@@ -138,7 +142,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         if dir.exists() && fs::remove_dir_all(&dir).is_ok() {
             println!(
                 "\x1b[1;32m🗑️ Removed directory:\x1b[0m {}",
-                tildify(&dir, &home)
+                tildify(&dir, home)
             );
         }
     }
@@ -156,7 +160,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         if bin.exists() && fs::remove_file(&bin).is_ok() {
             println!(
                 "\x1b[1;32m🗑️ Removed executable binary:\x1b[0m {}",
-                tildify(&bin, &home)
+                tildify(&bin, home)
             );
         }
     }
@@ -218,7 +222,10 @@ mod tests {
 
     #[test]
     fn test_self_uninstall_does_not_panic() {
-        let _ = run();
+        let temp_dir = std::env::temp_dir().join("gladeshell_test_uninstall_mock");
+        let _ = fs::create_dir_all(&temp_dir);
+        let _ = run_with_home(&temp_dir);
+        let _ = fs::remove_dir_all(&temp_dir);
     }
 
     #[test]

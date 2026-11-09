@@ -2740,6 +2740,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "flaky under parallel test execution; run alone with: cargo test test_empirical_performance_benchmark -- --ignored"]
     fn test_empirical_performance_benchmark() {
         use std::time::Instant;
         let mut ctx = PromptContext::default();

@@ -14,8 +14,9 @@
 //! - Real-time progress reporting for large directory cleanups (>500 files)
 
 use std::error::Error;
+use std::fs;
 use std::io::{stdout, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use crossterm::{
@@ -36,6 +37,7 @@ use crate::tools::delete_engine::{
     analyze_target, delete_target_with_progress, format_age, format_size, DeleteMode, DeleteTarget,
     TargetKind,
 };
+use rayon::prelude::*;
 
 // ── Theme Palette ────────────────────────────────────────────────────────────
 const C_PANEL: Color = Color::Rgb(24, 24, 38);
@@ -77,8 +79,14 @@ pub fn run(name: &str) -> Result<(), Box<dyn Error>> {
 pub fn run_with_options(opts: &RmdOptions) -> Result<(), Box<dyn Error>> {
     let raw_name = opts.name.trim();
     if raw_name.is_empty() {
-        println!("\x1b[1;33mUsage: rmd <directory_name> [-i] [--trash] [--dry-run] [-v]\x1b[0m");
-        return Ok(());
+        if opts.interactive {
+            return run_interactive_dir_picker();
+        } else {
+            println!(
+                "\x1b[1;33mUsage: rmd <directory_name> [-i] [--trash] [--dry-run] [-v]\x1b[0m"
+            );
+            return Ok(());
+        }
     }
 
     let target_path = Path::new(raw_name);
@@ -88,6 +96,13 @@ pub fn run_with_options(opts: &RmdOptions) -> Result<(), Box<dyn Error>> {
     }
 
     let target = analyze_target(target_path)?;
+    if target.kind != TargetKind::Directory {
+        println!(
+            "\x1b[1;31m❌ '{}' is a file, not a directory. Use 'rmf' to remove files.\x1b[0m",
+            raw_name
+        );
+        return Ok(());
+    }
 
     // Interactive TUI Mode
     if opts.interactive {
@@ -189,6 +204,373 @@ enum ModalChoice {
     Permanent,
     DryRun,
     Cancel,
+}
+
+fn run_interactive_dir_picker() -> Result<(), Box<dyn Error>> {
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let mut dir_paths: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = fs::read_dir(&current_dir) {
+        for entry in entries.flatten() {
+            if let Ok(ft) = entry.file_type() {
+                if ft.is_dir() {
+                    let path = entry.path();
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if !name.starts_with('.') {
+                        dir_paths.push(path);
+                    }
+                }
+            }
+        }
+    }
+
+    // Parallel analysis using Rayon — strictly directories only
+    let mut all_dirs: Vec<DeleteTarget> = dir_paths
+        .into_par_iter()
+        .filter_map(|path| analyze_target(&path).ok())
+        .filter(|t| t.kind == TargetKind::Directory)
+        .collect();
+
+    if all_dirs.is_empty() {
+        println!("\x1b[1;33mUsage: rmd <directory_name> [-i] [--trash] [--dry-run] [-v]\x1b[0m");
+        println!("\x1b[1;36mℹ No non-hidden subdirectories found in current directory.\x1b[0m");
+        return Ok(());
+    }
+
+    all_dirs.sort_by_key(|a| std::cmp::Reverse(a.size_bytes));
+
+    let _guard = TerminalGuard;
+    enable_raw_mode()?;
+    let mut stdout_handle = stdout();
+    execute!(stdout_handle, EnterAlternateScreen, crossterm::cursor::Hide)?;
+    let backend = CrosstermBackend::new(stdout_handle);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut selected_idx: usize = 0;
+    let mut search_query = String::new();
+    let mut search_mode = false;
+
+    loop {
+        // Build filtered list each frame
+        let filtered: Vec<&DeleteTarget> = if search_query.is_empty() {
+            all_dirs.iter().collect()
+        } else {
+            let q = search_query.to_lowercase();
+            all_dirs
+                .iter()
+                .filter(|t| {
+                    t.path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_lowercase().contains(&q))
+                        .unwrap_or(false)
+                })
+                .collect()
+        };
+
+        // Clamp cursor
+        if !filtered.is_empty() && selected_idx >= filtered.len() {
+            selected_idx = filtered.len() - 1;
+        }
+
+        terminal.draw(|f| {
+            draw_dir_picker_ui(
+                f,
+                &filtered,
+                all_dirs.len(),
+                selected_idx,
+                &search_query,
+                search_mode,
+            );
+        })?;
+
+        if let Event::Key(key) = event::read()? {
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+
+            if search_mode {
+                match key.code {
+                    KeyCode::Esc => {
+                        search_mode = false;
+                        search_query.clear();
+                        selected_idx = 0;
+                    }
+                    KeyCode::Backspace => {
+                        search_query.pop();
+                        selected_idx = 0;
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        // Allow navigation while searching
+                        if !filtered.is_empty() {
+                            if selected_idx == 0 {
+                                selected_idx = filtered.len() - 1;
+                            } else {
+                                selected_idx -= 1;
+                            }
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        if !filtered.is_empty() {
+                            selected_idx = (selected_idx + 1) % filtered.len();
+                        }
+                    }
+                    KeyCode::Enter => {
+                        if let Some(target) = filtered.get(selected_idx) {
+                            let chosen = (*target).clone();
+                            drop(_guard);
+                            return run_interactive_modal(&chosen);
+                        }
+                    }
+                    KeyCode::Char(c) => {
+                        search_query.push(c);
+                        selected_idx = 0;
+                    }
+                    _ => {}
+                }
+            } else {
+                match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                    KeyCode::Char('/') => {
+                        search_mode = true;
+                        selected_idx = 0;
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        if filtered.is_empty() {
+                        } else if selected_idx == 0 {
+                            selected_idx = filtered.len() - 1;
+                        } else {
+                            selected_idx -= 1;
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        if !filtered.is_empty() {
+                            selected_idx = (selected_idx + 1) % filtered.len();
+                        }
+                    }
+                    KeyCode::Enter => {
+                        if let Some(target) = filtered.get(selected_idx) {
+                            let chosen = (*target).clone();
+                            drop(_guard);
+                            return run_interactive_modal(&chosen);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+}
+
+fn draw_dir_picker_ui(
+    f: &mut Frame,
+    dirs: &[&DeleteTarget],
+    all_count: usize,
+    selected_idx: usize,
+    search_query: &str,
+    search_mode: bool,
+) {
+    let size = f.area();
+
+    // ── Full-screen outer block ──────────────────────────────────────────────
+    let outer_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(C_BORDER))
+        .style(Style::default().bg(C_PANEL))
+        .title(Span::styled(
+            " 🗑️  rmd — SELECT DIRECTORY TO REMOVE ",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
+        ));
+    f.render_widget(outer_block, size);
+
+    // Inner area (shrink by border)
+    let inner_area = Rect::new(
+        size.x + 1,
+        size.y + 1,
+        size.width.saturating_sub(2),
+        size.height.saturating_sub(2),
+    );
+
+    // ── Top-level layout ─────────────────────────────────────────────────────
+    //   [Search bar : 3]
+    //   [Stats line : 1]
+    //   [Dir list   : fill]
+    //   [Footer     : 1]
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Search bar
+            Constraint::Length(1), // Stats / header
+            Constraint::Min(2),    // Directory list
+            Constraint::Length(1), // Footer
+        ])
+        .split(inner_area);
+
+    // ── Search Bar ───────────────────────────────────────────────────────────
+    let (search_border_style, search_text_style, label_style) = if search_mode {
+        (
+            Style::default().fg(C_CYAN),
+            Style::default().fg(C_TEXT).add_modifier(Modifier::BOLD),
+            Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+        )
+    } else {
+        (
+            Style::default().fg(C_MUTED),
+            Style::default().fg(C_MUTED),
+            Style::default().fg(C_MUTED),
+        )
+    };
+
+    let search_display = if search_mode {
+        format!("{}_", search_query)
+    } else if search_query.is_empty() {
+        "Press / to search…".to_string()
+    } else {
+        search_query.to_string()
+    };
+
+    let search_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(search_border_style)
+        .title(Span::styled(" 🔍 Search ", label_style));
+
+    let search_para = Paragraph::new(Line::from(Span::styled(search_display, search_text_style)))
+        .block(search_block);
+    f.render_widget(search_para, layout[0]);
+
+    // ── Stats Line ───────────────────────────────────────────────────────────
+    let stats_line = if search_query.is_empty() {
+        Line::from(vec![
+            Span::styled(
+                "  Choose a directory to inspect & remove — ",
+                Style::default().fg(C_MUTED),
+            ),
+            Span::styled(
+                format!("{} directories found", all_count),
+                Style::default().fg(C_YELLOW).add_modifier(Modifier::BOLD),
+            ),
+        ])
+    } else {
+        Line::from(vec![
+            Span::styled("  Showing ", Style::default().fg(C_MUTED)),
+            Span::styled(
+                format!("{} of {}", dirs.len(), all_count),
+                Style::default().fg(C_CYAN).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" directories matching \"{}\"", search_query),
+                Style::default().fg(C_MUTED),
+            ),
+        ])
+    };
+    f.render_widget(Paragraph::new(stats_line), layout[1]);
+
+    // ── Directory List ───────────────────────────────────────────────────────
+    let list_area = layout[2];
+    let visible_rows = list_area.height as usize;
+    let start_idx = if selected_idx >= visible_rows && visible_rows > 0 {
+        selected_idx - visible_rows + 1
+    } else {
+        0
+    };
+
+    // Column widths based on actual terminal width
+    // Layout: prefix(3) + icon(3) + name(name_w) + 2 + size(10) + 2 + files(10) + 2 + age(16)
+    // meta_w = 10 + 2 + 10 + 2 + 16 = 40; overhead = prefix(3) + icon(3) + separators(6) = 12
+    let avail_w = list_area.width as usize;
+    let meta_w = 40; // size(10) + sep(2) + files(10) + sep(2) + age(16)
+    let overhead = 12; // prefix(3) + icon(3) + separators(6)
+    let name_w = avail_w.saturating_sub(meta_w + overhead).clamp(10, 45); // min 10, max 45 chars
+
+    let mut list_lines = Vec::new();
+
+    if dirs.is_empty() {
+        list_lines.push(Line::from(Span::styled(
+            "  No directories match your search.",
+            Style::default().fg(C_MUTED),
+        )));
+    } else {
+        for (i, target) in dirs.iter().enumerate().skip(start_idx).take(visible_rows) {
+            let is_selected = i == selected_idx;
+            let prefix = if is_selected { " ▶ " } else { "   " };
+            let dir_name = target
+                .path
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            // Truncate long names safely (Unicode / UTF-8 aware, never byte-slicing)
+            let char_len = dir_name.chars().count();
+            let truncated_name = if char_len > name_w && name_w > 0 {
+                let keep = name_w.saturating_sub(1);
+                let s: String = dir_name.chars().take(keep).collect();
+                format!("{}…", s)
+            } else if name_w > char_len {
+                let pad = " ".repeat(name_w - char_len);
+                format!("{}{}", dir_name, pad)
+            } else {
+                dir_name
+            };
+
+            let name_style = if is_selected {
+                Style::default()
+                    .fg(C_YELLOW)
+                    .add_modifier(Modifier::BOLD)
+                    .bg(Color::Rgb(50, 40, 10))
+            } else {
+                Style::default().fg(C_TEXT)
+            };
+
+            let size_str = format!("{:>10}", format_size(target.size_bytes));
+            let count_str = format!("{:>5} files", target.file_count);
+            // Fixed-width age column (16 chars) so metadata never overflows
+            let age_raw = format_age(target.modified);
+            let age_str = format!("• {:<14}", age_raw);
+
+            list_lines.push(Line::from(vec![
+                Span::styled(prefix, Style::default().fg(C_YELLOW)),
+                Span::styled("📁 ", Style::default().fg(C_CYAN)),
+                Span::styled(truncated_name, name_style),
+                Span::raw("  "),
+                Span::styled(size_str, Style::default().fg(C_GREEN)),
+                Span::raw("  "),
+                Span::styled(count_str, Style::default().fg(C_MUTED)),
+                Span::raw("  "),
+                Span::styled(age_str, Style::default().fg(C_MUTED)),
+            ]));
+        }
+    }
+
+    f.render_widget(Paragraph::new(list_lines), list_area);
+
+    // ── Footer ───────────────────────────────────────────────────────────────
+    let footer = if search_mode {
+        Line::from(vec![
+            Span::styled("[↑↓/j,k] ", Style::default().fg(C_CYAN)),
+            Span::styled("Navigate   ", Style::default().fg(C_MUTED)),
+            Span::styled("[Enter] ", Style::default().fg(C_GREEN)),
+            Span::styled("Confirm   ", Style::default().fg(C_MUTED)),
+            Span::styled("[Backspace] ", Style::default().fg(C_YELLOW)),
+            Span::styled("Erase   ", Style::default().fg(C_MUTED)),
+            Span::styled("[Esc] ", Style::default().fg(C_RED)),
+            Span::styled("Clear Search", Style::default().fg(C_MUTED)),
+        ])
+    } else {
+        Line::from(vec![
+            Span::styled("[↑↓/j,k] ", Style::default().fg(C_CYAN)),
+            Span::styled("Navigate   ", Style::default().fg(C_MUTED)),
+            Span::styled("[/] ", Style::default().fg(C_CYAN)),
+            Span::styled("Search   ", Style::default().fg(C_MUTED)),
+            Span::styled("[Enter] ", Style::default().fg(C_GREEN)),
+            Span::styled("Confirm   ", Style::default().fg(C_MUTED)),
+            Span::styled("[Esc/q] ", Style::default().fg(C_RED)),
+            Span::styled("Cancel", Style::default().fg(C_MUTED)),
+        ])
+    };
+    f.render_widget(
+        Paragraph::new(footer).alignment(Alignment::Center),
+        layout[3],
+    );
 }
 
 fn run_interactive_modal(target: &DeleteTarget) -> Result<(), Box<dyn Error>> {

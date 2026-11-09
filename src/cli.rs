@@ -220,6 +220,7 @@ pub enum Commands {
     /// Force remove directory recursively (`rmd <name>`)
     Rmd {
         /// Directory or file name to remove
+        #[arg(default_value = "")]
         name: String,
 
         /// Launch interactive TUI confirmation modal

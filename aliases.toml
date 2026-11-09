@@ -666,9 +666,8 @@ only_shells = ["bash", "zsh", "fish"]
 
 [[group.aliases]]
 key         = "bak"
-value       = "cp $1 $1.bak"
-description = "Quick backup of a file"
-only_shells = ["bash", "zsh"]
+value       = "gladeshell bak"
+description = "Instant timestamped backup copy (.bak)"
 
 # ── Modern CLI Tool Wrappers ──────────────────────────────────────────────────
 # Port of: bat, eza, z, tree, tldr, trash, fh wrappers in config.sh
@@ -727,8 +726,8 @@ description = "Simplified man pages via tldr"
 
 [[group.aliases]]
 key         = "trash"
-value       = "gio trash"
-description = "Safe delete — moves files to system trash via GIO"
+value       = "gladeshell trash"
+description = "Safe delete — moves files or directories to system trash safely"
 
 [[group.aliases]]
 key         = "fh"
@@ -789,6 +788,21 @@ description = "Interactive system performance monitor"
 key         = "t"
 value       = "gladeshell t"
 description = "Smart file creation helper"
+
+[[group.aliases]]
+key         = "mkd"
+value       = "gladeshell mkd"
+description = "Create directory and enter it"
+
+[[group.aliases]]
+key         = "rmd"
+value       = "gladeshell rmd"
+description = "Force remove directory recursively or interactive TUI modal"
+
+[[group.aliases]]
+key         = "rmf"
+value       = "gladeshell rmf"
+description = "Remove file(s) with confirmation or interactive TUI explorer"
 
 [[group.aliases]]
 key         = "pc-info"

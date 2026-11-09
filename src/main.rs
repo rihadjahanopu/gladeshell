@@ -239,15 +239,17 @@ fn main() {
                 err.exit();
             }
             // Check if user ran `gladeshell <unknown_cmd>`
-            if effective_args.len() > 1 && !effective_args[1].starts_with('-') {
+            if err.kind() == clap::error::ErrorKind::InvalidSubcommand
+                && effective_args.len() > 1
+                && !effective_args[1].starts_with('-')
+            {
                 let unknown_subcmd = &effective_args[1];
                 let pretty_msg =
                     gladeshell_core::core::typo_engine::render_pretty_suggestion(unknown_subcmd);
                 eprint!("{}", pretty_msg);
                 std::process::exit(1);
-            } else {
-                err.exit();
             }
+            err.exit();
         }
     };
 
@@ -314,30 +316,36 @@ fn main() {
                 trash,
                 dry_run,
                 verbose,
-            } => gladeshell_core::tools::rmd::run_with_options(
-                &gladeshell_core::tools::rmd::RmdOptions {
-                    name,
-                    interactive,
-                    trash,
-                    dry_run,
-                    verbose,
-                },
-            ),
+            } => {
+                let is_interactive = interactive || name.trim().is_empty();
+                gladeshell_core::tools::rmd::run_with_options(
+                    &gladeshell_core::tools::rmd::RmdOptions {
+                        name,
+                        interactive: is_interactive,
+                        trash,
+                        dry_run,
+                        verbose,
+                    },
+                )
+            }
             Commands::Rmf {
                 names,
                 force,
                 interactive,
                 trash,
                 dry_run,
-            } => gladeshell_core::tools::rmf::run_with_options(
-                &gladeshell_core::tools::rmf::RmfOptions {
-                    names,
-                    force,
-                    interactive,
-                    trash,
-                    dry_run,
-                },
-            ),
+            } => {
+                let is_interactive = interactive || (names.is_empty() && !force);
+                gladeshell_core::tools::rmf::run_with_options(
+                    &gladeshell_core::tools::rmf::RmfOptions {
+                        names,
+                        force,
+                        interactive: is_interactive,
+                        trash,
+                        dry_run,
+                    },
+                )
+            }
             Commands::Bak { name } => gladeshell_core::tools::bak::run(&name),
             Commands::Trash { name } => gladeshell_core::tools::trash::run(&name),
             Commands::Zed => gladeshell_core::tools::zed_setup::run(),

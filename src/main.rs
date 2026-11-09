@@ -315,8 +315,36 @@ fn main() {
             Commands::Cf => gladeshell_core::tools::fuzzy_cd::run(),
             Commands::T { files } => gladeshell_core::tools::touch_tool::run(&files),
             Commands::Mkd { name } => gladeshell_core::tools::mkd::run(&name).map(|_| ()),
-            Commands::Rmd { name } => gladeshell_core::tools::rmd::run(&name),
-            Commands::Rmf { name, force } => gladeshell_core::tools::rmf::run(&name, force),
+            Commands::Rmd {
+                name,
+                interactive,
+                trash,
+                dry_run,
+                verbose,
+            } => gladeshell_core::tools::rmd::run_with_options(
+                &gladeshell_core::tools::rmd::RmdOptions {
+                    name,
+                    interactive,
+                    trash,
+                    dry_run,
+                    verbose,
+                },
+            ),
+            Commands::Rmf {
+                names,
+                force,
+                interactive,
+                trash,
+                dry_run,
+            } => gladeshell_core::tools::rmf::run_with_options(
+                &gladeshell_core::tools::rmf::RmfOptions {
+                    names,
+                    force,
+                    interactive,
+                    trash,
+                    dry_run,
+                },
+            ),
             Commands::Bak { name } => gladeshell_core::tools::bak::run(&name),
             Commands::Trash { name } => gladeshell_core::tools::trash::run(&name),
             Commands::Zed => gladeshell_core::tools::zed_setup::run(),

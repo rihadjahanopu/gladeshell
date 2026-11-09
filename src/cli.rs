@@ -221,16 +221,45 @@ pub enum Commands {
     Rmd {
         /// Directory or file name to remove
         name: String,
+
+        /// Launch interactive TUI confirmation modal
+        #[arg(short, long)]
+        interactive: bool,
+
+        /// Move to Trash / Recycle Bin instead of permanent deletion
+        #[arg(long)]
+        trash: bool,
+
+        /// Preview deletion target and size without removing anything
+        #[arg(long = "dry-run")]
+        dry_run: bool,
+
+        /// Verbose output showing items removed
+        #[arg(short, long)]
+        verbose: bool,
     },
 
-    /// Remove file with confirmation (`rmf <file>`)
+    /// Remove file(s) with confirmation (`rmf <file>`)
     Rmf {
-        /// File name to remove
-        name: String,
+        /// File names or glob patterns (e.g. *.log, test.tmp)
+        #[arg(required = false, num_args = 0..)]
+        names: Vec<String>,
 
         /// Skip interactive confirmation
         #[arg(short, long)]
         force: bool,
+
+        /// Launch interactive TUI cleanup explorer with Ripgrep search
+        #[arg(short, long)]
+        interactive: bool,
+
+        /// Move to Trash / Recycle Bin instead of permanent deletion
+        #[arg(long)]
+        trash: bool,
+
+        /// Preview deletion target and size without removing anything
+        #[arg(long = "dry-run")]
+        dry_run: bool,
     },
 
     /// Create backup copy (.bak) (`bak <file>`)

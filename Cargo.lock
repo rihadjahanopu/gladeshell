@@ -2106,6 +2106,7 @@ dependencies = [
  "crossterm",
  "flate2",
  "gix",
+ "globset",
  "grep-printer",
  "grep-regex",
  "grep-searcher",

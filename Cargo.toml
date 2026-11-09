@@ -56,6 +56,7 @@ unicode-width = "0.2"
 
 # Fast Grep Engine (ripgrep crates)
 ignore = { version = "0.4", optional = true }
+globset = { version = "0.4", optional = true }
 grep-regex = { version = "0.1", optional = true }
 grep-searcher = { version = "0.1", optional = true }
 grep-printer = { version = "0.3", optional = true }
@@ -99,6 +100,8 @@ windows-sys = { version = "0.61", features = [
     "Win32_System_JobObjects",
     "Win32_System_Threading",
     "Win32_Foundation",
+    "Win32_UI_Shell",
+    "Win32_Storage_FileSystem",
 ] }
 
 # Unix Raw Mode termios handling
@@ -121,6 +124,7 @@ tools = [
     "walkdir",
     "arboard",
     "ignore",
+    "globset",
     "grep-regex",
     "grep-searcher",
     "grep-printer",

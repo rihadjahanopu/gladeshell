@@ -12,5 +12,5 @@ pub mod env;
 pub mod prompt;
 pub mod secret_gen;
 pub mod sysinfo;
-pub mod typo_engine;
+pub use crate::engines::intelligence::typo as typo_engine;
 pub mod utils;

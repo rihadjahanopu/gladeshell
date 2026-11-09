@@ -8,7 +8,7 @@
 //   • No stdout/stderr pollution on failure.
 // ============================================================================
 
-use crate::buffer_engine::BufferEngine;
+use super::buffer::BufferEngine;
 use std::io::{self, Write};
 use unicode_width::UnicodeWidthChar;
 
@@ -278,7 +278,7 @@ impl Default for Renderer {
 
 // Re-export KeyModifiers for use in tests above
 #[cfg(test)]
-use crate::input_parser::KeyModifiers;
+use super::parser::KeyModifiers;
 
 // ============================================================================
 // Unit Tests

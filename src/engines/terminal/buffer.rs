@@ -9,7 +9,7 @@
 //   • All `char_to_byte_index` mappings use the standard `.char_indices()` API.
 // ============================================================================
 
-use crate::input_parser::KeyModifiers;
+use super::parser::KeyModifiers;
 
 /// Hard limit on typed buffer length in Unicode scalar values.
 /// Prevents memory exhaustion if the PTY floods input.

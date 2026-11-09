@@ -22,18 +22,21 @@
 #![deny(clippy::unwrap_in_result)]
 
 // Re-export the core modules so both lib consumers and unit-tests can reach them.
-pub mod buffer_engine;
 pub mod cli;
 pub mod core;
 pub mod daemon;
+pub mod engines;
 pub mod git;
 pub mod init;
-pub mod input_parser;
-pub mod plugin_engine;
 pub mod plugins;
-pub mod renderer;
 #[cfg(feature = "tools")]
 pub mod tools;
+
+// ── Backward-Compatible Module Re-exports (Zero-Breaking Shims) ──────────────
+pub use engines::terminal::buffer as buffer_engine;
+pub use engines::terminal::parser as input_parser;
+pub use engines::terminal::plugin as plugin_engine;
+pub use engines::terminal::renderer;
 
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};

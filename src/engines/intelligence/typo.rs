@@ -457,6 +457,27 @@ pub fn render_pretty_suggestion(input: &str) -> String {
     out
 }
 
+/// Facade for the typo correction engine.
+pub struct TypoEngine;
+
+impl TypoEngine {
+    pub fn suggest(input: &str) -> Option<Suggestion> {
+        suggest(input)
+    }
+
+    pub fn find_suggestions(input: &str) -> Vec<Suggestion> {
+        find_suggestions(input)
+    }
+
+    pub fn render_pretty_suggestion(input: &str) -> String {
+        render_pretty_suggestion(input)
+    }
+
+    pub fn distance(s1: &str, s2: &str) -> usize {
+        damerau_levenshtein(s1, s2)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

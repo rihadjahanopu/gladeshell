@@ -13,7 +13,7 @@ pub mod bak;
 pub mod bun_runner;
 pub mod code_setup;
 pub mod compressor;
-pub mod delete_engine;
+pub use crate::engines::system::delete as delete_engine;
 pub mod dep_installer;
 pub mod dman;
 pub mod drive_jumper;

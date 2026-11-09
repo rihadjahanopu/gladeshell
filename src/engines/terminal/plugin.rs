@@ -11,10 +11,10 @@
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
 
-use crate::buffer_engine::BufferEngine;
-use crate::input_parser::{InputParser, KeyEvent};
+use super::buffer::BufferEngine;
+use super::parser::{InputParser, KeyEvent};
+use super::renderer::Renderer;
 use crate::plugins::{autocomplete, autosuggest};
-use crate::renderer::Renderer;
 
 /// If autosuggestion lookup takes longer than this, skip and return None.
 /// Keeps the input loop responsive under all conditions.

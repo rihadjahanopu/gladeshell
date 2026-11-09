@@ -69,6 +69,39 @@ pub struct DeleteStats {
     pub errors: Vec<(PathBuf, String)>,
 }
 
+/// Facade for the safe deletion subsystem.
+pub struct DeleteEngine;
+
+impl DeleteEngine {
+    pub fn analyze(path: &Path) -> Result<DeleteTarget, Box<dyn Error>> {
+        analyze_target(path)
+    }
+
+    pub fn delete<F>(
+        target: &DeleteTarget,
+        mode: DeleteMode,
+        progress: F,
+    ) -> Result<DeleteStats, Box<dyn Error>>
+    where
+        F: FnMut(u64, u64, &Path),
+    {
+        delete_target_with_progress(target, mode, progress)
+    }
+
+    pub fn trash(path: &Path) -> Result<(), Box<dyn Error>> {
+        move_to_trash(path)
+    }
+
+    pub fn search(
+        base_dir: &Path,
+        pattern: &str,
+        cancel_token: &Arc<AtomicBool>,
+        max_results: usize,
+    ) -> Vec<DeleteTarget> {
+        search_interactive_targets(base_dir, pattern, cancel_token, max_results)
+    }
+}
+
 pub fn format_size(bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = 1024 * KB;

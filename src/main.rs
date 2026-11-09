@@ -213,31 +213,24 @@ fn main() {
         })
         .unwrap_or_default();
 
-    if prog_name == "gw" || prog_name == "cwatch" || prog_name == "cw" {
-        #[cfg(feature = "tools")]
-        {
-            #[derive(clap::Parser)]
-            #[command(name = "gw", about = "Universal hot reload & dev watch runner")]
-            struct GwCli {
-                #[command(flatten)]
-                args: gladeshell_core::tools::gwatch::WatchArgs,
-            }
-
-            let gw_cli = match GwCli::try_parse_from(
-                std::iter::once(prog_name).chain(raw_args.into_iter().skip(1)),
-            ) {
-                Ok(a) => a,
-                Err(err) => err.exit(),
+    // Universal Multicall Support: if invoked via a tool symlink (e.g. `rmd`, `rmf`, `mkd`, `gw`, `keep`)
+    let effective_args: Vec<String> =
+        if !prog_name.is_empty() && prog_name != "gladeshell" && prog_name != "gladeshell_core" {
+            let clean_exe = prog_name.strip_suffix(".exe").unwrap_or(&prog_name);
+            let target_subcmd = match clean_exe {
+                "gw" | "cwatch" | "cw" => "watch",
+                "comp" | "pack" | "compress" => "cmp",
+                other => other,
             };
-            if let Err(e) = gladeshell_core::tools::gwatch::run(&gw_cli.args) {
-                eprintln!("\x1b[31merror:\x1b[0m {e}");
-                std::process::exit(1);
-            }
-            return;
-        }
-    }
+            std::iter::once(String::from("gladeshell"))
+                .chain(std::iter::once(target_subcmd.to_string()))
+                .chain(raw_args.iter().skip(1).cloned())
+                .collect()
+        } else {
+            raw_args.clone()
+        };
 
-    let cli = match Cli::try_parse() {
+    let cli = match Cli::try_parse_from(&effective_args) {
         Ok(cli) => cli,
         Err(err) => {
             if err.kind() == clap::error::ErrorKind::DisplayHelp
@@ -246,8 +239,8 @@ fn main() {
                 err.exit();
             }
             // Check if user ran `gladeshell <unknown_cmd>`
-            if raw_args.len() > 1 && !raw_args[1].starts_with('-') {
-                let unknown_subcmd = &raw_args[1];
+            if effective_args.len() > 1 && !effective_args[1].starts_with('-') {
+                let unknown_subcmd = &effective_args[1];
                 let pretty_msg =
                     gladeshell_core::core::typo_engine::render_pretty_suggestion(unknown_subcmd);
                 eprint!("{}", pretty_msg);
@@ -515,6 +508,29 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
     // Pre-generate and cache zero-fork init scripts for all supported shells
     for sh in ["bash", "zsh", "fish", "pwsh"] {
         let _ = init::generate(sh);
+    }
+
+    // Auto-create standalone tool symlinks so `rmd`, `rmf`, etc. work in any shell/script
+    #[cfg(unix)]
+    {
+        let tools = [
+            "rmd", "rmf", "mkd", "bak", "trash", "keep", "gw", "uup", "uu", "ut", "fkill", "dman",
+            "ex", "cmp", "sysmon",
+        ];
+        if let Some(home) = std::env::var_os("HOME") {
+            let home_path = std::path::PathBuf::from(home);
+            for dir in [home_path.join(".local/bin"), home_path.join(".cargo/bin")] {
+                let gladeshell_bin = dir.join("gladeshell");
+                if gladeshell_bin.exists() {
+                    for tool in tools {
+                        let link = dir.join(tool);
+                        if !link.exists() {
+                            let _ = std::os::unix::fs::symlink(&gladeshell_bin, &link);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Ok(())

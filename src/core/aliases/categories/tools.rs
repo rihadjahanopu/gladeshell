@@ -276,6 +276,36 @@ pub fn group() -> AliasGroup {
                 only_shells: vec![],
             },
             AliasEntry {
+                key: "mkd".into(),
+                value: "gladeshell mkd".into(),
+                description: "Create directory and enter it".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "rmd".into(),
+                value: "gladeshell rmd".into(),
+                description: "Force remove directory recursively".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "rmf".into(),
+                value: "gladeshell rmf".into(),
+                description: "Remove file(s) with confirmation and dry-run".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "bak".into(),
+                value: "gladeshell bak".into(),
+                description: "Create instant timestamped backup copy".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
+                key: "trash".into(),
+                value: "gladeshell trash".into(),
+                description: "Safely move files/directories to system trash".into(),
+                only_shells: vec![],
+            },
+            AliasEntry {
                 key: "glade".into(),
                 value: "gladeshell theme".into(),
                 description: "Interactive TUI theme picker & switcher".into(),

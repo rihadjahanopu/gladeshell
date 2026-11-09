@@ -784,64 +784,101 @@ A full-featured process manager in your terminal. Processes are sorted by **CPU 
 
 ```
 gladeshell/
-├── src/                    # Pure Rust core application codebase
-│   ├── main.rs             # CLI entrypoint & subcommand router
-│   ├── cli.rs              # Clap CLI definitions & flag parsing
-│   ├── config.rs           # Workspace & theme configuration loader
-│   ├── theme.rs            # 55 prompt themes & ANSI styling engine
-│   └── tools/              # Tool implementations & Ratatui TUIs
-│       ├── compressor.rs   # Level 1 Fast multi-core zstd compressor
-│       ├── extractor.rs    # Multi-format parallel extractor
-│       ├── ffmedia.rs      # 24-in-1 FFmpeg multimedia suite
-│       ├── vault.rs        # AES-256 PBKDF2 Multi-Vault Security Suite
-│       ├── todo.rs         # Task manager Ratatui TUI
-│       ├── notes.rs        # Notes manager Ratatui TUI
-│       ├── filetree.rs     # File explorer Ratatui TUI
-│       ├── process.rs      # Interactive Process Manager TUI
-│       └── cleaner.rs      # System clean Ratatui TUI
+├── src/                        # Pure Rust core application codebase
+│   ├── main.rs                 # CLI entrypoint & subcommand fast-path router
+│   ├── lib.rs                  # C-ABI dynamic library (`cdylib` zero-fork shell hook)
+│   ├── cli.rs                  # Clap CLI schema & argument definitions
+│   │
+│   ├── engines/                # High-performance modular engine subsystems
+│   │   ├── terminal/           # Interactive terminal runtime engine
+│   │   │   ├── buffer.rs       # Active line buffer & Unicode cursor state machine
+│   │   │   ├── parser.rs       # Unified VT100 / ANSI / CSI / SS3 key event parser
+│   │   │   ├── renderer.rs     # Atomic double-buffered redraw engine with ghost text
+│   │   │   └── plugin.rs       # Plugin lifecycle & orchestration pipeline
+│   │   ├── intelligence/       # Command intelligence & typo correction
+│   │   │   └── typo.rs         # Damerau-Levenshtein distance & PATH suggestion engine
+│   │   └── system/             # Operating system & filesystem engines
+│   │       └── delete.rs       # Cross-platform safe delete (Recycle Bin / Trash / Ripgrep)
+│   │
+│   ├── core/                   # Prompt & environment core
+│   │   ├── prompt.rs           # Zero-allocation dynamic prompt renderer (55 themes)
+│   │   ├── aliases.rs          # Cross-shell alias engine & expansion logic
+│   │   ├── env.rs              # Cross-platform environment variable normalizer
+│   │   ├── sysinfo.rs          # Hardware metrics (CPU, RAM, Battery, Duration)
+│   │   ├── secret_gen.rs       # Cryptographically secure random generator
+│   │   └── utils.rs            # Atomic file operations & path utilities
+│   │
+│   ├── daemon/                 # Background prompt cache & async IPC engine
+│   │   ├── mod.rs              # Unix domain socket / Windows named pipe server
+│   │   └── client.rs           # Zero-latency async IPC client with in-process fallback
+│   │
+│   ├── git/                    # Git version control engine
+│   │   └── mod.rs              # Native gitoxide integration (branch, dirty, stash)
+│   │
+│   ├── init/                   # Shell integration scripts generator
+│   │   └── mod.rs              # Zsh, Bash, Fish, and PowerShell startup loaders
+│   │
+│   ├── plugins/                # Terminal productivity plugins
+│   │   ├── autosuggest.rs      # Real-time fish-like command autosuggestion
+│   │   ├── autocomplete.rs     # Tab-completion candidate generator
+│   │   └── highlight.rs        # Live syntax highlighter (executables, paths, flags)
+│   │
+│   └── tools/                  # Built-in developer utilities & Ratatui TUIs
+│       ├── rmd.rs              # Modern safe directory removal (CLI + interactive TUI)
+│       ├── rmf.rs              # Modern safe file removal (Ripgrep cleanup explorer)
+│       ├── gwatch.rs           # Universal zero-overhead file watcher & hot-reload runner
+│       ├── vault.rs            # AES-256-GCM / PBKDF2 encrypted vault manager
+│       ├── compressor.rs       # Multi-threaded parallel archiver (zip, tar.gz, 7z, zstd)
+│       ├── extractor.rs        # Universal multi-format archive extractor
+│       ├── ffmedia.rs          # 24-in-1 FFmpeg audio/video processing suite
+│       ├── theme_picker.rs     # Interactive 55-theme browser & live preview TUI
+│       ├── todo.rs             # Local productivity task manager TUI
+│       ├── notes.rs            # Markdown notes manager & search TUI
+│       ├── system_clean.rs     # System cache, package & temp cleaner TUI
+│       └── fkill.rs            # Interactive process search & termination TUI
 │
-├── benches/                # Criterion performance benchmarks
-├── aliases.toml            # Centralized cross-shell alias registry
-├── Cargo.toml              # Rust crate metadata & dependencies
-├── Cargo.lock              # Tracked dependency lockfile
-├── Makefile                # Cargo workflow shortcuts (check, clippy, test, bench)
+├── benches/                    # Criterion performance & latency benchmarks
+├── aliases.toml                # Centralized cross-shell alias registry
+├── Cargo.toml                  # Rust workspace manifest & feature flags
+├── Cargo.lock                  # Pinned dependency graph lockfile
+├── Makefile                    # Cargo workflow shortcuts (check, clippy, test, bench)
 │
-├── install.sh              # Universal Unix/Linux/macOS setup script
-├── install.ps1             # Universal Windows PowerShell setup script
+├── install.sh                  # Universal Unix/Linux/macOS setup script
+├── install.ps1                 # Universal Windows PowerShell setup script
 │
-├── web/                    # Static website & Netlify deployment
-│   ├── index.html          # Landing page
-│   ├── docs.html           # Interactive documentation page
-│   ├── linux-setup.html    # Linux application ecosystem browser
-│   ├── style.css           # Styling system & dark mode
-│   ├── install.sh          # Mirrored installer
-│   └── install.ps1         # Mirrored installer
+├── web/                        # Official website & documentation deployment
+│   ├── index.html              # Landing page
+│   ├── docs.html               # Interactive documentation page
+│   ├── linux-setup.html        # Linux application ecosystem browser
+│   ├── style.css               # Styling system & dark mode
+│   ├── install.sh              # Mirrored installer
+│   └── install.ps1             # Mirrored installer
 │
-├── .githooks/              # Automated Git hygiene hooks
-│   ├── pre-commit          # Cargo fmt/clippy, sync guard, conflict marker check
-│   └── pre-push            # Cargo check & test verification
+├── .githooks/                  # Automated Git hygiene hooks
+│   ├── pre-commit              # Cargo fmt/clippy, sync guard, conflict marker check
+│   └── pre-push                # Cargo check & test verification
 │
-├── .github/                # CI/CD Workflows
+├── .github/                    # CI/CD Workflows
 │   └── workflows/
-│       ├── rust-ci.yml     # Multi-OS Rust compilation & test matrix
-│       ├── release.yml     # Cross-platform release binaries
-│       ├── shellcheck.yml  # Installer script validation
-│       └── label.yml       # PR auto-labeling
+│       ├── rust-ci.yml         # Multi-OS Rust compilation & test matrix (Ubuntu/macOS/Windows)
+│       ├── release.yml         # Cross-platform release binaries
+│       ├── shellcheck.yml      # Installer script validation
+│       └── label.yml           # PR auto-labeling
 │
-├── .vscode/                # VS Code workspace settings
-│   ├── settings.json       # Live Clippy on save & rust-analyzer config
-│   ├── launch.json         # CodeLLDB debugging configuration
-│   └── tasks.json          # Cargo task shortcuts
+├── .vscode/                    # VS Code workspace settings
+│   ├── settings.json           # Live Clippy on save & rust-analyzer config
+│   ├── launch.json             # CodeLLDB debugging configuration
+│   └── tasks.json              # Cargo task shortcuts
 │
-├── README.md               # User documentation (you are here)
-├── ARCHITECTURE.txt        # Architecture design & system map
-├── wiki.md                 # Extended wiki manual
-├── ROADMAP.md              # Project roadmap & milestones
-├── CHANGELOG.md            # Release version history
-├── CONTRIBUTING.md         # Developer contribution guidelines
-├── SUPPORT.md              # Support options
-├── SECURITY.md             # Security policy & reporting
-└── LICENSE                 # MIT License
+├── README.md                   # User documentation (you are here)
+├── ARCHITECTURE.txt            # Architecture design & system map
+├── wiki.md                     # Extended wiki manual
+├── ROADMAP.md                  # Project roadmap & milestones
+├── CHANGELOG.md                # Release version history
+├── CONTRIBUTING.md             # Developer contribution guidelines
+├── SUPPORT.md                  # Support options
+├── SECURITY.md                 # Security policy & reporting
+└── LICENSE                     # MIT License
 ```
 
 ---

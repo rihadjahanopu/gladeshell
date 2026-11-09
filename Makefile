@@ -2,7 +2,7 @@
 #  Makefile — gladeshell Build, Lint, Test & Installation Manager
 # =============================================================================
 
-.PHONY: build check clippy fmt test bench bench-startup bench-full install update uninstall hooks help
+.PHONY: build check clippy fmt test bench bench-startup install update uninstall hooks help
 
 # Default action
 all: build
@@ -33,10 +33,6 @@ export BENCH_SCRIPT
 ## bench-startup: Benchmark process launch & shell init startup times
 bench-startup:
 	@python3 -c "$$BENCH_SCRIPT"
-
-## bench-full: Run full 50-iteration Python empirical benchmark suite
-bench-full: build
-	@python3 scripts/run_benchmarks.py
 
 
 ## build: Build release binary

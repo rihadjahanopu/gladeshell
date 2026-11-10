@@ -1548,7 +1548,7 @@ fn draw_select_screen(f: &mut Frame, app: &mut InstallerApp) {
             }),
         ),
         Span::styled(
-            "  gladeshell v1.2.16",
+            format!("  gladeshell v{}", env!("CARGO_PKG_VERSION")),
             Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
         ),
     ]);

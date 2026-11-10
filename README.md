@@ -14,7 +14,7 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 [![Rust](https://img.shields.io/badge/Rust-2024%20%7C%201.85%2B-orange?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-0ea5e9?style=for-the-badge&logo=linux&logoColor=white)](#)
 [![Stars](https://img.shields.io/github/stars/rihadjahanopu/gladeshell?style=for-the-badge&logo=github&color=f59e0b&logoColor=white)](https://github.com/rihadjahanopu/gladeshell)
-[![Version](https://img.shields.io/badge/Version-1.2.16-ec4899?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/Version-1.2.17-ec4899?style=for-the-badge)](#)
 [![Website](https://img.shields.io/badge/Website-gladeshell.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://gladeshell.netlify.app)
 
 <br>
@@ -566,8 +566,8 @@ uu
 | -------------- | ----------------------------------------------------------- | ---------------------------- |
 | `mkd <name>`   | Create directory and `cd` into it                           | `mkd my-app`                 |
 | `t <file>`     | Create a file with feedback                                 | `t index.js`                 |
-| `rmd <name>`   | Force remove directory recursively                          | `rmd old-build`              |
-| `rmf <file>`   | Safely remove a file                                        | `rmf config.bak`             |
+| `rmd [name]`   | Fast recursive dir deletion or interactive Ratatui TUI      | `rmd old-build` / `rmd`      |
+| `rmf [file]`   | Safe parallel file deletion or Ripgrep cleanup explorer TUI | `rmf config.bak` / `rmf`     |
 | `bak <file>`   | Create a `.bak` backup copy                                 | `bak .env`                   |
 | `trash <file>` | Move file to system trash (safe delete)                     | `trash temp.log`             |
 | `ex <archive>`                | Extract any archive format                                             | `ex project.tar.gz`        |

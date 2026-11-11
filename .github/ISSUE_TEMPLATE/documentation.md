@@ -8,7 +8,7 @@ assignees: rihadjahanopu
 
 ## 📖 Documentation Issue
 
-<!-- Which documentation file has the issue? (e.g. README.md, ARCHITECTURE.txt, CONTRIBUTING.md, Rust doc comments, or web/ site) -->
+<!-- Which documentation file has the issue? (e.g. README.md, architecture/, ARCHITECTURE.txt, CONTRIBUTING.md, Rust doc comments, or docs/ site) -->
 
 **File / Module:**
 

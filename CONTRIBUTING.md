@@ -74,7 +74,7 @@ git remote add upstream https://github.com/rihadjahanopu/gladeshell.git
 
 ### Step 1.5: Activate Git Hooks (Required)
 
-This project ships pre-commit and pre-push hooks inside `.githooks/` that **automatically sync** installer files (`install.sh` & `install.ps1`) into `web/` and verify Rust code quality before every commit.
+This project ships pre-commit and pre-push hooks inside `.githooks/` that **automatically sync** installer files (`install.sh` & `install.ps1`) into `docs/` and verify Rust code quality before every commit.
 
 Run the setup script **once** after cloning (pick your shell):
 
@@ -100,7 +100,7 @@ chmod +x .githooks/*
 > **What the pre-commit hook does on every `git commit`:**
 >
 > - Runs security & hygiene guard (checks for merge conflict markers and uncommitted secrets)
-> - Auto-syncs `install.sh` & `install.ps1` → `web/`
+> - Auto-syncs `install.sh` & `install.ps1` → `docs/`
 > - Verifies Rust formatting (`cargo fmt`), lints (`cargo clippy`), and compilation (`cargo check`)
 
 You only need to run this **once** per local clone. It does **not** affect any global git settings.
@@ -124,7 +124,8 @@ gladeshell/
 ├── benches/               ★ Performance benchmarks (Criterion / Criterion-rs)
 ├── install.sh             ★ Non-destructive Unix/Linux/macOS installer script
 ├── install.ps1            ★ Non-destructive Windows PowerShell installer script
-├── web/                   ★ Static web portal (deploy root — index.html, install.sh, install.ps1)
+├── architecture/          ★ Technical specs, ADRs & system architecture docs
+├── docs/                  ★ Static web portal (deploy root — index.html, install.sh, install.ps1)
 ├── .githooks/             ★ Project git hooks (pre-commit & pre-push verification)
 └── .github/workflows/    ★ Automated multi-platform GitHub Actions CI/CD pipelines
 ```

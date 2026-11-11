@@ -56,7 +56,7 @@ indent_size = 2
 indent_style = space
 indent_size = 2
 
-# ── HTML / CSS / JS (web/) ────────────────────────────────────
+# ── HTML / CSS / JS (docs/) ────────────────────────────────────
 [*.{html,css,js}]
 indent_style = space
 indent_size = 2

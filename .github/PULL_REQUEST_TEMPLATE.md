@@ -11,8 +11,8 @@ Closes #<!-- Issue number, if applicable -->
 - [ ] 🦀 **Rust Core Engine** (features, optimization, bug fix in `src/`)
 - [ ] ⚡ **Performance / Benchmarks** (memory, parallel I/O, speedup)
 - [ ] 📦 **Installer Script** (`install.sh` / `install.ps1`)
-- [ ] 📖 **Documentation** (`README.md`, `ARCHITECTURE.txt`, doc comments)
-- [ ] 🌐 **Web Portal** (`web/` site updates)
+- [ ] 📖 **Documentation** (`README.md`, `architecture/`, `ARCHITECTURE.txt`, doc comments)
+- [ ] 🌐 **Web Portal** (`docs/` site updates)
 - [ ] 🔧 **CI/CD / Tooling** (`.github/`, `.githooks/`, Makefile)
 
 ---

@@ -32,7 +32,7 @@ jobs:
 
       - name: Run ShellCheck on Bash installer scripts
         run: |
-          echo "🔍 Checking install.sh and web/install.sh..."
+          echo "🔍 Checking install.sh and docs/install.sh..."
           mapfile -t BASH_FILES < <(git ls-files '*.sh')
           if [ ${#BASH_FILES[@]} -gt 0 ]; then
             shellcheck --severity=warning "${BASH_FILES[@]}"

@@ -2,7 +2,7 @@
 #  Makefile — gladeshell Build, Lint, Test & Installation Manager
 # =============================================================================
 
-.PHONY: build check clippy fmt test bench bench-startup bench-full install update uninstall hooks help
+.PHONY: build check clippy fmt test test-full test-full-pwsh test-all ci bench bench-startup bench-full install update uninstall hooks help
 
 # Default action
 all: build
@@ -59,6 +59,24 @@ fmt:
 test:
 	cargo test --workspace
 
+## test-full: Run comprehensive test suite with modern visual dashboard UI (CI/CD ready, auto-detects OS/PowerShell)
+test-full:
+ifeq ($(OS),Windows_NT)
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/test_runner.ps1 2>nul || powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test_runner.ps1
+else
+	@./scripts/test_runner.sh
+endif
+
+## test-full-pwsh: Run comprehensive test suite using PowerShell dashboard (cross-platform pwsh)
+test-full-pwsh:
+	@pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/test_runner.ps1 || powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test_runner.ps1
+
+## ci: Alias for test-full
+ci: test-full
+
+## test-all: Alias for test-full
+test-all: test-full
+
 ## bench: Run Criterion micro-benchmarks
 bench:
 	cargo bench
@@ -104,7 +122,8 @@ help:
 	@echo "  make check      - Run fast cargo check across all targets"
 	@echo "  make clippy     - Run Rust Clippy linter with strict warning enforcement"
 	@echo "  make fmt        - Format Rust source code using rustfmt"
-	@echo "  make test       - Execute full workspace unit test suite"
+	@echo "  make test       - Execute workspace unit test suite"
+	@echo "  make test-full  - Run comprehensive suite with modern UI dashboard (fmt, clippy, check, audit, test, doc, smoke)"
 	@echo "  make bench      - Run Criterion benchmarks"
 	@echo "  make hooks      - Enable local .githooks git pre-commit & pre-push hooks"
 	@echo "  make install    - Build and install gladeshell into system PATH"

@@ -113,7 +113,7 @@ and native Ratatui TUI developer applications.
              ▼                          ▼                          ▼
    ┌───────────────────┐      ┌───────────────────┐      ┌───────────────────┐
    │    WEB PORTAL     │      │  VS CODE / ZED    │      │   BULLETPROOF CI  │
-   │    web/           │      │  .vscode/         │      │   .github/        │
+   │    docs/          │      │  .vscode/         │      │   .github/        │
    │                   │      │                   │      │   .githooks/      │
    │ • Landing Page    │      │ • Clippy on save  │      │ • 7-target Matrix │
    │ • Mirror Scripts  │      │ • CodeLLDB Debug  │      │ • Auto-Tag & Release│
@@ -156,7 +156,13 @@ gladeshell/
 ├── install.sh              ← Universal Unix/Linux/macOS installer script
 ├── install.ps1             ← Universal Windows PowerShell installer script
 │
-├── web/                    ← Static website deploy root (Netlify)
+├── architecture/           ← Technical specs, ADRs & system architecture docs
+│   ├── adr/                ← Architecture Decision Records
+│   ├── core/               ← Core subsystem design specifications
+│   ├── engines/            ← Modular terminal & system engines
+│   └── tools/              ← Developer utilities & TUI blueprints
+│
+├── docs/                   ← Static website deploy root (Netlify)
 │   ├── index.html          ← Main landing page
 │   ├── install.sh          ← Mirrored Linux installer
 │   └── install.ps1         ← Mirrored Windows installer

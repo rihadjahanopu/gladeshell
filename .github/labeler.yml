@@ -46,12 +46,13 @@ installer:
 website:
   - changed-files:
       - any-glob-to-any-file:
-          - 'web/**'
+          - 'docs/**'
 
 # ── 7. Documentation & Project Specs ──────────────────────────
 documentation:
   - changed-files:
       - any-glob-to-any-file:
+          - 'architecture/**'
           - '*.md'
           - '*.txt'
           - 'ARCHITECTURE.txt'

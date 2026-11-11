@@ -2,7 +2,7 @@
 
 <br>
 
-<img src="web/favicon.svg" alt="logo" width="30%">
+<img src="docs/favicon.svg" alt="logo" width="30%">
 
 ### ⚡ The Ultimate Pure Rust Shell & Developer Suite for Modern Terminal Users
 
@@ -846,7 +846,13 @@ gladeshell/
 ├── install.sh                  # Universal Unix/Linux/macOS setup script
 ├── install.ps1                 # Universal Windows PowerShell setup script
 │
-├── web/                        # Official website & documentation deployment
+├── architecture/               # System architecture specs, ADRs & design blueprints
+│   ├── adr/                    # Architecture Decision Records
+│   ├── core/                   # Core subsystem design specifications
+│   ├── engines/                # Modular terminal & system engines
+│   └── tools/                  # Developer utilities & TUI blueprints
+│
+├── docs/                       # Official website & documentation portal (Netlify root)
 │   ├── index.html              # Landing page
 │   ├── docs.html               # Interactive documentation page
 │   ├── linux-setup.html        # Linux application ecosystem browser

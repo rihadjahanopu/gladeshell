@@ -145,7 +145,8 @@ glade monochrome
 
 ```
 gladeshell/
-├── web/                   # Static documentation website (gladeshell.netlify.app)
+├── architecture/          # Technical specifications, ADRs & system architecture docs
+├── docs/                  # Static documentation website (gladeshell.netlify.app)
 │   ├── AGENT.md           # Machine-readable context & specification for AI Agents
 │   ├── llms.txt           # Standard LLM discovery document (llmstxt.org)
 │   ├── index.html         # Official Landing Page

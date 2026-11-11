@@ -37,7 +37,7 @@ Contributions to `gladeshell` fall into several key areas:
 
 ### 🎨 Web & Design
 
-- Static website portal (`web/index.html`, `web/install.sh`, `web/install.ps1`).
+- Static website portal (`docs/index.html`, `docs/install.sh`, `docs/install.ps1`).
 - UI/UX enhancements, Ratatui theme palettes, and terminal preview assets.
 
 ### 🧪 Testing & Bug Reporting

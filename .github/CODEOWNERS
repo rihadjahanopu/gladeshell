@@ -16,7 +16,8 @@ install.sh                  @rihadjahanopu
 install.ps1                 @rihadjahanopu
 
 # Web Portal & Docs
-web/                        @rihadjahanopu
+docs/                       @rihadjahanopu
+architecture/               @rihadjahanopu
 *.md                        @rihadjahanopu
 
 # Automation & Hooks

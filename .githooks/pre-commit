@@ -4,7 +4,7 @@
 # ║                                                                            ║
 # ║  What it does:                                                             ║
 # ║    1. Security & Hygiene: Conflict markers, private keys, large files (>10M)║
-# ║    2. Web Sync: Syncs install.sh & install.ps1 → web/                      ║
+# ║    2. Docs Sync: Syncs install.sh & install.ps1 → docs/                    ║
 # ║    3. Rust Quality: Formats (rustfmt), lints (clippy), checks (cargo check) ║
 # ║                                                                            ║
 # ║  Skip controls:                                                            ║
@@ -148,7 +148,7 @@ fi
 if [[ "${GLADESHELL_SKIP_SYNC:-0}" == "1" ]]; then
   warn "GLADESHELL_SKIP_SYNC=1 detected — skipping installer file auto-sync."
 else
-  header "◆ STEP 2: Installer File Auto-Sync (install.sh & install.ps1 → web/)"
+  header "◆ STEP 2: Installer File Auto-Sync (install.sh & install.ps1 → docs/)"
 
   safe_copy() {
     local src="$1"
@@ -185,7 +185,7 @@ else
   SYNC_NEEDED=false
 
   for f in "${INSTALLER_FILES[@]}"; do
-    if is_staged "$f" || [[ ! -f "web/$f" ]]; then
+    if is_staged "$f" || [[ ! -f "docs/$f" ]]; then
       SYNC_NEEDED=true
       break
     fi
@@ -195,8 +195,8 @@ else
     skip "No installer files (install.sh / install.ps1) modified."
   else
     for f in "${INSTALLER_FILES[@]}"; do
-      if is_staged "$f" || [[ ! -f "web/$f" ]]; then
-        safe_copy "$f" "web/$f"
+      if is_staged "$f" || [[ ! -f "docs/$f" ]]; then
+        safe_copy "$f" "docs/$f"
       fi
     done
   fi

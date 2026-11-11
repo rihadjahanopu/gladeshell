@@ -20,11 +20,13 @@ if [[ -t 1 ]]; then
   C_MAGENTA='\033[1;35m'
   C_CYAN='\033[1;36m'
   C_WHITE='\033[1;37m'
-  BG_DARK='\033[48;5;235m'
 else
   C_RESET='' C_BOLD='' C_DIM='' C_RED='' C_GREEN=''
-  C_YELLOW='' C_BLUE='' C_MAGENTA='' C_CYAN='' C_WHITE='' BG_DARK=''
+  C_YELLOW='' C_BLUE='' C_MAGENTA='' C_CYAN='' C_WHITE=''
 fi
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
 
 # ─── Detect OS & Binary Suffix ───────────────────────────────────────────────
 BIN_PATH="./target/debug/gladeshell"
@@ -65,15 +67,19 @@ run_step() {
   local detail_fail="$5"
 
   echo -e "${C_BOLD}${C_BLUE}◆ [${num}/7]${C_RESET} ${C_BOLD}${name}${C_RESET} ..."
-  local t_start=$(date +%s%N)
+  local t_start
+  t_start=$(date +%s%N)
   local log_output
   local exit_code=0
 
   log_output=$(eval "$cmd" 2>&1) || exit_code=$?
 
-  local t_end=$(date +%s%N)
-  local elapsed_ms=$(( (t_end - t_start) / 1000000 ))
-  local elapsed_sec=$(awk -v ms="$elapsed_ms" 'BEGIN { printf "%.2fs", ms/1000 }')
+  local t_end
+  t_end=$(date +%s%N)
+  local elapsed_ms
+  elapsed_ms=$(( (t_end - t_start) / 1000000 ))
+  local elapsed_sec
+  elapsed_sec=$(awk -v ms="$elapsed_ms" 'BEGIN { printf "%.2fs", ms/1000 }')
 
   STEP_NAMES+=("$name")
   STEP_TIMES+=("$elapsed_sec")

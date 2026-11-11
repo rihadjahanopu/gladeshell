@@ -56,7 +56,8 @@ function Write-BoxLine {
 }
 
 # ── Timing ─────────────────────────────────────────────────────────────────────
-function Start-Timing {
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
+function Get-Stopwatch {
     return [System.Diagnostics.Stopwatch]::StartNew()
 }
 function Get-Elapsed {
@@ -103,7 +104,7 @@ function Invoke-Step {
         return
     }
 
-    $sw  = Start-Timing
+    $sw  = Get-Stopwatch
     $tmp = [System.IO.Path]::GetTempFileName()
 
     try {
@@ -230,7 +231,7 @@ function Show-Summary {
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Push-Location $ProjectRoot
 
-$suiteTimer = Start-Timing
+$suiteTimer = Get-Stopwatch
 
 Show-Header
 
@@ -274,7 +275,7 @@ Write-Cyan "  $BULLET "
 Write-White "[7/7] Binary Smoke Test ..."
 NL
 
-$sw7 = Start-Timing
+$sw7 = Get-Stopwatch
 $smokeOk = $true
 $smokeFails = @()
 

@@ -26,7 +26,7 @@ else
 fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 
 # ─── Detect OS & Binary Suffix ───────────────────────────────────────────────
 BIN_PATH="./target/debug/gladeshell"

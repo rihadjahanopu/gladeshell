@@ -1,80 +1,160 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║             GLADESHELL — WORLD-CLASS DEPENDABOT v2 CONFIGURATION             ║
+# ║                                                                            ║
+# ║  Enterprise-Grade Automation • Zero PR Fatigue • SemVer Major Safety Guard  ║
+# ║  Conventional Commits • Multi-Ecosystem Smart Grouping • Clean Architecture ║
+# ║                                                                            ║
+# ║  Documentation & Specification:                                            ║
+# ║  https://docs.github.com/en/code-security/dependabot/dependabot-version-updates ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
 version: 2
 
 updates:
-  # ── 1. Cargo Rust Dependencies ───────────────────────────────────────────────
+  # ─────────────────────────────────────────────────────────────────────────────
+  #  1. RUST CARGO DEPENDENCY ECOSYSTEM (Cargo.toml & Cargo.lock)
+  # ─────────────────────────────────────────────────────────────────────────────
   - package-ecosystem: "cargo"
     directory: "/"
+
+    # ── Scheduling ─────────────────────────────────────────────────────────────
+    # Run weekly on Monday early morning (03:00 UTC).
+    # Why Etc/UTC: Universal standard time prevents clock-drift & timezone issues
+    # across distributed CI runners and multi-region developer machines.
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "04:00"
-      timezone: "Asia/Dhaka"
-    open-pull-requests-limit: 5
-    versioning-strategy: "increase-if-necessary"
+      time: "03:00"
+      timezone: "Etc/UTC"
+
+    # Limit open PRs to prevent notification spam and CI concurrency starvation
+    open-pull-requests-limit: 10
+
+    # ── Commit Message Standard (Conventional Commits) ─────────────────────────
+    # Produces clean, automated release-friendly commit messages:
+    # Example: "chore(deps): bump ratatui from 0.28.0 to 0.28.1"
+    # Example for groups: "chore(deps): bump terminal-ui-suite group"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
+
+    # ── GitHub Metadata & Triage ───────────────────────────────────────────────
     labels:
       - "dependencies"
       - "rust"
+      - "automated-pr"
+
     assignees:
       - "rihadjahanopu"
-    reviewers:
-      - "rihadjahanopu"
 
-    # Smart Grouping Rules: Combines related dependency updates into a single clean PR
+    # CRITICAL SECURITY & API RULE:
+    # DO NOT put the repository owner in `reviewers: [...]`.
+    # GitHub API explicitly forbids the PR creator/owner from being assigned
+    # as a reviewer on their own PR (HTTP 422 Unprocessable Entity).
+    # Triage is cleanly handled via `assignees`.
+
+    # ── SemVer Major Safety Guard (Prevent Breaking API Rewrites) ──────────────
+    # Major updates (0.x -> 1.0, 1.x -> 2.0, or 0.28 -> 0.29 in pre-1.0 crates)
+    # often contain breaking API rewrites that require deliberate architectural refactoring.
+    # By ignoring major bumps on core framework crates, Dependabot safely automates
+    # 100% of non-breaking patch and minor updates without breaking the build.
+    ignore:
+      - dependency-name: "gix*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "ratatui*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "crossterm*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "clap*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "sysinfo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "inquire"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "toml"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "serde*"
+        update-types: ["version-update:semver-major"]
+
+    # ── Smart Grouping Rules (Consolidate Related PRs) ─────────────────────────
+    # Instead of creating 20 individual PRs, Dependabot bundles related suites
+    # into single, atomic, easy-to-review Pull Requests.
+    # Note: Dependabot assigns dependencies to the FIRST matching group.
     groups:
-      gitoxide-ecosystem:
+      # Gitoxide Suite: Keeps all gix-* crates in lockstep synchronization
+      gitoxide-suite:
         patterns:
           - "gix*"
-        semantic-title: "chore(deps): bump gitoxide (gix) crate suite"
 
-      crypto-security:
+      # Terminal UI Suite: Ratatui + Crossterm + Inquire + Termcolor
+      terminal-ui-suite:
         patterns:
-          - "aes-gcm"
-          - "pbkdf2"
-          - "sha2"
-          - "zeroize"
-          - "rpassword"
+          - "ratatui*"
+          - "crossterm*"
+          - "unicode-width*"
+          - "inquire*"
+          - "termcolor*"
+
+      # Cryptographic & Security Vault Suite
+      crypto-security-suite:
+        patterns:
+          - "aes-gcm*"
+          - "pbkdf2*"
+          - "sha2*"
+          - "zeroize*"
+          - "rpassword*"
           - "rand*"
-        semantic-title: "chore(deps): bump crypto & security crates"
 
-      terminal-ui:
+      # Fast Grep Engine Suite: Ripgrep engine ecosystem
+      ripgrep-search-suite:
         patterns:
-          - "ratatui"
-          - "crossterm"
-          - "unicode-width"
-          - "inquire"
-          - "termcolor"
-        semantic-title: "chore(deps): bump terminal UI crates"
+          - "grep-*"
+          - "globset*"
+          - "ignore*"
+          - "walkdir*"
 
-      cargo-patch-updates:
+      # Serialization & Configuration Ecosystem
+      serialization-suite:
+        patterns:
+          - "serde*"
+          - "toml*"
+
+      # Catch-all: Consolidate remaining safe minor & patch updates into one PR
+      patch-and-minor-crates:
         update-types:
           - "patch"
-        semantic-title: "chore(deps): bump patch cargo dependencies"
+          - "minor"
+        dependency-type: "production"
 
-  # ── 2. GitHub Actions Workflows ──────────────────────────────────────────────
+  # ─────────────────────────────────────────────────────────────────────────────
+  #  2. GITHUB ACTIONS WORKFLOW ECOSYSTEM (.github/workflows/*.yml)
+  # ─────────────────────────────────────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
+
     schedule:
-      interval: "monthly"
+      interval: "weekly"
       day: "monday"
-      time: "04:00"
-      timezone: "Asia/Dhaka"
-    open-pull-requests-limit: 3
+      time: "03:30"
+      timezone: "Etc/UTC"
+
+    open-pull-requests-limit: 5
+
+    # Conventional commit format: "ci(deps): bump actions/checkout from 4 to 5"
     commit-message:
-      prefix: "ci(deps)"
+      prefix: "ci"
       include: "scope"
+
     labels:
       - "ci"
       - "dependencies"
+      - "github-actions"
+
     assignees:
       - "rihadjahanopu"
-    reviewers:
-      - "rihadjahanopu"
 
+    # Bundle all GitHub Action updates into one single weekly PR
     groups:
-      actions-workflows:
+      actions-all:
         patterns:
           - "*"
-        semantic-title: "ci(deps): bump GitHub Actions workflow dependencies"

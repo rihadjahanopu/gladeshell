@@ -1,0 +1,75 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║             GLADESHELL — AUTOMATED RELEASE NOTES DRAFTER                     ║
+# ║                                                                            ║
+# ║  Categorizes pull requests into structured, polished release notes:         ║
+# ║  Features • Fixes • Performance • Security • Dependencies • Documentation  ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+name-template: 'v$RESOLVED_VERSION — GladeShell Release'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: '🚀 Features & Enhancements'
+    labels:
+      - 'enhancement'
+      - 'feature'
+      - 'feat'
+
+  - title: '🐛 Bug Fixes & Stability'
+    labels:
+      - 'bug'
+      - 'fix'
+
+  - title: '⚡ Performance & Zero-Fork Optimizations'
+    labels:
+      - 'performance'
+      - 'perf'
+      - 'benchmarks'
+
+  - title: '🔒 Security & Cryptographic Hardening'
+    labels:
+      - 'security'
+
+  - title: '📦 Dependency & Supply-Chain Updates'
+    labels:
+      - 'dependencies'
+      - 'cargo'
+
+  - title: '📝 Documentation & Community'
+    labels:
+      - 'documentation'
+      - 'docs'
+
+  - title: '🛠️ Tooling & Infrastructure'
+    labels:
+      - 'ci'
+      - 'chore'
+      - 'refactor'
+
+change-template: '- $TITLE by @$AUTHOR in #$NUMBER'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking-change'
+  minor:
+    labels:
+      - 'minor'
+      - 'enhancement'
+      - 'feature'
+  patch:
+    labels:
+      - 'patch'
+      - 'bug'
+      - 'fix'
+      - 'dependencies'
+  default: patch
+
+template: |
+  ## 🌟 What's Changed in GladeShell
+
+  $CHANGES
+
+  ---
+  **Full Changelog**: https://github.com/rihadjahanopu/gladeshell/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION

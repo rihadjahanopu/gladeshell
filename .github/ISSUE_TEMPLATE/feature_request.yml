@@ -1,0 +1,61 @@
+name: "✨ Feature Request"
+description: "Suggest a new tool, theme, prompt enhancement, or shell integration for GladeShell."
+title: "feat: [short feature summary]"
+labels: ["enhancement"]
+assignees: ["rihadjahanopu"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 💡 Propose a New Feature or Capability
+        GladeShell evolves through community feedback. Please describe the problem you want solved or the feature you'd like to see.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem or Limitation Statement"
+      description: "Is your feature request related to a specific limitation or workflow friction?"
+      placeholder: "I frequently need to inspect git stashes in sub-millisecond prompts, but currently..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: "Proposed Solution & Design"
+      description: "Describe the desired capability, command syntax, or UI behavior."
+      placeholder: "Add a new sub-command `gladeshell git-stash` or an additional segment in prompt themes..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: "Target Subsystem"
+      description: "Which area of GladeShell does this feature primarily impact?"
+      options:
+        - "Prompt Engine & Themes (src/core/prompt.rs)"
+        - "Shell Init & Aliases (src/init / aliases.toml)"
+        - "TUI Tools (Ratatui terminal applications)"
+        - "System Diagnostics & Telemetry (src/core/sysinfo.rs)"
+        - "Cryptographic Vault (src/tools/vault.rs)"
+        - "Cross-Platform Installers (install.sh / install.ps1)"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives Considered"
+      description: "Have you explored any workarounds or existing shell tools (e.g. Starship, Oh-My-Posh, FZF)?"
+      placeholder: "I previously used a custom bash script, but it suffered from fork latency..."
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: "Implementation Willingness"
+      options:
+        - label: "I am willing to submit a Pull Request to implement this feature."
+          required: false

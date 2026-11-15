@@ -1,0 +1,19 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║             GLADESHELL — GITHUB ISSUE TEMPLATE CONFIGURATION                ║
+# ║  Enforces structured issue intake and redirects general Q&A to Discussions  ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: 💬 GitHub Discussions & General Q&A
+    url: https://github.com/rihadjahanopu/gladeshell/discussions
+    about: Ask questions, share shell configurations, and brainstorm ideas with the community.
+
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/rihadjahanopu/gladeshell/security/advisories/new
+    about: Report sensitive vulnerabilities privately following responsible disclosure guidelines.
+
+  - name: 📖 Official GladeShell Documentation
+    url: https://rihadjahanopu.github.io/gladeshell
+    about: Read setup guides, shell initialization, benchmarks, and architectural documentation.

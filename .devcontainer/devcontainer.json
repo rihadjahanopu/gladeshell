@@ -1,0 +1,36 @@
+{
+  "name": "GladeShell Rust Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefault": true
+    },
+    "ghcr.io/devcontainers/features/powershell:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "lldb.executable": "/usr/bin/lldb",
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer",
+          "editor.formatOnSave": true
+        },
+        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer.cargo.allFeatures": true
+      },
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+        "ms-vscode.powershell"
+      ]
+    }
+  },
+
+  "postCreateCommand": "cargo check --workspace",
+  "remoteUser": "vscode"
+}

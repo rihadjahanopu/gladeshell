@@ -2,7 +2,7 @@
 
 This document defines the security model, vulnerability disclosure procedures, and core security guarantees of **[gladeshell](https://github.com/rihadjahanopu/gladeshell)**.
 
-[![Security Policy](https://img.shields.io/badge/Security-Policy%20v1.1-a855f7?style=for-the-badge&logo=shield)](https://github.com/rihadjahanopu/gladeshell/security/policy)
+[![Security Policy](https://img.shields.io/badge/Security-Policy%20v1.2-a855f7?style=for-the-badge&logo=shield)](https://github.com/rihadjahanopu/gladeshell/security/policy)
 [![Memory Safety](https://img.shields.io/badge/Memory%20Safety-100%25%20Safe%20Rust-22c55e?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 [![Zero Telemetry](https://img.shields.io/badge/Telemetry-Zero%20Network%20Calls-0ea5e9?style=for-the-badge)](https://github.com/rihadjahanopu/gladeshell)
 [![AES-256 Vault](https://img.shields.io/badge/Encryption-AES--256--GCM-f59e0b?style=for-the-badge)](https://github.com/rihadjahanopu/gladeshell)
@@ -15,9 +15,9 @@ Only active production releases of `gladeshell` receive security patches and vul
 
 | Version | Status | Engine Architecture | Security Support |
 | :--- | :--- | :--- | :--- |
-| **1.1.x** | 🟢 **Active Release** | Pure Rust Core (`#![deny(unsafe_code)]`) | ✅ Full Security Patches & Audits |
-| **1.0.x** | 🟡 **Legacy** | Shell Script Engine | ⚠️ Security Critical Patches Only |
-| **< 1.0** | 🔴 **End of Life** | Experimental Drafts | ❌ No Security Maintenance |
+| **1.2.x** | 🟢 **Active Release** | Pure Rust Core (`#![deny(unsafe_code)]`) | ✅ Full Security Patches & Audits |
+| **1.1.x** | 🟡 **Maintenance** | Pure Rust Core (`#![deny(unsafe_code)]`) | ⚠️ Security Critical Patches Only |
+| **<= 1.0** | 🔴 **End of Life** | Legacy Script Engine / Early Drafts | ❌ No Security Maintenance |
 
 ---
 

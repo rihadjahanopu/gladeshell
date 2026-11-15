@@ -1,0 +1,45 @@
+name: "⚡ Performance / Latency Report"
+description: "Report prompt rendering latency regression, high memory usage, or benchmark anomalies."
+title: "perf: [subsystem latency or memory report]"
+labels: ["performance", "benchmarks"]
+assignees: ["rihadjahanopu"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### ⚡ Zero-Fork Performance Guarantee
+        GladeShell guarantees sub-millisecond prompt rendering. If prompt latency exceeds 1.5ms or memory usage increases unexpectedly, please report it below.
+
+  - type: input
+    id: benchmark-metric
+    attributes:
+      label: "Observed Latency / Metric"
+      description: "Measured render time (e.g. from `hyperfine 'gladeshell prompt render'` or internal timer)."
+      placeholder: "e.g. 3.2ms rendering on a large Git worktree"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment-details
+    attributes:
+      label: "Hardware & Repository Conditions"
+      description: "Describe the machine specs, CPU, disk type (NVMe/SSD/NFS), and repo size."
+      placeholder: "AMD Ryzen 7 7840HS, 32GB RAM, Linux kernel 6.8, Git repository with 50,000 files..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: "Reproduction & Profile Steps"
+      description: "How can the performance team benchmark this regression locally?"
+      placeholder: "1. Clone large repo\n2. Run `cargo bench` or `hyperfine ...`"
+    validations:
+      required: true
+
+  - type: textarea
+    id: flamegraph
+    attributes:
+      label: "Flamegraph / Perf Output (Optional)"
+      description: "If you profiled with `cargo flamegraph` or `perf`, paste call-stack hotspots here."

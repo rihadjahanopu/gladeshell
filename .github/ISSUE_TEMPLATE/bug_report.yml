@@ -1,0 +1,122 @@
+name: "🐛 Bug Report"
+description: "File a bug, crash, panic, or unexpected behavior in GladeShell."
+title: "fix: [short bug summary]"
+labels: ["bug", "triage"]
+assignees: ["rihadjahanopu"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🔍 Thank you for reporting an issue in GladeShell!
+        Please provide detailed reproduction steps so we can diagnose and resolve the issue quickly.
+
+  - type: input
+    id: version
+    attributes:
+      label: "GladeShell Version"
+      description: "Run `gladeshell --version` in your terminal and paste the output."
+      placeholder: "e.g. gladeshell 1.2.17"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System & Environment"
+      description: "Select the operating system where this bug occurred."
+      options:
+        - "Linux — Ubuntu / Debian (x86_64)"
+        - "Linux — Ubuntu / Debian (ARM64 / aarch64)"
+        - "Linux — Arch / Manjaro / EndeavourOS"
+        - "Linux — Fedora / RHEL / CentOS"
+        - "macOS — Apple Silicon (M1/M2/M3/M4)"
+        - "macOS — Intel (x86_64)"
+        - "Windows 11 / 10 (PowerShell 7+ / pwsh)"
+        - "Windows 11 / 10 (Windows PowerShell 5.1)"
+        - "Other / BSD"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: shell
+    attributes:
+      label: "Active Shell Environment"
+      description: "Which shell interpreter was executing when the issue occurred?"
+      options:
+        - "Zsh (zsh 5.x)"
+        - "Bash (bash 5.x)"
+        - "Fish (fish 3.x+)"
+        - "PowerShell Core (pwsh 7.x+)"
+        - "Windows PowerShell 5.1"
+        - "Subshell / Non-interactive"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: terminal
+    attributes:
+      label: "Terminal Emulator"
+      description: "Which terminal client are you using?"
+      options:
+        - "Alacritty"
+        - "WezTerm"
+        - "Ghostty"
+        - "Kitty"
+        - "Windows Terminal"
+        - "iTerm2"
+        - "GNOME Terminal / Konsole"
+        - "VS Code Integrated Terminal"
+        - "Native TTY Console"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Bug Description"
+      description: "A clear and concise explanation of what unexpected behavior or crash occurred."
+      placeholder: "When running `gladeshell uup` in raw mode, ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Steps to Reproduce"
+      description: "List the exact commands or interactions required to reproduce the bug."
+      value: |
+        1. Open terminal with shell: ...
+        2. Run command: `gladeshell ...`
+        3. Observe error / unexpected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behavior"
+      description: "What did you expect to happen instead?"
+      placeholder: "The command should exit cleanly with status 0..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Crash Stacktrace / Terminal Logs"
+      description: "If a Rust panic occurred, run with `RUST_BACKTRACE=1` and paste the trace here."
+      render: shell
+      placeholder: "thread 'main' panicked at ..."
+
+  - type: checkboxes
+    id: validation
+    attributes:
+      label: "Pre-Submission Checklist"
+      description: "Please confirm you have checked existing issues before submitting."
+      options:
+        - label: "I have searched existing open and closed issues to ensure this is not a duplicate."
+          required: true
+        - label: "I have verified this issue occurs on the latest release of GladeShell."
+          required: true

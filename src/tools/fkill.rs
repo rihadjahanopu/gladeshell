@@ -124,7 +124,7 @@ impl App {
 
 /// Runs the interactive process killer TUI.
 pub fn run_fkill() -> Result<(), Box<dyn std::error::Error>> {
-    let mut sys = System::new_all();
+    let mut sys = System::new_all().unwrap_or_else(|_| System::new().expect("sysinfo init failed"));
     sys.refresh_all();
 
     let mut processes: Vec<ProcessEntry> = sys
@@ -180,7 +180,8 @@ pub fn run_fkill() -> Result<(), Box<dyn std::error::Error>> {
                     KeyCode::Char('y') | KeyCode::Char('Y') => {
                         if let Some(pid_num) = app.confirm_kill.take() {
                             let target = sysinfo::Pid::from(pid_num);
-                            let mut sys2 = System::new_all();
+                            let mut sys2 = System::new_all()
+                                .unwrap_or_else(|_| System::new().expect("sysinfo init failed"));
                             sys2.refresh_all();
                             if let Some(proc) = sys2.process(target) {
                                 proc.kill();
@@ -495,7 +496,7 @@ pub fn run_kp(port_opt: Option<&str>) -> Result<(), Box<dyn std::error::Error>> 
         return Ok(());
     }
 
-    let mut sys = System::new_all();
+    let mut sys = System::new_all().unwrap_or_else(|_| System::new().expect("sysinfo init failed"));
     sys.refresh_all();
 
     println!(
@@ -628,7 +629,8 @@ mod tests {
 
     #[test]
     fn test_fkill_runs() {
-        let mut sys = System::new_all();
+        let mut sys =
+            System::new_all().unwrap_or_else(|_| System::new().expect("sysinfo init failed"));
         sys.refresh_all();
         assert!(!sys.processes().is_empty());
     }

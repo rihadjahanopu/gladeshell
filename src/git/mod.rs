@@ -627,12 +627,13 @@ fn ahead_behind(repo: &gix::Repository) -> (bool, bool) {
 
     // Find merge base to determine direction of divergence
     match repo.merge_base(local_id, upstream_id) {
-        Ok(base) => {
-            let ahead = base != upstream_id;
-            let behind = base != local_id;
+        Ok(Some(base)) => {
+            let base_id = base.detach();
+            let ahead = base_id != upstream_id;
+            let behind = base_id != local_id;
             (ahead, behind)
         }
-        Err(_) => (false, false),
+        _ => (false, false),
     }
 }
 

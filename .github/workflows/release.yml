@@ -35,7 +35,7 @@ jobs:
       release_notes: ${{ steps.changelog.outputs.notes }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -157,7 +157,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -237,7 +237,7 @@ jobs:
           sha256sum gladeshell-* 2>/dev/null > SHA256SUMS-${{ matrix.target }}.txt || true
 
       - name: Publish Release Artifacts
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare-release.outputs.tag_name }}
           name: "gladeshell ${{ needs.prepare-release.outputs.tag_name }}"

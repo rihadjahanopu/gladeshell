@@ -153,9 +153,12 @@ updates:
     assignees:
       - "rihadjahanopu"
 
-    # Ignore action version bumps on rust-toolchain to prevent disrupting MSRV & stable pins
+    # Ignore action version bumps on rust-toolchain to prevent disrupting MSRV & stable pins.
+    # Ignore Swatinem/rust-cache — we pin to @v2 (floating major) to auto-receive patch/minor
+    # fixes without Dependabot PR noise. Exact version bumps within v2 are handled automatically.
     ignore:
       - dependency-name: "dtolnay/rust-toolchain"
+      - dependency-name: "Swatinem/rust-cache"
 
     # Bundle all GitHub Action updates into one single weekly PR
     groups:

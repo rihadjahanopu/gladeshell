@@ -59,7 +59,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.8.0
+        uses: Swatinem/rust-cache@v2
 
       - name: Pre-fetch Cargo registry index
         run: cargo fetch --locked
@@ -98,7 +98,7 @@ jobs:
           toolchain: "1.95"
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.8.0
+        uses: Swatinem/rust-cache@v2
         with:
           key: msrv-1.95
 
@@ -135,7 +135,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.8.0
+        uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
 
@@ -194,7 +194,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2.8.0
+        uses: Swatinem/rust-cache@v2
 
       - name: Pre-fetch Cargo registry index
         run: cargo fetch --locked

@@ -71,7 +71,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy lints (warnings as errors)
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings --offline
+        run: cargo clippy --workspace --all-targets --all-features --offline -- -D warnings
 
       - name: Install cargo-audit
         uses: taiki-e/install-action@cargo-audit

@@ -28,6 +28,15 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   CARGO_INCREMENTAL: 0
+  # ── Network Resilience (macOS runner DNS flakiness fix) ────────────────
+  # Sparse registry protocol avoids full index clone → fewer DNS round-trips
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+  # Retry up to 10 times on transient network errors (default: 2)
+  CARGO_NET_RETRY: 10
+  # Disable HTTP/2 multiplexing — macOS runners fail under connection reuse
+  CARGO_HTTP_MULTIPLEXING: false
+  # 60-second per-request timeout (default: 30s — too short on macOS CI)
+  CARGO_HTTP_TIMEOUT: 60
 
 jobs:
   # ─────────────────────────────────────────────────────────────
@@ -52,11 +61,17 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.8.0
 
+      - name: Pre-fetch Cargo registry index
+        run: cargo fetch --locked
+        env:
+          CARGO_NET_RETRY: 10
+          CARGO_HTTP_MULTIPLEXING: false
+
       - name: Check code formatting (rustfmt)
         run: cargo fmt --all -- --check
 
       - name: Run Clippy lints (warnings as errors)
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings --offline
 
       - name: Install cargo-audit
         uses: taiki-e/install-action@cargo-audit
@@ -87,8 +102,14 @@ jobs:
         with:
           key: msrv-1.95
 
+      - name: Pre-fetch Cargo registry index
+        run: cargo fetch --locked
+        env:
+          CARGO_NET_RETRY: 10
+          CARGO_HTTP_MULTIPLEXING: false
+
       - name: Verify compilation on MSRV
-        run: cargo check --workspace --all-targets
+        run: cargo check --workspace --all-targets --offline
 
   # ─────────────────────────────────────────────────────────────
   # JOB 3: Cross-Platform Test Matrix
@@ -118,28 +139,35 @@ jobs:
         with:
           key: ${{ matrix.os }}
 
+      # Pre-fetch registry index with retries — guards against macOS DNS flakiness
+      - name: Pre-fetch Cargo registry index
+        run: cargo fetch --locked
+        env:
+          CARGO_NET_RETRY: 10
+          CARGO_HTTP_MULTIPLEXING: false
+
       - name: Verify compilation — all features
-        run: cargo check --workspace --all-targets --all-features
+        run: cargo check --workspace --all-targets --all-features --offline
 
       - name: Verify compilation — no default features (lib only)
-        run: cargo check --lib --no-default-features
+        run: cargo check --lib --no-default-features --offline
 
       - name: Execute unit & integration tests — all features
-        run: cargo test --workspace --all-targets --all-features
+        run: cargo test --workspace --all-targets --all-features --offline
 
       - name: Ensure benchmarks compile (no run)
-        run: cargo check --benches --all-features
+        run: cargo check --benches --all-features --offline
 
       - name: Verify documentation generation (no warnings)
         env:
           RUSTDOCFLAGS: "-D warnings"
-        run: cargo doc --no-deps --workspace --all-features
+        run: cargo doc --no-deps --workspace --all-features --offline
 
       - name: Verify PowerShell init and syntax on Windows
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $output = cargo run -- init pwsh
+          $output = cargo run --offline -- init pwsh
           if ([string]::IsNullOrWhiteSpace($output)) { throw "init pwsh was empty" }
           $tokens = $null
           $errors = $null
@@ -168,8 +196,14 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.8.0
 
+      - name: Pre-fetch Cargo registry index
+        run: cargo fetch --locked
+        env:
+          CARGO_NET_RETRY: 10
+          CARGO_HTTP_MULTIPLEXING: false
+
       - name: Build debug binary
-        run: cargo build --workspace
+        run: cargo build --workspace --offline
 
       - name: Smoke — version flag
         run: |

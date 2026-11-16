@@ -1315,7 +1315,8 @@ pub fn collect_system_report() -> SystemReport {
     #[cfg(feature = "tools")]
     {
         use sysinfo::System;
-        let mut sys = System::new_all();
+        let mut sys =
+            System::new_all().unwrap_or_else(|_| System::new().expect("sysinfo init failed"));
         sys.refresh_all();
         std::thread::sleep(std::time::Duration::from_millis(150));
         sys.refresh_cpu_all();
@@ -1334,11 +1335,11 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         use sysinfo::{Components, Disks, Networks, System};
 
         // 1. System Identity (Real OS, Host, Kernel, Motherboard & BIOS)
-        let hostname = System::host_name().unwrap_or_else(|| "Workstation".into());
-        let os_name = System::name().unwrap_or_else(|| "Linux/Unix".into());
-        let os_version = System::os_version().unwrap_or_else(|| "Generic".into());
-        let kernel_version = System::kernel_version().unwrap_or_else(|| "Linux Kernel".into());
-        let uptime_seconds = System::uptime();
+        let hostname = System::host_name().unwrap_or_else(|_| "Workstation".into());
+        let os_name = System::name().unwrap_or_else(|_| "Linux/Unix".into());
+        let os_version = System::os_version().unwrap_or_else(|_| "Generic".into());
+        let kernel_version = System::kernel_version().unwrap_or_else(|_| "Linux Kernel".into());
+        let uptime_seconds = System::uptime().unwrap_or(0);
 
         let mfg = read_sysfs("/sys/class/dmi/id/board_vendor")
             .or_else(|| read_sysfs("/sys/class/dmi/id/sys_vendor"))
@@ -1389,7 +1390,7 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         let physical_cores = System::physical_core_count().unwrap_or(cpus.len());
         let logical_threads = cpus.len();
 
-        let per_core_utilization_pct: Vec<f32> = cpus.iter().map(|c| c.cpu_usage()).collect();
+        let per_core_utilization_pct: Vec<f32> = cpus.iter().map(|c| c.usage()).collect();
         let avg_cpu_freq = if !cpus.is_empty() {
             cpus.iter().map(|c| c.frequency()).sum::<u64>() as f64 / cpus.len() as f64 / 1000.0
         } else {
@@ -1397,19 +1398,21 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         };
 
         let live_temperature_celsius = {
-            let components = Components::new_with_refreshed_list();
-            let comp_temp = components
-                .iter()
-                .find(|c| {
-                    let l = c.label().to_lowercase();
-                    l.contains("cpu")
-                        || l.contains("core")
-                        || l.contains("package")
-                        || l.contains("tctl")
-                        || l.contains("tdie")
-                })
-                .and_then(|c| c.temperature())
-                .or_else(|| components.first().and_then(|c| c.temperature()));
+            let components = Components::new_with_refreshed_list().ok();
+            let comp_temp = components.as_ref().and_then(|comps| {
+                comps
+                    .iter()
+                    .find(|c| {
+                        let l = c.label().to_lowercase();
+                        l.contains("cpu")
+                            || l.contains("core")
+                            || l.contains("package")
+                            || l.contains("tctl")
+                            || l.contains("tdie")
+                    })
+                    .and_then(|c| c.temperature())
+                    .or_else(|| comps.first().and_then(|c| c.temperature()))
+            });
 
             if let Some(t) = comp_temp {
                 if t > 0.0 {
@@ -1698,7 +1701,8 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         }
 
         // 5. Real Storage Info (Deduplicated by physical device node)
-        let disks = Disks::new_with_refreshed_list();
+        let disks = Disks::new_with_refreshed_list()
+            .unwrap_or_else(|_| Disks::new().expect("disks init failed"));
         let mut drive_map: std::collections::HashMap<String, StorageInfo> =
             std::collections::HashMap::new();
 
@@ -1998,11 +2002,12 @@ pub fn collect_system_report_with_sys(sys: &mut sysinfo::System) -> SystemReport
         };
 
         // 8. Real Network Interfaces
-        let networks = Networks::new_with_refreshed_list();
+        let networks = Networks::new_with_refreshed_list()
+            .unwrap_or_else(|_| Networks::new().expect("networks init failed"));
         let active_interfaces: Vec<NetworkInterfaceInfo> = networks
             .iter()
             .map(|(interface_name, data)| NetworkInterfaceInfo {
-                name: interface_name.clone(),
+                name: interface_name.to_string_lossy().to_string(),
                 interface_type: NetworkInterfaceType::Ethernet,
                 mac_address: data.mac_address().to_string(),
                 ipv4_addresses: vec![],
@@ -2379,7 +2384,8 @@ pub fn run_tui() -> Result<(), Box<dyn Error>> {
         let mut terminal = Terminal::new(backend)?;
 
         use sysinfo::System;
-        let mut sys = System::new_all();
+        let mut sys =
+            System::new_all().unwrap_or_else(|_| System::new().expect("sysinfo init failed"));
         sys.refresh_all();
         std::thread::sleep(Duration::from_millis(150));
         sys.refresh_all();

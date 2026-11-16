@@ -36,14 +36,14 @@ serde_norway = "0.9"
 toml = "1.1"
 
 # Git internals – gitoxide (pure Rust, zero C dependencies)
-gix = { version = "0.88", default-features = false, features = [
+gix = { version = "0.90", default-features = false, features = [
     "revision",   # HEAD / branch name parsing
     "status",     # enables repo.is_dirty() — index ↔ worktree comparison
     "sha1",       # activates gix-hash SHA1 variant
 ], optional = true }
 
 # System info & PC Diagnostics (Phase 2 prompt / Phase 4 tools / pc-info)
-sysinfo = { version = "0.39", optional = true }
+sysinfo = { version = "0.40", optional = true }
 starship-battery = { version = "0.12", optional = true }
 
 # Interactive prompts (Phase 4 tools: uup, uu)

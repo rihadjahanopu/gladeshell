@@ -153,6 +153,10 @@ updates:
     assignees:
       - "rihadjahanopu"
 
+    # Ignore action version bumps on rust-toolchain to prevent disrupting MSRV & stable pins
+    ignore:
+      - dependency-name: "dtolnay/rust-toolchain"
+
     # Bundle all GitHub Action updates into one single weekly PR
     groups:
       actions-all:

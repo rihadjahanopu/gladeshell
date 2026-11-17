@@ -527,13 +527,18 @@ fn find_pids_by_port(port: u16) -> Vec<usize> {
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
         if let Ok(output) = cmd.output() {
             let text = String::from_utf8_lossy(&output.stdout);
-            let port_suffix = format!(":{}", port);
             let mut pids = Vec::new();
             for line in text.lines() {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 4 && parts[0].eq_ignore_ascii_case("TCP") {
                     let local_addr = parts[1];
-                    if local_addr.ends_with(&port_suffix) {
+                    let port_matches = local_addr
+                        .rsplit(':')
+                        .next()
+                        .and_then(|p_str| p_str.parse::<u16>().ok())
+                        .map(|p| p == port)
+                        .unwrap_or(false);
+                    if port_matches {
                         if let Some(pid_str) = parts.last() {
                             if let Ok(pid) = pid_str.parse::<usize>() {
                                 if pid > 0 && !pids.contains(&pid) {

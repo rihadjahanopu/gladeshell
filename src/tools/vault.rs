@@ -833,8 +833,14 @@ pub fn run(action_opt: Option<&str>, args: &[String]) -> Result<(), Box<dyn std:
                                 let vault_dir = home.join(&name_c);
 
                                 #[cfg(windows)]
-                                let shell = std::env::var("COMSPEC")
-                                    .unwrap_or_else(|_| "powershell.exe".into());
+                                let shell = if crate::core::utils::cmd_exists("pwsh") {
+                                    "pwsh.exe".into()
+                                } else if crate::core::utils::cmd_exists("powershell") {
+                                    "powershell.exe".into()
+                                } else {
+                                    std::env::var("COMSPEC")
+                                        .unwrap_or_else(|_| "powershell.exe".into())
+                                };
                                 #[cfg(not(windows))]
                                 let shell =
                                     std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());

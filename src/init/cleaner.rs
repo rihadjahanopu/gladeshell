@@ -87,6 +87,20 @@ pub fn get_rc_path_for_shell(shell: &str) -> Option<PathBuf> {
                         .join("Microsoft.PowerShell_profile.ps1"),
                 );
             }
+            if let Ok(onedrive_b) = std::env::var("OneDriveCommercial") {
+                candidates.push(
+                    PathBuf::from(&onedrive_b)
+                        .join("Documents")
+                        .join("PowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1"),
+                );
+                candidates.push(
+                    PathBuf::from(&onedrive_b)
+                        .join("Documents")
+                        .join("WindowsPowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1"),
+                );
+            }
 
             candidates.push(
                 PathBuf::from(&home)

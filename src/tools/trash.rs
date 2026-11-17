@@ -56,6 +56,9 @@ pub fn run(name: &str) -> Result<(), Box<dyn Error>> {
         }
     }
 
+    #[cfg(windows)]
+    println!("\x1b[1;32m✅ Moved to Trash (~\\.Trash): {}\x1b[0m", name);
+    #[cfg(not(windows))]
     println!("\x1b[1;32m✅ Moved to Trash (Native Rust): {}\x1b[0m", name);
     Ok(())
 }

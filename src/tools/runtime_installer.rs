@@ -1251,19 +1251,31 @@ fn configure_shell_paths(tools: &[&RuntimeTool]) -> HashMap<String, String> {
 
     #[cfg(windows)]
     {
-        let ps_profile = home.join("Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1");
+        let mut target_profiles = vec![
+            home.join("Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1"),
+            home.join("Documents\\WindowsPowerShell\\Microsoft.PowerShell_profile.ps1"),
+        ];
+        if let Ok(onedrive) = std::env::var("OneDrive") {
+            let od_docs = PathBuf::from(onedrive).join("Documents");
+            target_profiles.push(od_docs.join("PowerShell\\Microsoft.PowerShell_profile.ps1"));
+            target_profiles
+                .push(od_docs.join("WindowsPowerShell\\Microsoft.PowerShell_profile.ps1"));
+        }
+
         for tool in tools {
             let mut configured = false;
             for subpath in tool.default_path_env {
                 let win_path = format!("$env:USERPROFILE\\{}", subpath.replace('/', "\\"));
-                let content = fs::read_to_string(&ps_profile).unwrap_or_default();
-                if !content.contains(subpath) {
-                    let snippet = format!(
-                        "\n# Gladeshell rt: {}\n$env:PATH = \"{};\" + $env:PATH\n",
-                        tool.name, win_path
-                    );
-                    if append_to_file(&ps_profile, &snippet) {
-                        configured = true;
+                for profile in &target_profiles {
+                    let content = fs::read_to_string(profile).unwrap_or_default();
+                    if !content.contains(subpath) {
+                        let snippet = format!(
+                            "\n# Gladeshell rt: {}\n$env:PATH = \"{};\" + $env:PATH\n",
+                            tool.name, win_path
+                        );
+                        if append_to_file(profile, &snippet) {
+                            configured = true;
+                        }
                     }
                 }
             }

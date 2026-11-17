@@ -35,6 +35,9 @@ try {
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
     [Console]::InputEncoding = [System.Text.Encoding]::UTF8
     $OutputEncoding = [System.Text.Encoding]::UTF8
+    if ([System.Environment]::OSVersion.Platform -eq 'Win32NT') {
+        Set-ItemProperty -Path 'HKCU:\Console' -Name 'VirtualTerminalLevel' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
 } catch {}
 
 # ── gladeshell Prompt & Native Auto-LS Hook ──
@@ -118,10 +121,10 @@ if ($psrl) {
         Comment            = '#64748b'
         InlinePrediction   = '#64748b'
     } -ErrorAction SilentlyContinue
-    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete -ErrorAction SilentlyContinue
-    Set-PSReadLineKeyHandler -Chord 'Ctrl+Space' -Function MenuComplete -ErrorAction SilentlyContinue
-    Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward -ErrorAction SilentlyContinue
-    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward -ErrorAction SilentlyContinue
+    try { Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete -ErrorAction SilentlyContinue } catch {}
+    try { Set-PSReadLineKeyHandler -Chord 'Ctrl+Spacebar' -Function MenuComplete -ErrorAction SilentlyContinue } catch {}
+    try { Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward -ErrorAction SilentlyContinue } catch {}
+    try { Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward -ErrorAction SilentlyContinue } catch {}
     # ── Transient Prompt & Timer Key Handler (Zero Buffer Injection) ──
     try {
         Set-PSReadLineKeyHandler -Key Enter -ScriptBlock {
@@ -207,6 +210,8 @@ mod tests {
         assert!(script.contains("function Prompt"));
         assert!(script.contains("Set-PSReadLineOption"));
         assert!(script.contains("Set-PSReadLineKeyHandler -Key Enter"));
+        assert!(script.contains("Set-PSReadLineKeyHandler -Chord 'Ctrl+Spacebar'"));
+        assert!(script.contains("VirtualTerminalLevel"));
         assert!(script.contains("function z"));
         assert!(script.contains("function _fb_notify"));
         assert_eq!(script.matches("function cf").count(), 1);

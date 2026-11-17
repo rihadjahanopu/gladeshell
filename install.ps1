@@ -549,6 +549,8 @@ try {
         if ($initLines) {
             $initText = $initLines -join "`r`n"
             # Sanitize legacy/incompatible syntax for Windows PowerShell 5.1 compatibility
+            $initText = $initText -replace "-Chord 'Ctrl\+Space'", "-Chord 'Ctrl+Spacebar'"
+            $initText = $initText -replace "Set-PSReadLineKeyHandler -Chord 'Ctrl\+Spacebar' -Function MenuComplete -ErrorAction SilentlyContinue", "try { Set-PSReadLineKeyHandler -Chord 'Ctrl+Spacebar' -Function MenuComplete -ErrorAction SilentlyContinue } catch {}"
             $initText = $initText -replace " -split ';' @args", " -split ';'"
             $initText = $initText -replace '(?m)^.*sudo systemctl.*$', ''
             $initText = $initText -replace " && ", "; if (`$?) { "

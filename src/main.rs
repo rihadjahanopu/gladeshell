@@ -837,13 +837,17 @@ fn cmd_prompt(args: PromptArgs) -> Result<(), Box<dyn std::error::Error>> {
     use gladeshell_core::daemon::client;
 
     let user = if args.user.is_empty() {
-        std::env::var("USER").unwrap_or_else(|_| "user".into())
+        std::env::var("USER")
+            .or_else(|_| std::env::var("USERNAME"))
+            .unwrap_or_else(|_| "user".into())
     } else {
         args.user
     };
 
     let host = if args.host.is_empty() {
-        std::env::var("HOSTNAME").unwrap_or_else(|_| "host".into())
+        std::env::var("HOSTNAME")
+            .or_else(|_| std::env::var("COMPUTERNAME"))
+            .unwrap_or_else(|_| "host".into())
     } else {
         args.host
     };

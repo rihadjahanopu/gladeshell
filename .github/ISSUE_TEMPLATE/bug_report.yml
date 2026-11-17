@@ -16,7 +16,7 @@ body:
     attributes:
       label: "GladeShell Version"
       description: "Run `gladeshell --version` in your terminal and paste the output."
-      placeholder: "e.g. gladeshell 1.2.17"
+      placeholder: "e.g. gladeshell 1.2.18"
     validations:
       required: true
 

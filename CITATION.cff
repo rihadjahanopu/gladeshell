@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use GladeShell in academic research, benchmark studies, or software projects, please cite it as below."
 title: "GladeShell: Ultra-High-Performance Modular Shell Environment and Prompt Engine"
 abstract: "GladeShell is a pure-Rust, zero-fork modular shell environment, sub-millisecond dynamic prompt kit, and native cross-platform terminal utility suite built with type safety, memory security, and multi-core efficiency."
-version: 1.2.17
-date-released: "2026-11-10"
+version: 1.2.18
+date-released: "2026-11-17"
 license: "MIT"
 repository-code: "https://github.com/rihadjahanopu/gladeshell"
 url: "https://github.com/rihadjahanopu/gladeshell"
@@ -27,6 +27,6 @@ preferred-citation:
   authors:
     - family-names: "Jahan Opu"
       given-names: "Rihad"
-  version: 1.2.17
+  version: 1.2.18
   year: 2026
   url: "https://github.com/rihadjahanopu/gladeshell"

@@ -1997,7 +1997,7 @@ dependencies = [
 
 [[package]]
 name = "gladeshell"
-version = "1.2.17"
+version = "1.2.18"
 dependencies = [
  "aes-gcm",
  "arboard",

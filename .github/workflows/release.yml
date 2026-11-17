@@ -96,7 +96,7 @@ jobs:
           
           NOTES=""
           if [[ -f "$CHANGELOG_FILE" ]]; then
-            NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" "$CHANGELOG_FILE" | sed '$d' | sed '1d')
+            NOTES=$(sed -n "/## .*\[$VERSION\]/,/## .*\[/p" "$CHANGELOG_FILE" | sed '$d' | sed '1d')
           fi
 
           if [[ -z "$NOTES" ]]; then

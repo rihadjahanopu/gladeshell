@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [1.2.18] — 2026-11-17
+
+### 🪟 Windows PowerShell Parity, Port Engine & Security Audit Hardening
+- ⌨️ **Windows PowerShell 5.1 & PSReadLine Hotfix**:
+  - Resolved `ArgumentException: Unrecognized key 'Space'` thrown by PSReadLine during Windows PowerShell startup by replacing the `'Ctrl+Space'` chord with `'Ctrl+Spacebar'` in the initialization template.
+  - Wrapped `Set-PSReadLineKeyHandler` within an exception-safe `try/catch` block to guarantee non-blocking profile startup across legacy and modern console environments.
+- 🔌 **Hardened Network & Process Engines on Windows**:
+  - Enhanced port inspection (`src/tools/port.rs`) and process killing (`fkill.rs`) to reliably parse dual-stack endpoints, IPv6 brackets (`[::]:port`), and Windows `netstat` socket outputs.
+  - Added robust fallback to native `taskkill /F /PID` when killing hung processes on Windows encountering Win32 access-denied restrictions.
+  - Fixed Windows UNC path normalization (`\\?\`, `\\.\`) across core path utilities and directory navigation engines.
+- 📦 **Dependency Modernization & Breaking API Upgrades**:
+  - Upgraded Git subsystem (`gix`) from `0.88` to `0.90` with detached merge base resolution.
+  - Upgraded system diagnostics (`sysinfo`) from `0.39` to `0.40` with fallible initialization handling and migrated `Cpu::usage()` API.
+  - Removed unused Windows target dependency `wmi = "0.18"`, eliminating transitive `chrono 0.4.45` dependency and clearing RUSTSEC-2026-0543 unmaintained advisory.
+  - Configured RUSTSEC-2026-0543 in `.cargo/audit.toml` ignore list as an extra safety measure.
+- 🛡️ **CI/CD Reliability & Upstream Runner Hardening**:
+  - Configured sparse registry protocol and `--offline` cargo flags across macOS and Linux CI runners to eliminate DNS flakiness on GitHub Actions runners.
+  - Pinned `Swatinem/rust-cache` to floating `@v2` and configured Dependabot grouping rules.
+  - Bumped 7 core GitHub Actions steps to latest major releases.
+
 ## 🚀 [1.2.17] — 2026-11-10
 
 ### 🧹 Modernized TUI File & Directory Management (`rmd`, `rmf`) & Engine Concurrency
@@ -420,6 +440,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.2.18]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.2.18
 [1.1.2]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.2
 [1.1.1]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.1
 [1.1.0]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.0

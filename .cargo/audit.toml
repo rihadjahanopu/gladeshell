@@ -8,7 +8,11 @@
 # all archive entry paths against the destination directory before any write.
 # The CVE requires a maliciously crafted .7z archive; our sanitizer prevents zip-slip.
 # Tracked for migration to sevenz-rust2 once its public API stabilises.
+# RUSTSEC-2026-0543 — chrono: unmaintained notice
+# Justification: chrono has an informational unmaintained notice on rustsec.
+# gladeshell uses jiff for modern, safe time/date operations; chrono is only a transitive dep if pulled by sub-crates.
 ignore = [
+    "RUSTSEC-2026-0543",
     "RUSTSEC-2026-0245",
     "RUSTSEC-2026-0246",
     "RUSTSEC-2025-0068",

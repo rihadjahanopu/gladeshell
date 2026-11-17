@@ -91,9 +91,8 @@ rayon = { version = "1.10", optional = true }
 # Ultra-fast, low-latency global memory allocator
 mimalloc = { version = "0.1", default-features = false }
 
-# Windows WMI Hardware Diagnostics & Console APIs
+# Windows Native APIs & Console Hooks
 [target.'cfg(target_os = "windows")'.dependencies]
-wmi         = "0.18"
 windows-sys = { version = "0.61", features = [
     "Win32_System_Console",
     "Win32_System_SystemInformation",

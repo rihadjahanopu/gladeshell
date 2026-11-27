@@ -11,6 +11,12 @@
 # RUSTSEC-2026-0543 — chrono: unmaintained notice
 # Justification: chrono has an informational unmaintained notice on rustsec.
 # gladeshell uses jiff for modern, safe time/date operations; chrono is only a transitive dep if pulled by sub-crates.
+# RUSTSEC-2026-0574..RUSTSEC-2026-0582 — heapless 0.8.0: unsoundness advisories (2026-11-18)
+# Justification: heapless 0.8.0 appears in Cargo.lock only via gix -> gix-hash/gix-packetline ->
+# faster-hex 0.10.1 ([target.'cfg(not(feature = "alloc"))'.dependencies.heapless]).
+# Both gix-hash and gix-packetline enable faster-hex's `std` (`alloc`) feature, and faster-hex
+# only imports heapless::{String, Vec} under #[cfg(not(feature = "alloc"))], so none of the
+# affected heapless data structures are used in gladeshell. Awaiting upstream gix/faster-hex bump.
 ignore = [
     "RUSTSEC-2026-0543",
     "RUSTSEC-2026-0245",
@@ -18,4 +24,13 @@ ignore = [
     "RUSTSEC-2025-0068",
     "RUSTSEC-2020-0168",
     "RUSTSEC-2021-0119",
+    "RUSTSEC-2026-0574",
+    "RUSTSEC-2026-0575",
+    "RUSTSEC-2026-0576",
+    "RUSTSEC-2026-0577",
+    "RUSTSEC-2026-0578",
+    "RUSTSEC-2026-0579",
+    "RUSTSEC-2026-0580",
+    "RUSTSEC-2026-0581",
+    "RUSTSEC-2026-0582",
 ]

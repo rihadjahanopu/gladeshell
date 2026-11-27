@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
-use std::io::{self, BufRead, BufReader};
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -1381,38 +1381,12 @@ fn dirs_home() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-fn open_tty() -> Box<dyn io::Write + Send> {
-    #[cfg(unix)]
-    {
-        if let Ok(file) = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("/dev/tty")
-        {
-            return Box::new(file);
-        }
-    }
-    #[cfg(windows)]
-    {
-        if let Ok(file) = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("CONOUT$")
-        {
-            return Box::new(file);
-        }
-    }
-    Box::new(io::stderr())
-}
-
-/// RAII guard ensuring raw mode & alternate screen are unconditionally restored
-/// even on early error returns or unexpected panic unwinding.
 struct TerminalGuard;
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
-        let mut tty = open_tty();
+        let mut tty = crate::core::utils::open_tty();
         let _ = execute!(
             tty,
             LeaveAlternateScreen,
@@ -1426,7 +1400,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
     enable_raw_mode()?;
-    let mut tty = open_tty();
+    let mut tty = crate::core::utils::open_tty();
     execute!(tty, EnterAlternateScreen, EnableMouseCapture)?;
     let _guard = TerminalGuard;
 

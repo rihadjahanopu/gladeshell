@@ -748,7 +748,7 @@ fn version_eq(a: &str, b: &str) -> bool {
 fn apply_shell_configs() -> Result<(), Box<dyn Error>> {
     let _ = crate::init::cleaner::ensure_all_installed_shells_configured();
     let _ = crate::init::cleaner::ensure_auto_heal_hooks();
-    for shell in ["bash", "zsh", "fish", "pwsh"] {
+    for shell in ["bash", "brush", "zsh", "fish", "pwsh"] {
         let _ = crate::init::generate(shell);
     }
     Ok(())

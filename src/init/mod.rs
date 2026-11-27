@@ -21,6 +21,7 @@
 // =============================================================================
 
 pub mod bash;
+pub mod brush;
 pub mod cleaner;
 pub mod fish;
 pub mod pwsh;
@@ -31,13 +32,14 @@ pub mod zsh;
 pub fn generate(shell: &str) -> Result<String, String> {
     let script = match shell.to_ascii_lowercase().as_str() {
         "bash" => bash::generate(),
+        "brush" => brush::generate(),
         "zsh" => zsh::generate(),
         "fish" => fish::generate(),
         "pwsh" | "powershell" => pwsh::generate(),
         other => {
             return Err(format!(
                 "unsupported shell: '{other}'. \
-             Supported: bash, zsh, fish, pwsh (powershell)"
+             Supported: bash, brush, zsh, fish, pwsh (powershell)"
             ))
         }
     };

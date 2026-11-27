@@ -263,6 +263,16 @@ function Invoke-Doctor {
         Write-Host "  📄 Profile Hook:       ${YLW}[MISSING]${NC} Profile file does not exist ($PROFILE)"
     }
 
+    if (Get-Command brush -ErrorAction SilentlyContinue) {
+        $brushRc = Join-Path $HOME ".brushrc"
+        $brushOk = (Test-Path $brushRc) -and ((Get-Content $brushRc -Raw -ErrorAction SilentlyContinue) -match "gladeshell init")
+        if ($brushOk) {
+            Write-Host "  🦀 Brush Hook:         ${GRN}[OK]${NC} $brushRc"
+        } else {
+            Write-Host "  🦀 Brush Hook:         ${YLW}[MISSING]${NC} Run 'gladeshell setup' to configure $brushRc"
+        }
+    }
+
     Write-Host "`n  --------------------------------------------------"
     Write-Host "  🎉 Doctor check completed.`n"
     exit 0
@@ -605,6 +615,12 @@ foreach ($p in $targetProfiles) {
     } catch {
         Write-Host "  ${RED}❌ Failed to write to profile ($p): $($_.Exception.Message)${NC}"
     }
+}
+
+if ($exe -and ($TARGET_ALL_SHELLS -or (Get-Command brush -ErrorAction SilentlyContinue))) {
+    try {
+        & $exe setup 2>$null | Out-Null
+    } catch { $null = $_ }
 }
 
 # Reload profile

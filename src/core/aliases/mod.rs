@@ -60,6 +60,7 @@ pub enum Shell {
     Zsh,
     Fish,
     Pwsh,
+    Brush,
 }
 
 impl Shell {
@@ -70,6 +71,7 @@ impl Shell {
             "zsh" => Some(Shell::Zsh),
             "fish" => Some(Shell::Fish),
             "pwsh" | "powershell" => Some(Shell::Pwsh),
+            "brush" => Some(Shell::Brush),
             _ => None,
         }
     }
@@ -80,8 +82,42 @@ impl Shell {
             Shell::Zsh => "zsh",
             Shell::Fish => "fish",
             Shell::Pwsh => "pwsh",
+            Shell::Brush => "brush",
         }
     }
+
+    /// Returns true for POSIX/Bourne-family shells (`bash`, `zsh`, `brush`).
+    #[inline]
+    pub fn is_posix_like(self) -> bool {
+        matches!(self, Shell::Bash | Shell::Zsh | Shell::Brush)
+    }
+}
+
+/// Check whether an `only_shells` allowlist enables rendering for `shell`.
+///
+/// Empty allowlists match all shells. `Shell::Brush` inherits multi-shell
+/// Bash-compatible groups/entries (such as `["bash", "zsh"]`), while
+/// entries pinned exclusively to `["bash"]` (like `~/.bashrc` or bash `rel`)
+/// remain Bash-only so Brush receives its own `~/.brushrc` equivalents.
+fn shell_matches(only_shells: &[String], shell: Shell) -> bool {
+    if only_shells.is_empty() {
+        return true;
+    }
+    if only_shells
+        .iter()
+        .any(|s| Shell::from_str(s) == Some(shell))
+    {
+        return true;
+    }
+    if shell == Shell::Brush {
+        let is_exclusive_bash =
+            only_shells.len() == 1 && Shell::from_str(&only_shells[0]) == Some(Shell::Bash);
+        return !is_exclusive_bash
+            && only_shells
+                .iter()
+                .any(|s| Shell::from_str(s) == Some(Shell::Bash));
+    }
+    false
 }
 
 // ── Constructors & Serializer ─────────────────────────────────────────────────
@@ -110,12 +146,7 @@ impl AliasFile {
 
         for group in &self.group {
             // Respect per-group shell restriction
-            if !group.only_shells.is_empty()
-                && !group
-                    .only_shells
-                    .iter()
-                    .any(|s| Shell::from_str(s) == Some(shell))
-            {
+            if !shell_matches(&group.only_shells, shell) {
                 continue;
             }
 
@@ -123,12 +154,7 @@ impl AliasFile {
 
             for entry in &group.aliases {
                 // Respect per-entry shell restriction
-                if !entry.only_shells.is_empty()
-                    && !entry
-                        .only_shells
-                        .iter()
-                        .any(|s| Shell::from_str(s) == Some(shell))
-                {
+                if !shell_matches(&entry.only_shells, shell) {
                     continue;
                 }
 
@@ -139,7 +165,7 @@ impl AliasFile {
                 }
 
                 match shell {
-                    Shell::Bash | Shell::Zsh => {
+                    Shell::Bash | Shell::Zsh | Shell::Brush => {
                         let escaped_val = entry.value.replace('\'', "'\\''");
                         if shell == Shell::Zsh {
                             out.push_str(&format!("unfunction {} 2>/dev/null\n", entry.key));
@@ -322,6 +348,19 @@ value = "git push"
         let out = af.render(Shell::Bash);
         assert!(out.contains("alias ..='cd ..'"));
         assert!(out.contains("alias gs='git status -sb'"));
+    }
+
+    #[test]
+    fn render_brush() {
+        assert_eq!(Shell::from_str("brush"), Some(Shell::Brush));
+        let af = AliasFile::builtin();
+        let out = af.render(Shell::Brush);
+        assert!(out.contains("alias ..='cd ..'"));
+        assert!(out.contains("alias gs='git status -sb'"));
+        assert!(out.contains("alias brushrc='code ~/.brushrc'"));
+        assert!(out.contains("source ~/.brushrc"));
+        assert!(!out.contains("alias bashrc="));
+        assert!(out.contains("alias pgstart='sudo systemctl start postgresql'"));
     }
 
     #[test]

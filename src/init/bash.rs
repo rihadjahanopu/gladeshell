@@ -36,13 +36,21 @@ pub fn generate() -> String {
     out.push_str(r#"
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
 _fb_timer_start=0
+_fb_in_prompt=0
 _fb_sock="$(gladeshell socket-path 2>/dev/null || echo "${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock")"
 _fb_healed=""
 _fb_daemon_spawned=""
-trap '_fb_timer_start=$SECONDS' DEBUG
+_fb_preexec_trap() {
+    [[ "$_fb_in_prompt" -ne 0 || "${BASH_COMMAND:-}" == __fb_prompt* ]] && return
+    if [[ "${_fb_timer_start:-0}" -eq 0 ]]; then
+        _fb_timer_start=$SECONDS
+    fi
+}
+trap '_fb_preexec_trap' DEBUG
 
 __fb_prompt() {
     local exit_code=$?
+    _fb_in_prompt=1
     local duration=0
     if [[ -n "$_fb_timer_start" && "$_fb_timer_start" -gt 0 ]]; then
         duration=$(( (SECONDS - _fb_timer_start) * 1000 ))
@@ -76,12 +84,14 @@ __fb_prompt() {
     local _fb_raw
     _fb_raw=$(gladeshell prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)
     PS1="${_fb_raw%x}"
+    _fb_in_prompt=0
 }
 
 PROMPT_COMMAND="__fb_prompt"
 
 # ── Shell options ──
-shopt -s histappend checkwinsize globstar autocd
+shopt -s histappend checkwinsize globstar 2>/dev/null || true
+[[ -z "${BRUSH_VERSION:-}" ]] && shopt -s autocd 2>/dev/null || true
 HISTSIZE=50000
 HISTFILESIZE=100000
 HISTCONTROL=ignoreboth:erasedups

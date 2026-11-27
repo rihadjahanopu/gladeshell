@@ -49,6 +49,7 @@ pub fn run_with_home(home: &Path) -> Result<(), Box<dyn Error>> {
     // ── 1. Target Shell Config Files ───────────────────────────────────────────
     let target_files = vec![
         home.join(".bashrc"),
+        home.join(".brushrc"),
         home.join(".zshrc"),
         home.join(".zshenv"),
         home.join(".zprofile"),

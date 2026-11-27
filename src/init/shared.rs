@@ -86,7 +86,7 @@ pub fn render_env_and_path(shell: Shell) -> String {
     out.push_str("\n# ── Environment variables ──\n");
     for var in env::canonical_env_vars() {
         match shell {
-            Shell::Zsh | Shell::Bash => out.push_str(&env::render_env_bash(&var)),
+            Shell::Zsh | Shell::Bash | Shell::Brush => out.push_str(&env::render_env_bash(&var)),
             Shell::Fish => out.push_str(&env::render_env_fish(&var)),
             Shell::Pwsh => out.push_str(&env::render_env_pwsh(&var)),
         }
@@ -96,7 +96,7 @@ pub fn render_env_and_path(shell: Shell) -> String {
     out.push_str("\n# ── PATH ──\n");
     for entry in env::canonical_path_entries() {
         match shell {
-            Shell::Zsh | Shell::Bash => out.push_str(&env::render_path_bash(&entry)),
+            Shell::Zsh | Shell::Bash | Shell::Brush => out.push_str(&env::render_path_bash(&entry)),
             Shell::Fish => out.push_str(&env::render_path_fish(&entry)),
             Shell::Pwsh => out.push_str(&env::render_path_pwsh(&entry)),
         }
@@ -163,7 +163,21 @@ fi
 "##,
             );
         }
-        Shell::Bash => {
+        Shell::Bash | Shell::Brush => {
+            let (rc_file, start_marker, end_marker) = if shell == Shell::Brush {
+                (
+                    "$HOME/.brushrc",
+                    "# >>> glade-brush >>>",
+                    "# <<< glade-brush <<<",
+                )
+            } else {
+                (
+                    "$HOME/.bashrc",
+                    "# >>> glade-bashrc >>>",
+                    "# <<< glade-bashrc <<<",
+                )
+            };
+
             out.push_str(
                 r#"
 # ── NVM lazy-load (zero startup cost) ──
@@ -175,16 +189,16 @@ export NVM_DIR="${NVM_DIR:-$HOME/.config/nvm}"
                 out.push_str(&format!("export PATH=\"{}:$PATH\"\n", node_bin));
             }
 
-            out.push_str(
+            out.push_str(&format!(
                 r##"
 # ── Self-heal: keep glade block at the bottom, auto-reorder if other software appended after it ──
 # Run at most once per session (GLADESHELL_HEAL_DONE guard) and only in interactive shells.
-if [[ $- == *i* ]] && [[ -f "$HOME/.bashrc" ]] && [[ -z "${GLADESHELL_HEAL_DONE:-}" ]]; then
+if [[ $- == *i* ]] && [[ -f "{rc_file}" ]] && [[ -z "${{GLADESHELL_HEAL_DONE:-}}" ]]; then
     export GLADESHELL_HEAL_DONE=1
-    if ! grep -qF "# >>> glade-bashrc >>>" "$HOME/.bashrc" 2>/dev/null; then
+    if ! grep -qF "{start_marker}" "{rc_file}" 2>/dev/null; then
         # Block is missing → re-inject (background, non-blocking)
         gladeshell setup >/dev/null 2>&1 &
-    elif ! tail -5 "$HOME/.bashrc" | grep -qF "# <<< glade-bashrc <<<" 2>/dev/null; then
+    elif ! tail -5 "{rc_file}" | grep -qF "{end_marker}" 2>/dev/null; then
         # Block exists but not at bottom → reorder (background, non-blocking)
         gladeshell internal-clean-rc >/dev/null 2>&1 &
     fi
@@ -194,7 +208,7 @@ fi
 # If user has their own nvm lines before the glade block, skip redefining —
 # so gladeshell removal never breaks node/nvm.
 if ! type -t nvm >/dev/null 2>&1 && ! command -v node >/dev/null 2>&1; then
-    _fb_lazy_load_nvm() {
+    _fb_lazy_load_nvm() {{
         unset -f nvm node npm npx 2>/dev/null || true
         if [[ -s "$NVM_DIR/nvm.sh" ]]; then
             # shellcheck disable=SC1091
@@ -203,14 +217,14 @@ if ! type -t nvm >/dev/null 2>&1 && ! command -v node >/dev/null 2>&1; then
         if [[ -s "$NVM_DIR/bash_completion" ]]; then
             \. "$NVM_DIR/bash_completion"
         fi
-    }
-    nvm()  { _fb_lazy_load_nvm; command nvm  "$@"; }
-    node() { _fb_lazy_load_nvm; command node "$@"; }
-    npm()  { _fb_lazy_load_nvm; command npm  "$@"; }
-    npx()  { _fb_lazy_load_nvm; command npx  "$@"; }
+    }}
+    nvm()  {{ _fb_lazy_load_nvm; command nvm  "$@"; }}
+    node() {{ _fb_lazy_load_nvm; command node "$@"; }}
+    npm()  {{ _fb_lazy_load_nvm; command npm  "$@"; }}
+    npx()  {{ _fb_lazy_load_nvm; command npx  "$@"; }}
 fi
 "##,
-            );
+            ));
         }
         Shell::Fish => {
             out.push_str(r##"
@@ -263,7 +277,7 @@ if [[ -n "$ZSH_VERSION" && -s "$BUN_INSTALL/_bun" ]]; then
 fi
 "#
         .to_string(),
-        Shell::Bash => r#"
+        Shell::Bash | Shell::Brush => r#"
 # ── Bun environment ──
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 if [[ -d "$BUN_INSTALL/bin" && ":$PATH:" != *":$BUN_INSTALL/bin:"* ]]; then
@@ -284,7 +298,7 @@ fish_add_path --prepend "$BUN_INSTALL/bin"
 /// Render safe ls / eza fallback wrapper snippet per shell.
 pub fn render_safe_ls_wrapper(shell: Shell) -> String {
     match shell {
-        Shell::Bash | Shell::Zsh => r#"
+        Shell::Bash | Shell::Zsh | Shell::Brush => r#"
 # ── Safe ls / eza fallback wrapper ──
 unalias ls ll la lt tree 2>/dev/null
 if command -v eza &>/dev/null; then
@@ -352,12 +366,29 @@ Register-ArgumentCompleter -Native -CommandName 'gladeshell' -ScriptBlock {
         .to_string();
     }
 
+    if shell == Shell::Brush {
+        return r#"
+# ── Lazy-Loaded gladeshell CLI completions (~50% faster Brush startup) ──
+_fb_lazy_gladeshell_complete() {
+    unset -f _fb_lazy_gladeshell_complete 2>/dev/null || true
+    if command -v gladeshell >/dev/null 2>&1; then
+        eval "$(gladeshell completions brush 2>/dev/null)"
+        if declare -F _gladeshell >/dev/null 2>&1; then
+            _gladeshell "$@"
+        fi
+    fi
+}
+complete -o bashdefault -o default -F _fb_lazy_gladeshell_complete gladeshell 2>/dev/null || true
+"#
+        .to_string();
+    }
+
     use crate::cli::Cli;
     use clap::CommandFactory;
     use clap_complete::{generate, Shell as ClapShell};
 
     let clap_shell = match shell {
-        Shell::Bash => ClapShell::Bash,
+        Shell::Bash | Shell::Brush => ClapShell::Bash,
         Shell::Zsh => ClapShell::Zsh,
         Shell::Fish => ClapShell::Fish,
         Shell::Pwsh => unreachable!(),
@@ -374,7 +405,7 @@ Register-ArgumentCompleter -Native -CommandName 'gladeshell' -ScriptBlock {
 /// Render shell function helpers for filesystem operations (mkd, rmd, rmf, bak, trash).
 pub fn render_file_helpers(shell: Shell) -> String {
     match shell {
-        Shell::Zsh | Shell::Bash => r#"
+        Shell::Zsh | Shell::Bash | Shell::Brush => r#"
 # ── Native Rust File & Directory Helper Functions ──
 unset -f mkd rmd rmf bak trash 2>/dev/null || true
 unalias mkd rmd rmf bak trash 2>/dev/null || true
@@ -491,7 +522,7 @@ accurate_auto_ls() {
 add-zsh-hook chpwd accurate_auto_ls
 "#
         .to_string(),
-        Shell::Bash => r#"
+        Shell::Bash | Shell::Brush => r#"
 # ── Native Rust Auto-LS on directory change ──
 _fb_last_pwd="$PWD"
 _fb_auto_ls() {
@@ -524,7 +555,7 @@ if ($cwd -ne $global:_fb_last_pwd) {
 /// Render shell function wrapper for `cf` fuzzy directory navigator.
 pub fn render_cf_wrapper(shell: Shell) -> String {
     match shell {
-        Shell::Zsh | Shell::Bash => r#"
+        Shell::Zsh | Shell::Bash | Shell::Brush => r#"
 # ── Interactive Fuzzy Directory Navigator (`cf`) shell wrapper ──
 unalias cf _cf_open 2>/dev/null || true
 
@@ -940,7 +971,7 @@ function ff {
 /// Render desktop and terminal notification helper function per shell.
 pub fn render_notification_helpers(shell: Shell) -> String {
     match shell {
-        Shell::Zsh | Shell::Bash => r#"
+        Shell::Zsh | Shell::Bash | Shell::Brush => r#"
 # ── gladeshell Long-Running Command Notification ──
 _fb_notify() {
     local code="$1"
@@ -1002,7 +1033,7 @@ function _fb_notify($code, $dur) {
 /// Render pure Rust frecent directory jumper (`z`) shell wrapper.
 pub fn render_z_wrapper(shell: Shell) -> String {
     match shell {
-        Shell::Zsh | Shell::Bash => r#"
+        Shell::Zsh | Shell::Bash | Shell::Brush => r#"
 # ── Smart Frecent Directory Jumper (`z`) ──
 unalias z 2>/dev/null || true
 z() {
@@ -1081,6 +1112,7 @@ mod tests {
     #[test]
     fn test_render_safe_ls_wrapper() {
         assert!(render_safe_ls_wrapper(Shell::Zsh).contains("eza"));
+        assert!(render_safe_ls_wrapper(Shell::Brush).contains("eza"));
         assert!(render_safe_ls_wrapper(Shell::Fish).contains("eza"));
         assert!(render_safe_ls_wrapper(Shell::Pwsh).contains("Get-Command"));
     }
@@ -1089,8 +1121,17 @@ mod tests {
     fn test_render_auto_ls_hook() {
         assert!(render_auto_ls_hook(Shell::Zsh).contains("gladeshell auto-ls"));
         assert!(render_auto_ls_hook(Shell::Bash).contains("gladeshell auto-ls"));
+        assert!(render_auto_ls_hook(Shell::Brush).contains("gladeshell auto-ls"));
         assert!(render_auto_ls_hook(Shell::Fish).contains("gladeshell auto-ls"));
         assert!(render_auto_ls_hook(Shell::Pwsh).contains("gladeshell auto-ls"));
+    }
+
+    #[test]
+    fn test_render_cli_completions_brush_lazy() {
+        let comp = render_cli_completions(Shell::Brush);
+        assert!(comp.contains("_fb_lazy_gladeshell_complete"));
+        assert!(comp.contains("gladeshell completions brush"));
+        assert!(comp.len() < 1024);
     }
 
     #[test]

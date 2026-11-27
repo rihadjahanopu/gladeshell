@@ -47,6 +47,7 @@ fn dirs_home() -> Option<PathBuf> {
 fn history_file_candidates(home: &Path) -> Vec<PathBuf> {
     let mut candidates = vec![
         home.join(".bash_history"),
+        home.join(".brush_history"),
         home.join(".zsh_history"),
         // Fish shell history (TOML-like format, we'll extract `cmd:` lines)
         home.join(".local/share/fish/fish_history"),
@@ -440,5 +441,12 @@ mod tests {
             suggestion,
             Some("gladeshell_test_live_command --sync".to_string())
         );
+    }
+
+    #[test]
+    fn test_brush_history_in_candidates() {
+        let home = PathBuf::from("/tmp/gladeshell_test_home");
+        let candidates = history_file_candidates(&home);
+        assert!(candidates.contains(&home.join(".brush_history")));
     }
 }

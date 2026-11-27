@@ -120,20 +120,23 @@ show_header() {
     echo -e "${BLUE}         ╚█████╔╝ ███████╗██║  ██║██████╔╝███████╗███████║██║  ██║███████╗███████╗███████╗${NC}"
     echo -e "${BLUE}          ╚════╝  ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝${NC}"
     echo ""
-    echo -e "   ✨ ${BOLD}${CYAN}G L A D E S H E L L${NC}  •  ${BOLD}Smart Production Cross-Shell Engine (Bash, Zsh, Fish)${NC}"
+    echo -e "   ✨ ${BOLD}${CYAN}G L A D E S H E L L${NC}  •  ${BOLD}Smart Production Cross-Shell Engine (Bash, Brush, Zsh, Fish)${NC}"
     echo ""
 }
 
 # ─── Shell Resolution & System Probing ────
 detect_shell() {
     local current_shell="${TARGET_SHELL:-${GLADESHELL_SHELL:-}}"
+    if [ -z "$current_shell" ] && [ -n "${BRUSH_VERSION:-}" ]; then
+        current_shell="brush"
+    fi
     if [ -z "$current_shell" ]; then
         local _ppid_cmd
         _ppid_cmd=$(ps -p "$PPID" -o comm= 2>/dev/null | sed 's/^-//' | xargs basename 2>/dev/null)
         [ -z "$_ppid_cmd" ] && [ -f "/proc/$PPID/comm" ] && \
             _ppid_cmd=$(sed 's/^-//' "/proc/$PPID/comm" 2>/dev/null)
         case "${_ppid_cmd:-}" in
-            zsh|bash|fish|dash|sh) current_shell="$_ppid_cmd" ;;
+            zsh|bash|brush|fish|dash|sh) current_shell="$_ppid_cmd" ;;
             *) current_shell=$(basename "${SHELL:-bash}") ;;
         esac
     fi
@@ -142,8 +145,9 @@ detect_shell() {
 
 detect_all_installed_shells() {
     local installed=()
-    for s in bash zsh fish; do
-        if command -v "$s" >/dev/null 2>&1; then
+    local probe_path="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+    for s in bash brush zsh fish; do
+        if PATH="$probe_path" command -v "$s" >/dev/null 2>&1; then
             installed+=("$s")
         fi
     done
@@ -153,8 +157,9 @@ detect_all_installed_shells() {
 get_target_rc() {
     local shell_name="${1:-$(detect_shell)}"
     case "$shell_name" in
-        zsh)  echo "$HOME/.zshrc" ;;
-        fish) echo "$HOME/.config/fish/config.fish" ;;
+        zsh)   echo "$HOME/.zshrc" ;;
+        brush) echo "$HOME/.brushrc" ;;
+        fish)  echo "$HOME/.config/fish/config.fish" ;;
         *)
             if [ -f "$HOME/.bashrc" ]; then
                 echo "$HOME/.bashrc"
@@ -385,6 +390,7 @@ check_existing_install() {
 backup_shell_rc() {
     local ALL_RC_FILES=(
         "${HOME}/.bashrc"
+        "${HOME}/.brushrc"
         "${HOME}/.bash_profile"
         "${HOME}/.zshrc"
         "${HOME}/.config/fish/config.fish"
@@ -414,6 +420,7 @@ remove_old_config() {
     printf "  ${CYAN}➜${NC} Cleaning up legacy configuration blocks...\n"
     local rcs=(
         "${HOME}/.bashrc"
+        "${HOME}/.brushrc"
         "${HOME}/.bash_profile"
         "${HOME}/.zshrc"
         "${HOME}/.config/fish/config.fish"
@@ -724,6 +731,29 @@ EOF
             else
                 printf "  ${GREEN}✔${NC} gladeshell already configured in %s\n" "$(tildify "$target_rc")"
             fi
+        elif [ "$current_shell" = "brush" ]; then
+            if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
+                block=$(cat << 'EOF'
+
+# >>> glade-brush >>>
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+if type gladeshell >/dev/null 2>&1; then
+    _fb_cache="$HOME/.gladeshell/cache/init.brush"
+    _fb_bin="$(command -v gladeshell 2>/dev/null)"
+    if [[ -f "$_fb_cache" && -n "$_fb_bin" && "$_fb_cache" -nt "$_fb_bin" ]]; then
+        source "$_fb_cache"
+    else
+        eval "$(gladeshell init brush)"
+    fi
+fi
+# <<< glade-brush <<<
+EOF
+                )
+                _atomic_inject_rc "$target_rc" "$block"
+                printf "  ${GREEN}✔${NC} Injected gladeshell init into %s\n" "$(tildify "$target_rc")"
+            else
+                printf "  ${GREEN}✔${NC} gladeshell already configured in %s\n" "$(tildify "$target_rc")"
+            fi
         else
             if ! grep -qF "$MARKER" "$target_rc" 2>/dev/null; then
                 block=$(cat << EOF
@@ -733,13 +763,15 @@ EOF
 # gladeshell Rust Native Engine - auto-loaded every shell session
 export PATH="\$HOME/.cargo/bin:\$HOME/.local/bin:\$PATH"
 
-if type gladeshell >/dev/null 2>&1; then
-    _fb_cache="\$HOME/.gladeshell/cache/init.bash"
-    _fb_bin="\$(command -v gladeshell 2>/dev/null)"
-    if [[ -f "\$_fb_cache" && -n "\$_fb_bin" && "\$_fb_cache" -nt "\$_fb_bin" ]]; then
-        source "\$_fb_cache"
-    else
-        eval "\$(gladeshell init bash)"
+if [[ -z "\${BRUSH_VERSION:-}" ]] || ! grep -qF '# >>> glade-brush >>>' "\$HOME/.brushrc" 2>/dev/null; then
+    if type gladeshell >/dev/null 2>&1; then
+        _fb_cache="\$HOME/.gladeshell/cache/init.bash"
+        _fb_bin="\$(command -v gladeshell 2>/dev/null)"
+        if [[ -f "\$_fb_cache" && -n "\$_fb_bin" && "\$_fb_cache" -nt "\$_fb_bin" ]]; then
+            source "\$_fb_cache"
+        else
+            eval "\$(gladeshell init bash)"
+        fi
     fi
 fi
 # <<< glade-bashrc <<<
@@ -802,7 +834,7 @@ run_doctor() {
         printf "  🔤 Powerline Fonts:   ${GRAY}[SKIP]${NC} fc-list not available\n"
     fi
 
-    for sh in bash zsh fish; do
+    for sh in bash brush zsh fish; do
         local rc
         rc=$(get_target_rc "$sh")
         if [ -f "$rc" ]; then
@@ -860,9 +892,10 @@ show_summary() {
     local reload_cmd
 
     case "$current_shell" in
-        fish) reload_cmd="source ~/.config/fish/config.fish" ;;
-        zsh)  reload_cmd="source ~/.zshrc" ;;
-        *)    reload_cmd="source ~/.bashrc" ;;
+        fish)  reload_cmd="source ~/.config/fish/config.fish" ;;
+        zsh)   reload_cmd="source ~/.zshrc" ;;
+        brush) reload_cmd="source ~/.brushrc" ;;
+        *)     reload_cmd="source ~/.bashrc" ;;
     esac
 
     echo ""
@@ -875,6 +908,11 @@ show_summary() {
             ;;
         zsh)
             if command -v zsh >/dev/null 2>&1 && zsh -c "source '$target_rc'" >/dev/null 2>&1; then
+                reloaded=true
+            fi
+            ;;
+        brush)
+            if command -v brush >/dev/null 2>&1 && brush --norc --noprofile -c "source '$target_rc'" >/dev/null 2>&1; then
                 reloaded=true
             fi
             ;;

@@ -169,6 +169,7 @@ fn get_builtins() -> &'static HashSet<&'static str> {
             "zip",
             "zsh",
             "bash",
+            "brush",
             "fish",
             "nu",
             "pwsh",

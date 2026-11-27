@@ -41,6 +41,7 @@ pub fn get_rc_path_for_shell(shell: &str) -> Option<PathBuf> {
     match shell.to_ascii_lowercase().as_str() {
         "zsh" => Some(PathBuf::from(&home).join(".zshrc")),
         "bash" => Some(PathBuf::from(&home).join(".bashrc")),
+        "brush" => Some(PathBuf::from(&home).join(".brushrc")),
         "fish" => Some(PathBuf::from(&home).join(".config/fish/config.fish")),
         "pwsh" | "powershell" => {
             let mut candidates = Vec::new();
@@ -123,7 +124,9 @@ pub fn get_rc_path_for_shell(shell: &str) -> Option<PathBuf> {
 /// Clean and re-order gladeshell block for current active shell.
 pub fn clean_rc_file() -> std::io::Result<()> {
     let shell = std::env::var("SHELL").unwrap_or_default();
-    let target_shell = if shell.contains("zsh") {
+    let target_shell = if std::env::var_os("BRUSH_VERSION").is_some() || shell.contains("brush") {
+        "brush"
+    } else if shell.contains("zsh") {
         "zsh"
     } else if shell.contains("fish") {
         "fish"
@@ -245,7 +248,10 @@ pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
             "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif (( ${{+commands[gladeshell]}} )); then\n    _fb_cache=\"$HOME/.gladeshell/cache/init.zsh\"\n    _fb_bin=\"${{commands[gladeshell]}}\"\n    if [[ -f \"$_fb_cache\" && -n \"$_fb_bin\" && \"$_fb_cache\" -nt \"$_fb_bin\" ]]; then\n        source \"$_fb_cache\"\n    else\n        eval \"$(gladeshell init zsh)\"\n    fi\nfi\n{end_marker}"
         ),
         "bash" => format!(
-            "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif type gladeshell >/dev/null 2>&1; then\n    _fb_cache=\"$HOME/.gladeshell/cache/init.bash\"\n    _fb_bin=\"$(command -v gladeshell 2>/dev/null)\"\n    if [[ -f \"$_fb_cache\" && -n \"$_fb_bin\" && \"$_fb_cache\" -nt \"$_fb_bin\" ]]; then\n        source \"$_fb_cache\"\n    else\n        eval \"$(gladeshell init bash)\"\n    fi\nfi\n{end_marker}"
+            "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif [[ -z \"${{BRUSH_VERSION:-}}\" ]] || ! grep -qF '# >>> glade-brush >>>' \"$HOME/.brushrc\" 2>/dev/null; then\n    if type gladeshell >/dev/null 2>&1; then\n        _fb_cache=\"$HOME/.gladeshell/cache/init.bash\"\n        _fb_bin=\"$(command -v gladeshell 2>/dev/null)\"\n        if [[ -f \"$_fb_cache\" && -n \"$_fb_bin\" && \"$_fb_cache\" -nt \"$_fb_bin\" ]]; then\n            source \"$_fb_cache\"\n        else\n            eval \"$(gladeshell init bash)\"\n        fi\n    fi\nfi\n{end_marker}"
+        ),
+        "brush" => format!(
+            "{start_marker}\nexport PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"\nif type gladeshell >/dev/null 2>&1; then\n    _fb_cache=\"$HOME/.gladeshell/cache/init.brush\"\n    _fb_bin=\"$(command -v gladeshell 2>/dev/null)\"\n    if [[ -f \"$_fb_cache\" && -n \"$_fb_bin\" && \"$_fb_cache\" -nt \"$_fb_bin\" ]]; then\n        source \"$_fb_cache\"\n    else\n        eval \"$(gladeshell init brush)\"\n    fi\nfi\n{end_marker}"
         ),
         "fish" => format!(
             "{start_marker}\nset -gx PATH $HOME/.cargo/bin $HOME/.local/bin $PATH\nif type -q gladeshell\n    set -l _fb_cache \"$HOME/.gladeshell/cache/init.fish\"\n    set -l _fb_bin (command -v gladeshell 2>/dev/null)\n    if test -f \"$_fb_cache\" -a -n \"$_fb_bin\" -a \"$_fb_cache\" -nt \"$_fb_bin\"\n        source \"$_fb_cache\"\n    else\n        gladeshell init fish | source\n    end\nend\n{end_marker}"
@@ -343,7 +349,8 @@ fi\n\
             file.write_all(hook.as_bytes())?;
         }
 
-        // 2. Bash auto-heal hook in ~/.profile & ~/.bash_profile
+        // 2. Bash & Brush auto-heal hooks in ~/.profile & ~/.bash_profile
+        let has_brush = crate::core::utils::cmd_exists("brush") || home.join(".brushrc").exists();
         for bash_file_name in &[".profile", ".bash_profile"] {
             let bash_file = home.join(bash_file_name);
             let p_start_marker = "# >>> glade-profile >>>";
@@ -371,6 +378,27 @@ fi\n\
                     .append(true)
                     .open(&bash_file)?;
                 file.write_all(hook.as_bytes())?;
+            }
+
+            if has_brush {
+                let b_start = "# >>> glade-brush-login >>>";
+                let b_end = "# <<< glade-brush-login <<<";
+                if !p_existing.contains(b_start) || !p_existing.contains(b_end) {
+                    let b_hook = format!(
+                        "{b_start}\n\
+# Load ~/.brushrc for Brush login shells (`brush -l`)\n\
+if [[ -n \"${{BRUSH_VERSION:-}}\" && -r \"$HOME/.brushrc\" && -z \"${{_GLADESHELL_BRUSH_LOADED:-}}\" ]]; then\n\
+    _GLADESHELL_BRUSH_LOADED=1\n\
+    . \"$HOME/.brushrc\"\n\
+fi\n\
+{b_end}\n"
+                    );
+                    let mut file = fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&bash_file)?;
+                    file.write_all(b_hook.as_bytes())?;
+                }
             }
         }
 
@@ -438,21 +466,40 @@ if (Get-Command gladeshell -ErrorAction SilentlyContinue) {{\n\
     Ok(())
 }
 
+/// Check if `shell` executable is available on `$PATH` or in standard user bin directories.
+fn is_shell_installed(shell: &str) -> bool {
+    if crate::core::utils::cmd_exists(shell) {
+        return true;
+    }
+    if let Some(home) = crate::core::utils::home_dir() {
+        for bin_dir in [".local/bin", ".cargo/bin"] {
+            if home.join(bin_dir).join(shell).is_file() {
+                return true;
+            }
+            #[cfg(windows)]
+            if home.join(bin_dir).join(format!("{shell}.exe")).is_file() {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Auto-detect and configure all shells installed/present on host system.
 pub fn ensure_all_installed_shells_configured() -> std::io::Result<Vec<String>> {
     let mut configured = Vec::new();
-    let target_shells = ["zsh", "bash", "fish", "pwsh"];
+    let target_shells = ["zsh", "bash", "brush", "fish", "pwsh"];
 
     for shell in &target_shells {
         if let Some(path) = get_rc_path_for_shell(shell) {
             let should_attempt = path.exists() || {
                 #[cfg(windows)]
                 {
-                    *shell == "pwsh"
+                    *shell == "pwsh" || is_shell_installed(shell)
                 }
                 #[cfg(not(windows))]
                 {
-                    crate::core::utils::cmd_exists(shell)
+                    is_shell_installed(shell)
                 }
             };
             if should_attempt && ensure_init_in_rc(shell)? {
@@ -464,4 +511,18 @@ pub fn ensure_all_installed_shells_configured() -> std::io::Result<Vec<String>> 
     let _ = ensure_auto_heal_hooks();
 
     Ok(configured)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_brush_markers_and_rc_path() {
+        let (start, end) = get_markers_for_shell("brush");
+        assert_eq!(start, "# >>> glade-brush >>>");
+        assert_eq!(end, "# <<< glade-brush <<<");
+        let path = get_rc_path_for_shell("brush").unwrap();
+        assert!(path.ends_with(".brushrc"));
+    }
 }

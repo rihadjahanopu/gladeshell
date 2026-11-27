@@ -50,6 +50,12 @@ pub fn group() -> AliasGroup {
                 only_shells: vec!["bash".to_string()],
             },
             AliasEntry {
+                key: "brushrc".to_string(),
+                value: "code ~/.brushrc".to_string(),
+                description: "Edit Brush config in VS Code".to_string(),
+                only_shells: vec!["brush".to_string()],
+            },
+            AliasEntry {
                 key: "rel".to_string(),
                 value: "pkill -f gladeshell-daemon 2>/dev/null; rm -f /tmp/gladeshell_*.sock(N) 2>/dev/null; source ~/.zshrc; echo \"🔄 Zsh reloaded!\"".to_string(),
                 description: "Reload Zsh config".to_string(),
@@ -60,6 +66,12 @@ pub fn group() -> AliasGroup {
                 value: "pkill -f gladeshell-daemon 2>/dev/null; rm -f /tmp/gladeshell_*.sock 2>/dev/null; source ~/.bashrc; echo \"🔄 Bash reloaded!\"".to_string(),
                 description: "Reload Bash config".to_string(),
                 only_shells: vec!["bash".to_string()],
+            },
+            AliasEntry {
+                key: "rel".to_string(),
+                value: "pkill -f gladeshell-daemon 2>/dev/null; rm -f /tmp/gladeshell_*.sock 2>/dev/null; source ~/.brushrc; echo \"🔄 Brush reloaded!\"".to_string(),
+                description: "Reload Brush config".to_string(),
+                only_shells: vec!["brush".to_string()],
             },
             AliasEntry {
                 key: "rel".to_string(),

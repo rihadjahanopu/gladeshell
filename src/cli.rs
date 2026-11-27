@@ -27,6 +27,7 @@ pub enum Commands {
     /// Usage (add to shell rc file):
     ///   eval "$(gladeshell init zsh)"
     ///   eval "$(gladeshell init bash)"
+    ///   eval "$(gladeshell init brush)"
     ///   gladeshell init fish | source
     ///   gladeshell init pwsh | Invoke-Expression
     Init(InitArgs),
@@ -34,10 +35,10 @@ pub enum Commands {
     /// Print the gladeshell version
     Version,
 
-    /// Generate shell auto-completions for Bash, Zsh, Fish, PowerShell, or Elvish
+    /// Generate shell auto-completions for Bash, Brush, Zsh, Fish, PowerShell, or Elvish
     #[command(alias = "completion")]
     Completions {
-        /// Target shell (bash, zsh, fish, powershell, elvish)
+        /// Target shell (bash, brush, zsh, fish, powershell, elvish)
         #[arg(value_name = "SHELL")]
         shell: String,
     },
@@ -410,7 +411,7 @@ pub struct PromptArgs {
     #[arg(long, default_value_t = 0)]
     pub cmd_duration: u64,
 
-    /// Target shell (zsh | bash | fish | pwsh)
+    /// Target shell (zsh | bash | brush | fish | pwsh)
     #[arg(long, default_value = "zsh")]
     pub shell: String,
 
@@ -436,7 +437,7 @@ pub struct ZArgs {
 
 #[derive(Args, Debug, Clone)]
 pub struct InitArgs {
-    /// Target shell: bash | zsh | fish | pwsh
+    /// Target shell: bash | brush | zsh | fish | pwsh
     #[arg(value_name = "SHELL")]
     pub shell: String,
 

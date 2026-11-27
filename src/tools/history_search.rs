@@ -30,6 +30,17 @@ use ratatui::{
     Terminal,
 };
 
+/// RAII guard restoring terminal mode and alternate screen on exit or unwind.
+struct TerminalGuard;
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let mut tty = crate::core::utils::open_tty();
+        let _ = execute!(tty, LeaveAlternateScreen, crossterm::cursor::Show);
+    }
+}
+
 /// Entry point for `gladeshell fh` or `gladeshell history`
 pub fn run() -> Result<(), Box<dyn Error>> {
     let history_items = load_shell_history();
@@ -40,19 +51,17 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     let mut app = HistoryApp::new(history_items);
 
-    // Setup terminal raw mode & alternate screen
+    // Setup terminal raw mode & alternate screen on TTY/stderr so stdout remains clean for `$(gladeshell fh)`
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
+    let mut tty = crate::core::utils::open_tty();
+    execute!(tty, EnterAlternateScreen)?;
+    let guard = TerminalGuard;
+    let backend = CrosstermBackend::new(tty);
     let mut terminal = Terminal::new(backend)?;
 
     let res = app.run_loop(&mut terminal);
 
-    // Restore terminal state safely
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
+    drop(guard);
 
     if let Ok(Some(selected_cmd)) = res {
         println!("{selected_cmd}");
@@ -83,14 +92,16 @@ fn load_shell_history() -> Vec<String> {
         }
     }
 
-    // 2. Bash history (~/.bash_history)
-    let bash_path = home.join(".bash_history");
-    if bash_path.exists() {
-        if let Ok(content) = fs::read_to_string(&bash_path) {
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    entries.push(trimmed.to_string());
+    // 2. Bash (~/.bash_history) & Brush (~/.brush_history) plain-line histories
+    for plain_hist in [".bash_history", ".brush_history"] {
+        let hist_path = home.join(plain_hist);
+        if hist_path.exists() {
+            if let Ok(content) = fs::read_to_string(&hist_path) {
+                for line in content.lines() {
+                    let trimmed = line.trim();
+                    if !trimmed.is_empty() && !trimmed.starts_with('#') {
+                        entries.push(trimmed.to_string());
+                    }
                 }
             }
         }

@@ -8,7 +8,35 @@
 //  src/core/utils.rs — Shared Native Rust utilities
 // =============================================================================
 
+use std::io;
 use std::path::Path;
+
+/// Open the controlling terminal device for interactive TUI rendering,
+/// falling back to `stderr` when no controlling TTY handle is available.
+/// Using the TTY / `stderr` keeps `stdout` free for captured command output.
+pub fn open_tty() -> Box<dyn io::Write + Send> {
+    #[cfg(unix)]
+    {
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/tty")
+        {
+            return Box::new(file);
+        }
+    }
+    #[cfg(windows)]
+    {
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("CONOUT$")
+        {
+            return Box::new(file);
+        }
+    }
+    Box::new(io::stderr())
+}
 
 /// Returns true if `name` exists as an executable in any directory on PATH.
 /// Fully native — no `which` subprocess, no external tools. Cross-OS verified.

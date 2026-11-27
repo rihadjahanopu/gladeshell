@@ -427,6 +427,7 @@ fn cmd_init(args: InitArgs) -> Result<(), Box<dyn std::error::Error>> {
     let rc_file = match args.shell.to_ascii_lowercase().as_str() {
         "zsh" => "~/.zshrc",
         "bash" => "~/.bashrc",
+        "brush" => "~/.brushrc",
         "fish" => "~/.config/fish/config.fish",
         _ => "",
     };
@@ -514,7 +515,7 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Pre-generate and cache zero-fork init scripts for all supported shells
-    for sh in ["bash", "zsh", "fish", "pwsh"] {
+    for sh in ["bash", "brush", "zsh", "fish", "pwsh"] {
         let _ = init::generate(sh);
     }
 
@@ -854,7 +855,7 @@ fn cmd_prompt(args: PromptArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     let shell_id = match args.shell.to_lowercase().as_str() {
         "zsh" => 0,
-        "bash" => 1,
+        "bash" | "brush" => 1,
         "fish" => 2,
         "pwsh" => 3,
         _ => 0,
@@ -906,13 +907,13 @@ fn cmd_completions(shell_str: &str) -> Result<(), Box<dyn std::error::Error>> {
     use clap_complete::{generate, Shell};
 
     let shell = match shell_str.to_ascii_lowercase().as_str() {
-        "bash" => Shell::Bash,
+        "bash" | "brush" => Shell::Bash,
         "zsh" => Shell::Zsh,
         "fish" => Shell::Fish,
         "powershell" | "pwsh" => Shell::PowerShell,
         "elvish" => Shell::Elvish,
         other => {
-            eprintln!("error: unsupported shell '{other}'. Supported shells: bash, zsh, fish, powershell, elvish");
+            eprintln!("error: unsupported shell '{other}'. Supported shells: bash, brush, zsh, fish, powershell, elvish");
             std::process::exit(1);
         }
     };

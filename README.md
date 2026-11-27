@@ -112,29 +112,32 @@ One binary. One install. Absolute speed.
 
 ## ⚡ Performance Benchmark Matrix
 
-> **Empirical Performance Comparison:** `gladeshell` vs `Starship` vs `Oh My Posh` vs `Oh My Zsh`
+> **Empirical Performance Comparison:** `gladeshell` v1.2.18 (`e1b363f`) vs `Starship` vs `Oh My Posh` vs `Oh My Zsh`
 >
-> Tested on Linux x86_64 / macOS ARM64 using 10,000-iteration sample suites. See [benchmark.md](benchmark.md) for full methodology.
+> Tested on Linux x86_64 (`i5-1145G7`, `rustc 1.99.1`) using 100-iteration `os.wait4` (`p50`/`p99`), 500-iteration `AF_UNIX` IPC, and Criterion (`100` samples). See [benchmark.md](benchmark.md) for full methodology.
 
-| Performance Metric                |        ⚡ **`gladeshell`**         |   🚀 **`Starship`**   |  🎨 **`Oh My Posh`**  |     🐚 **`Oh My Zsh`**     |
-| :-------------------------------- | :--------------------------------: | :-------------------: | :-------------------: | :------------------------: |
-| **Engine Architecture**           | **Rust (Pure `gix` / Zero-Alloc)** | Rust (Modular Binary) | Go (GC Static Binary) |       Zsh Scripting        |
-| **Core Prompt Latency (`PS1`)**   |     **0.0114 ms (11.4 µs)** 🏆     |   2.40 ms – 8.50 ms   |  8.20 ms – 26.50 ms   |    18.50 ms – 95.00 ms     |
-| **Warm Process Launch**           |  **~1.64 ms mean / 0.92 ms min**   |   15.2 ms – 28.5 ms   |   35.0 ms – 72.0 ms   |     N/A (Pure script)      |
-| **Bash Hook Source (Cached)**     |   **~6.7 ms mean / 5.9 ms min**    |   18.5 ms – 32.0 ms   |   38.0 ms – 85.0 ms   |      180 ms – 450 ms       |
-| **Zsh Hook Source (Cached)**      |  **~32.4 ms mean / 29.2 ms min**   |   30.0 ms – 55.0 ms   |   45.0 ms – 90.0 ms   |      200 ms – 450 ms       |
-| **Subshell Process Forks**        |       **0 (Zero subshells)**       |    1 (Exec binary)    |    1 (Exec binary)    | 3 – 8 (git/env subshells)  |
-| **Git Repo Overhead (`gix`)**     |  **4.8 µs cache / < 4.6 ms live**  |   8.5 ms – 35.0 ms    |   15.0 ms – 55.0 ms   |     45.0 ms – 250.0 ms     |
-| **Tab RSS Memory Footprint**      |   **~3.9 MB (Fat LTO Stripped)**   |  ~12.5 MB – 18.2 MB   |  ~18.5 MB – 32.0 MB   |     ~28.0 MB – 55.0 MB     |
-| **Autocompletion Engine Latency** |     **~0.08 ms (Native Rust)**     |          N/A          |          N/A          | ~12.5 ms (`zsh-syntax-hl`) |
-| **Included Themes**               |           **55 Themes**            |    Config required    |     JSON Presets      |      Community themes      |
+| Performance Metric                |                 ⚡ **`gladeshell`** (`e1b363f`)                  |   🚀 **`Starship`**   |  🎨 **`Oh My Posh`**  |     🐚 **`Oh My Zsh`**     |
+| :-------------------------------- | :--------------------------------------------------------------: | :-------------------: | :-------------------: | :------------------------: |
+| **Engine Architecture**           |            **Rust (`gix 0.90` + Binary IPC Daemon)**             | Rust (Modular Binary) | Go (GC Static Binary) |       Zsh Scripting        |
+| **Core Render Latency (`PS1`)**   |                 **`35.48 µs` (`0.035 ms`)** 🏆                   |   2.40 ms – 8.50 ms   |  8.20 ms – 26.50 ms   |    18.50 ms – 95.00 ms     |
+| **Daemon IPC (`AF_UNIX`, `p50`)** |            **`51.0 µs` (repo) / `217.8 µs` (`/tmp`)**            |          N/A          |          N/A          |            N/A             |
+| **Fast-Path / Daemon CLI (`p50`)**| **`1.76 ms` (`/tmp` offline) · `2.64 ms` (`/tmp` daemon) · `5.27 ms` (repo daemon)** |   15.2 ms – 28.5 ms   |   35.0 ms – 72.0 ms   |     N/A (Pure script)      |
+| **Bash Hook Source (Cached)**     |       **`7.69 ms` `p50` (`min 5.79 ms` · `40.5 KB` lazy)**       |   18.5 ms – 32.0 ms   |   38.0 ms – 85.0 ms   |      180 ms – 450 ms       |
+| **Brush Hook Source (Cached)**    |         **`11.98 ms` `p50` (`11.46 ms` with `OSC auto`)**        |          N/A          |          N/A          |            N/A             |
+| **Zsh Hook Source (Cached)**      |      **`34.51 ms` `p50` (`min 29.20 ms` · `57.5 KB` lazy)**      |   30.0 ms – 55.0 ms   |   45.0 ms – 90.0 ms   |      200 ms – 450 ms       |
+| **Subshell Process Forks**        | **`0` (Zsh `zsocket`) / `1` lightweight CLI (`Bash`/`Brush`/`Fish`/`Pwsh`)** |    1 (Exec binary)    |    1 (Exec binary)    | 3 – 8 (git/env subshells)  |
+| **Git Repo Overhead (`gix 0.90`)**|             **`3.03 µs` cache / `1.53 ms` live scan**            |   8.5 ms – 35.0 ms    |   15.0 ms – 55.0 ms   |     45.0 ms – 250.0 ms     |
+| **CLI MaxRSS (`os.wait4`)**       |         **`21.59 MB`** (Unified binary + 40+ built-in tools)     |  ~12.5 MB – 18.2 MB   |  ~18.5 MB – 32.0 MB   |     ~28.0 MB – 55.0 MB     |
+| **Keystroke Suggest / Highlight** |        **`29.7 µs` suggest / `25.6 µs` highlight (IPC)**         |          N/A          |          N/A          | ~12.5 ms (`zsh-syntax-hl`) |
+| **Included Themes**               |                  **55 Themes + `OSC 133/7/777`**                 |    Config required    |     JSON Presets      |      Community themes      |
 
 ```
 Prompt Render Latency (Lower is better):
-gladeshell (Pure Rust Engine) : █ 0.0114 ms  [210x FASTER THAN STARSHIP]
-Starship (Rust Modular)      : ███████ 2.40 ms
-Oh My Posh (Go Engine)       : █████████████████████ 8.20 ms
-Oh My Zsh (Zsh Scripting)    : ██████████████████████████████████████████ 18.50 ms
+gladeshell (Core Render)      : █ 0.035 ms  [68x FASTER THAN STARSHIP]
+gladeshell (Daemon Zsh IPC)   : █ 0.051 ms  [47x FASTER THAN STARSHIP]
+Starship (Rust Modular)       : ███████ 2.40 ms
+Oh My Posh (Go Engine)        : █████████████████████ 8.20 ms
+Oh My Zsh (Zsh Scripting)     : ██████████████████████████████████████████ 18.50 ms
 ```
 
 > 📖 _For complete micro-benchmarking methodology, IPC socket metrics, and memory profiles, see [benchmark.md](benchmark.md)._

@@ -1635,7 +1635,7 @@ reboot</code></pre>
                     <pre><code>zsh &lt;(curl -fsSL https://gladeshell.netlify.app/public/install.zsh)</code></pre>
                   </div>
                   <p class="zsh-tip">
-                    <span class="zsh-tip-icon">💡</span> <strong>100% Automated:</strong> The installer automatically sets up gladeshell's native Rust zero-latency autocompletion and syntax highlighting (~0.08ms) — no manual git clones or plugin folders needed!
+                    <span class="zsh-tip-icon">💡</span> <strong>100% Automated:</strong> The installer automatically sets up gladeshell's native Rust autocompletion (29.7 µs IPC) and syntax highlighting (25.6 µs IPC) — no manual git clones or plugin folders needed!
                   </p>
                 </div>
 
@@ -3738,9 +3738,9 @@ reboot</code></pre>
           <!-- Hero env strip -->
           <div class="bh-env-strip">
             <span class="bh-env-pill"><span class="bh-dot"></span>Linux x86_64 · Intel i5-1145G7 @ 2.60GHz</span>
-            <span class="bh-env-pill"><span class="bh-dot"></span>Rust 1.98.1 · gladeshell v1.2 (Fat-LTO)</span>
+            <span class="bh-env-pill"><span class="bh-dot"></span>Rust 1.99.1 · gladeshell v1.2.18 (LTO)</span>
             <span class="bh-env-pill"><span class="bh-dot"></span>GladeShell vs Starship vs Oh My Posh vs Oh My Zsh</span>
-            <span class="bh-env-pill"><span class="bh-dot"></span>Criterion Micro-benchmarks + 50-Iteration os.wait4</span>
+            <span class="bh-env-pill"><span class="bh-dot"></span>Criterion + 100-Iter os.wait4 + 500-Iter AF_UNIX IPC</span>
           </div>
 
           <!-- Score cards: strictly 4 products -->
@@ -3748,30 +3748,30 @@ reboot</code></pre>
             <div class="bh-card bh-card--winner">
               <div class="bh-card-icon">⚡</div>
               <div class="bh-card-shell">GladeShell</div>
-              <div class="bh-card-val" style="color: var(--clr-cyan)">11.4 µs</div>
-              <div class="bh-card-sub">Core render (0.011 ms) · 0 forks</div>
+              <div class="bh-card-val" style="color: var(--clr-cyan)">35.5 µs</div>
+              <div class="bh-card-sub">Core render (0.035 ms) · 51 µs IPC</div>
               <div class="bh-card-badge">⚡ FASTEST</div>
             </div>
             <div class="bh-card">
               <div class="bh-card-icon">⭐</div>
               <div class="bh-card-shell">Starship</div>
               <div class="bh-card-val" style="color: var(--clr-yellow)">2.40 ms</div>
-              <div class="bh-card-sub">Rust modular binary · 210× slower</div>
-              <div class="bh-card-badge">210× SLOWER</div>
+              <div class="bh-card-sub">Rust modular binary · ~68× slower</div>
+              <div class="bh-card-badge">~68× SLOWER</div>
             </div>
             <div class="bh-card">
               <div class="bh-card-icon">🎨</div>
               <div class="bh-card-shell">Oh My Posh</div>
               <div class="bh-card-val" style="color: var(--clr-orange)">8.20 ms</div>
-              <div class="bh-card-sub">Go binary runtime · 700× slower</div>
-              <div class="bh-card-badge">700× SLOWER</div>
+              <div class="bh-card-sub">Go binary runtime · ~231× slower</div>
+              <div class="bh-card-badge">~231× SLOWER</div>
             </div>
             <div class="bh-card">
               <div class="bh-card-icon">🔴</div>
               <div class="bh-card-shell">Oh My Zsh</div>
               <div class="bh-card-val" style="color: #ef4444">18.50 ms</div>
-              <div class="bh-card-sub">Zsh script framework · 1,600× slower</div>
-              <div class="bh-card-badge">1,600× SLOWER</div>
+              <div class="bh-card-sub">Zsh script framework · ~521× slower</div>
+              <div class="bh-card-badge">~521× SLOWER</div>
             </div>
           </div>
 
@@ -3824,19 +3824,19 @@ reboot</code></pre>
           >
             <p class="bh-panel-desc">
               Shell hook sourcing overhead (cached init file) —
-              <code>make bench-startup</code> 10-iteration suite + 50-iter <code>os.wait4</code>. Bars
+              <code>scripts/run_benchmarks.py</code> 100-iteration <code>os.wait4</code> timing (<code>p50</code>). Bars
               proportional to worst (Oh My Zsh · 220 ms).
             </p>
             <div class="bh-chart" id="bh-startup-chart">
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
                   <span class="bh-icon bh-icon--fb">⚡</span>GladeShell (cached hook)
-                  <span class="bench-tip" data-tooltip="⚡ FASTEST · 6.71 ms" tabindex="0" aria-label="Fastest">🏆</span>
+                  <span class="bench-tip" data-tooltip="⚡ FASTEST · 7.69 ms p50" tabindex="0" aria-label="Fastest">🏆</span>
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="3.1"></div>
+                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="3.5"></div>
                 </div>
-                <div class="bh-bar-num bh-num--winner">6.71 ms</div>
+                <div class="bh-bar-num bh-num--winner">7.69 ms</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
@@ -3869,20 +3869,20 @@ reboot</code></pre>
             <!-- Raw output -->
             <div class="bh-raw">
               <div class="bh-raw-title">📊 Terminal Startup / Hook Sourcing · 4 Prompt Engines Compared</div>
-              <span class="bh-cmd">GladeShell Bash hook (cached) — 10 runs</span>
-              <span class="bh-fast">mean 6.71 ms ± 0.38 ms · min 5.90 ms · (Zsh: 32.4 ms)</span>
+              <span class="bh-cmd">GladeShell Bash hook (cached) — 100 runs (os.wait4)</span>
+              <span class="hf-fast bh-fast">p50 7.69 ms · min 5.79 ms · p99 14.58 ms · (Brush: 11.98 ms · Zsh: 34.51 ms)</span>
 
-              <span class="bh-cmd">Starship init binary exec — measured</span>
+              <span class="bh-cmd">Starship init binary exec — reference</span>
               <span class="bh-dim">mean 18.5 ms (18.5 ms – 32.0 ms range)</span>
 
-              <span class="bh-cmd">Oh My Posh init binary exec — measured</span>
+              <span class="bh-cmd">Oh My Posh init binary exec — reference</span>
               <span class="bh-dim">mean 38.0 ms (38.0 ms – 85.0 ms range)</span>
 
-              <span class="bh-cmd">Oh My Zsh default plugin suite — measured</span>
+              <span class="bh-cmd">Oh My Zsh default plugin suite — reference</span>
               <span class="bh-slow">mean 220.0 ms (180 ms – 450 ms range; unoptimized: 890 ms)</span>
 
               <span class="bh-winner"
-                >🏆 GladeShell is 2.8× faster than Starship · 5.5× faster than Oh My Posh · 32.8× faster than Oh My Zsh</span
+                >🏆 GladeShell is 2.4× faster than Starship · 4.9× faster than Oh My Posh · 28.6× faster than Oh My Zsh</span
               >
             </div>
           </div>
@@ -3890,19 +3890,19 @@ reboot</code></pre>
           <!-- ── Tab 2: Prompt Speed ── -->
           <div class="bh-panel" id="bhpanel-prompt" role="tabpanel" aria-labelledby="bhtab-prompt">
             <p class="bh-panel-desc">
-              Core prompt render latency (Criterion micro-bench · Oct 9, 2026). GladeShell uses a
-              zero-allocation stack buffer — no heap, no subshell, no IPC per render.
+              Core prompt render latency (Criterion empirical micro-bench · Nov 27, 2026). GladeShell uses a
+              stack-allocated byte buffer, <code>gix 0.90</code>, and a packed binary IPC daemon (<code>51.0 µs</code> <code>p50</code>).
             </p>
             <div class="bh-chart" id="bh-prompt-chart">
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
                   <span class="bh-icon bh-icon--fb">⚡</span>GladeShell Core Engine
-                  <span class="bench-tip" data-tooltip="🏆 11.4 µs · Pure Zero-Alloc" tabindex="0" aria-label="Fastest Engine">🏆</span>
+                  <span class="bench-tip" data-tooltip="🏆 35.5 µs · Core Render" tabindex="0" aria-label="Fastest Engine">🏆</span>
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="0.06"></div>
+                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="0.2"></div>
                 </div>
-                <div class="bh-bar-num bh-num--winner">0.011 ms</div>
+                <div class="bh-bar-num bh-num--winner">0.035 ms</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
@@ -3933,47 +3933,47 @@ reboot</code></pre>
               </div>
             </div>
             <div class="bh-note">
-              ⚡ Criterion measured: <strong>11.38 µs</strong> pure theme · <strong>13.51 µs</strong>
-              default theme · <strong>14.41 µs</strong> dirty tree + exit code. GladeShell uses a
-              <strong>stack-allocated <code>[u8; 4096]</code> buffer</strong> — zero heap allocs on
-              the hot path. Warm process launch: <strong>1.64 ms mean / 0.92 ms min</strong>.
+              ⚡ Criterion measured: <strong>35.48 µs</strong> default theme (isolated run) ·
+              <strong>84.49 µs</strong> pure theme · Daemon Unix IPC round-trip:
+              <strong>51.0 µs <code>p50</code></strong> (repo git). Offline <code>/tmp</code> prompt launch:
+              <strong>1.76 ms <code>p50</code> / 1.30 ms <code>min</code></strong>.
             </div>
           </div>
 
           <!-- ── Tab 3: Memory ── -->
           <div class="bh-panel" id="bhpanel-memory" role="tabpanel" aria-labelledby="bhtab-memory">
             <p class="bh-panel-desc">
-              RSS memory after interactive shell fully loads. Via
-              <code>/usr/bin/time -v shell -i -c exit 2&gt;&amp;1 | grep 'Maximum resident'</code>.
+              Peak resident set size (<code>MaxRSS</code>) measured via Linux <code>os.wait4</code> across 100
+              iterations on the full unified GladeShell binary (including 40+ TUI apps, FFmpeg &amp; crypto vault tools).
             </p>
             <div class="bh-chart" id="bh-memory-chart">
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
-                  <span class="bh-icon bh-icon--fb">⚡</span>GladeShell (core / full binary)
-                  <span class="bench-tip" data-tooltip="🏆 LIGHTEST · 3.9 MB RSS" tabindex="0" aria-label="Lightest">🏆</span>
+                  <span class="bh-icon bh-icon--fb">⚡</span>GladeShell (full unified binary)
+                  <span class="bench-tip" data-tooltip="⚡ 21.59 MB MaxRSS (40+ tools included)" tabindex="0" aria-label="Memory">🏆</span>
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="7.1"></div>
+                  <div class="bh-bar-fill bh-fill--fb bh-fill--winner" data-pct="21.6"></div>
                 </div>
-                <div class="bh-bar-num bh-num--winner">3.9 MB / 14.7 MB</div>
+                <div class="bh-bar-num bh-num--winner">21.59 MB MaxRSS</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
                   <span class="bh-icon bh-icon--fb">⭐</span>Starship
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--zsh" data-pct="22.7"></div>
+                  <div class="bh-bar-fill bh-fill--zsh" data-pct="18.2"></div>
                 </div>
-                <div class="bh-bar-num">12.5 MB</div>
+                <div class="bh-bar-num">12.5 – 18.2 MB</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
                   <span class="bh-icon bh-icon--omp">🎨</span>Oh My Posh
                 </div>
                 <div class="bh-bar-track">
-                  <div class="bh-bar-fill bh-fill--omp" data-pct="33.6"></div>
+                  <div class="bh-bar-fill bh-fill--omp" data-pct="32.0"></div>
                 </div>
-                <div class="bh-bar-num">18.5 MB</div>
+                <div class="bh-bar-num">18.5 – 32.0 MB</div>
               </div>
               <div class="bh-bar-row">
                 <div class="bh-bar-label">
@@ -3986,8 +3986,7 @@ reboot</code></pre>
               </div>
             </div>
             <div class="bh-note">
-              💾 GladeShell core prompt engine footprint is just <strong>~3.9 MB RSS</strong>. Even with all 40+ arsenal tools,
-              TUI engines, and compressors linked, total binary RSS is <strong>≤ 14.7 MB</strong>. Oh My Zsh with
+              💾 Full unified GladeShell CLI + daemon <code>MaxRSS</code> is <strong>21.59 MB</strong> (<code>14.01 MiB</code> static binary with 40+ TUI tools, compressor, FFmedia, and AES-256 vault linked). Oh My Zsh with
               git + nvm + docker + python plugins easily exceeds <strong>55–100 MB RSS</strong>.
             </div>
           </div>
@@ -4010,7 +4009,7 @@ reboot</code></pre>
                   <li>
                     <span class="bh-ldot" style="background: #22d3ee"></span>
                     <div>
-                      <strong>GladeShell</strong><span>Zero-Alloc · gix engine · 0 subshells</span>
+                      <strong>GladeShell</strong><span>gix 0.90 · Binary IPC · Lazy Init</span>
                     </div>
                   </li>
                   <li>
@@ -4050,56 +4049,56 @@ reboot</code></pre>
                 <tbody>
                   <tr>
                     <td>Language / Architecture</td>
-                    <td class="bh-best">Rust (Zero-Alloc / gix)</td>
+                    <td class="bh-best">Rust (gix 0.90 + IPC Daemon)</td>
                     <td class="bh-good">Rust (Static Binary)</td>
                     <td class="bh-ok">Go (Static Binary)</td>
                     <td class="bh-bad">Zsh Scripting</td>
                   </tr>
                   <tr>
-                    <td>Core Prompt Latency (PS1)</td>
-                    <td class="bh-best">11.4 µs (0.011 ms) ⚡</td>
+                    <td>Core Render Latency (PS1)</td>
+                    <td class="bh-best">35.5 µs (0.035 ms) ⚡</td>
                     <td class="bh-good">2.40 ms – 8.50 ms</td>
                     <td class="bh-ok">8.20 ms – 26.50 ms</td>
                     <td class="bh-bad">18.50 ms – 95.00 ms</td>
                   </tr>
                   <tr>
-                    <td>Warm Process Launch (prompt)</td>
-                    <td class="bh-best">1.64 ms mean / 0.92 ms min ⚡</td>
+                    <td>Daemon IPC / CLI Prompt (p50)</td>
+                    <td class="bh-best">51.0 µs IPC / 1.76–5.27 ms CLI ⚡</td>
                     <td class="bh-good">15.2 ms – 28.5 ms</td>
                     <td class="bh-bad">35.0 ms – 72.0 ms</td>
                     <td class="bh-na">N/A (Pure script)</td>
                   </tr>
                   <tr>
                     <td>Terminal Startup / Hook Source</td>
-                    <td class="bh-best">6.71 ms (Bash) / 32.4 ms (Zsh) ⚡</td>
+                    <td class="bh-best">7.69 ms (Bash) / 11.98 ms (Brush) / 34.51 ms (Zsh) ⚡</td>
                     <td class="bh-good">18.5 ms – 32.0 ms</td>
                     <td class="bh-ok">38.0 ms – 85.0 ms</td>
                     <td class="bh-bad">180 ms – 450 ms (220 ms avg)</td>
                   </tr>
                   <tr>
-                    <td>Cold Init Generation</td>
-                    <td class="bh-best">24 ms – 28 ms ⚡</td>
+                    <td>Cold Init Generation (p50)</td>
+                    <td class="bh-best">2.50 ms (Brush) – 4.14 ms (Zsh) ⚡</td>
                     <td class="bh-good">12 ms – 25 ms</td>
                     <td class="bh-bad">28 ms – 60 ms</td>
                     <td class="bh-na">N/A (Static files)</td>
                   </tr>
                   <tr>
-                    <td>Git Status Overhead (gix)</td>
-                    <td class="bh-best">4.8 µs cache / &lt; 4.6 ms live ⚡</td>
+                    <td>Git Status Overhead (gix 0.90)</td>
+                    <td class="bh-best">3.03 µs cache / 1.53 ms live ⚡</td>
                     <td class="bh-ok">8.5 ms – 35.0 ms</td>
                     <td class="bh-bad">15.0 ms – 55.0 ms</td>
                     <td class="bh-bad">45.0 ms – 250.0 ms</td>
                   </tr>
                   <tr>
                     <td>Subshell Process Forks</td>
-                    <td class="bh-best">0 (Zero subshells) ⚡</td>
+                    <td class="bh-best">0 (Zsh zsocket) / 1 CLI (Bash/Fish/Pwsh) ⚡</td>
                     <td class="bh-good">1 (Exec binary)</td>
                     <td class="bh-good">1 (Exec binary)</td>
                     <td class="bh-bad">3 – 8 (git/env subshells)</td>
                   </tr>
                   <tr>
-                    <td>Memory Footprint (RSS)</td>
-                    <td class="bh-best">~3.9 MB core / 14.7 MB full ⚡</td>
+                    <td>Memory Footprint (MaxRSS)</td>
+                    <td class="bh-good">21.59 MB (Unified CLI + 40+ tools)</td>
                     <td class="bh-good">~12.5 MB – 18.2 MB</td>
                     <td class="bh-ok">~18.5 MB – 32.0 MB</td>
                     <td class="bh-bad">~28.0 MB – 55.0 MB (up to 100 MB)</td>

@@ -9,6 +9,141 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
+/// Return whether `brush` binary or `~/.brushrc` is present on this system.
+pub fn is_brush_present() -> bool {
+    is_shell_installed("brush")
+        || crate::core::utils::home_dir()
+            .map(|h| h.join(".brushrc").exists())
+            .unwrap_or(false)
+}
+
+/// Resolve the OS-specific `brush` TOML configuration file path (`config.toml`).
+///
+/// - Linux / macOS: `${XDG_CONFIG_HOME:-$HOME/.config}/brush/config.toml`
+/// - Windows: `%APPDATA%\brush\config.toml` (fallback: `%USERPROFILE%\.config\brush\config.toml`)
+pub fn get_brush_config_path() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        if let Some(appdata) = std::env::var_os("APPDATA") {
+            if !appdata.is_empty() {
+                return Some(PathBuf::from(appdata).join("brush").join("config.toml"));
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
+            let trimmed = xdg.trim();
+            if !trimmed.is_empty() {
+                return Some(PathBuf::from(trimmed).join("brush").join("config.toml"));
+            }
+        }
+    }
+    crate::core::utils::home_dir().map(|h| h.join(".config").join("brush").join("config.toml"))
+}
+
+/// Ensure `[ui]\nsyntax-highlighting = true` is configured in Brush's `config.toml`.
+///
+/// Respects explicit user settings (`true` or `false`), preserves existing comments
+/// when inserting under `[ui]`, skips malformed TOML safely, and writes atomically.
+pub fn ensure_brush_ui_config() -> std::io::Result<bool> {
+    match get_brush_config_path() {
+        Some(path) => ensure_brush_ui_config_at(&path),
+        None => Ok(false),
+    }
+}
+
+/// Ensure `[ui]\nsyntax-highlighting = true` in a specific TOML config file path.
+pub fn ensure_brush_ui_config_at(cfg_path: &std::path::Path) -> std::io::Result<bool> {
+    let existing = if cfg_path.exists() {
+        fs::read_to_string(cfg_path)?
+    } else {
+        String::new()
+    };
+
+    let line_ending = if existing.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+
+    let updated = if existing.trim().is_empty() {
+        format!(
+            "# GladeShell — Brush interactive syntax highlighting{le}[ui]{le}syntax-highlighting = true{le}",
+            le = line_ending
+        )
+    } else {
+        let Ok(mut parsed) = toml::from_str::<toml::Value>(&existing) else {
+            return Ok(false);
+        };
+
+        if let Some(ui_val) = parsed.get("ui") {
+            if ui_val.get("syntax-highlighting").is_some() {
+                return Ok(false);
+            }
+            if let Some(insert_pos) = find_toml_section_end_of_header(&existing, "[ui]") {
+                let mut out = String::with_capacity(existing.len() + 40);
+                out.push_str(&existing[..insert_pos]);
+                if !existing[..insert_pos].ends_with('\n') {
+                    out.push_str(line_ending);
+                }
+                out.push_str("syntax-highlighting = true");
+                out.push_str(line_ending);
+                out.push_str(&existing[insert_pos..]);
+                out
+            } else if let Some(ui_tbl) = parsed.get_mut("ui").and_then(|v| v.as_table_mut()) {
+                ui_tbl.insert("syntax-highlighting".into(), toml::Value::Boolean(true));
+                toml::to_string_pretty(&parsed).map_err(std::io::Error::other)?
+            } else {
+                return Ok(false);
+            }
+        } else {
+            let mut out = existing.clone();
+            if !out.ends_with('\n') {
+                out.push_str(line_ending);
+            }
+            out.push_str(&format!(
+                "{le}# GladeShell — Brush interactive syntax highlighting{le}[ui]{le}syntax-highlighting = true{le}",
+                le = line_ending
+            ));
+            out
+        }
+    };
+
+    if let Some(parent) = cfg_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let tmp_name = format!(
+        ".{}.tmp.{}",
+        cfg_path.file_name().unwrap_or_default().to_string_lossy(),
+        std::process::id()
+    );
+    let tmp_path = cfg_path.with_file_name(tmp_name);
+    fs::write(&tmp_path, updated)?;
+    crate::core::utils::atomic_replace(&tmp_path, cfg_path)?;
+
+    Ok(true)
+}
+
+/// Find byte offset right after the matching TOML section header line (e.g. `[ui]`).
+fn find_toml_section_end_of_header(content: &str, header: &str) -> Option<usize> {
+    let mut offset = 0;
+    for chunk in content.split_inclusive('\n') {
+        let trimmed = chunk.trim();
+        let matches_header = trimmed == header
+            || trimmed
+                .strip_prefix(header)
+                .map(|rest| rest.trim_start().starts_with('#'))
+                .unwrap_or(false);
+        offset += chunk.len();
+        if matches_header {
+            return Some(offset);
+        }
+    }
+    None
+}
+
 /// Return dynamic start and end markers for a given shell name.
 pub fn get_markers_for_shell(shell: &str) -> (String, String) {
     match shell.to_ascii_lowercase().as_str() {
@@ -235,6 +370,9 @@ pub fn clean_specific_rc_file(rc_path: &PathBuf) -> std::io::Result<()> {
 /// appropriate shell RC file — idempotent, appends only if not already present.
 pub fn ensure_init_in_rc(shell: &str) -> std::io::Result<bool> {
     let _ = ensure_auto_heal_hooks();
+    if shell.eq_ignore_ascii_case("brush") {
+        let _ = ensure_brush_ui_config();
+    }
 
     let rc_path = match get_rc_path_for_shell(shell) {
         Some(p) => p,
@@ -509,6 +647,9 @@ pub fn ensure_all_installed_shells_configured() -> std::io::Result<Vec<String>> 
     }
 
     let _ = ensure_auto_heal_hooks();
+    if is_brush_present() {
+        let _ = ensure_brush_ui_config();
+    }
 
     Ok(configured)
 }
@@ -524,5 +665,52 @@ mod tests {
         assert_eq!(end, "# <<< glade-brush <<<");
         let path = get_rc_path_for_shell("brush").unwrap();
         assert!(path.ends_with(".brushrc"));
+    }
+
+    #[test]
+    fn test_ensure_brush_ui_config_creates_and_preserves() {
+        let dir =
+            std::env::temp_dir().join(format!("gladeshell_brush_cfg_test_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let cfg = dir.join("brush").join("config.toml");
+
+        // 1. Creates fresh file when missing
+        assert!(ensure_brush_ui_config_at(&cfg).unwrap());
+        let c1 = fs::read_to_string(&cfg).unwrap();
+        assert!(c1.contains("[ui]"));
+        assert!(c1.contains("syntax-highlighting = true"));
+
+        // 2. Idempotent on second call
+        assert!(!ensure_brush_ui_config_at(&cfg).unwrap());
+
+        // 3. Preserves explicit false
+        fs::write(&cfg, "[ui]\nsyntax-highlighting = false\n").unwrap();
+        assert!(!ensure_brush_ui_config_at(&cfg).unwrap());
+        assert!(fs::read_to_string(&cfg)
+            .unwrap()
+            .contains("syntax-highlighting = false"));
+
+        // 4. Inserts cleanly under existing [ui] section while keeping other keys & comments
+        fs::write(&cfg, "# custom comment\n[ui]\nmouse = true\n").unwrap();
+        assert!(ensure_brush_ui_config_at(&cfg).unwrap());
+        let c4 = fs::read_to_string(&cfg).unwrap();
+        assert!(c4.contains("# custom comment"));
+        assert!(c4.contains("syntax-highlighting = true"));
+        assert!(c4.contains("mouse = true"));
+
+        // 5. Appends [ui] when other sections exist without [ui]
+        fs::write(&cfg, "[experimental]\nzsh-hooks = true\n").unwrap();
+        assert!(ensure_brush_ui_config_at(&cfg).unwrap());
+        let c5 = fs::read_to_string(&cfg).unwrap();
+        assert!(c5.contains("zsh-hooks = true"));
+        assert!(c5.contains("[ui]"));
+        assert!(c5.contains("syntax-highlighting = true"));
+
+        // 6. Skips broken TOML safely
+        fs::write(&cfg, "[broken ===\n").unwrap();
+        assert!(!ensure_brush_ui_config_at(&cfg).unwrap());
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

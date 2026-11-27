@@ -263,13 +263,27 @@ function Invoke-Doctor {
         Write-Host "  📄 Profile Hook:       ${YLW}[MISSING]${NC} Profile file does not exist ($PROFILE)"
     }
 
-    if (Get-Command brush -ErrorAction SilentlyContinue) {
+    $brushBin = Get-Command brush -ErrorAction SilentlyContinue
+    if (-not $brushBin) {
+        foreach ($cand in @((Join-Path $HOME ".local\bin\brush.exe"), (Join-Path $HOME ".cargo\bin\brush.exe"))) {
+            if (Test-Path $cand) { $brushBin = $cand; break }
+        }
+    }
+    if ($brushBin) {
         $brushRc = Join-Path $HOME ".brushrc"
         $brushOk = (Test-Path $brushRc) -and ((Get-Content $brushRc -Raw -ErrorAction SilentlyContinue) -match "gladeshell init")
         if ($brushOk) {
             Write-Host "  🦀 Brush Hook:         ${GRN}[OK]${NC} $brushRc"
         } else {
             Write-Host "  🦀 Brush Hook:         ${YLW}[MISSING]${NC} Run 'gladeshell setup' to configure $brushRc"
+        }
+        $brushCfgDir = if ($env:APPDATA) { Join-Path $env:APPDATA "brush" } else { Join-Path $HOME ".config\brush" }
+        $brushCfg = Join-Path $brushCfgDir "config.toml"
+        $brushCfgOk = (Test-Path $brushCfg) -and ((Get-Content $brushCfg -Raw -ErrorAction SilentlyContinue) -match "(?m)^\s*syntax-highlighting\s*=\s*true")
+        if ($brushCfgOk) {
+            Write-Host "  🦀 Brush UI Config:    ${GRN}[OK]${NC} $brushCfg (syntax-highlighting = true)"
+        } else {
+            Write-Host "  🦀 Brush UI Config:    ${YLW}[MISSING]${NC} Run 'gladeshell setup' to configure $brushCfg"
         }
     }
 
@@ -617,7 +631,7 @@ foreach ($p in $targetProfiles) {
     }
 }
 
-if ($exe -and ($TARGET_ALL_SHELLS -or (Get-Command brush -ErrorAction SilentlyContinue))) {
+if ($exe -and ($TARGET_ALL_SHELLS -or (Get-Command brush -ErrorAction SilentlyContinue) -or (Test-Path (Join-Path $HOME ".cargo\bin\brush.exe")) -or (Test-Path (Join-Path $HOME ".local\bin\brush.exe")) -or (Test-Path (Join-Path $HOME ".brushrc")))) {
     try {
         & $exe setup 2>$null | Out-Null
     } catch { $null = $_ }

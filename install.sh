@@ -846,6 +846,11 @@ run_doctor() {
         fi
     done
 
+    local brush_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/brush/config.toml"
+    if [ -f "$brush_cfg" ] && grep -qE '^\s*syntax-highlighting\s*=\s*true' "$brush_cfg" 2>/dev/null; then
+        printf "  🦀 Brush UI Config:   ${GREEN}[OK]${NC} syntax-highlighting enabled (%s)\n" "$(tildify "$brush_cfg")"
+    fi
+
     printf "\n  ──────────────────────────────────────────────────\n"
     printf "  🎉 Doctor check completed.\n\n"
     exit 0

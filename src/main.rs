@@ -499,15 +499,26 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
 
     let _ = init::cleaner::ensure_auto_heal_hooks();
 
+    let brush_cfg_updated = if init::cleaner::is_brush_present() {
+        init::cleaner::ensure_brush_ui_config().unwrap_or(false)
+    } else {
+        false
+    };
+
     let configured = init::cleaner::ensure_all_installed_shells_configured()?;
 
-    if configured.is_empty() {
+    if configured.is_empty() && !brush_cfg_updated {
         eprintln!(
             "\x1b[1;33m✔  All installed shells are already configured — nothing to do.\x1b[0m"
         );
     } else {
         for sh in &configured {
             eprintln!("\x1b[1;32m✅ Successfully injected gladeshell into shell: {sh}\x1b[0m");
+        }
+        if brush_cfg_updated {
+            eprintln!(
+                "\x1b[1;32m✅ Enabled [ui] syntax-highlighting = true in Brush config.toml\x1b[0m"
+            );
         }
         eprintln!(
             "\x1b[1;36m💡 Restart your terminal or source your shell config to activate.\x1b[0m"

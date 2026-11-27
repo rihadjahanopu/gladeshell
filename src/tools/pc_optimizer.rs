@@ -1375,6 +1375,9 @@ fn dirs_home() -> PathBuf {
 }
 
 fn detect_shell_name() -> String {
+    if std::env::var_os("BRUSH_VERSION").is_some() {
+        return "brush".into();
+    }
     std::env::var("SHELL")
         .map(|s| s.rsplit('/').next().unwrap_or("bash").to_string())
         .unwrap_or_else(|_| "bash".into())
@@ -1384,6 +1387,7 @@ fn rc_file_for(shell_name: &str) -> PathBuf {
     let home = dirs_home();
     match shell_name {
         "zsh" => home.join(".zshrc"),
+        "brush" => home.join(".brushrc"),
         "fish" => home.join(".config/fish/config.fish"),
         _ => home.join(".bashrc"),
     }

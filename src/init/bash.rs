@@ -26,6 +26,12 @@ pub fn generate() -> String {
 
     out.push_str(&header_comment("#"));
     out.push_str(&shared::render_guard(Shell::Bash));
+    out.push_str(
+        r#"
+# Skip Bash initialization inside Brush when ~/.brushrc handles GladeShell natively.
+if [[ -z "${BRUSH_VERSION:-}" ]] || ! grep -qF '# >>> glade-brush >>>' "$HOME/.brushrc" 2>/dev/null; then
+"#,
+    );
     out.push_str(&shared::render_env_and_path(Shell::Bash));
     out.push_str(&shared::render_nvm_lazy_load(Shell::Bash));
     out.push_str(&shared::render_bun_setup(Shell::Bash));
@@ -41,10 +47,13 @@ _fb_sock="$(gladeshell socket-path 2>/dev/null || echo "${TMPDIR:-/tmp}/gladeshe
 _fb_healed=""
 _fb_daemon_spawned=""
 _fb_preexec_trap() {
-    [[ "$_fb_in_prompt" -ne 0 || "${BASH_COMMAND:-}" == __fb_prompt* ]] && return
+    if [[ "$_fb_in_prompt" -ne 0 || "${BASH_COMMAND:-}" == __fb_prompt* ]]; then
+        return 0
+    fi
     if [[ "${_fb_timer_start:-0}" -eq 0 ]]; then
         _fb_timer_start=$SECONDS
     fi
+    return 0
 }
 trap '_fb_preexec_trap' DEBUG
 
@@ -68,7 +77,7 @@ __fb_prompt() {
     if [[ -z "$_fb_healed" ]]; then
         _fb_healed=1
         if [[ -f "$HOME/.bashrc" ]] && ! grep -qF '# >>> glade-bashrc >>>' "$HOME/.bashrc" 2>/dev/null; then
-            (gladeshell setup >/dev/null 2>&1 &)
+            (gladeshell setup </dev/null >/dev/null 2>&1 &)
         fi
     fi
 
@@ -76,13 +85,13 @@ __fb_prompt() {
     if [[ -z "$_fb_daemon_spawned" ]]; then
         _fb_daemon_spawned=1
         if [[ -n "$_fb_sock" && ! -S "$_fb_sock" ]]; then
-            (gladeshell serve >/dev/null 2>&1 &)
+            (gladeshell serve </dev/null >/dev/null 2>&1 &)
         fi
     fi
 
     # Use printf x trick so $() doesn't strip trailing newlines that carry ❯❯❯
     local _fb_raw
-    _fb_raw=$(gladeshell prompt --shell bash --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOSTNAME" 2>/dev/null; printf x)
+    _fb_raw=$(gladeshell prompt --shell bash --cwd "${PWD:-.}" --exit-code "$exit_code" --cmd-duration "$duration" --user "${USER:-}" --host "${HOSTNAME:-}" 2>/dev/null; printf x)
     PS1="${_fb_raw%x}"
     _fb_in_prompt=0
 }
@@ -125,7 +134,7 @@ command_not_found_handle() {
     out.push_str(&shared::render_z_wrapper(Shell::Bash));
     out.push_str(&shared::render_notification_helpers(Shell::Bash));
     out.push_str(&shared::render_cli_completions(Shell::Bash));
-    out.push_str("\n# gladeshell bash init complete\n");
+    out.push_str("\nfi\n# gladeshell bash init complete\n");
     out
 }
 
@@ -139,6 +148,8 @@ mod tests {
         assert!(script.contains("PROMPT_COMMAND=\"__fb_prompt\""));
         assert!(script.contains("gladeshell bash init complete"));
         assert!(script.contains("_fb_timer_start"));
+        assert!(script.contains("BRUSH_VERSION"));
+        assert!(script.contains("${HOSTNAME:-}"));
         assert!(!script.contains("_fb_skip_render"));
         assert!(!script.contains("bind -x"));
         assert!(!script.contains("_fb_cached_ps1"));

@@ -72,7 +72,30 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
 // ── History File Parser ───────────────────────────────────────────────────────
 
+/// Read up to the trailing `max_bytes` of a history file with lossy UTF-8 decoding
+/// so non-UTF-8 sequences or very large files never drop shell history.
+fn read_history_lossy(path: &std::path::Path, max_bytes: u64) -> Option<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = fs::File::open(path).ok()?;
+    let file_len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let truncated = file_len > max_bytes;
+    let mut bytes = Vec::with_capacity(file_len.min(max_bytes) as usize);
+    if truncated {
+        let _ = file.seek(SeekFrom::End(-(max_bytes as i64)));
+    }
+    let _ = file.read_to_end(&mut bytes);
+    let text = String::from_utf8_lossy(&bytes);
+    if truncated {
+        // Drop potentially partial first line from mid-file seek
+        if let Some(pos) = text.find('\n') {
+            return Some(text.get(pos + 1..).unwrap_or("").to_string());
+        }
+    }
+    Some(text.into_owned())
+}
+
 fn load_shell_history() -> Vec<String> {
+    const MAX_HIST_BYTES: u64 = 2 * 1024 * 1024;
     let mut entries = Vec::with_capacity(4096);
     let home = match dirs_home() {
         Some(h) => h,
@@ -82,7 +105,7 @@ fn load_shell_history() -> Vec<String> {
     // 1. Zsh history (~/.zsh_history)
     let zsh_path = home.join(".zsh_history");
     if zsh_path.exists() {
-        if let Ok(content) = fs::read_to_string(&zsh_path) {
+        if let Some(content) = read_history_lossy(&zsh_path, MAX_HIST_BYTES) {
             for line in content.lines() {
                 let clean = clean_zsh_line(line);
                 if !clean.trim().is_empty() {
@@ -96,7 +119,7 @@ fn load_shell_history() -> Vec<String> {
     for plain_hist in [".bash_history", ".brush_history"] {
         let hist_path = home.join(plain_hist);
         if hist_path.exists() {
-            if let Ok(content) = fs::read_to_string(&hist_path) {
+            if let Some(content) = read_history_lossy(&hist_path, MAX_HIST_BYTES) {
                 for line in content.lines() {
                     let trimmed = line.trim();
                     if !trimmed.is_empty() && !trimmed.starts_with('#') {
@@ -110,7 +133,7 @@ fn load_shell_history() -> Vec<String> {
     // 3. Fish history (~/.local/share/fish/fish_history)
     let fish_path = home.join(".local/share/fish/fish_history");
     if fish_path.exists() {
-        if let Ok(content) = fs::read_to_string(&fish_path) {
+        if let Some(content) = read_history_lossy(&fish_path, MAX_HIST_BYTES) {
             for line in content.lines() {
                 if let Some(cmd) = line.strip_prefix("- cmd: ") {
                     let trimmed = cmd.trim();
@@ -131,7 +154,7 @@ fn load_shell_history() -> Vec<String> {
     ];
     for pwsh_path in &pwsh_paths {
         if pwsh_path.exists() {
-            if let Ok(content) = fs::read_to_string(pwsh_path) {
+            if let Some(content) = read_history_lossy(pwsh_path, MAX_HIST_BYTES) {
                 for line in content.lines() {
                     let trimmed = line.trim();
                     if !trimmed.is_empty() {
@@ -416,4 +439,30 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_history_lossy_handles_non_utf8_and_tail() {
+        let dir =
+            std::env::temp_dir().join(format!("gladeshell_hist_lossy_test_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let p = dir.join(".brush_history");
+        // Write valid commands interspersed with invalid UTF-8 bytes
+        fs::write(&p, b"first_cmd\necho \xff\xfe bad_utf8\nsecond_cmd\n").unwrap();
+
+        let full = read_history_lossy(&p, 1024).unwrap();
+        assert!(full.contains("first_cmd"));
+        assert!(full.contains("second_cmd"));
+
+        // Truncated tail should cleanly skip partial first line and keep the last valid line
+        let tail = read_history_lossy(&p, 20).unwrap();
+        assert!(tail.contains("second_cmd"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

@@ -165,6 +165,33 @@ impl AliasFile {
                 }
 
                 match shell {
+                    Shell::Brush if needs_posix_function(&entry.value) => {
+                        // Brush does not re-tokenize shell operators inside alias values;
+                        // emit functions instead and clear any stale alias before declaring.
+                        let append_args = !entry.value.contains(';')
+                            && !entry.value.contains('|')
+                            && !entry.value.contains("&&")
+                            && !entry.value.contains("||")
+                            && !entry.value.contains('>')
+                            && !entry.value.contains('<')
+                            && !entry.value.contains("$1")
+                            && !entry.value.contains("$@")
+                            && !entry.value.starts_with("eval ");
+                        let body = if append_args {
+                            format!("{} \"$@\"", entry.value)
+                        } else {
+                            entry.value.clone()
+                        };
+                        let comment = if entry.description.is_empty() {
+                            String::new()
+                        } else {
+                            format!("  # {}", entry.description)
+                        };
+                        out.push_str(&format!(
+                            "unalias {} 2>/dev/null || true\n{}() {{ {}; }}{}\n",
+                            entry.key, entry.key, body, comment
+                        ));
+                    }
                     Shell::Bash | Shell::Zsh | Shell::Brush => {
                         let escaped_val = entry.value.replace('\'', "'\\''");
                         if shell == Shell::Zsh {
@@ -278,6 +305,22 @@ impl AliasFile {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/// Returns `true` when a POSIX alias value contains shell operators/chains
+/// that Brush 0.5.x alias expansion would pass as literal arguments instead
+/// of re-parsing as shell syntax.
+fn needs_posix_function(val: &str) -> bool {
+    val.contains(';')
+        || val.contains('|')
+        || val.contains("&&")
+        || val.contains("||")
+        || val.contains('>')
+        || val.contains('<')
+        || val.contains("$1")
+        || val.contains("$@")
+        || val.contains("$(")
+        || val.starts_with("eval ")
+}
+
 /// Convert a kebab/snake alias name to PascalCase for PowerShell function names.
 fn pascal_case(s: &str) -> String {
     s.split(['-', '_'])
@@ -358,9 +401,21 @@ value = "git push"
         assert!(out.contains("alias ..='cd ..'"));
         assert!(out.contains("alias gs='git status -sb'"));
         assert!(out.contains("alias brushrc='code ~/.brushrc'"));
+        assert!(out.contains("rel() {"));
         assert!(out.contains("source ~/.brushrc"));
+        assert!(out.contains("path() { echo $PATH | tr"));
+        assert!(out.contains("pgenable() {"));
+        assert!(!out.contains("alias rel="));
         assert!(!out.contains("alias bashrc="));
         assert!(out.contains("alias pgstart='sudo systemctl start postgresql'"));
+
+        // `brushrc` should also be available from Bash & Zsh
+        assert!(af
+            .render(Shell::Bash)
+            .contains("alias brushrc='code ~/.brushrc'"));
+        assert!(af
+            .render(Shell::Zsh)
+            .contains("alias brushrc='code ~/.brushrc'"));
     }
 
     #[test]

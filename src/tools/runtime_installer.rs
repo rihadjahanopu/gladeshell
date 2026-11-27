@@ -1185,6 +1185,7 @@ fn configure_shell_paths(tools: &[&RuntimeTool]) -> HashMap<String, String> {
         let shell_targets = [
             home.join(".zshrc"),
             home.join(".bashrc"),
+            home.join(".brushrc"),
             home.join(".config/fish/config.fish"),
         ];
 

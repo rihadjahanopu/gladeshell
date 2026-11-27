@@ -53,7 +53,12 @@ pub fn group() -> AliasGroup {
                 key: "brushrc".to_string(),
                 value: "code ~/.brushrc".to_string(),
                 description: "Edit Brush config in VS Code".to_string(),
-                only_shells: vec!["brush".to_string()],
+                only_shells: vec![
+                    "brush".to_string(),
+                    "bash".to_string(),
+                    "zsh".to_string(),
+                    "fish".to_string(),
+                ],
             },
             AliasEntry {
                 key: "rel".to_string(),
@@ -69,7 +74,7 @@ pub fn group() -> AliasGroup {
             },
             AliasEntry {
                 key: "rel".to_string(),
-                value: "pkill -f gladeshell-daemon 2>/dev/null; rm -f /tmp/gladeshell_*.sock 2>/dev/null; source ~/.brushrc; echo \"🔄 Brush reloaded!\"".to_string(),
+                value: "pkill -f \"gladeshell serve\" 2>/dev/null || true; rm -f \"${TMPDIR:-/tmp}\"/gladeshell_*.sock /tmp/gladeshell_*.sock 2>/dev/null; source ~/.brushrc; echo \"🔄 Brush reloaded!\"".to_string(),
                 description: "Reload Brush config".to_string(),
                 only_shells: vec!["brush".to_string()],
             },

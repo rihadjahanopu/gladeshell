@@ -55,11 +55,14 @@ pub fn ensure_brush_ui_config() -> std::io::Result<bool> {
 
 /// Ensure `[ui]\nsyntax-highlighting = true` in a specific TOML config file path.
 pub fn ensure_brush_ui_config_at(cfg_path: &std::path::Path) -> std::io::Result<bool> {
-    let existing = if cfg_path.exists() {
+    let raw_existing = if cfg_path.exists() {
         fs::read_to_string(cfg_path)?
     } else {
         String::new()
     };
+    let existing_trimmed_bom = raw_existing.trim_start_matches('\u{FEFF}');
+    let has_bom = raw_existing.len() != existing_trimmed_bom.len();
+    let existing = existing_trimmed_bom.to_string();
 
     let line_ending = if existing.contains("\r\n") {
         "\r\n"
@@ -67,7 +70,7 @@ pub fn ensure_brush_ui_config_at(cfg_path: &std::path::Path) -> std::io::Result<
         "\n"
     };
 
-    let updated = if existing.trim().is_empty() {
+    let mut updated = if existing.trim().is_empty() {
         format!(
             "# GladeShell — Brush interactive syntax highlighting{le}[ui]{le}syntax-highlighting = true{le}",
             le = line_ending
@@ -109,6 +112,10 @@ pub fn ensure_brush_ui_config_at(cfg_path: &std::path::Path) -> std::io::Result<
             out
         }
     };
+
+    if has_bom {
+        updated.insert(0, '\u{FEFF}');
+    }
 
     if let Some(parent) = cfg_path.parent() {
         fs::create_dir_all(parent)?;
@@ -487,10 +494,14 @@ fi\n\
             file.write_all(hook.as_bytes())?;
         }
 
-        // 2. Bash & Brush auto-heal hooks in ~/.profile & ~/.bash_profile
-        let has_brush = crate::core::utils::cmd_exists("brush") || home.join(".brushrc").exists();
+        // 2. Bash & Brush auto-heal hooks in ~/.profile (and existing ~/.bash_profile)
+        // Avoid inventing ~/.bash_profile if absent, since its presence suppresses ~/.profile.
+        let has_brush = is_brush_present();
         for bash_file_name in &[".profile", ".bash_profile"] {
             let bash_file = home.join(bash_file_name);
+            if *bash_file_name == ".bash_profile" && !bash_file.exists() {
+                continue;
+            }
             let p_start_marker = "# >>> glade-profile >>>";
             let p_end_marker = "# <<< glade-profile <<<";
             let p_existing = if bash_file.exists() {
@@ -498,11 +509,14 @@ fi\n\
             } else {
                 String::new()
             };
+            let mut need_nl = !p_existing.is_empty() && !p_existing.ends_with('\n');
 
             if !p_existing.contains(p_start_marker) || !p_existing.contains(p_end_marker) {
+                let prefix = if need_nl { "\n" } else { "" };
+                need_nl = false;
                 // Guard: only call setup when .bashrc block is truly absent.
                 let hook = format!(
-                    "{p_start_marker}\n\
+                    "{prefix}{p_start_marker}\n\
 # Only re-inject when the glade block is truly missing (not on every startup).\n\
 if command -v gladeshell >/dev/null 2>&1; then\n\
     if ! grep -qF '# >>> glade-bashrc >>>' \"$HOME/.bashrc\" 2>/dev/null; then\n\
@@ -522,8 +536,9 @@ fi\n\
                 let b_start = "# >>> glade-brush-login >>>";
                 let b_end = "# <<< glade-brush-login <<<";
                 if !p_existing.contains(b_start) || !p_existing.contains(b_end) {
+                    let prefix = if need_nl { "\n" } else { "" };
                     let b_hook = format!(
-                        "{b_start}\n\
+                        "{prefix}{b_start}\n\
 # Load ~/.brushrc for Brush login shells (`brush -l`)\n\
 if [[ -n \"${{BRUSH_VERSION:-}}\" && -r \"$HOME/.brushrc\" && -z \"${{_GLADESHELL_BRUSH_LOADED:-}}\" ]]; then\n\
     _GLADESHELL_BRUSH_LOADED=1\n\
@@ -707,7 +722,14 @@ mod tests {
         assert!(c5.contains("[ui]"));
         assert!(c5.contains("syntax-highlighting = true"));
 
-        // 6. Skips broken TOML safely
+        // 6. Preserves UTF-8 BOM + CRLF on Windows configs
+        fs::write(&cfg, "\u{FEFF}[experimental]\r\nzsh-hooks = true\r\n").unwrap();
+        assert!(ensure_brush_ui_config_at(&cfg).unwrap());
+        let c6 = fs::read_to_string(&cfg).unwrap();
+        assert!(c6.starts_with('\u{FEFF}'));
+        assert!(c6.contains("[ui]\r\nsyntax-highlighting = true\r\n"));
+
+        // 7. Skips broken TOML safely
         fs::write(&cfg, "[broken ===\n").unwrap();
         assert!(!ensure_brush_ui_config_at(&cfg).unwrap());
 

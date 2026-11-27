@@ -104,7 +104,7 @@ const AUTOCOMPLETE_DICTIONARY = [
   {
     id: 'shell-installers',
     title: 'Shell-Specific Installers',
-    sub: 'Bash / Zsh / Fish / PowerShell',
+    sub: 'Bash / Brush / Zsh / Fish / PowerShell',
     type: 'section',
     icon: '🐚',
   },
@@ -142,6 +142,13 @@ const AUTOCOMPLETE_DICTIONARY = [
     sub: 'config.fish setup',
     type: 'section',
     icon: '🐟',
+  },
+  {
+    id: 'brush-setup',
+    title: 'Brush Shell Setup',
+    sub: '~/.brushrc + brush/config.toml',
+    type: 'section',
+    icon: '🦀',
   },
   {
     id: 'powershell-setup',
@@ -184,6 +191,13 @@ const AUTOCOMPLETE_DICTIONARY = [
     sub: 'ENV vars for prompt tuning',
     type: 'section',
     icon: '⚙️',
+  },
+  {
+    id: 'terminal-shell-integration',
+    title: 'Terminal Shell Integration (OSC 133 / OSC 7)',
+    sub: 'gladeshell integration <off|auto|on|status>',
+    type: 'section',
+    icon: '🔌',
   },
   {
     id: 'command-explorer',

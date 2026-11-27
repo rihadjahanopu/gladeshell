@@ -39,24 +39,28 @@ try {
         Set-ItemProperty -Path 'HKCU:\Console' -Name 'VirtualTerminalLevel' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     }
 } catch {}
-
+"##);
+    out.push_str(&shared::render_terminal_integration_helpers(Shell::Pwsh));
+    out.push_str(r##"
 # ── gladeshell Prompt & Native Auto-LS Hook ──
 $global:_fb_last_pwd = $null
 $global:_fb_timer = $null
 $global:_fb_is_transient = $false
 
 function Prompt {
+    $cmdOk = $?
     $ErrorActionPreference = 'SilentlyContinue'
-    $lastExit = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+    $lastExit = if (-not $cmdOk -and $null -eq $LASTEXITCODE) { 1 } elseif ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
 
     # Transient prompt fast-path: invoked by PSConsoleReadLine on Enter
     if ($global:_fb_is_transient) {
         $global:_fb_is_transient = $false
         $transient = gladeshell prompt --transient --shell pwsh --exit-code $lastExit 2>$null
-        if ($transient) {
-            return $transient
+        $trText = if ($transient) { $transient } else { "❯ " }
+        if ($global:_fb_term_int -eq 1) {
+            return "$([char]27)]133;A$([char]7)$trText$([char]27)]133;B$([char]7)"
         }
-        return "❯ "
+        return $trText
     }
 
     $cwd = (Get-Location).Path
@@ -80,6 +84,23 @@ function Prompt {
         }
     }
 
+    # Terminal Shell Integration (`OSC 133;D` + `OSC 7` CWD)
+    $oscPrefix = ""
+    if ($global:_fb_term_int -eq 1) {
+        if ($global:_fb_osc_prompt_shown) {
+            if ($global:_fb_osc_cmd_ran) {
+                $oscPrefix += "$([char]27)]133;D;$lastExit$([char]7)"
+            } else {
+                $oscPrefix += "$([char]27)]133;D$([char]7)"
+            }
+        }
+        $global:_fb_osc_cmd_ran = $false
+        if ($cwd -ne $global:_fb_osc7_last_pwd) {
+            $global:_fb_osc7_last_pwd = $cwd
+            $oscPrefix += _fb_osc7_seq $cwd
+        }
+    }
+
     # Auto-spawn background IPC daemon on Unix/macOS (one-time session guard)
     $isWin = [System.Environment]::OSVersion.Platform -match 'Win' -or $env:OS -eq 'Windows_NT'
     if (-not $isWin -and -not $global:_fb_daemon_spawned) {
@@ -91,10 +112,12 @@ function Prompt {
     }
 
     $p = gladeshell prompt --shell pwsh --cwd "$cwd" --exit-code "$lastExit" --cmd-duration "$duration" --user "$env:USERNAME" --host "$env:COMPUTERNAME" 2>$null
-    if ($p) {
-        return $p
+    $promptText = if ($p) { $p } else { "PS $cwd> " }
+    if ($global:_fb_term_int -eq 1) {
+        $global:_fb_osc_prompt_shown = $true
+        return "$oscPrefix$([char]27)]133;A$([char]7)$promptText$([char]27)]133;B$([char]7)"
     }
-    return "PS $cwd> "
+    return $promptText
 }
 
 # ── PSReadLine & Native Rust Engine ──
@@ -136,6 +159,10 @@ if ($psrl) {
                     $global:_fb_is_transient = $true
                     [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
                 }
+            }
+            if ($global:_fb_term_int -eq 1 -and -not [string]::IsNullOrWhiteSpace($line)) {
+                $global:_fb_osc_cmd_ran = $true
+                [System.Console]::Write("$([char]27)]133;C$([char]7)")
             }
             [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
         }
@@ -216,6 +243,10 @@ mod tests {
         assert!(script.contains("function _fb_notify"));
         assert_eq!(script.matches("function cf").count(), 1);
         assert!(script.contains("--shell pwsh"));
+        assert!(script.contains("_fb_init_terminal_integration"));
+        assert!(script.contains("133;D"));
+        assert!(script.contains("133;C"));
+        assert!(script.contains("_fb_osc7_seq"));
         assert!(!script.contains("using namespace"));
         assert!(script.contains("gladeshell pwsh init complete"));
     }

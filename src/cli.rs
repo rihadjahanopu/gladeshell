@@ -47,6 +47,10 @@ pub enum Commands {
     #[command(alias = "glade", alias = "glade_theme")]
     Theme(ThemeArgs),
 
+    /// Manage modern terminal shell integration (`OSC 133`, `OSC 7`, `OSC 777/99`)
+    #[command(alias = "shell-integration", alias = "osc")]
+    Integration(IntegrationArgs),
+
     /// Generate a cryptographically-secure secret key
     ///
     /// Output is hex-encoded. Default length: 32 bytes (256-bit).
@@ -463,6 +467,13 @@ pub struct ThemeArgs {
     /// Color value (#ff0055, 214, cyan, default)
     #[arg(value_name = "ARG3")]
     pub val: Option<String>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct IntegrationArgs {
+    /// Action: off | auto | on | status
+    #[arg(value_name = "ACTION")]
+    pub action: Option<String>,
 }
 
 #[derive(Args, Debug, Clone)]

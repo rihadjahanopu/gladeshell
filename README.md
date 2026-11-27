@@ -41,6 +41,7 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 - [🦄 Zsh Setup Guide](#-zsh-setup-guide)
 - [⚙️ Font Setup](#️-font-setup-for-emoji--icons)
 - [📟 Smart Prompt](#-smart-prompt-system)
+- [🔌 Terminal Shell Integration](#-terminal-shell-integration)
 - [🎨 Prompt Themes](#-prompt-themes)
   - [🖼️ Preview All 55 Themes](#️-preview-all-55-themes)
   - [⚡ Switch Themes](#-switch-themes)
@@ -82,7 +83,7 @@ _100% Rust • Blazing Fast • Zero Bloat • Native Ratatui TUI Suite_
 
 **gladeshell** (also known as `gladeshell`) is a high-performance, single-binary shell environment and developer suite written completely in **Pure Rust (2024 edition)**.
 
-It replaces slow shell scripts and heavy framework overhead with a single compiled binary, providing ultra-fast prompt rendering, cross-shell compatibility (Bash, Zsh, Fish, PowerShell), a fast multi-core compression engine (Level 1 Fast), a 24-in-1 FFmpeg multimedia suite, hardened AES-256 security vault, and full Ratatui TUI utilities.
+It replaces slow shell scripts and heavy framework overhead with a single compiled binary, providing ultra-fast prompt rendering, cross-shell compatibility (Bash, Brush, Zsh, Fish, PowerShell), a fast multi-core compression engine (Level 1 Fast), a 24-in-1 FFmpeg multimedia suite, hardened AES-256 security vault, and full Ratatui TUI utilities.
 
 One binary. One install. Absolute speed.
 
@@ -102,7 +103,8 @@ One binary. One install. Absolute speed.
 | 🎬 **24-in-1 FFmedia Suite**   | Comprehensive FFmpeg multimedia processor (compression, trimming, visualizer, GIFs, screen recording) |
 | 🔐 **AES-256 PBKDF2 Vault**    | Memory-guarded directory vault with panic password decoy mode and auto-shredding                      |
 | 🎨 **55 Prompt Themes**        | Swap between Catppuccin, Tokyo Night, Dracula, Matrix, Starship, Rose Pine, and 49 more in 1 command  |
-| 🔄 **Cross-Shell Integration** | Built-in shell integration generator for Bash, Zsh, Fish, and PowerShell (`gladeshell shell-init`)    |
+| 🔄 **Cross-Shell Integration** | Built-in shell bootstrapper for Bash, Brush (`.brushrc` + `config.toml`), Zsh, Fish, and PowerShell (`gladeshell init`) |
+| 🔌 **Terminal Shell Integration** | Opt-in semantic prompts (`OSC 133`), CWD tracking (`OSC 7`), and command notifications (`OSC 777/99`) across Ghostty, Kitty, WezTerm, iTerm2 & Windows Terminal |
 | 📦 **Universal Uninstaller**   | `uu` — interactive fuzzy application remover across apt/snap/flatpak/AppImage                         |
 | 🔁 **Mega Updater**            | `uup` — updates system packages, runtimes, and flatpaks in one command                                |
 
@@ -274,6 +276,29 @@ You can modify or toggle the prompt layout to your liking by editing your shell 
 ```
 
 Feel free to customize, add, or remove any helper functions (like `node_version`, `cpu_temp`, etc.) from your configuration block to design your own custom layout!
+
+---
+
+## 🔌 Terminal Shell Integration
+
+GladeShell includes built-in semantic terminal integration across **Zsh, Bash, Brush, Fish, and PowerShell** with zero extra subprocess forks per prompt. It is **disabled (`off`) by default** so legacy terminals never display raw escape sequences.
+
+```bash
+gladeshell integration status   # Inspect active mode, detected terminal, and conflict guards
+gladeshell integration auto     # Auto-enable in Ghostty, Kitty, WezTerm, iTerm2, Windows Terminal, etc.
+gladeshell integration on       # Force enable in all interactive TTY sessions
+gladeshell integration off      # Disable globally (default)
+```
+
+> 💡 Run `rel` (or open a new tab) after switching modes. You can also override per-session with `GLADESHELL_TERMINAL_INTEGRATION=auto|on|off`.
+
+| Protocol | Feature Unlocked | Notes |
+| -------- | ---------------- | ----- |
+| `OSC 133` (`A`/`B`/`C`/`D`) | Command Navigation, Exit-Status gutter marks, 1-click Output Copy | Wraps Zsh `%{...%}` & Bash/Brush `\[...\]` safely; pairs empty `<Enter>` cleanly without phantom badges |
+| `OSC 7` (`file://...`) | New Tabs & Splits open in current working directory | URI-encoded automatically; emitted only when `$PWD` changes |
+| `OSC 777` / `OSC 99` | Desktop & terminal notifications on long-running commands | Controlled by `GLADESHELL_NOTIFY_THRESHOLD` (default `10000` ms) |
+
+> 🛡️ **Conflict Protection:** In `auto` mode, GladeShell yields automatically when `VSCODE_SHELL_INTEGRATION`, Brush's `[experimental] terminal-shell-integration = true`, Fish `4.*`, GNU `screen`, or `TERM=dumb` is detected.
 
 ---
 
@@ -513,6 +538,7 @@ gw -- --port 8080            # Pass CLI arguments directly to your running binar
 | Command      | Description                                                                                          |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
 | `glade`      | Interactive TUI prompt theme picker & switcher with live preview                                     |
+| `gladeshell integration` | Manage terminal shell integration (`off` \| `auto` \| `on` \| `status`)               |
 | `pcinfo`     | Advanced system hardware diagnostics & live sensors profiler TUI                                     |
 | `zed-setup`  | Bulletproof Zed IDE settings installer                                                               |
 | `code-setup` | Bulletproof VS Code settings & extensions installer                                                  |
@@ -525,7 +551,8 @@ gw -- --port 8080            # Pass CLI arguments directly to your running binar
 | `setuppc`   | Bootstrap a new PC with all essential developer tools                                                |
 | `rt`        | Install Node.js (via nvm), Bun, and Deno                                                             |
 | `ut`        | Setup optimized CLI tooling for the PC                                                               |
-| `rel`       | Reload `.bashrc` configuration                                                                       |
+| `rel`       | Reload current shell configuration (`.bashrc`, `.brushrc`, `.zshrc`, or `config.fish`)               |
+| `brushrc`   | Edit Brush shell config (`~/.brushrc`) across supported shells                                       |
 | `myip`      | Show your public IP address                                                                          |
 | `iploc`     | Show IP + city/region/org info via `ipinfo.io`                                                       |
 | `ports`     | List all open ports                                                                                  |
@@ -802,6 +829,7 @@ gladeshell/
 │   │
 │   ├── core/                   # Prompt & environment core
 │   │   ├── prompt.rs           # Zero-allocation dynamic prompt renderer (55 themes)
+│   │   ├── shell_integration.rs # OSC 133 / OSC 7 config, probe & URI encoding
 │   │   ├── aliases.rs          # Cross-shell alias engine & expansion logic
 │   │   ├── env.rs              # Cross-platform environment variable normalizer
 │   │   ├── sysinfo.rs          # Hardware metrics (CPU, RAM, Battery, Duration)
@@ -816,7 +844,7 @@ gladeshell/
 │   │   └── mod.rs              # Native gitoxide integration (branch, dirty, stash)
 │   │
 │   ├── init/                   # Shell integration scripts generator
-│   │   └── mod.rs              # Zsh, Bash, Fish, and PowerShell startup loaders
+│   │   └── mod.rs              # Zsh, Bash, Brush, Fish, and PowerShell startup loaders
 │   │
 │   ├── plugins/                # Terminal productivity plugins
 │   │   ├── autosuggest.rs      # Real-time fish-like command autosuggestion

@@ -282,6 +282,9 @@ if [[ -o interactive ]]; then
     _fb_zle_accept_line() {
         if [[ "${GLADESHELL_TRANSIENT:-1}" != "0" && -n "$BUFFER" ]]; then
             PROMPT="$(gladeshell prompt --transient --exit-code $? --shell zsh 2>/dev/null)"
+            if (( ${_fb_term_int:-0} )); then
+                PROMPT=$'%{\e]133;A\a%}'"${PROMPT}"$'%{\e]133;B\a%}'
+            fi
             zle .reset-prompt 2>/dev/null
         fi
         zle .accept-line
@@ -295,6 +298,7 @@ fi
     out.push_str(&shared::render_bun_setup(Shell::Zsh));
     out.push_str(&shared::render_aliases(Shell::Zsh));
     out.push_str(&shared::render_integrations(Shell::Zsh));
+    out.push_str(&shared::render_terminal_integration_helpers(Shell::Zsh));
 
     // ── Native Rust Prompt Engine & Command Duration Tracker ──────────────────
     // CRITICAL FIX: socket path is now resolved dynamically at shell startup
@@ -305,7 +309,13 @@ fi
 typeset -g _fb_timer=0
 typeset -g _fb_sock="$(gladeshell socket-path 2>/dev/null || echo "${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock")"
 
-_fb_preexec() { _fb_timer=$SECONDS; }
+_fb_preexec() {
+    _fb_timer=$SECONDS
+    if (( ${_fb_term_int:-0} )); then
+        _fb_osc_cmd_ran=1
+        printf '\033]133;C\007'
+    fi
+}
 
 _fb_precmd() {
     local exit_code=$?
@@ -318,6 +328,19 @@ _fb_precmd() {
     # ── Long-running command desktop notification (>= 10s by default) ──
     if (( duration >= ${GLADESHELL_NOTIFY_THRESHOLD:-10000} && ${GLADESHELL_NOTIFY_THRESHOLD:-10000} > 0 )); then
         _fb_notify "$exit_code" "$duration" 2>/dev/null || true
+    fi
+
+    # ── Terminal Shell Integration (`OSC 133;D` + `OSC 7` CWD) ──
+    if (( ${_fb_term_int:-0} )); then
+        if (( ${_fb_osc_prompt_shown:-0} )); then
+            if (( ${_fb_osc_cmd_ran:-0} )); then
+                printf '\033]133;D;%s\007' "$exit_code"
+            else
+                printf '\033]133;D\007'
+            fi
+        fi
+        _fb_osc_cmd_ran=0
+        _fb_emit_osc7
     fi
 
     # ── Auto-heal & auto-reorder hook for Zsh (one-time check) ──
@@ -346,7 +369,12 @@ _fb_precmd() {
             # Read the FULL multiline prompt (IFS= read -r -d '' preserves all newlines)
             local raw_prompt
             IFS= read -r -d '' -u $fd raw_prompt
-            PROMPT="${raw_prompt}"
+            if (( ${_fb_term_int:-0} )); then
+                PROMPT=$'%{\e]133;A\a%}'"${raw_prompt}"$'%{\e]133;B\a%}'
+                _fb_osc_prompt_shown=1
+            else
+                PROMPT="${raw_prompt}"
+            fi
             exec {fd}>&-
             return
         else
@@ -359,7 +387,12 @@ _fb_precmd() {
     # printf-trick avoids $() stripping trailing newlines that carry ❯❯❯.
     local tmp
     tmp=$(gladeshell prompt --shell zsh --cwd "$PWD" --exit-code "$exit_code" --cmd-duration "$duration" --user "$USER" --host "$HOST" 2>/dev/null; printf x)
-    PROMPT="${tmp%x}"
+    if (( ${_fb_term_int:-0} )); then
+        PROMPT=$'%{\e]133;A\a%}'"${tmp%x}"$'%{\e]133;B\a%}'
+        _fb_osc_prompt_shown=1
+    else
+        PROMPT="${tmp%x}"
+    fi
 }
 
 autoload -Uz add-zsh-hook
@@ -384,4 +417,21 @@ command_not_found_handler() {
 
     out.push_str("\n# gladeshell zsh init complete\n");
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_zsh() {
+        let script = generate();
+        assert!(script.contains("_fb_init_terminal_integration"));
+        assert!(script.contains("133;A"));
+        assert!(script.contains("133;B"));
+        assert!(script.contains("133;C"));
+        assert!(script.contains("133;D"));
+        assert!(script.contains("_fb_emit_osc7"));
+        assert!(script.contains("gladeshell zsh init complete"));
+    }
 }

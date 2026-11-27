@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [![SemVer](https://img.shields.io/badge/SemVer-2.0.0-0ea5e9?style=for-the-badge&logo=semver)](https://semver.org/)
 [![Pure Rust](https://img.shields.io/badge/Rust-2024%20Edition-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 
+## 🚀 [Unreleased]
+
+### 🔌 Terminal Shell Integration (`OSC 133`, `OSC 7`, `OSC 777/99`) & First-Class Brush Support
+- 🔌 **Opt-In Semantic Terminal Shell Integration (`src/core/shell_integration.rs`)**:
+  - Added built-in `OSC 133` (`A`/`B`/`C`/`D` prompt, command, and exit-code markers), `OSC 7` (`file://` URI-encoded working directory tracking on directory change), and `OSC 777` / `OSC 99` long-running command notifications across **Zsh, Bash, Brush, Fish, and PowerShell**.
+  - Defaults to `off` (zero OSC bytes emitted) so legacy terminals remain unaffected; controlled via `gladeshell integration <off|auto|on|status>` (aliases: `shell-integration`, `osc`) or `GLADESHELL_TERMINAL_INTEGRATION`.
+  - Runs per-session in shell init hooks (`_fb_init_terminal_integration`) with zero extra subshell forks per prompt, isolating multi-tab/mixed-terminal state from the shared IPC daemon.
+  - Safely wraps Zsh `%{...%}` and Bash/Brush `\[...\]` width escapes, preserves transient prompt boundaries, avoids phantom `D;0` markers on empty `<Enter>`, and automatically yields in `auto` mode to `VSCODE_SHELL_INTEGRATION`, Brush native `terminal-shell-integration`, Fish `4.*`, GNU `screen`, non-TTY stdout, and `TERM=dumb`.
+  - Added `🔌 Shell Integration` diagnostic line to `install.sh` and `install.ps1` (`--doctor`).
+- 🦀 **First-Class Brush (`brush.sh`) Compatibility (`src/init/brush.rs`)**:
+  - Added dedicated `Shell::Brush` bootstrapper with `~/.brushrc` integration, `$EPOCHREALTIME` duration tracking, Reedline-compatible `bind -x` shortcuts (`Ctrl+R`, `Alt+C`), lazy completion stub, `~/.brush_history` support (`fh`, autosuggestions), POSIX function wrappers for multi-command aliases (`rel`, `brushrc`, `path`, etc.), and cross-shell `brushrc` editor alias.
+  - Added idempotent TOML update (`ensure_brush_ui_config`) to enable `[ui] syntax-highlighting = true` inside Brush's `config.toml` while preserving comments and explicit user preferences.
+- 📖 **Documentation & Architecture Sync**:
+  - Updated `README.md`, `wiki.md`, `docs/index.html`, `docs/docs.html`, `docs/docs.js`, and `architecture/init/shell_init_generators.md` for 5-shell parity and terminal integration.
+
 ## 🚀 [1.2.18] — 2026-11-17
 
 ### 🪟 Windows PowerShell Parity, Port Engine & Security Audit Hardening

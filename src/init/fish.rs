@@ -54,6 +54,18 @@ set -g _fb_host "$hostname"
 if not test -n "$_fb_host"
     set -g _fb_host (hostname -s 2>/dev/null; or hostname 2>/dev/null; or echo host)
 end
+"#,
+    );
+    out.push_str(&shared::render_terminal_integration_helpers(Shell::Fish));
+    out.push_str(
+        r#"
+functions -e _fb_osc_preexec 2>/dev/null
+function _fb_osc_preexec --on-event fish_preexec
+    if test "$_fb_term_int" -eq 1
+        set -g _fb_osc_cmd_ran 1
+        printf '\033]133;C\007'
+    end
+end
 
 function fish_prompt
     # Capture exit code FIRST before any other command clobbers it
@@ -62,7 +74,13 @@ function fish_prompt
     # Transient prompt hook
     if test "$_fb_transient" = "1"
         set -g _fb_transient 0
+        if test "$_fb_term_int" -eq 1
+            printf '\033]133;A\007'
+        end
         gladeshell prompt --transient --shell fish --exit-code $_fb_exit 2>/dev/null
+        if test "$_fb_term_int" -eq 1
+            printf '\033]133;B\007'
+        end
         return
     end
 
@@ -97,6 +115,20 @@ function fish_prompt
         end
     end
 
+    # Terminal Shell Integration (`OSC 133;D` + `OSC 7` + `OSC 133;A`)
+    if test "$_fb_term_int" -eq 1
+        if test "$_fb_osc_prompt_shown" -eq 1
+            if test "$_fb_osc_cmd_ran" -eq 1
+                printf '\033]133;D;%s\007' $_fb_exit
+            else
+                printf '\033]133;D\007'
+            end
+        end
+        set -g _fb_osc_cmd_ran 0
+        _fb_emit_osc7
+        printf '\033]133;A\007'
+    end
+
     # Render prompt via Native Rust engine — outputs raw ANSI (no escaping needed in Fish)
     gladeshell prompt \
         --shell fish \
@@ -106,6 +138,11 @@ function fish_prompt
         --host "$_fb_host" \
         --cmd-duration $_fb_dur \
         2>/dev/null
+
+    if test "$_fb_term_int" -eq 1
+        printf '\033]133;B\007'
+        set -g _fb_osc_prompt_shown 1
+    end
 end
 
 # ── Right-side prompt: disabled (duration is handled in main prompt) ──────
@@ -151,4 +188,22 @@ end
 
     out.push_str("\n# gladeshell fish init complete\n");
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_fish() {
+        let script = generate();
+        assert!(script.contains("_fb_init_terminal_integration"));
+        assert!(script.contains("fish_preexec"));
+        assert!(script.contains("133;A"));
+        assert!(script.contains("133;B"));
+        assert!(script.contains("133;C"));
+        assert!(script.contains("133;D"));
+        assert!(script.contains("_fb_emit_osc7"));
+        assert!(script.contains("gladeshell fish init complete"));
+    }
 }

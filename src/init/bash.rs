@@ -37,6 +37,7 @@ if [[ -z "${BRUSH_VERSION:-}" ]] || ! grep -qF '# >>> glade-brush >>>' "$HOME/.b
     out.push_str(&shared::render_bun_setup(Shell::Bash));
     out.push_str(&shared::render_aliases(Shell::Bash));
     out.push_str(&shared::render_integrations(Shell::Bash));
+    out.push_str(&shared::render_terminal_integration_helpers(Shell::Bash));
 
     // ── Native Rust Prompt & Hook Engine ──────────────────────────────────────
     out.push_str(r#"
@@ -50,12 +51,21 @@ _fb_preexec_trap() {
     if [[ "$_fb_in_prompt" -ne 0 || "${BASH_COMMAND:-}" == __fb_prompt* ]]; then
         return 0
     fi
+    _fb_osc_cmd_ran=1
     if [[ "${_fb_timer_start:-0}" -eq 0 ]]; then
         _fb_timer_start=$SECONDS
     fi
     return 0
 }
 trap '_fb_preexec_trap' DEBUG
+
+if [[ "${_fb_term_int:-0}" -eq 1 ]]; then
+    if [[ "${PS0:-}" != *'133;C'* ]]; then
+        PS0='\e]133;C\a'"${PS0:-}"
+    fi
+elif [[ "${PS0:-}" == '\e]133;C\a'* ]]; then
+    PS0="${PS0#'\e]133;C\a'}"
+fi
 
 __fb_prompt() {
     local exit_code=$?
@@ -69,6 +79,19 @@ __fb_prompt() {
     # ── Long-running command desktop notification (>= 10s by default) ──
     if (( duration >= ${GLADESHELL_NOTIFY_THRESHOLD:-10000} && ${GLADESHELL_NOTIFY_THRESHOLD:-10000} > 0 )); then
         _fb_notify "$exit_code" "$duration" 2>/dev/null || true
+    fi
+
+    # ── Terminal Shell Integration (`OSC 133;D` + `OSC 7` CWD) ──
+    if [[ "${_fb_term_int:-0}" -eq 1 ]]; then
+        if [[ "${_fb_osc_prompt_shown:-0}" -eq 1 ]]; then
+            if [[ "${_fb_osc_cmd_ran:-0}" -eq 1 ]]; then
+                printf '\033]133;D;%s\007' "$exit_code"
+            else
+                printf '\033]133;D\007'
+            fi
+        fi
+        _fb_osc_cmd_ran=0
+        _fb_emit_osc7
     fi
 
     _fb_auto_ls
@@ -92,7 +115,12 @@ __fb_prompt() {
     # Use printf x trick so $() doesn't strip trailing newlines that carry ❯❯❯
     local _fb_raw
     _fb_raw=$(gladeshell prompt --shell bash --cwd "${PWD:-.}" --exit-code "$exit_code" --cmd-duration "$duration" --user "${USER:-}" --host "${HOSTNAME:-}" 2>/dev/null; printf x)
-    PS1="${_fb_raw%x}"
+    if [[ "${_fb_term_int:-0}" -eq 1 ]]; then
+        PS1="\[\e]133;A\a\]${_fb_raw%x}\[\e]133;B\a\]"
+        _fb_osc_prompt_shown=1
+    else
+        PS1="${_fb_raw%x}"
+    fi
     _fb_in_prompt=0
 }
 
@@ -150,6 +178,10 @@ mod tests {
         assert!(script.contains("_fb_timer_start"));
         assert!(script.contains("BRUSH_VERSION"));
         assert!(script.contains("${HOSTNAME:-}"));
+        assert!(script.contains("_fb_init_terminal_integration"));
+        assert!(script.contains("133;D"));
+        assert!(script.contains("133;C"));
+        assert!(script.contains("_fb_emit_osc7"));
         assert!(!script.contains("_fb_skip_render"));
         assert!(!script.contains("bind -x"));
         assert!(!script.contains("_fb_cached_ps1"));

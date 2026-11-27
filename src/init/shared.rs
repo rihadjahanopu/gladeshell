@@ -968,6 +968,294 @@ function ff {
     }
 }
 
+/// Render modern terminal shell integration (`OSC 133` + `OSC 7`) session
+/// probe and URI helpers per shell.
+///
+/// Evaluated once at shell init using pure shell builtins (zero subprocess
+/// forks per prompt). Defaults strictly to `off` (`_fb_term_int=0`).
+pub fn render_terminal_integration_helpers(shell: Shell) -> String {
+    match shell {
+        Shell::Zsh | Shell::Bash | Shell::Brush => r#"
+# ── Terminal Shell Integration Probe (`OSC 133` + `OSC 7`) ──
+_fb_term_int=0
+_fb_osc_prompt_shown=0
+_fb_osc_cmd_ran=0
+_fb_osc7_last_pwd=""
+
+_fb_init_terminal_integration() {
+    local _ti_mode="${GLADESHELL_TERMINAL_INTEGRATION:-}"
+    if [[ -z "$_ti_mode" && -r "$HOME/.config/gladeshell/shell_integration" ]]; then
+        IFS= read -r _ti_mode < "$HOME/.config/gladeshell/shell_integration" 2>/dev/null || _ti_mode=""
+    fi
+    _ti_mode="${_ti_mode#"${_ti_mode%%[![:space:]]*}"}"
+    _ti_mode="${_ti_mode%"${_ti_mode##*[![:space:]]}"}"
+
+    case "${_ti_mode:-off}" in
+        1|on|ON|true|TRUE|yes|YES|enable|enabled)
+            _ti_mode="on"
+            ;;
+        auto|AUTO)
+            _ti_mode="auto"
+            ;;
+        *)
+            _fb_term_int=0
+            return 0
+            ;;
+    esac
+
+    if [[ ! -t 1 || "${TERM:-}" == "dumb" ]]; then
+        _fb_term_int=0
+        return 0
+    fi
+
+    if [[ "$_ti_mode" == "on" ]]; then
+        _fb_term_int=1
+        return 0
+    fi
+
+    # `auto` mode guards: avoid empty TERM, GNU screen, and duplicate IDE/shell marks
+    if [[ -z "${TERM:-}" || -n "${VSCODE_SHELL_INTEGRATION:-}" || -n "${STY:-}" ]]; then
+        _fb_term_int=0
+        return 0
+    fi
+    case "${TERM:-}" in
+        screen*) _fb_term_int=0; return 0 ;;
+    esac
+
+    # Yield if Brush's own experimental terminal-shell-integration is already active
+    if [[ -n "${BRUSH_VERSION:-}" ]]; then
+        local _brush_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/brush/config.toml"
+        if [[ -r "$_brush_cfg" ]]; then
+            local _line="" _val=""
+            while IFS= read -r _line || [[ -n "$_line" ]]; do
+                _line="${_line#"${_line%%[![:space:]]*}"}"
+                case "$_line" in
+                    \#*|"") ;;
+                    *terminal-shell-integration*=*)
+                        _val="${_line#*=}"
+                        _val="${_val%%#*}"
+                        _val="${_val#"${_val%%[![:space:]]*}"}"
+                        _val="${_val%"${_val##*[![:space:]]}"}"
+                        if [[ "$_val" == "true" ]]; then
+                            _fb_term_int=0
+                            return 0
+                        fi
+                        ;;
+                esac
+            done < "$_brush_cfg"
+        fi
+    fi
+
+    if [[ -n "${WT_SESSION:-}" || -n "${KITTY_WINDOW_ID:-}" || -n "${GHOSTTY_RESOURCES_DIR:-}" \
+       || -n "${WEZTERM_EXECUTABLE:-}" || -n "${WEZTERM_PANE:-}" \
+       || -n "${KONSOLE_VERSION:-}" || -n "${ALACRITTY_WINDOW_ID:-}" || -n "${ALACRITTY_SOCKET:-}" ]]; then
+        _fb_term_int=1
+        return 0
+    fi
+
+    case "${TERM:-}" in
+        xterm-kitty|xterm-ghostty)
+            _fb_term_int=1
+            return 0
+            ;;
+    esac
+
+    case "${TERM_PROGRAM:-}" in
+        iTerm.app|vscode|ghostty|WezTerm|WarpTerminal|Apple_Terminal|Hyper|Tabby|rio|contour|Alacritty)
+            _fb_term_int=1
+            return 0
+            ;;
+    esac
+
+    if [[ -n "${VTE_VERSION:-}" && "${VTE_VERSION:-0}" -ge 5000 ]] 2>/dev/null; then
+        _fb_term_int=1
+        return 0
+    fi
+
+    _fb_term_int=0
+}
+
+_fb_init_terminal_integration
+
+_fb_emit_osc7() {
+    [[ "${_fb_term_int:-0}" -eq 1 ]] || return 0
+    [[ "${PWD:-}" == "${_fb_osc7_last_pwd:-}" ]] && return 0
+    _fb_osc7_last_pwd="$PWD"
+    local _p="$PWD" _uri="" _i=0 _c=""
+    case "$_p" in
+        *[[:space:]%#\?\&\;\+]*)
+            while (( _i < ${#_p} )); do
+                _c="${_p:$_i:1}"
+                case "$_c" in
+                    ' ') _uri="${_uri}%20" ;;
+                    '%') _uri="${_uri}%25" ;;
+                    '#') _uri="${_uri}%23" ;;
+                    '?') _uri="${_uri}%3F" ;;
+                    '&') _uri="${_uri}%26" ;;
+                    ';') _uri="${_uri}%3B" ;;
+                    '+') _uri="${_uri}%2B" ;;
+                    $'\t') _uri="${_uri}%09" ;;
+                    *) _uri="${_uri}${_c}" ;;
+                esac
+                _i=$(( _i + 1 ))
+            done
+            ;;
+        *) _uri="$_p" ;;
+    esac
+    printf '\033]7;file://%s%s\007' "${HOSTNAME:-${HOST:-localhost}}" "$_uri"
+}
+"#
+        .to_string(),
+        Shell::Fish => r#"
+# ── Terminal Shell Integration Probe (`OSC 133` + `OSC 7`) ──
+set -g _fb_term_int 0
+set -g _fb_osc_prompt_shown 0
+set -g _fb_osc_cmd_ran 0
+set -g _fb_osc7_last_pwd ""
+
+function _fb_init_terminal_integration
+    set -l _ti_mode ""
+    if set -q GLADESHELL_TERMINAL_INTEGRATION; and test -n "$GLADESHELL_TERMINAL_INTEGRATION"
+        set _ti_mode "$GLADESHELL_TERMINAL_INTEGRATION"
+    else if test -r "$HOME/.config/gladeshell/shell_integration"
+        read -l _ti_mode < "$HOME/.config/gladeshell/shell_integration" 2>/dev/null; or set _ti_mode ""
+    end
+    set _ti_mode (string lower (string trim -- "$_ti_mode"))
+
+    switch "$_ti_mode"
+        case 1 on true yes enable enabled
+            set _ti_mode "on"
+        case auto
+            set _ti_mode "auto"
+        case '*'
+            set -g _fb_term_int 0
+            return 0
+    end
+
+    if not status is-interactive; or not test -t 1; or test "$TERM" = "dumb"
+        set -g _fb_term_int 0
+        return 0
+    end
+
+    if test "$_ti_mode" = "on"
+        set -g _fb_term_int 1
+        return 0
+    end
+
+    # In `auto` mode, Fish 4.0+ has native semantic prompts, and VS Code/screen manage their own
+    if test -z "$TERM"; or test -n "$VSCODE_SHELL_INTEGRATION"; or test -n "$STY"
+        set -g _fb_term_int 0
+        return 0
+    end
+    if string match -q 'screen*' -- "$TERM"; or string match -q '4.*' -- "$FISH_VERSION"
+        set -g _fb_term_int 0
+        return 0
+    end
+
+    if test -n "$WT_SESSION" -o -n "$KITTY_WINDOW_ID" -o -n "$GHOSTTY_RESOURCES_DIR" \
+        -o -n "$WEZTERM_EXECUTABLE" -o -n "$WEZTERM_PANE" \
+        -o -n "$KONSOLE_VERSION" -o -n "$ALACRITTY_WINDOW_ID" -o -n "$ALACRITTY_SOCKET"
+        set -g _fb_term_int 1
+        return 0
+    end
+
+    switch "$TERM"
+        case xterm-kitty xterm-ghostty
+            set -g _fb_term_int 1
+            return 0
+    end
+
+    switch "$TERM_PROGRAM"
+        case iTerm.app vscode ghostty WezTerm WarpTerminal Apple_Terminal Hyper Tabby rio contour Alacritty
+            set -g _fb_term_int 1
+            return 0
+    end
+
+    if test -n "$VTE_VERSION" -a "$VTE_VERSION" -ge 5000 2>/dev/null
+        set -g _fb_term_int 1
+        return 0
+    end
+
+    set -g _fb_term_int 0
+end
+
+_fb_init_terminal_integration
+
+function _fb_emit_osc7
+    test "$_fb_term_int" -eq 1; or return 0
+    test "$PWD" = "$_fb_osc7_last_pwd"; and return 0
+    set -g _fb_osc7_last_pwd "$PWD"
+    set -l _uri (string escape --style=url -- "$PWD" | string replace -a '%2F' '/')
+    printf '\033]7;file://%s%s\007' "$_fb_host" "$_uri"
+end
+"#
+        .to_string(),
+        Shell::Pwsh => r#"
+# ── Terminal Shell Integration Probe (`OSC 133` + `OSC 7`) ──
+$global:_fb_term_int = 0
+$global:_fb_osc_prompt_shown = $false
+$global:_fb_osc_cmd_ran = $false
+$global:_fb_osc7_last_pwd = $null
+
+function _fb_init_terminal_integration {
+    $mode = $env:GLADESHELL_TERMINAL_INTEGRATION
+    if ([string]::IsNullOrWhiteSpace($mode)) {
+        $homeDir = if ($env:HOME) { $env:HOME } else { $env:USERPROFILE }
+        if ($homeDir) {
+            $cfgPath = Join-Path (Join-Path (Join-Path $homeDir ".config") "gladeshell") "shell_integration"
+            if ([System.IO.File]::Exists($cfgPath)) {
+                try { $mode = [System.IO.File]::ReadAllText($cfgPath) } catch { $mode = "" }
+            }
+        }
+    }
+    $norm = if ($mode) { $mode.Trim().ToLowerInvariant() } else { "off" }
+    switch ($norm) {
+        { $_ -in '1','on','true','yes','enable','enabled' } { $norm = 'on'; break }
+        'auto' { $norm = 'auto'; break }
+        default { $global:_fb_term_int = 0; return }
+    }
+
+    if ([Console]::IsOutputRedirected -or $env:TERM -eq 'dumb') {
+        $global:_fb_term_int = 0
+        return
+    }
+    if ($norm -eq 'on') {
+        $global:_fb_term_int = 1
+        return
+    }
+    if ($env:VSCODE_SHELL_INTEGRATION -or $env:STY -or ($env:TERM -and $env:TERM.StartsWith('screen'))) {
+        $global:_fb_term_int = 0
+        return
+    }
+    $modernPrograms = @('iTerm.app','vscode','ghostty','WezTerm','WarpTerminal','Apple_Terminal','Hyper','Tabby','rio','contour','Alacritty')
+    $isModern = [bool](
+        $env:WT_SESSION -or $env:KITTY_WINDOW_ID -or $env:GHOSTTY_RESOURCES_DIR -or
+        $env:WEZTERM_EXECUTABLE -or $env:WEZTERM_PANE -or $env:KONSOLE_VERSION -or
+        $env:ALACRITTY_WINDOW_ID -or $env:ALACRITTY_SOCKET -or
+        ($env:TERM -in @('xterm-kitty','xterm-ghostty')) -or
+        ($env:TERM_PROGRAM -in $modernPrograms) -or
+        (($env:VTE_VERSION -as [int]) -ge 5000)
+    )
+    $global:_fb_term_int = if ($isModern) { 1 } else { 0 }
+}
+
+_fb_init_terminal_integration
+
+function _fb_osc7_seq([string]$cwd) {
+    $hostPart = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { 'localhost' }
+    $norm = $cwd.Replace('\', '/')
+    $segments = $norm.Split('/')
+    $encoded = ($segments | ForEach-Object {
+        if ($_ -match '^[A-Za-z]:$') { $_ } else { [System.Uri]::EscapeDataString($_) }
+    }) -join '/'
+    if (-not $encoded.StartsWith('/')) { $encoded = "/$encoded" }
+    return "$([char]27)]7;file://$hostPart$encoded$([char]7)"
+}
+"#
+        .to_string(),
+    }
+}
+
 /// Render desktop and terminal notification helper function per shell.
 pub fn render_notification_helpers(shell: Shell) -> String {
     match shell {
@@ -1194,6 +1482,34 @@ mod tests {
         assert!(render_notification_helpers(Shell::Bash).contains("_fb_notify"));
         assert!(render_notification_helpers(Shell::Fish).contains("notify-send"));
         assert!(render_notification_helpers(Shell::Pwsh).contains("Write"));
+    }
+
+    #[test]
+    fn test_render_terminal_integration_helpers() {
+        for sh in [
+            Shell::Zsh,
+            Shell::Bash,
+            Shell::Brush,
+            Shell::Fish,
+            Shell::Pwsh,
+        ] {
+            let script = render_terminal_integration_helpers(sh);
+            assert!(
+                script.contains("_fb_init_terminal_integration"),
+                "missing init probe for {:?}",
+                sh
+            );
+            assert!(
+                script.contains("_fb_term_int"),
+                "missing _fb_term_int for {:?}",
+                sh
+            );
+            assert!(
+                script.contains("VSCODE_SHELL_INTEGRATION"),
+                "missing VS Code conflict guard for {:?}",
+                sh
+            );
+        }
     }
 
     #[test]

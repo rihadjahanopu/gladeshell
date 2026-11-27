@@ -851,6 +851,13 @@ run_doctor() {
         printf "  🦀 Brush UI Config:   ${GREEN}[OK]${NC} syntax-highlighting enabled (%s)\n" "$(tildify "$brush_cfg")"
     fi
 
+    local ti_mode="off (default)"
+    local ti_cfg="$HOME/.config/gladeshell/shell_integration"
+    if [ -f "$ti_cfg" ]; then
+        ti_mode=$(tr -d '[:space:]' < "$ti_cfg" 2>/dev/null || echo "off")
+    fi
+    printf "  🔌 Shell Integration: ${CYAN}%s${NC} (gladeshell integration <off|auto|on>)\n" "$ti_mode"
+
     printf "\n  ──────────────────────────────────────────────────\n"
     printf "  🎉 Doctor check completed.\n\n"
     exit 0

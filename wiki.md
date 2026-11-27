@@ -20,7 +20,7 @@ _Pure Rust Architecture • Hyper-Optimized CLI Engine • Interactive Ratatui T
 [![MIT License](https://img.shields.io/badge/License-MIT-a855f7?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](https://opensource.org/licenses/MIT)
 [![Rust Engine](https://img.shields.io/badge/Engine-Pure%20Rust%20100%25-22c55e?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-0ea5e9?style=for-the-badge&logo=linux&logoColor=white)](#)
-[![Version](https://img.shields.io/badge/Version-1.1.0-ec4899?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/Version-1.2.18-ec4899?style=for-the-badge)](#)
 [![Website](https://img.shields.io/badge/Website-gladeshell.netlify.app-22d3ee?style=for-the-badge&logo=netlify&logoColor=white)](https://gladeshell.netlify.app)
 
 </div>
@@ -54,13 +54,16 @@ _Pure Rust Architecture • Hyper-Optimized CLI Engine • Interactive Ratatui T
   - [5.7 Process & System Monitor (`process_manager` / `sysmon`)](#57-process--system-monitor-process_manager--sysmon)
   - [5.8 Directory Traversal & Navigation](#58-directory-traversal--navigation)
   - [5.9 Git Version Control Matrix](#59-git-version-control-matrix)
-- [6. Multi-Platform \& Shell Parity](#6-multi-platform--shell-parity)
-  - [6.1 Linux Distributions Support](#61-linux-distributions-support)
-  - [6.2 macOS Terminal Integration](#62-macos-terminal-integration)
-  - [6.3 Windows PowerShell 7+ Strategy](#63-windows-powershell-7-strategy)
-- [7. Editor \& VS Code Integration](#7-editor--vs-code-integration)
-- [8. Configuration \& Custom Overrides](#8-configuration--custom-overrides)
-- [9. Developer Guide \& Contribution Protocol](#9-developer-guide--contribution-protocol)
+- [6. Multi-Platform & Shell Parity](#6-multi-platform--shell-parity)
+  - [6.1 Linux, macOS & Windows Parity](#61-linux-macos--windows-parity)
+  - [6.2 Brush Shell (`brush.sh`) & Auto Config](#62-brush-shell-brushsh--auto-config)
+- [7. Terminal Shell Integration (`OSC 133` & `OSC 7`)](#7-terminal-shell-integration-osc-133--osc-7)
+  - [7.1 Architecture & Multi-Tab Daemon Isolation](#71-architecture--multi-tab-daemon-isolation)
+  - [7.2 Supported Protocols & Modes](#72-supported-protocols--modes)
+  - [7.3 Conflict Prevention & Edge-Case Guards](#73-conflict-prevention--edge-case-guards)
+- [8. Configuration Files & Environment Overrides](#8-configuration-files--environment-overrides)
+- [9. Editor & VS Code Integration](#9-editor--vs-code-integration)
+- [10. Developer Guide & Contribution Protocol](#10-developer-guide--contribution-protocol)
 
 ---
 
@@ -96,6 +99,7 @@ flowchart TD
         PROMPT[Prompt Telemetry Engine]
         THEMES[55 Ratatui Theme Switcher]
         ALIASES[aliases.toml Engine]
+        SHELLINT[Shell Integration OSC 133 / 7]
     end
 
     subgraph Interactive TUI Suite
@@ -215,7 +219,75 @@ AES-256 encrypted directory vault with decoy password triggers, RAM execution gu
 
 ---
 
-## 6. Editor & VS Code Integration
+## 6. Multi-Platform & Shell Parity
+
+### 6.1 Linux, macOS & Windows Parity
+
+GladeShell generates zero-fork bootstrap scripts (`gladeshell init <shell>`) and caches them atomically in `~/.gladeshell/cache/init.<ext>` across all **5 supported shells**:
+
+- **Zsh (`5.x+`):** Full ZLE widgets (`autosuggest` ghost text + `highlight`), `add-zsh-hook` (`precmd`/`preexec`/`chpwd`), Unix socket daemon client, and transient prompt.
+- **Bash (`4.4+`):** `PROMPT_COMMAND`, `PS0`, `DEBUG` trap timing, lazy system completions, and UTF-8 prompt rendering.
+- **Brush (`0.5+`):** Native Rust shell support with `$EPOCHREALTIME` sub-millisecond timing, Reedline `bind -x` widgets (`Ctrl+R`, `Alt+C`), lazy completions, and POSIX function adapters for operator aliases (`rel()`, `path()`, `brushrc`, etc.).
+- **Fish (`3.x+`):** `fish_prompt`, `$CMD_DURATION`, `--on-event fish_preexec`, `--on-variable PWD` hooks, and transient prompt repainting.
+- **PowerShell (`7+` / `5.1`):** `Prompt` function, `PSReadLine` colors & Enter transient handler, `%USERPROFILE%` fallbacks, and Windows VT console setup.
+
+### 6.2 Brush Shell (`brush.sh`) & Auto Config
+
+GladeShell configures Brush automatically during `gladeshell setup` and installer runs:
+
+- Injects the idempotent init block into `~/.brushrc` (`# >>> glade-brush >>>`).
+- Automatically ensures `[ui]\nsyntax-highlighting = true` inside Brush's TOML config (`${XDG_CONFIG_HOME:-$HOME/.config}/brush/config.toml` on Linux/macOS or `%APPDATA%\brush\config.toml` on Windows) without overwriting explicit user preferences or stripping comments.
+- Adds cross-shell `brushrc` editor shortcuts (`bash`, `brush`, `zsh`, `fish`) and shell-local `rel` reload functions (`eval "$(gladeshell init brush)"`).
+
+---
+
+## 7. Terminal Shell Integration (`OSC 133` & `OSC 7`)
+
+### 7.1 Architecture & Multi-Tab Daemon Isolation
+
+Because GladeShell's Unix IPC prompt daemon (`src/daemon/mod.rs`) is shared across multiple concurrent terminal tabs (e.g., an IDE terminal, a standalone GPU terminal, and an SSH/TTY session), inspecting terminal environment variables inside the daemon would cross-contaminate sessions.
+
+Instead, **terminal probing and OSC emission execute per shell session** at startup inside generated init hooks (`_fb_init_terminal_integration` in `src/init/shared.rs`) using pure shell builtins (**0 extra subshell forks per prompt**), backed by `src/core/shell_integration.rs`.
+
+### 7.2 Supported Protocols & Modes
+
+```bash
+gladeshell integration <off|auto|on|status>
+# Aliases: gladeshell shell-integration ..., gladeshell osc ...
+```
+
+| Mode | Behavior |
+| ---- | -------- |
+| `off` *(default)* | Emits zero `OSC 133` / `OSC 7` bytes — 100% safe for legacy TTYs and older emulators |
+| `auto` | Activates automatically in verified modern terminals (`WT_SESSION`, Kitty, Ghostty, WezTerm, Konsole, Alacritty, iTerm2, macOS Terminal, Warp, Hyper, Tabby, Rio, Contour, `VTE_VERSION >= 5000`) |
+| `on` | Force-enables in all interactive TTY sessions (still suppresses if `TERM=dumb` or non-TTY stdout) |
+
+* **`OSC 133;A` / `133;B` / `133;C` / `133;D[;<exit>]`:** Marks prompt start/end, command execution start, and exit code boundaries across Zsh, Bash, Brush, Fish, and PowerShell (wrapped cleanly inside `%{...%}` in Zsh and `\[...\]` in Bash/Brush `PS1` so cursor column calculations stay exact).
+* **`OSC 7` (`file://<host>/<uri>`):** Percent-encodes `$PWD` cleanly and emits only when the working directory changes.
+* **`OSC 777` / `OSC 99`:** Built-in desktop & terminal completion notifications in `_fb_notify` (`>= GLADESHELL_NOTIFY_THRESHOLD`).
+
+### 7.3 Conflict Prevention & Edge-Case Guards
+
+- **Empty `<Enter>` accuracy:** Emits bare `\e]133;D\a` (without an exit status code) when no command ran (using `preexec` / `DEBUG` trap on Zsh/Bash/Fish, `PSReadLine` buffer check on PowerShell, and `HISTCMD` guard on Brush).
+- **Double-mark suppression (`auto` mode):** Yields cleanly when `VSCODE_SHELL_INTEGRATION=1`, Brush's `config.toml` `experimental.terminal-shell-integration = true`, `Fish 4.*`, GNU `screen`, or `TERM=dumb` is detected.
+- **Transient prompt boundary preservation:** Compact transient prompts (`❯ `) remain framed with `133;A` ... `133;B` in Zsh, Fish, and PowerShell.
+
+---
+
+## 8. Configuration Files & Environment Overrides
+
+| Purpose | Config File Path | Environment Variable Fast-Path |
+| ------- | ---------------- | ------------------------------ |
+| Active Theme | `~/.config/gladeshell/theme` | `GLADESHELL_THEME` |
+| Theme Colors | `~/.config/gladeshell/theme_overrides.toml` | — |
+| Shell Integration | `~/.config/gladeshell/shell_integration` | `GLADESHELL_TERMINAL_INTEGRATION` (`off`\|`auto`\|`on`) |
+| Transient Prompt | Enabled by default | `GLADESHELL_TRANSIENT=0` (disable) |
+| Command Alerts | `10000` ms threshold | `GLADESHELL_NOTIFY_THRESHOLD` (`0` disables) |
+| Brush UI Config | `${XDG_CONFIG_HOME:-~/.config}/brush/config.toml` (`%APPDATA%\brush\config.toml` on Windows) | `GLADESHELL_BRUSH_KEYBINDS=0` |
+
+---
+
+## 9. Editor & VS Code Integration
 
 Pre-configured VS Code settings (`.vscode/settings.json`) enable `rust-analyzer` live linting:
 
@@ -225,7 +297,7 @@ Pre-configured VS Code settings (`.vscode/settings.json`) enable `rust-analyzer`
 
 ---
 
-## 7. Developer Guide & Contribution Protocol
+## 10. Developer Guide & Contribution Protocol
 
 Contributors must verify code before submitting pull requests:
 

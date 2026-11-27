@@ -1,4 +1,4 @@
-<!doctype html>
+ca<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -258,8 +258,12 @@
             <li><a href="#manual-install">Manual Clone & Source</a></li>
             <li><a href="#verification">Verification & Reload</a></li>
             <li><a href="#update-uninstall">Updating & Uninstalling</a></li>
-            <li><a href="#zed-settings">Zed IDE Settings <span class="sidebar-tag">IDE</span></a></li>
-            <li><a href="#vscode-settings">VS Code Settings <span class="sidebar-tag">IDE</span></a></li>
+            <li>
+              <a href="#zed-settings">Zed IDE Settings <span class="sidebar-tag">IDE</span></a>
+            </li>
+            <li>
+              <a href="#vscode-settings">VS Code Settings <span class="sidebar-tag">IDE</span></a>
+            </li>
           </ul>
         </div>
 
@@ -267,25 +271,33 @@
           <div class="sidebar-group-title">🐚 Shell Integration</div>
           <ul class="sidebar-links">
             <li>
-              <a href="#zsh-setup">Zsh & Plugin Guide <span class="sidebar-tag">Zsh</span></a>
+              <a href="#zsh-setup">Zsh &amp; Plugin Guide <span class="sidebar-tag">Zsh</span></a>
             </li>
             <li>
               <a href="#fish-setup">Fish Shell Guide <span class="sidebar-tag">Fish</span></a>
             </li>
             <li>
+              <a href="#brush-setup">Brush Shell Guide <span class="sidebar-tag new">Rust</span></a>
+            </li>
+            <li>
               <a href="#powershell-setup">PowerShell Setup <span class="sidebar-tag">Win</span></a>
             </li>
-            <li><a href="#font-setup">Font & Emoji Setup</a></li>
+            <li><a href="#font-setup">Font &amp; Emoji Setup</a></li>
           </ul>
         </div>
 
         <div class="sidebar-group">
-          <div class="sidebar-group-title">📟 Smart Prompt</div>
+          <div class="sidebar-group-title">📟 Smart Prompt &amp; OSC</div>
           <ul class="sidebar-links">
             <li><a href="#prompt-architecture">Prompt Architecture</a></li>
             <li><a href="#folder-emojis">Folder Emojis & Badges</a></li>
             <li><a href="#health-metrics">CPU Temp & System Metrics</a></li>
             <li><a href="#customizing-prompt">Customization Tuning</a></li>
+            <li>
+              <a href="#terminal-shell-integration"
+                >Terminal Shell Integration <span class="sidebar-tag new">OSC 133</span></a
+              >
+            </li>
           </ul>
         </div>
 
@@ -369,10 +381,11 @@
           </p>
 
           <div class="docs-meta-bar">
-            <span class="meta-badge green">✓ Version 2.0 Stable</span>
+            <span class="meta-badge green">✓ v1.2.18</span>
             <span class="meta-badge cyan">⚡ Zero Dependencies</span>
             <span class="meta-badge purple">🛡️ Safe Boundary Installer</span>
-            <span class="meta-badge">Shells: Bash • Zsh • Fish • PowerShell</span>
+            <span class="meta-badge">Shells: Bash • Brush • Zsh • Fish • PowerShell</span>
+            <span class="meta-badge">OSC 133 + OSC 7 Ready</span>
             <span class="meta-badge">License: MIT</span>
           </div>
         </header>
@@ -386,9 +399,10 @@
             <strong>gladeshell</strong> is a lightweight, opinionated terminal enhancement
             environment engineered specifically for full-stack, DevOps, and open-source developers.
             Unlike heavy shell script frameworks (such as Oh My Zsh or bulky plugin managers),
-            gladeshell operates as a <strong>single compiled Pure Rust (2024 edition) binary</strong> with
-            <strong>zero external script dependencies</strong>, blazing fast prompt latency (~0.08ms),
-            built-in Ratatui TUIs, and a safe self-healing architecture.
+            gladeshell operates as a
+            <strong>single compiled Pure Rust (2024 edition) binary</strong> with
+            <strong>zero external script dependencies</strong>, blazing fast prompt latency
+            (~0.08ms), built-in Ratatui TUIs, and a safe self-healing architecture.
           </p>
 
           <div class="alert-box alert-note">
@@ -396,7 +410,8 @@
             <p>
               gladeshell never modifies your core system bin files or destroys existing shell
               configurations. All additions are injected cleanly between boundary comments (e.g.
-              <code># &gt;&gt;&gt; glade-bashrc &gt;&gt;&gt;</code> and <code># &lt;&lt;&lt; glade-bashrc &lt;&lt;&lt;</code> for Bash, or
+              <code># &gt;&gt;&gt; glade-bashrc &gt;&gt;&gt;</code> and
+              <code># &lt;&lt;&lt; glade-bashrc &lt;&lt;&lt;</code> for Bash, or
               <code># &gt;&gt;&gt; glade-zshrc &gt;&gt;&gt;</code> for Zsh).
             </p>
           </div>
@@ -416,7 +431,7 @@
               <tbody>
                 <tr>
                   <td><strong>Linux</strong> (Ubuntu, Debian, Arch, Fedora, Alpine)</td>
-                  <td>Bash 4.4+, Zsh 5.8+, Fish 3.0+</td>
+                  <td>Bash 4.4+, Brush 0.5+, Zsh 5.8+, Fish 3.0+</td>
                   <td><code>curl</code>, <code>git</code></td>
                   <td><code>fonts-noto-color-emoji</code>, Cascadia Code / Fira Code Nerd Font</td>
                 </tr>
@@ -450,10 +465,15 @@
             <pre><code>curl -fsSL https://gladeshell.netlify.app/install.sh | bash</code></pre>
           </div>
 
-          <div class="code-wrapper" style="opacity: 0.78; position: relative;">
+          <div class="code-wrapper" style="opacity: 0.78; position: relative">
             <div class="code-header">
-              <span class="code-lang">PowerShell (Windows Universal) <span class="coming-soon-badge">Coming Soon</span></span>
-              <button class="copy-btn" data-disabled="true" data-tooltip="Windows coming soon"><span>⏳</span> Coming Soon</button>
+              <span class="code-lang"
+                >PowerShell (Windows Universal)
+                <span class="coming-soon-badge">Coming Soon</span></span
+              >
+              <button class="copy-btn" data-disabled="true" data-tooltip="Windows coming soon">
+                <span>⏳</span> Coming Soon
+              </button>
             </div>
             <pre><code>powershell -c "irm https://gladeshell.netlify.app/install.ps1 | iex"</code></pre>
           </div>
@@ -481,6 +501,13 @@
                   </td>
                 </tr>
                 <tr>
+                  <td><strong>Brush</strong></td>
+                  <td><code>~/.brushrc</code></td>
+                  <td>
+                    <code>curl -fsSL https://gladeshell.netlify.app/install.sh | bash -s -- --shell=brush</code>
+                  </td>
+                </tr>
+                <tr>
                   <td><strong>Zsh</strong></td>
                   <td><code>~/.zshrc</code></td>
                   <td>
@@ -497,10 +524,28 @@
                   </td>
                 </tr>
                 <tr>
-                  <td><strong>PowerShell</strong> <span class="coming-soon-badge">Coming Soon</span></td>
+                  <td>
+                    <strong>PowerShell</strong> <span class="coming-soon-badge">Coming Soon</span>
+                  </td>
                   <td><code>$PROFILE</code></td>
                   <td>
-                    <button type="button" class="table-soon-btn" data-disabled="true" data-tooltip="Windows coming soon" style="background: rgba(168, 85, 247, 0.12); border: 1px dashed rgba(168, 85, 247, 0.4); color: #c084fc; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: not-allowed; font-family: inherit; font-weight: 500;">
+                    <button
+                      type="button"
+                      class="table-soon-btn"
+                      data-disabled="true"
+                      data-tooltip="Windows coming soon"
+                      style="
+                        background: rgba(168, 85, 247, 0.12);
+                        border: 1px dashed rgba(168, 85, 247, 0.4);
+                        color: #c084fc;
+                        padding: 4px 10px;
+                        border-radius: 6px;
+                        font-size: 0.8rem;
+                        cursor: not-allowed;
+                        font-family: inherit;
+                        font-weight: 500;
+                      "
+                    >
                       <span>⏳</span> Windows Coming Soon
                     </button>
                   </td>
@@ -511,7 +556,8 @@
 
           <h3 id="manual-install">Manual Clone &amp; Cargo Build</h3>
           <p>
-            For air-gapped environments, custom builds, or manual dotfile management, clone and build the Rust binary directly:
+            For air-gapped environments, custom builds, or manual dotfile management, clone and
+            build the Rust binary directly:
           </p>
 
           <div class="code-wrapper">
@@ -534,11 +580,17 @@ cp target/release/gladeshell ~/.local/bin/
 <span class="hl-comment"># For Bash (~/.bashrc)</span>
 eval "$(gladeshell init bash)"
 
+<span class="hl-comment"># For Brush (~/.brushrc)</span>
+eval "$(gladeshell init brush)"
+
 <span class="hl-comment"># For Zsh (~/.zshrc)</span>
 eval "$(gladeshell init zsh)"
 
 <span class="hl-comment"># For Fish (~/.config/fish/config.fish)</span>
-gladeshell init fish | source</code></pre>
+gladeshell init fish | source
+
+<span class="hl-comment"># Auto-configure all detected shells + Brush config.toml:</span>
+gladeshell setup</code></pre>
           </div>
 
           <h3 id="verification">Verification & First Steps</h3>
@@ -580,7 +632,8 @@ gladeshell init fish | source</code></pre>
           </div>
 
           <p>
-            To cleanly uninstall gladeshell and automatically restore your original shell configurations:
+            To cleanly uninstall gladeshell and automatically restore your original shell
+            configurations:
           </p>
           <div class="code-wrapper">
             <div class="code-header">
@@ -611,13 +664,18 @@ curl -fsSL https://gladeshell.netlify.app/u.sh | bash</code></pre>
             <strong>What it does:</strong> Creates a timestamped backup of your existing settings,
             writes tuned <code>settings.json</code> (BlackFox theme, Cascadia Code 22px font, Tab
             size 2, Prettier, Git inline blame, autosave) to both <code>~/.config/zed/</code> and
-            Flatpak <code>dev.zed.Zed</code> config paths. Run <code>zed-setup</code> (or <code>gladeshell zed-setup</code>) anytime.
+            Flatpak <code>dev.zed.Zed</code> config paths. Run <code>zed-setup</code> (or
+            <code>gladeshell zed-setup</code>) anytime.
           </p>
 
           <h3 id="vscode-settings">💻 VS Code Settings &amp; Extensions Installer</h3>
           <p>
-            Install a battle-tested, high-performance <code>settings.json</code> and 50+ curated developer extensions for
-            <a href="https://code.visualstudio.com" target="_blank" rel="noopener">Visual Studio Code</a> / VSCodium / Code-OSS — with automatic timestamped backup:
+            Install a battle-tested, high-performance <code>settings.json</code> and 50+ curated
+            developer extensions for
+            <a href="https://code.visualstudio.com" target="_blank" rel="noopener"
+              >Visual Studio Code</a
+            >
+            / VSCodium / Code-OSS — with automatic timestamped backup:
           </p>
 
           <div class="code-wrapper">
@@ -629,7 +687,10 @@ curl -fsSL https://gladeshell.netlify.app/u.sh | bash</code></pre>
           </div>
           <p style="font-size: 0.85rem; color: var(--docs-text-muted)">
             <strong>What it does:</strong> Creates an atomic backup of your existing configuration,
-            writes tuned <code>settings.json</code> (Dobri Next Black theme, Cascadia Code 17px font with ligatures, Prettier, ErrorLens, Tailwind CSS, smooth caret animation), and installs 50+ curated extensions via <code>code --install-extension</code>. Run <code>code-setup</code> (or <code>gladeshell code-setup</code>) anytime.
+            writes tuned <code>settings.json</code> (Dobri Next Black theme, Cascadia Code 17px font
+            with ligatures, Prettier, ErrorLens, Tailwind CSS, smooth caret animation), and installs
+            50+ curated extensions via <code>code --install-extension</code>. Run
+            <code>code-setup</code> (or <code>gladeshell code-setup</code>) anytime.
           </p>
         </section>
 
@@ -641,8 +702,13 @@ curl -fsSL https://gladeshell.netlify.app/u.sh | bash</code></pre>
 
           <h3>Zsh Setup &amp; Native Rust Subsystem (Zero External Plugins)</h3>
           <p>
-            gladeshell provides built-in <strong>Native Rust Autocompletion &amp; Syntax Highlighting (~0.08ms)</strong>.
-            Everything is configured automatically by the installer — <strong>no manual git clones, plugin managers, or heavy frameworks like Oh-My-Zsh required</strong>:
+            gladeshell provides built-in
+            <strong>Native Rust Autocompletion &amp; Syntax Highlighting (~0.08ms)</strong>.
+            Everything is configured automatically by the installer —
+            <strong
+              >no manual git clones, plugin managers, or heavy frameworks like Oh-My-Zsh
+              required</strong
+            >:
           </p>
 
           <div class="code-wrapper">
@@ -672,13 +738,58 @@ fish <(curl -fsSL https://gladeshell.netlify.app/public/install.fish)
 source ~/.config/fish/config.fish</code></pre>
           </div>
 
-          <h3 id="powershell-setup">PowerShell Setup ($PROFILE) <span class="coming-soon-badge">Coming Soon</span></h3>
-          <p>PowerShell 7+ and Windows PowerShell 5.1 support is currently undergoing stabilization for parity with Linux &amp; macOS.</p>
+          <h3 id="brush-setup">
+            Brush Shell Setup (<code>brush.sh</code> &amp; <code>~/.brushrc</code>)
+          </h3>
+          <p>
+            GladeShell provides native, production-hardened support for
+            <strong>Brush (<code>brush 0.5+</code>)</strong> with zero external scripts:
+          </p>
+          <ul>
+            <li>
+              <strong>Auto RC &amp; TOML UI Config:</strong> Running
+              <code>gladeshell setup</code> (or the installer) injects
+              <code>eval "$(gladeshell init brush)"</code> into <code>~/.brushrc</code> and safely
+              enables <code>[ui] syntax-highlighting = true</code> inside
+              <code>${XDG_CONFIG_HOME:-~/.config}/brush/config.toml</code> (or
+              <code>%APPDATA%\brush\config.toml</code> on Windows) without overwriting explicit user
+              settings or comments.
+            </li>
+            <li>
+              <strong>Reedline Native Integration:</strong> Uses
+              <code>$EPOCHREALTIME</code> sub-millisecond timing, Reedline-compatible
+              <code>bind -x</code> widgets (<code>Ctrl+R</code> fuzzy history <code>fh</code>,
+              <code>Alt+C</code> for <code>cf</code>), lazy CLI completions, and POSIX function
+              wrappers for operator shortcuts (<code>rel</code>, <code>brushrc</code>,
+              <code>path</code>).
+            </li>
+          </ul>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">Brush Configuration</span>
+              <button type="button" class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre
+              role="region"
+              aria-label="Brush shell setup commands"
+              tabindex="0"
+            ><code>gladeshell setup        <span class="hl-comment"># Configures ~/.brushrc &amp; brush/config.toml</span>
+brushrc                 <span class="hl-comment"># Edit ~/.brushrc from Bash, Brush, Zsh, or Fish</span>
+rel                     <span class="hl-comment"># Reload current shell configuration cleanly</span></code></pre>
+          </div>
+
+          <h3 id="powershell-setup">
+            PowerShell Setup ($PROFILE) <span class="coming-soon-badge">Coming Soon</span>
+          </h3>
+          <p>
+            PowerShell 7+ and Windows PowerShell 5.1 support is currently undergoing stabilization
+            for parity with Linux &amp; macOS.
+          </p>
           <div class="alert-box alert-warning">
             <div class="alert-title">⏳ Windows Support Coming Soon</div>
             <p>
-              Windows native installer is temporarily paused while we polish PowerShell performance and compatibility.
-              Once released, you can enable remote script execution via:
+              Windows native installer is temporarily paused while we polish PowerShell performance
+              and compatibility. Once released, you can enable remote script execution via:
               <code>Set-ExecutionPolicy RemoteSigned -Scope CurrentUser</code>
             </p>
           </div>
@@ -822,6 +933,138 @@ fc-cache -fv</code></pre>
 export GLADE_SHOW_CPU_TEMP=true     <span class="hl-comment"># Show CPU temp</span>
 export GLADE_SHOW_GIT_DIRTY=true    <span class="hl-comment"># Show git dirty status</span>
 export GLADE_SHOW_EXEC_TIMER=true   <span class="hl-comment"># Show command duration</span></code></pre>
+          </div>
+        </section>
+
+        <!-- ============================================================
+           SECTION 3B: TERMINAL SHELL INTEGRATION (OSC 133 + OSC 7)
+           ============================================================ -->
+        <section class="docs-section">
+          <h2 id="terminal-shell-integration">
+            <span class="section-icon">🔌</span> Terminal Shell Integration (<code>OSC 133</code>
+            &amp; <code>OSC 7</code>)
+          </h2>
+          <p>
+            GladeShell emits optional semantic terminal escape sequences across all 5 shells
+            (<strong>Zsh, Bash, Brush, Fish, and PowerShell</strong>) so modern terminal emulators
+            can navigate commands, highlight failed exit codes in the gutter, offer 1-click output
+            copying, and inherit the current working directory in new splits or tabs.
+          </p>
+
+          <div class="alert-box alert-note">
+            <div class="alert-title">🛡️ Legacy-Safe by Default &amp; Daemon-Isolated</div>
+            <p>
+              Mode defaults strictly to <code>off</code> so legacy terminals never display raw
+              escape codes. Because GladeShell's Unix IPC daemon is shared across terminal tabs,
+              <code>_fb_init_terminal_integration</code> probes each shell session individually at
+              startup using pure shell builtins (<strong>0 subshell forks per prompt</strong>).
+            </p>
+          </div>
+
+          <h3>CLI Control &amp; Configuration Precedence</h3>
+          <p>
+            Resolution precedence: <code>$GLADESHELL_TERMINAL_INTEGRATION</code> environment
+            variable (fastest zero-disk override) →
+            <code>~/.config/gladeshell/shell_integration</code> → default <code>off</code>.
+          </p>
+          <div class="code-wrapper">
+            <div class="code-header">
+              <span class="code-lang">gladeshell integration CLI</span>
+              <button type="button" class="copy-btn"><span>📋</span> Copy</button>
+            </div>
+            <pre
+              role="region"
+              aria-label="Terminal integration CLI usage"
+              tabindex="0"
+            ><code>gladeshell integration status   <span class="hl-comment"># Inspect mode, emulator detection &amp; conflict guards</span>
+gladeshell integration auto     <span class="hl-comment"># Enable automatically in verified modern terminals</span>
+gladeshell integration on       <span class="hl-comment"># Force enable across interactive TTY sessions</span>
+gladeshell integration off      <span class="hl-comment"># Disable globally (default)</span>
+rel                             <span class="hl-comment"># Apply immediately in active shell (or open new tab)</span></code></pre>
+          </div>
+
+          <h3>Supported Escape Protocols &amp; Conflict Guards</h3>
+          <div
+            class="docs-table-wrapper"
+            tabindex="0"
+            role="region"
+            aria-label="OSC protocol matrix and shell implementation"
+          >
+            <table class="docs-table">
+              <thead>
+                <tr>
+                  <th scope="col">Sequence / Component</th>
+                  <th scope="col">Per-Shell Implementation</th>
+                  <th scope="col">Capability &amp; Edge-Case Guard</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>OSC 133;A</code> / <code>133;B</code></th>
+                  <td>
+                    Zsh <code>%{...%}</code>, Bash/Brush <code>\[...\]</code>, Fish
+                    <code>fish_prompt</code>, PowerShell <code>Prompt</code> (normal + transient)
+                  </td>
+                  <td>
+                    Zero cursor-width drift when line-wrapping; keeps compact transient prompts
+                    (<code>❯ </code>) framed cleanly
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>OSC 133;C</code></th>
+                  <td>
+                    Zsh <code>_fb_preexec</code>, Bash/Brush <code>PS0='\e]133;C\a'</code>, Fish
+                    <code>fish_preexec</code>, PowerShell <code>PSReadLine</code> Enter handler
+                  </td>
+                  <td>
+                    Marks command output start; auto-cleans <code>PS0</code> when switching back to
+                    <code>off</code> via <code>rel</code>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>OSC 133;D[;&lt;exit&gt;]</code></th>
+                  <td>
+                    Prompt hooks capture real <code>$?</code> / <code>$status</code> /
+                    <code>$LASTEXITCODE</code> first before emitting
+                  </td>
+                  <td>
+                    Empty <code>&lt;Enter&gt;</code> emits bare <code>133;D</code> without false
+                    exit badge (uses <code>HISTCMD</code> guard in Brush)
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>OSC 7</code> (<code>file://host/uri</code>)</th>
+                  <td>
+                    <code>_fb_emit_osc7</code> (POSIX/Fish) &amp;
+                    <code>_fb_osc7_seq</code> (PowerShell <code>[Uri]::EscapeDataString</code>)
+                  </td>
+                  <td>
+                    Emitted only on <code>$PWD</code> changes; handles spaces, <code>#</code>,
+                    <code>?</code>, UTF-8, and Windows <code>C:\...</code> paths
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>OSC 777</code> / <code>99</code></th>
+                  <td>
+                    Built-in <code>_fb_notify</code> hook for commands &ge;
+                    <code>GLADESHELL_NOTIFY_THRESHOLD</code>
+                  </td>
+                  <td>
+                    Native desktop + terminal notifications with <code>notify-send</code> /
+                    <code>osascript</code> fallback
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>auto</code> Yield Guards</th>
+                  <td>Single startup check in <code>_fb_init_terminal_integration</code></td>
+                  <td>
+                    Yields to <code>VSCODE_SHELL_INTEGRATION</code>, Brush
+                    <code>terminal-shell-integration = true</code>, Fish <code>4.*</code>, GNU
+                    <code>screen</code>, and <code>TERM=dumb</code>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -2419,8 +2662,10 @@ glade matrix
               </table>
             </div>
             <p style="margin-top: 8px; font-size: 0.85rem">
-              <strong>Features:</strong> 100% Native Rust Ratatui TUI with live commit graph preview on the right (hash, author, date,
-              subject). Dual-pane interactive branch switcher and manager. Smart remote checkout auto-strips <code>origin/</code> prefix with zero external dependencies.
+              <strong>Features:</strong> 100% Native Rust Ratatui TUI with live commit graph preview
+              on the right (hash, author, date, subject). Dual-pane interactive branch switcher and
+              manager. Smart remote checkout auto-strips <code>origin/</code> prefix with zero
+              external dependencies.
             </p>
           </div>
 
@@ -2437,11 +2682,17 @@ glade matrix
               <tbody>
                 <tr>
                   <td><code>gw [target]</code></td>
-                  <td>Universal hot-reload runner for Rust/C/C++/Go/Python/Node/Zig with sub-ms zero-CPU watch &amp; TUI (<code>-t</code>)</td>
+                  <td>
+                    Universal hot-reload runner for Rust/C/C++/Go/Python/Node/Zig with sub-ms
+                    zero-CPU watch &amp; TUI (<code>-t</code>)
+                  </td>
                 </tr>
                 <tr>
                   <td><code>project</code></td>
-                  <td>Interactive Project Setup &amp; Tool Hub TUI (Next.js, Vite, Bun, Tailwind v4, Shadcn)</td>
+                  <td>
+                    Interactive Project Setup &amp; Tool Hub TUI (Next.js, Vite, Bun, Tailwind v4,
+                    Shadcn)
+                  </td>
                 </tr>
                 <tr>
                   <td><code>ii</code></td>
@@ -2489,10 +2740,14 @@ glade matrix
 
           <!-- 4.1 GW RUNNER -->
           <div class="docs-callout" style="margin-top: 24px; border-left: 4px solid #a6e3a1">
-            <h3 id="gw-runner" style="margin-top: 0">⚡ Universal Hot Reload &amp; Watch Runner (<code>gw</code>)</h3>
+            <h3 id="gw-runner" style="margin-top: 0">
+              ⚡ Universal Hot Reload &amp; Watch Runner (<code>gw</code>)
+            </h3>
             <p>
-              <code>gw</code> is an ultra-fast, 100% native Rust dev watch runner and compilation supervisor with zero-overhead inotify tracking.
-              It auto-detects project types, supervises child processes, passes stdin through interactively, and instantly re-runs on file changes.
+              <code>gw</code> is an ultra-fast, 100% native Rust dev watch runner and compilation
+              supervisor with zero-overhead inotify tracking. It auto-detects project types,
+              supervises child processes, passes stdin through interactively, and instantly re-runs
+              on file changes.
             </p>
             <div class="docs-table-wrapper" style="margin: 12px 0">
               <table class="docs-table">
@@ -2538,7 +2793,10 @@ glade matrix
               </table>
             </div>
             <p style="margin-top: 8px; font-size: 0.85rem">
-              <strong>Runtime Hotkeys:</strong> <kbd>[r]</kbd> Rebuild &bull; <kbd>[Enter]</kbd> Re-run completed process &bull; <kbd>[c]</kbd> Clear &bull; <kbd>[p]</kbd> Pause/Resume &bull; <kbd>[s]</kbd> Toggle ASan &bull; <kbd>[?]</kbd> Help &bull; <kbd>[q]</kbd> Quit.
+              <strong>Runtime Hotkeys:</strong> <kbd>[r]</kbd> Rebuild &bull;
+              <kbd>[Enter]</kbd> Re-run completed process &bull; <kbd>[c]</kbd> Clear &bull;
+              <kbd>[p]</kbd> Pause/Resume &bull; <kbd>[s]</kbd> Toggle ASan &bull;
+              <kbd>[?]</kbd> Help &bull; <kbd>[q]</kbd> Quit.
             </p>
           </div>
 
@@ -2556,6 +2814,13 @@ glade matrix
                 <tr>
                   <td><code>glade</code></td>
                   <td>Interactive TUI prompt theme picker &amp; switcher with live preview</td>
+                </tr>
+                <tr>
+                  <td><code>gladeshell integration [off|auto|on|status]</code></td>
+                  <td>
+                    Manage modern terminal shell integration (<code>OSC 133</code>,
+                    <code>OSC 7</code>, <code>OSC 777/99</code>)
+                  </td>
                 </tr>
                 <tr>
                   <td><code>pcinfo</code></td>
@@ -2607,7 +2872,14 @@ glade matrix
                 </tr>
                 <tr>
                   <td><code>rel</code></td>
-                  <td>Reload <code>.bashrc</code> configuration</td>
+                  <td>
+                    Reload active shell configuration (<code>.bashrc</code>, <code>.brushrc</code>,
+                    <code>.zshrc</code>, or <code>config.fish</code>)
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>brushrc</code></td>
+                  <td>Open <code>~/.brushrc</code> in your default editor</td>
                 </tr>
                 <tr>
                   <td><code>myip</code></td>
@@ -3229,7 +3501,8 @@ glade matrix
           <!-- cf Deep-Dive Card -->
           <div class="alert-box alert-note" style="margin-top: 20px">
             <div class="alert-title">
-              ⚡ <code>cf</code> — Dev Walk &amp; Quick CD Keybindings &amp; Live Preview (Ratatui TUI)
+              ⚡ <code>cf</code> — Dev Walk &amp; Quick CD Keybindings &amp; Live Preview (Ratatui
+              TUI)
             </div>
             <p>
               Usage: <code>cf [directory]</code> (Defaults to <code>.</code>) — Pure Rust dual-pane
@@ -3735,18 +4008,45 @@ glade matrix
             <span class="section-icon">🏗️</span> Architecture &amp; Safety Specs
           </h2>
           <p>
-            gladeshell is engineered as a <strong>Pure Rust (2024 edition) single compiled binary</strong> with safety, memory efficiency, and speed as its core pillars.
-            Originally conceived as a shell script environment, the entire architecture has been fully ported to native Rust — eliminating external shell interpreter overhead, subshell forks, and flaky script dependencies.
-            Every modification made to shell configs is protected by atomic file writes, boundary markers, and automatic timestamped backups.
+            gladeshell is engineered as a
+            <strong>Pure Rust (2024 edition) single compiled binary</strong> with safety, memory
+            efficiency, and speed as its core pillars. Originally conceived as a shell script
+            environment, the entire architecture has been fully ported to native Rust — eliminating
+            external shell interpreter overhead, subshell forks, and flaky script dependencies.
+            Every modification made to shell configs is protected by atomic file writes, boundary
+            markers, and automatic timestamped backups.
           </p>
 
           <div class="alert-box alert-note">
             <div class="alert-title">🦀 100% Native Rust Architecture Highlights</div>
-            <ul style="font-size: 0.88rem; padding-left: 20px; color: var(--docs-text-muted); line-height: 1.7; margin: 8px 0 0;">
-              <li><strong>Single Static Binary:</strong> Zero external script dependencies or runtime interpreters required.</li>
-              <li><strong>Native Ratatui TUI Suite:</strong> All interactive tools (<code>keep</code>, <code>pcinfo</code>, <code>glade</code>, <code>project</code>, <code>todo</code>, <code>notes</code>, <code>vault</code>, <code>gbranch</code>, <code>fkill</code>) run on native Rust TUI engines with zero subshell overhead.</li>
-              <li><strong>Zero-Alloc Hot Path:</strong> Stack-allocated byte buffers deliver sub-millisecond prompt rendering and instant shell response.</li>
-              <li><strong>Self-Healing Integration:</strong> Idempotent boundary blocks in <code>.bashrc</code>, <code>.zshrc</code>, <code>config.fish</code>, and <code>$PROFILE</code> automatically detect and self-heal configuration placement.</li>
+            <ul
+              style="
+                font-size: 0.88rem;
+                padding-left: 20px;
+                color: var(--docs-text-muted);
+                line-height: 1.7;
+                margin: 8px 0 0;
+              "
+            >
+              <li>
+                <strong>Single Static Binary:</strong> Zero external script dependencies or runtime
+                interpreters required.
+              </li>
+              <li>
+                <strong>Native Ratatui TUI Suite:</strong> All interactive tools (<code>keep</code>,
+                <code>pcinfo</code>, <code>glade</code>, <code>project</code>, <code>todo</code>,
+                <code>notes</code>, <code>vault</code>, <code>gbranch</code>, <code>fkill</code>)
+                run on native Rust TUI engines with zero subshell overhead.
+              </li>
+              <li>
+                <strong>Zero-Alloc Hot Path:</strong> Stack-allocated byte buffers deliver
+                sub-millisecond prompt rendering and instant shell response.
+              </li>
+              <li>
+                <strong>Self-Healing Integration:</strong> Idempotent boundary blocks in
+                <code>.bashrc</code>, <code>.zshrc</code>, <code>config.fish</code>, and
+                <code>$PROFILE</code> automatically detect and self-heal configuration placement.
+              </li>
             </ul>
           </div>
 
@@ -4575,8 +4875,10 @@ glade matrix
           <li><a href="#zed-settings">Zed IDE Settings</a></li>
           <li><a href="#vscode-settings">VS Code Settings</a></li>
           <li><a href="#zsh-setup">Zsh Setup Guide</a></li>
+          <li><a href="#brush-setup">Brush Shell Guide</a></li>
           <li><a href="#font-setup">Font & Emoji Setup</a></li>
           <li><a href="#prompt-architecture">Smart Prompt</a></li>
+          <li><a href="#terminal-shell-integration">Terminal Shell Integration</a></li>
           <li><a href="#command-explorer">Command Explorer</a></li>
           <li><a href="#terminal-simulator">Terminal Simulator</a></li>
           <li><a href="#config-builder">Custom Installer Builder</a></li>

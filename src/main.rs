@@ -262,6 +262,7 @@ fn main() {
             }
             Commands::Completions { shell } => cmd_completions(&shell),
             Commands::Theme(args) => cmd_theme(args),
+            Commands::Integration(args) => cmd_integration(args),
             Commands::Gen(args) => cmd_gen(args),
             Commands::Ex(args) => cmd_ex(args),
             Commands::Cmp(args) => cmd_cmp(args),
@@ -550,6 +551,111 @@ fn cmd_setup() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
+        }
+    }
+
+    Ok(())
+}
+
+// ── integration ──────────────────────────────────────────────────────────────
+
+#[cold]
+#[inline(never)]
+fn cmd_integration(args: IntegrationArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use gladeshell_core::core::shell_integration::{
+        active_mode, brush_native_shell_integration_enabled, integration_config_path,
+        probe_terminal, set_mode, IntegrationMode,
+    };
+    use std::io::IsTerminal;
+
+    let action = args
+        .action
+        .as_deref()
+        .unwrap_or("status")
+        .trim()
+        .to_ascii_lowercase();
+
+    let print_status = |mode: IntegrationMode| {
+        let is_tty = std::io::stdout().is_terminal();
+        let brush_ti = brush_native_shell_integration_enabled();
+        let probe = probe_terminal(mode, is_tty, brush_ti);
+        let env_override = std::env::var("GLADESHELL_TERMINAL_INTEGRATION")
+            .ok()
+            .filter(|s| !s.trim().is_empty());
+
+        println!("\n\x1b[1;36m⚡ GladeShell Terminal Shell Integration\x1b[0m\n");
+        println!(
+            "  Mode:         \x1b[1;33m{}\x1b[0m{}",
+            mode.as_str(),
+            env_override
+                .as_ref()
+                .map(|v| format!(" \x1b[2m(env GLADESHELL_TERMINAL_INTEGRATION={v})\x1b[0m"))
+                .unwrap_or_default()
+        );
+        println!("  Config File:  {}", integration_config_path().display());
+        println!(
+            "  Terminal:     {} ({})",
+            probe.terminal_name,
+            if probe.is_modern {
+                "modern OSC-capable"
+            } else {
+                "generic / unverified"
+            }
+        );
+        if let Some(mux) = probe.multiplexer {
+            println!("  Multiplexer:  {mux}");
+        }
+        if probe.vscode_conflict {
+            println!("  VS Code Hook: active (VSCODE_SHELL_INTEGRATION set)");
+        }
+        if probe.brush_conflict {
+            println!("  Brush Config: experimental.terminal-shell-integration = true");
+        }
+        let state_badge = if probe.effective_enabled {
+            "\x1b[1;32mACTIVE\x1b[0m"
+        } else {
+            "\x1b[1;30mINACTIVE\x1b[0m"
+        };
+        println!("  Effective:    {state_badge} — {}", probe.reason);
+        println!("  Protocols:    OSC 133 (Prompt/Command/Exit), OSC 7 (CWD), OSC 777/99 (Notify)");
+        println!("\n  \x1b[2mUsage: gladeshell integration <off|auto|on|status>\x1b[0m\n");
+    };
+
+    match action.as_str() {
+        "status" | "show" | "info" => {
+            print_status(active_mode());
+        }
+        "off" | "0" | "disable" | "disabled" => {
+            let path = set_mode(IntegrationMode::Off)?;
+            println!(
+                "\x1b[1;33m🔌 Terminal shell integration set to 'off'\x1b[0m ({})",
+                path.display()
+            );
+            println!("  \x1b[2mRun `rel` or open a new shell session to apply.\x1b[0m");
+        }
+        "auto" => {
+            let path = set_mode(IntegrationMode::Auto)?;
+            println!(
+                "\x1b[1;32m✨ Terminal shell integration set to 'auto'\x1b[0m ({})",
+                path.display()
+            );
+            print_status(IntegrationMode::Auto);
+            println!("  \x1b[2mRun `rel` or open a new shell session to apply.\x1b[0m");
+        }
+        "on" | "1" | "enable" | "enabled" => {
+            let path = set_mode(IntegrationMode::On)?;
+            println!(
+                "\x1b[1;32m⚡ Terminal shell integration set to 'on'\x1b[0m ({})",
+                path.display()
+            );
+            print_status(IntegrationMode::On);
+            println!("  \x1b[2mRun `rel` or open a new shell session to apply.\x1b[0m");
+        }
+        other => {
+            return Err(format!(
+                "unknown integration action '{other}'. Use: off | auto | on | status"
+            )
+            .into());
         }
     }
 

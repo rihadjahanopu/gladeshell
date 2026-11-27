@@ -287,6 +287,14 @@ function Invoke-Doctor {
         }
     }
 
+    $tiCfg = Join-Path (Join-Path (Join-Path $HOME ".config") "gladeshell") "shell_integration"
+    $tiMode = "off (default)"
+    if (Test-Path $tiCfg) {
+        $rawTi = (Get-Content $tiCfg -Raw -ErrorAction SilentlyContinue)
+        if ($rawTi -and $rawTi.Trim()) { $tiMode = $rawTi.Trim() }
+    }
+    Write-Host "  🔌 Shell Integration: ${CYN}$tiMode${NC} (gladeshell integration <off|auto|on>)"
+
     Write-Host "`n  --------------------------------------------------"
     Write-Host "  🎉 Doctor check completed.`n"
     exit 0

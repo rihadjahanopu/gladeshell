@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary Meta Tags -->
-    <title>gladeshell — Fast, Intelligent Bash, Zsh &amp; PowerShell Shell Setup</title>
+    <title>gladeshell — Fast, Intelligent Bash, Brush, Zsh, Fish &amp; PowerShell Setup</title>
     <meta
       name="title"
-      content="gladeshell — Fast, Intelligent Bash, Zsh &amp; PowerShell Shell Setup"
+      content="gladeshell — Fast, Intelligent Bash, Brush, Zsh, Fish &amp; PowerShell Setup"
     />
     <meta
       name="description"
-      content="gladeshell is a production-ready, opinionated Bash, Zsh, and PowerShell environment designed for modern web developers. Zero bloat, instant git status, custom themes, and smart dev aliases."
+      content="gladeshell is a production-ready Pure Rust shell environment for Bash, Brush, Zsh, Fish, and PowerShell — featuring OSC 133/7 terminal shell integration, 55 prompt themes, Ratatui TUIs, and smart dev aliases."
     />
     <meta
       name="keywords"
@@ -197,6 +197,7 @@
           <a href="#shell-setup">Shell Setup</a>
           <a href="#commands">Commands</a>
           <a href="#prompt">Prompt</a>
+          <a href="#terminal-integration">Shell Integration</a>
           <a href="#benchmark" style="color: var(--clr-cyan); font-weight: 700">⚡ Benchmark</a>
           <a href="linux-setup.html">Linux Apps</a>
           <a href="contribute.html" style="color: var(--clr-purple); font-weight: 700"
@@ -375,7 +376,7 @@
           <div class="stat-item">
             <span class="stat-icon">🌐</span>
             <div>
-              <div class="stat-num">3</div>
+              <div class="stat-num">5</div>
               <div class="stat-label">Shells Supported</div>
             </div>
           </div>
@@ -632,6 +633,34 @@
                 <code>ex archive.tar.gz</code> — handles <code>.zip</code>, <code>.tar.gz</code>,
                 <code>.rar</code>, <code>.7z</code>, <code>.bz2</code> and more with one simple
                 command.
+              </p>
+            </article>
+
+            <article class="feature-card feature-card--wide" id="feat-terminal-integration">
+              <div class="feature-icon">🔌</div>
+              <h3>Terminal Shell Integration (OSC 133 &amp; OSC 7)</h3>
+              <p>
+                Built-in semantic prompts across <strong>Zsh, Bash, Brush, Fish, and PowerShell</strong>
+                — unlocking command jump navigation, side exit-status marks, 1-click output copy,
+                and CWD tab inheritance in Ghostty, Kitty, WezTerm, iTerm2, and Windows Terminal.
+                Disabled (<code>off</code>) by default for legacy terminal safety.
+              </p>
+              <div class="feature-prompt-demo" aria-label="Terminal shell integration CLI demo">
+                <div class="fp-line"><code>$ gladeshell integration auto &amp;&amp; rel</code> <span style="color: #94a3b8;"># Auto-enable in modern terminals</span></div>
+                <div class="fp-line"><code>$ gladeshell integration status</code> <span style="color: #94a3b8;"># Inspect detected emulator &amp; conflict guards</span></div>
+              </div>
+            </article>
+
+            <article class="feature-card feature-card--wide" id="feat-brush">
+              <div class="feature-icon">🦀</div>
+              <h3>Brush Shell (<code>brush.sh</code>) First-Class Support</h3>
+              <p>
+                Full bootstrap integration via <code>~/.brushrc</code>, automatic
+                <code>[ui] syntax-highlighting = true</code> in
+                <code>~/.config/brush/config.toml</code> (<code>%APPDATA%\brush\config.toml</code>
+                on Windows), sub-ms <code>$EPOCHREALTIME</code> timing, Reedline
+                <code>Ctrl+R</code>/<code>Alt+C</code> widgets, and cross-shell
+                <code>rel</code>/<code>brushrc</code> helpers.
               </p>
             </article>
           </div>
@@ -1039,6 +1068,8 @@
 
           <div class="setup-tabs" role="tablist" aria-label="Shell setup selection">
             <button
+              type="button"
+              id="setup-tab-btn-bash"
               class="setup-tab-btn active"
               role="tab"
               aria-selected="true"
@@ -1048,6 +1079,8 @@
               🐧 Bash
             </button>
             <button
+              type="button"
+              id="setup-tab-btn-zsh"
               class="setup-tab-btn"
               role="tab"
               aria-selected="false"
@@ -1057,6 +1090,19 @@
               🦄 Zsh
             </button>
             <button
+              type="button"
+              id="setup-tab-btn-brush"
+              class="setup-tab-btn"
+              role="tab"
+              aria-selected="false"
+              aria-controls="setup-tab-brush"
+              data-setup-tab="brush"
+            >
+              🦀 Brush
+            </button>
+            <button
+              type="button"
+              id="setup-tab-btn-ps"
               class="setup-tab-btn"
               role="tab"
               aria-selected="false"
@@ -1718,6 +1764,74 @@ reboot</code></pre>
                 </div>
               </div>
             </div>
+
+            <!-- Brush Setup -->
+            <div
+              class="setup-tab-panel"
+              role="tabpanel"
+              id="setup-tab-brush"
+              aria-labelledby="setup-tab-btn-brush"
+              hidden
+            >
+              <div class="zsh-setup-grid">
+                <div class="zsh-step-card">
+                  <div class="zsh-step-header">
+                    <div class="zsh-step-num">01</div>
+                    <div class="zsh-step-icon">🦀</div>
+                    <div>
+                      <h3>Configure Brush Automatically</h3>
+                      <p>Run <code>gladeshell setup</code> (or the installer) to wire <code>~/.brushrc</code> and enable Brush UI syntax highlighting.</p>
+                    </div>
+                  </div>
+                  <div class="code-block">
+                    <div class="code-header">
+                      <span class="code-lang">brush / sh</span>
+                      <button
+                        type="button"
+                        class="copy-btn"
+                        data-copy="gladeshell setup"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre role="region" aria-label="Brush setup command" tabindex="0"><code>gladeshell setup</code></pre>
+                  </div>
+                </div>
+
+                <div class="zsh-step-card">
+                  <div class="zsh-step-header">
+                    <div class="zsh-step-num">02</div>
+                    <div class="zsh-step-icon">🎨</div>
+                    <div>
+                      <h3>Auto UI Syntax Highlighting</h3>
+                      <p>
+                        Safely adds <code>[ui] syntax-highlighting = true</code> inside
+                        <code>~/.config/brush/config.toml</code> (or
+                        <code>%APPDATA%\brush\config.toml</code> on Windows) while respecting your
+                        existing comments and toggles.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="zsh-step-card zsh-step-card--wide">
+                  <div class="zsh-step-header">
+                    <div class="zsh-step-num">03</div>
+                    <div class="zsh-step-icon">⚡</div>
+                    <div>
+                      <h3>Reload, Edit &amp; Keybindings</h3>
+                      <p>
+                        Use <code>brushrc</code> to edit <code>~/.brushrc</code>, run
+                        <code>rel</code> in any shell to reload cleanly, press <code>Ctrl+R</code>
+                        for fuzzy history (<code>fh</code>) or <code>Alt+C</code> for
+                        <code>cf</code>, and enable <code>gladeshell integration auto</code> if
+                        desired.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -2196,6 +2310,10 @@ reboot</code></pre>
                     <td>Interactive TUI prompt theme picker &amp; switcher with live preview</td>
                   </tr>
                   <tr>
+                    <td><code>gladeshell integration [off|auto|on|status]</code></td>
+                    <td>Manage modern terminal shell integration (<code>OSC 133</code>, <code>OSC 7</code>, <code>OSC 777/99</code>)</td>
+                  </tr>
+                  <tr>
                     <td><code>pcinfo</code></td>
                     <td>Advanced system hardware diagnostics &amp; live sensors profiler TUI</td>
                   </tr>
@@ -2245,7 +2363,11 @@ reboot</code></pre>
                   </tr>
                   <tr>
                     <td><code>rel</code></td>
-                    <td>Reload <code>.bashrc</code> configuration</td>
+                    <td>Reload active shell config (<code>.bashrc</code>, <code>.brushrc</code>, <code>.zshrc</code>, or <code>config.fish</code>)</td>
+                  </tr>
+                  <tr>
+                    <td><code>brushrc</code></td>
+                    <td>Open <code>~/.brushrc</code> in your default editor</td>
                   </tr>
                   <tr>
                     <td><code>myip</code></td>
@@ -3502,6 +3624,98 @@ reboot</code></pre>
         </div>
       </section>
 
+      <!-- Terminal Shell Integration Section -->
+      <section
+        id="terminal-integration"
+        class="section prompt-section"
+        aria-labelledby="ti-heading"
+      >
+        <div class="section-inner">
+          <div class="section-header">
+            <span class="section-eyebrow">Semantic Terminal Protocol</span>
+            <h2 id="ti-heading" class="section-title">
+              Terminal Shell <span class="gradient-text">Integration</span>
+            </h2>
+            <p class="section-desc">
+              Zero-fork per-session <code>OSC 133</code> semantic prompt marks,
+              <code>OSC 7</code> CWD tracking, and <code>OSC 777/99</code> command alerts across
+              Zsh, Bash, Brush, Fish, and PowerShell — <strong>disabled (<code>off</code>) by default</strong>
+              so legacy terminals stay spotless.
+            </p>
+          </div>
+
+          <div class="cmd-table-wrapper" tabindex="0" role="region" aria-labelledby="ti-protocol-caption">
+            <table class="cmd-table">
+              <caption id="ti-protocol-caption">Supported Terminal Escape Sequences and Capabilities</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Protocol Sequence</th>
+                  <th scope="col">Shell Hook Trigger</th>
+                  <th scope="col">Unlocked Terminal Feature</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>ESC ] 133 ; A ST</code> / <code>B ST</code></th>
+                  <td>Wraps prompt boundaries safely inside Zsh <code>%{...%}</code> and Bash/Brush <code>\[...\]</code> (including transient prompts)</td>
+                  <td>Jump to Previous / Next Command Navigation without including prompt glyphs</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>ESC ] 133 ; C ST</code></th>
+                  <td>Fires after Enter right before command stdout via <code>preexec</code>, <code>PS0</code>, <code>fish_preexec</code>, or <code>PSReadLine</code></td>
+                  <td>Marks exact start of command output for 1-click Output Copy</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>ESC ] 133 ; D ; &lt;exit&gt; ST</code></th>
+                  <td>Emitted cleanly on next prompt; omits exit code on empty <code>&lt;Enter&gt;</code> presses</td>
+                  <td>Success (✓) / Error (✗) side badges &amp; command output block end boundary</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>ESC ] 7 ; file://&lt;host&gt;&lt;uri&gt; ST</code></th>
+                  <td>Pure-shell percent-encoded URI emitted only when <code>$PWD</code> changes</td>
+                  <td>New tabs &amp; splits inherit exact working directory (handles spaces &amp; Windows drive paths)</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>ESC ] 777</code> / <code>99 ST</code></th>
+                  <td>Long-running command notifications in <code>_fb_notify</code> (<code>&gt;= GLADESHELL_NOTIFY_THRESHOLD</code>)</td>
+                  <td>Native desktop &amp; terminal alerts when slow builds finish</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="cmd-table-wrapper" style="margin-top: 1.5rem" tabindex="0" role="region" aria-labelledby="ti-modes-caption">
+            <table class="cmd-table">
+              <caption id="ti-modes-caption">Activation Modes, Terminal Allowlist &amp; Conflict Guards</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Setting</th>
+                  <th scope="col">Behavior</th>
+                  <th scope="col">CLI / Env Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>off</code> (Default)</th>
+                  <td>Emits zero <code>OSC 133</code> / <code>OSC 7</code> bytes — guarantees zero garbled text on legacy TTYs and pipes</td>
+                  <td><code>gladeshell integration off</code></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>auto</code> (Recommended)</th>
+                  <td>Auto-enables in Ghostty, Kitty, WezTerm, Windows Terminal, iTerm2, macOS Terminal, Konsole, Alacritty, Warp, Hyper, Tabby, Rio, Contour, and <code>VTE &gt;= 5000</code>; yields to <code>VSCODE_SHELL_INTEGRATION</code>, Brush <code>terminal-shell-integration</code>, Fish <code>4.*</code>, GNU <code>screen</code>, and <code>TERM=dumb</code></td>
+                  <td><code>gladeshell integration auto</code></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>on</code></th>
+                  <td>Force-enables in all interactive TTY sessions (still suppresses on <code>TERM=dumb</code> or redirected stdout)</td>
+                  <td><code>GLADESHELL_TERMINAL_INTEGRATION=on</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- ══════════════════════════════════════════════════════
            PERFORMANCE BENCHMARK SECTION — Home Page
            ══════════════════════════════════════════════════════ -->
@@ -3899,7 +4113,7 @@ reboot</code></pre>
                   </tr>
                   <tr>
                     <td>Cross-Shell Support</td>
-                    <td class="bh-best">Bash, Zsh, Fish, PowerShell</td>
+                    <td class="bh-best">Bash, Brush, Zsh, Fish, PowerShell</td>
                     <td class="bh-best">Bash, Zsh, Fish, PS, Nu</td>
                     <td class="bh-best">Bash, Zsh, Fish, PS</td>
                     <td class="bh-bad">Zsh only</td>

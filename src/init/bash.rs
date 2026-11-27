@@ -44,20 +44,24 @@ if [[ -z "${BRUSH_VERSION:-}" ]] || ! grep -qF '# >>> glade-brush >>>' "$HOME/.b
 # ── Native Rust Prompt Engine & Command Duration Tracker ──
 _fb_timer_start=0
 _fb_in_prompt=0
+_fb_last_cmd=""
+_fb_dbg_cmd=""
+_fb_osc_cmd_ran=0
 _fb_sock="$(gladeshell socket-path 2>/dev/null || echo "${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock")"
 _fb_healed=""
 _fb_daemon_spawned=""
 _fb_preexec_trap() {
-    if [[ "$_fb_in_prompt" -ne 0 || "${BASH_COMMAND:-}" == __fb_prompt* ]]; then
+    if [[ "$_fb_in_prompt" -ne 0 || "$_fb_dbg_cmd" == __fb_prompt* ]]; then
         return 0
     fi
     _fb_osc_cmd_ran=1
+    [[ -n "${BRUSH_VERSION:-}" ]] && _fb_last_cmd="$_fb_dbg_cmd"
     if [[ "${_fb_timer_start:-0}" -eq 0 ]]; then
         _fb_timer_start=$SECONDS
     fi
     return 0
 }
-trap '_fb_preexec_trap' DEBUG
+trap '_fb_dbg_cmd="${BASH_COMMAND:-}"; _fb_preexec_trap' DEBUG
 
 if [[ "${_fb_term_int:-0}" -eq 1 ]]; then
     if [[ "${PS0:-}" != *'133;C'* ]]; then
@@ -70,10 +74,19 @@ fi
 __fb_prompt() {
     local exit_code=$?
     _fb_in_prompt=1
+    local _fb_cmd="${_fb_last_cmd:-}"
+    local _fb_ran="${_fb_osc_cmd_ran:-0}"
+    _fb_last_cmd=""
+    _fb_osc_cmd_ran=0
     local duration=0
     if [[ -n "$_fb_timer_start" && "$_fb_timer_start" -gt 0 ]]; then
         duration=$(( (SECONDS - _fb_timer_start) * 1000 ))
         _fb_timer_start=0
+    fi
+
+    if [[ -n "${BRUSH_VERSION:-}" ]]; then
+        _fb_brush_fallback "$exit_code" "$_fb_ran" "$_fb_cmd"
+        exit_code=$?
     fi
 
     # ── Long-running command desktop notification (>= 10s by default) ──
@@ -84,13 +97,12 @@ __fb_prompt() {
     # ── Terminal Shell Integration (`OSC 133;D` + `OSC 7` CWD) ──
     if [[ "${_fb_term_int:-0}" -eq 1 ]]; then
         if [[ "${_fb_osc_prompt_shown:-0}" -eq 1 ]]; then
-            if [[ "${_fb_osc_cmd_ran:-0}" -eq 1 ]]; then
+            if [[ "$_fb_ran" -eq 1 ]]; then
                 printf '\033]133;D;%s\007' "$exit_code"
             else
                 printf '\033]133;D\007'
             fi
         fi
-        _fb_osc_cmd_ran=0
         _fb_emit_osc7
     fi
 
@@ -145,18 +157,9 @@ _fb_load_system_completions() {
 if [[ -z "${BASH_COMPLETION_VERSINFO:-}" ]]; then
     complete -D -F _fb_load_system_completions 2>/dev/null || _fb_load_system_completions
 fi
-
-# ── Typo Engine & Command Not Found Handler ──
-command_not_found_handle() {
-    if command -v gladeshell >/dev/null 2>&1; then
-        gladeshell correct "$1"
-    else
-        echo "bash: command not found: $1" >&2
-    fi
-    return 127
-}
 "#);
 
+    out.push_str(&shared::render_bash_not_found_and_brush_compat("bash"));
     out.push_str(&shared::render_auto_ls_hook(Shell::Bash));
     out.push_str(&shared::render_cf_wrapper(Shell::Bash));
     out.push_str(&shared::render_z_wrapper(Shell::Bash));
@@ -182,6 +185,8 @@ mod tests {
         assert!(script.contains("133;D"));
         assert!(script.contains("133;C"));
         assert!(script.contains("_fb_emit_osc7"));
+        assert!(script.contains("_fb_brush_fallback"));
+        assert!(script.contains("command_not_found_handle"));
         assert!(!script.contains("_fb_skip_render"));
         assert!(!script.contains("bind -x"));
         assert!(!script.contains("_fb_cached_ps1"));

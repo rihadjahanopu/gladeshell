@@ -15,7 +15,8 @@
 //    • Subshell-free millisecond timer via $EPOCHREALTIME + guarded DEBUG trap
 //      (prevents PROMPT_COMMAND from resetting _fb_timer_start before render).
 //    • Explicit HISTFILE=${HISTFILE:-$HOME/.brush_history}.
-//    • Avoids `shopt -s autocd` (Brush 0.5.0 attempts execve on directories).
+//    • Emulated `auto_cd` + `gladeshell correct` command-not-found handler via
+//      DEBUG-captured BASH_COMMAND (compensates for Brush 0.5.x gaps cleanly).
 //    • Reedline-compatible `bind -x` function widgets for `fh` (Ctrl+R) and `cf`.
 //    • Lazy-loaded CLI completions (~50% faster shell startup vs eager script).
 // =============================================================================
@@ -42,7 +43,9 @@ pub fn generate() -> String {
 _fb_timer_start=""
 _fb_in_prompt=0
 _fb_now=0
-_fb_osc_last_hist="${HISTCMD:-0}"
+_fb_osc_cmd_ran=0
+_fb_last_cmd=""
+_fb_dbg_cmd=""
 _fb_sock="$(gladeshell socket-path 2>/dev/null || echo "${TMPDIR:-/tmp}/gladeshell_${UID:-${USER:-default}}.sock")"
 _fb_healed=""
 _fb_daemon_spawned=""
@@ -67,20 +70,27 @@ _fb_now_ms() {
 }
 
 _fb_preexec_trap() {
-    if [[ "$_fb_in_prompt" -ne 0 || "${BASH_COMMAND:-}" == __fb_prompt* ]]; then
+    if [[ "$_fb_in_prompt" -ne 0 || "$_fb_dbg_cmd" == __fb_prompt* ]]; then
         return 0
     fi
+    _fb_osc_cmd_ran=1
+    _fb_last_cmd="$_fb_dbg_cmd"
     if [[ -z "$_fb_timer_start" ]]; then
         _fb_now_ms
         _fb_timer_start="$_fb_now"
     fi
     return 0
 }
-trap '_fb_preexec_trap' DEBUG
+trap '_fb_dbg_cmd="${BASH_COMMAND:-}"; _fb_preexec_trap' DEBUG
 
 __fb_prompt() {
     local exit_code=$?
     _fb_in_prompt=1
+
+    local _fb_cmd="${_fb_last_cmd:-}"
+    local _fb_ran="${_fb_osc_cmd_ran:-0}"
+    _fb_last_cmd=""
+    _fb_osc_cmd_ran=0
 
     local duration=0
     if [[ -n "$_fb_timer_start" ]]; then
@@ -90,6 +100,10 @@ __fb_prompt() {
         _fb_timer_start=""
     fi
 
+    # ── Brush Auto-CD & Command-Not-Found fallback before notifications / OSC 133;D / auto-ls ──
+    _fb_brush_fallback "$exit_code" "$_fb_ran" "$_fb_cmd"
+    exit_code=$?
+
     # ── Long-running command desktop notification (>= 10s by default) ──
     if (( duration >= ${GLADESHELL_NOTIFY_THRESHOLD:-10000} && ${GLADESHELL_NOTIFY_THRESHOLD:-10000} > 0 )); then
         _fb_notify "$exit_code" "$duration" 2>/dev/null || true
@@ -98,13 +112,12 @@ __fb_prompt() {
     # ── Terminal Shell Integration (`OSC 133;D` + `OSC 7` CWD) ──
     if [[ "${_fb_term_int:-0}" -eq 1 ]]; then
         if [[ "${_fb_osc_prompt_shown:-0}" -eq 1 ]]; then
-            if [[ "$exit_code" -eq 0 && "${HISTCMD:-0}" == "${_fb_osc_last_hist:-0}" ]]; then
-                printf '\033]133;D\007'
-            else
+            if [[ "$_fb_ran" -eq 1 ]]; then
                 printf '\033]133;D;%s\007' "$exit_code"
+            else
+                printf '\033]133;D\007'
             fi
         fi
-        _fb_osc_last_hist="${HISTCMD:-0}"
         _fb_emit_osc7
     fi
 
@@ -141,7 +154,8 @@ __fb_prompt() {
 PROMPT_COMMAND="__fb_prompt"
 
 # ── Brush-safe Shell & History Options ──
-# Omit `autocd` on Brush 0.5.x where bare directory invocation triggers EACCES.
+# Omit `autocd` on Brush 0.5.x where bare directory invocation triggers EACCES;
+# handled cleanly by `_fb_brush_fallback` above.
 shopt -s histappend checkwinsize globstar 2>/dev/null || true
 HISTSIZE=50000
 HISTFILESIZE=100000
@@ -160,19 +174,10 @@ _fb_load_system_completions() {
 if [[ -z "${BASH_COMPLETION_VERSINFO:-}" ]]; then
     complete -D -F _fb_load_system_completions 2>/dev/null || _fb_load_system_completions
 fi
-
-# ── Typo Engine & Command Not Found Handler (future-ready for Brush) ──
-command_not_found_handle() {
-    if command -v gladeshell >/dev/null 2>&1; then
-        gladeshell correct "$1"
-    else
-        echo "brush: command not found: $1" >&2
-    fi
-    return 127
-}
 "#,
     );
 
+    out.push_str(&shared::render_bash_not_found_and_brush_compat("brush"));
     out.push_str(&shared::render_auto_ls_hook(Shell::Brush));
     out.push_str(&shared::render_cf_wrapper(Shell::Brush));
     out.push_str(&shared::render_z_wrapper(Shell::Brush));
@@ -227,7 +232,11 @@ mod tests {
         assert!(script.contains("_fb_lazy_gladeshell_complete"));
         assert!(script.contains("${HOSTNAME:-}"));
         assert!(script.contains("_fb_init_terminal_integration"));
-        assert!(script.contains("_fb_osc_last_hist"));
+        assert!(script.contains("_fb_osc_cmd_ran"));
+        assert!(script.contains("_fb_brush_fallback"));
+        assert!(script.contains("_fb_erase_brush_err"));
+        assert!(script.contains("command_not_found_handle"));
+        assert!(script.contains("gladeshell correct --"));
         assert!(script.contains("133;D"));
         assert!(script.contains("_fb_emit_osc7"));
         assert!(script.contains("-e /dev/tty"));

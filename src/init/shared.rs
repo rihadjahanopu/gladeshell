@@ -1275,6 +1275,96 @@ function _fb_osc7_seq([string]$cwd) {
     }
 }
 
+/// Render `command_not_found_handle` and Brush 0.5.x runtime compatibility
+/// fallbacks (`auto_cd` + `gladeshell correct` typo suggestions) shared by
+/// Bash and Brush init scripts.
+pub fn render_bash_not_found_and_brush_compat(shell_label: &str) -> String {
+    format!(
+        r#"
+# ── Typo Engine & Command Not Found Handler ──
+command_not_found_handle() {{
+    if command -v gladeshell >/dev/null 2>&1; then
+        gladeshell correct -- "$1"
+    else
+        echo "{shell_label}: command not found: $1" >&2
+    fi
+    return 127
+}}
+
+# ── Brush Compatibility: Emulated Auto-CD & Command-Not-Found Handler ──
+# Brush 0.5.x does not invoke `command_not_found_handle` and treats bare directory
+# paths under `autocd` as execve(EACCES=126) or missing command (127).
+_fb_erase_brush_err() {{
+    local _err_len="${{1:-0}}"
+    [[ -t 0 && -t 1 && -t 2 && "${{TERM:-dumb}}" != "dumb" && "$_err_len" -gt 0 ]] || return 0
+    local _cols="${{COLUMNS:-}}"
+    if [[ -z "$_cols" ]]; then
+        local _sz=""
+        if [[ -e /dev/tty ]]; then
+            _sz="$(stty size </dev/tty 2>/dev/null || true)"
+        else
+            _sz="$(stty size 2>/dev/null || true)"
+        fi
+        _cols="${{_sz##* }}"
+    fi
+    [[ "$_cols" =~ ^[0-9]+$ && "$_cols" -ge 20 ]] || _cols=80
+    local _rows=$(( (_err_len + _cols - 1) / _cols ))
+    if [[ "$_rows" -lt 1 ]]; then
+        _rows=1
+    elif [[ "$_rows" -gt 4 ]]; then
+        _rows=4
+    fi
+    local _i=0
+    while (( _i < _rows )); do
+        printf '\033[1A\r\033[2K' >&2
+        _i=$(( _i + 1 ))
+    done
+}}
+
+_fb_brush_fallback() {{
+    local _ec="${{1:-0}}"
+    local _ran="${{2:-0}}"
+    local _raw="${{3:-}}"
+
+    [[ "$_ran" -eq 1 && -n "$_raw" && ( "$_ec" -eq 127 || "$_ec" -eq 126 ) ]] || return "$_ec"
+
+    local _trimmed="${{_raw#"${{_raw%%[![:space:]]*}}"}}"
+    _trimmed="${{_trimmed%"${{_trimmed##*[![:space:]]}}"}}"
+    [[ -n "$_trimmed" ]] || return "$_ec"
+
+    # 1. Auto-CD when a bare directory path fails execution (`126`/`127`)
+    if [[ "${{GLADESHELL_BRUSH_AUTOCD:-1}}" != "0" && -d "$_trimmed" ]] \
+       && ( [[ "$_trimmed" == */* ]] || ! type -t -- "$_trimmed" >/dev/null 2>&1 ); then
+        local _err_len=$(( 25 + ${{#_trimmed}} ))
+        if [[ "$_ec" -eq 126 ]]; then
+            _err_len=$(( 67 + ${{#_trimmed}} ))
+        fi
+        _fb_erase_brush_err "$_err_len"
+        if builtin cd -- "$_trimmed"; then
+            return 0
+        fi
+        return 1
+    fi
+
+    # 2. Command-Not-Found typo suggestions (`gladeshell correct`) on exit 127
+    if [[ "$_ec" -eq 127 && "${{GLADESHELL_BRUSH_CNF:-1}}" != "0" ]]; then
+        local _cmd0="${{_trimmed%%[[:space:]]*}}"
+        if [[ -n "$_cmd0" ]] && ! type -t -- "$_cmd0" >/dev/null 2>&1; then
+            _fb_erase_brush_err $(( 25 + ${{#_cmd0}} ))
+            if command -v gladeshell >/dev/null 2>&1; then
+                gladeshell correct -- "$_trimmed"
+            else
+                echo "{shell_label}: command not found: $_cmd0" >&2
+            fi
+        fi
+    fi
+
+    return "$_ec"
+}}
+"#
+    )
+}
+
 /// Render desktop and terminal notification helper function per shell.
 pub fn render_notification_helpers(shell: Shell) -> String {
     match shell {
@@ -1554,5 +1644,19 @@ mod tests {
         assert!(render_z_wrapper(Shell::Bash).contains("cd \"$target\""));
         assert!(render_z_wrapper(Shell::Fish).contains("function z"));
         assert!(render_z_wrapper(Shell::Pwsh).contains("Set-Location"));
+    }
+
+    #[test]
+    fn test_render_bash_not_found_and_brush_compat() {
+        let brush_part = render_bash_not_found_and_brush_compat("brush");
+        assert!(brush_part.contains("command_not_found_handle()"));
+        assert!(brush_part.contains("brush: command not found: $1"));
+        assert!(brush_part.contains("_fb_brush_fallback()"));
+        assert!(brush_part.contains("_fb_erase_brush_err()"));
+        assert!(brush_part.contains("builtin cd -- \"$_trimmed\""));
+        assert!(brush_part.contains("gladeshell correct -- \"$_trimmed\""));
+
+        let bash_part = render_bash_not_found_and_brush_compat("bash");
+        assert!(bash_part.contains("bash: command not found: $1"));
     }
 }

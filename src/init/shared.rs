@@ -348,10 +348,30 @@ if (Get-Command eza -ErrorAction SilentlyContinue) {
     }
 }
 
-/// Render automatic CLI completions pre-baked directly in-memory at init time (Zero Runtime Subshell).
+/// Render a small lazy-loading Bash-compatible completion stub for `bash` or `brush`.
+fn render_bash_style_lazy_completion(subcommand_shell: &str) -> String {
+    format!(
+        r#"
+# ── Lazy-Loaded gladeshell CLI completions (~68% smaller startup script) ──
+_fb_lazy_gladeshell_complete() {{
+    unset -f _fb_lazy_gladeshell_complete 2>/dev/null || true
+    if command -v gladeshell >/dev/null 2>&1; then
+        eval "$(gladeshell completions {subcommand_shell} 2>/dev/null)"
+        if declare -F _gladeshell >/dev/null 2>&1; then
+            _gladeshell "$@"
+        fi
+    fi
+}}
+complete -o bashdefault -o default -F _fb_lazy_gladeshell_complete gladeshell 2>/dev/null || true
+"#
+    )
+}
+
+/// Render CLI completions: lazy on-demand loaders for Pwsh, Brush, Bash, and Zsh;
+/// pre-baked static script for Fish.
 pub fn render_cli_completions(shell: Shell) -> String {
-    if shell == Shell::Pwsh {
-        return r#"
+    match shell {
+        Shell::Pwsh => r#"
 # ── Dynamic Lazy-Loaded gladeshell CLI completions (<1ms startup, zero parse lag) ──
 Register-ArgumentCompleter -Native -CommandName 'gladeshell' -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
@@ -363,43 +383,42 @@ Register-ArgumentCompleter -Native -CommandName 'gladeshell' -ScriptBlock {
     }
 }
 "#
-        .to_string();
-    }
-
-    if shell == Shell::Brush {
-        return r#"
-# ── Lazy-Loaded gladeshell CLI completions (~50% faster Brush startup) ──
-_fb_lazy_gladeshell_complete() {
-    unset -f _fb_lazy_gladeshell_complete 2>/dev/null || true
-    if command -v gladeshell >/dev/null 2>&1; then
-        eval "$(gladeshell completions brush 2>/dev/null)"
-        if declare -F _gladeshell >/dev/null 2>&1; then
-            _gladeshell "$@"
+        .to_string(),
+        Shell::Brush => render_bash_style_lazy_completion("brush"),
+        Shell::Bash => render_bash_style_lazy_completion("bash"),
+        Shell::Zsh => r#"
+# ── Lazy-Loaded gladeshell CLI completions (zero startup parse lag) ──
+if (( $+functions[compdef] )); then
+    _fb_lazy_gladeshell_complete() {
+        unfunction _fb_lazy_gladeshell_complete 2>/dev/null || true
+        if (( $+commands[gladeshell] )); then
+            eval "$(gladeshell completions zsh 2>/dev/null)"
+            if (( $+functions[_gladeshell] )); then
+                _gladeshell "$@"
+                return $?
+            fi
         fi
-    fi
-}
-complete -o bashdefault -o default -F _fb_lazy_gladeshell_complete gladeshell 2>/dev/null || true
-"#
-        .to_string();
+        return 1
     }
+    compdef _fb_lazy_gladeshell_complete gladeshell 2>/dev/null || true
+fi
+"#
+        .to_string(),
+        Shell::Fish => {
+            use crate::cli::Cli;
+            use clap::CommandFactory;
+            use clap_complete::{generate, Shell as ClapShell};
 
-    use crate::cli::Cli;
-    use clap::CommandFactory;
-    use clap_complete::{generate, Shell as ClapShell};
+            let mut buf = Vec::with_capacity(4096);
+            let mut cmd = Cli::command();
+            generate(ClapShell::Fish, &mut cmd, "gladeshell", &mut buf);
 
-    let clap_shell = match shell {
-        Shell::Bash | Shell::Brush => ClapShell::Bash,
-        Shell::Zsh => ClapShell::Zsh,
-        Shell::Fish => ClapShell::Fish,
-        Shell::Pwsh => unreachable!(),
-    };
-
-    let mut buf = Vec::with_capacity(4096);
-    let mut cmd = Cli::command();
-    generate(clap_shell, &mut cmd, "gladeshell", &mut buf);
-
-    let script = String::from_utf8_lossy(&buf).into_owned();
-    format!("\n# ── Pre-baked gladeshell CLI completions (Zero Runtime Subshell) ──\n{script}\n")
+            let script = String::from_utf8_lossy(&buf).into_owned();
+            format!(
+                "\n# ── Pre-baked gladeshell CLI completions (Zero Runtime Subshell) ──\n{script}\n"
+            )
+        }
+    }
 }
 
 /// Render shell function helpers for filesystem operations (mkd, rmd, rmf, bak, trash).
@@ -1419,6 +1438,23 @@ mod tests {
         let comp = render_cli_completions(Shell::Brush);
         assert!(comp.contains("_fb_lazy_gladeshell_complete"));
         assert!(comp.contains("gladeshell completions brush"));
+        assert!(comp.len() < 1024);
+    }
+
+    #[test]
+    fn test_render_cli_completions_bash_lazy() {
+        let comp = render_cli_completions(Shell::Bash);
+        assert!(comp.contains("_fb_lazy_gladeshell_complete"));
+        assert!(comp.contains("gladeshell completions bash"));
+        assert!(comp.len() < 1024);
+    }
+
+    #[test]
+    fn test_render_cli_completions_zsh_lazy() {
+        let comp = render_cli_completions(Shell::Zsh);
+        assert!(comp.contains("_fb_lazy_gladeshell_complete"));
+        assert!(comp.contains("gladeshell completions zsh"));
+        assert!(comp.contains("(( $+functions[compdef] ))"));
         assert!(comp.len() < 1024);
     }
 

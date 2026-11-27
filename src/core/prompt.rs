@@ -1800,10 +1800,23 @@ pub fn render_transient(exit_code: i32, shell: u8) -> String {
 }
 
 /// Detect project environment (Rust, Node, Python, Go, Docker) in cwd with parent discovery (< 1 µs cached check)
-pub fn detect_project_toolchain(
-    cwd_path: &std::path::Path,
-    tv: &ToolVersions,
-) -> Option<(&'static str, String)> {
+/// Detected project toolchain category for `cwd` (without version probing).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectKind {
+    Rust,
+    Bun,
+    Deno,
+    Node,
+    Python,
+    Go,
+    Docker,
+}
+
+/// Detect the primary project kind in `cwd_path` (or up to 4 parent dirs stopping at `.git`
+/// or filesystem root) without reading or spawning any `ToolVersions`.
+pub fn detect_project_kind(cwd_path: &std::path::Path) -> Option<ProjectKind> {
+    use std::ffi::OsStr;
+
     let mut has_cargo = false;
     let mut has_bun = false;
     let mut has_bun_lock = false;
@@ -1817,29 +1830,41 @@ pub fn detect_project_toolchain(
     if let Ok(entries) = std::fs::read_dir(cwd_path) {
         for entry in entries.flatten() {
             let name = entry.file_name();
-            let s = name.to_string_lossy();
-            if s == "Cargo.toml" {
+            let s = name.as_os_str();
+            if s == OsStr::new("Cargo.toml") {
                 has_cargo = true;
-            } else if s == "bunfig.toml" {
+            } else if s == OsStr::new("bunfig.toml") {
                 has_bun = true;
-            } else if s == "bun.lockb" || s == "bun.lock" {
+            } else if s == OsStr::new("bun.lockb") || s == OsStr::new("bun.lock") {
                 has_bun_lock = true;
-            } else if s == "package-lock.json" || s == "yarn.lock" || s == "pnpm-lock.yaml" {
+            } else if s == OsStr::new("package-lock.json")
+                || s == OsStr::new("yarn.lock")
+                || s == OsStr::new("pnpm-lock.yaml")
+            {
                 has_node_lock = true;
-            } else if s == "deno.json" || s == "deno.jsonc" || s == "deno.lock" {
+            } else if s == OsStr::new("deno.json")
+                || s == OsStr::new("deno.jsonc")
+                || s == OsStr::new("deno.lock")
+            {
                 has_deno = true;
-            } else if s == "package.json" || s == ".nvmrc" || s == ".node-version" {
+            } else if s == OsStr::new("package.json")
+                || s == OsStr::new(".nvmrc")
+                || s == OsStr::new(".node-version")
+            {
                 has_package_json = true;
-            } else if s == "pyproject.toml"
-                || s == "requirements.txt"
-                || s == "Pipfile"
-                || s == "poetry.lock"
-                || s == "uv.lock"
+            } else if s == OsStr::new("pyproject.toml")
+                || s == OsStr::new("requirements.txt")
+                || s == OsStr::new("Pipfile")
+                || s == OsStr::new("poetry.lock")
+                || s == OsStr::new("uv.lock")
             {
                 has_python = true;
-            } else if s == "go.mod" {
+            } else if s == OsStr::new("go.mod") {
                 has_go = true;
-            } else if s == "Dockerfile" || s == "docker-compose.yml" || s == "compose.yaml" {
+            } else if s == OsStr::new("Dockerfile")
+                || s == OsStr::new("docker-compose.yml")
+                || s == OsStr::new("compose.yaml")
+            {
                 has_docker = true;
             }
         }
@@ -1861,6 +1886,11 @@ pub fn detect_project_toolchain(
         let mut curr = cwd_path.parent();
         for _ in 0..4 {
             let Some(dir) = curr else { break };
+            // Skip nonexistent ancestor directories with a single stat instead of 15 marker checks.
+            if !dir.exists() {
+                curr = dir.parent();
+                continue;
+            }
             let is_git_root = dir.join(".git").exists();
 
             if dir.join("Cargo.toml").exists() {
@@ -1922,47 +1952,117 @@ pub fn detect_project_toolchain(
     }
 
     if has_cargo {
-        let text = if !tv.rust.is_empty() {
-            tv.rust.clone()
-        } else {
-            "🦀 Rust".to_string()
-        };
-        Some(("\x1b[38;2;222;165;132m", text))
+        Some(ProjectKind::Rust)
     } else if has_bun {
-        let text = if !tv.bun.is_empty() {
-            tv.bun.clone()
-        } else {
-            "🥐 Bun".to_string()
-        };
-        Some(("\x1b[38;2;251;200;160m", text))
+        Some(ProjectKind::Bun)
     } else if has_deno {
-        Some(("\x1b[38;2;112;230;216m", "🦕 Deno".to_string()))
+        Some(ProjectKind::Deno)
     } else if has_package_json {
-        let text = if !tv.node.is_empty() {
-            tv.node.replace("🟢 ", "⬢ ")
-        } else {
-            "⬢ Node".to_string()
-        };
-        Some(("\x1b[38;2;104;160;99m", text))
+        Some(ProjectKind::Node)
     } else if has_python {
-        let text = if !tv.python.is_empty() {
-            tv.python.clone()
-        } else {
-            "🐍 Python".to_string()
-        };
-        Some(("\x1b[38;2;75;139;190m", text))
+        Some(ProjectKind::Python)
     } else if has_go {
-        let text = if !tv.go.is_empty() {
-            tv.go.clone()
-        } else {
-            "🐹 Go".to_string()
-        };
-        Some(("\x1b[38;2;0;173;216m", text))
+        Some(ProjectKind::Go)
     } else if has_docker {
-        Some(("\x1b[38;2;36;150;237m", "🐳 Docker".to_string()))
+        Some(ProjectKind::Docker)
     } else {
         None
     }
+}
+
+/// Format a project badge `(ansi_color, display_text)` using pre-collected version strings.
+fn format_project_badge_with_raw(kind: ProjectKind, version_raw: &str) -> (&'static str, String) {
+    match kind {
+        ProjectKind::Rust => (
+            "\x1b[38;2;222;165;132m",
+            if !version_raw.is_empty() {
+                version_raw.to_string()
+            } else {
+                "🦀 Rust".to_string()
+            },
+        ),
+        ProjectKind::Bun => (
+            "\x1b[38;2;251;200;160m",
+            if !version_raw.is_empty() {
+                version_raw.to_string()
+            } else {
+                "🥐 Bun".to_string()
+            },
+        ),
+        ProjectKind::Deno => ("\x1b[38;2;112;230;216m", "🦕 Deno".to_string()),
+        ProjectKind::Node => (
+            "\x1b[38;2;104;160;99m",
+            if !version_raw.is_empty() {
+                version_raw.replace("🟢 ", "⬢ ")
+            } else {
+                "⬢ Node".to_string()
+            },
+        ),
+        ProjectKind::Python => (
+            "\x1b[38;2;75;139;190m",
+            if !version_raw.is_empty() {
+                version_raw.to_string()
+            } else {
+                "🐍 Python".to_string()
+            },
+        ),
+        ProjectKind::Go => (
+            "\x1b[38;2;0;173;216m",
+            if !version_raw.is_empty() {
+                version_raw.to_string()
+            } else {
+                "🐹 Go".to_string()
+            },
+        ),
+        ProjectKind::Docker => ("\x1b[38;2;36;150;237m", "🐳 Docker".to_string()),
+    }
+}
+
+/// Format a project badge from a `ToolVersions` struct without duplicating display formatting.
+fn format_project_badge_from_tv(kind: ProjectKind, tv: &ToolVersions) -> (&'static str, String) {
+    let raw = match kind {
+        ProjectKind::Rust => tv.rust.as_str(),
+        ProjectKind::Bun => tv.bun.as_str(),
+        ProjectKind::Node => tv.node.as_str(),
+        ProjectKind::Python => tv.python.as_str(),
+        ProjectKind::Go => tv.go.as_str(),
+        ProjectKind::Deno | ProjectKind::Docker => "",
+    };
+    format_project_badge_with_raw(kind, raw)
+}
+
+/// Resolve the prompt badge for a detected `ProjectKind`. Uses the in-memory `ToolVersions`
+/// cache when available (cloning only the single needed string), and otherwise probes only
+/// the one matching runtime binary so offline CLI prompts never spawn 7 processes.
+fn resolve_project_badge(kind: ProjectKind) -> (&'static str, String) {
+    use crate::core::sysinfo::RuntimeKind;
+
+    let runtime = match kind {
+        ProjectKind::Rust => Some(RuntimeKind::Rust),
+        ProjectKind::Bun => Some(RuntimeKind::Bun),
+        ProjectKind::Node => Some(RuntimeKind::Node),
+        ProjectKind::Python => Some(RuntimeKind::Python),
+        ProjectKind::Go => Some(RuntimeKind::Go),
+        ProjectKind::Deno | ProjectKind::Docker => None,
+    };
+
+    if runtime.is_none() {
+        return format_project_badge_with_raw(kind, "");
+    }
+
+    if let Some(badge) = ToolVersions::with_cached(|tv| format_project_badge_from_tv(kind, tv)) {
+        return badge;
+    }
+
+    let raw = ToolVersions::collect_single(runtime.expect("checked above"));
+    format_project_badge_with_raw(kind, &raw)
+}
+
+pub fn detect_project_toolchain(
+    cwd_path: &std::path::Path,
+    tv: &ToolVersions,
+) -> Option<(&'static str, String)> {
+    detect_project_kind(cwd_path).map(|kind| format_project_badge_from_tv(kind, tv))
 }
 
 /// Core render — writes a two-line ANSI prompt into `buf`.
@@ -2335,9 +2435,9 @@ pub fn render(ctx: &PromptContext, buf: &mut [u8]) -> Result<usize, &'static str
 
     // ── Project Toolchain & Environment Detector Badge ──
     {
-        let tv = ToolVersions::get_cached();
         let cwd_path = std::path::Path::new(cwd_raw);
-        if let Some((color, text)) = detect_project_toolchain(cwd_path, &tv) {
+        if let Some(kind) = detect_project_kind(cwd_path) {
+            let (color, text) = resolve_project_badge(kind);
             write_str(buf, &mut off, " ");
             write_ansi(buf, &mut off, color, s);
             write_str(buf, &mut off, &text);
@@ -2875,5 +2975,50 @@ mod tests {
         let (_, p_text) = py_detected.unwrap();
         assert!(p_text.contains("🐍"));
         let _ = std::fs::remove_dir_all(&py_dir);
+    }
+
+    #[test]
+    fn test_detect_project_kind_empty_and_nonexistent() {
+        let empty_dir =
+            std::env::temp_dir().join(format!("glade_test_empty_project_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&empty_dir);
+        assert_eq!(detect_project_kind(&empty_dir), None);
+        let _ = std::fs::remove_dir_all(&empty_dir);
+
+        let missing = std::path::Path::new("/tmp/glade_nonexistent_dir_xyz_12345/sub/leaf");
+        assert_eq!(detect_project_kind(missing), None);
+    }
+
+    #[test]
+    fn test_format_project_badge_fallback_labels() {
+        let empty_tv = ToolVersions::default();
+        assert_eq!(
+            format_project_badge_from_tv(ProjectKind::Rust, &empty_tv).1,
+            "🦀 Rust"
+        );
+        assert_eq!(
+            format_project_badge_from_tv(ProjectKind::Bun, &empty_tv).1,
+            "🥐 Bun"
+        );
+        assert_eq!(
+            format_project_badge_from_tv(ProjectKind::Deno, &empty_tv).1,
+            "🦕 Deno"
+        );
+        assert_eq!(
+            format_project_badge_from_tv(ProjectKind::Node, &empty_tv).1,
+            "⬢ Node"
+        );
+        assert_eq!(
+            format_project_badge_from_tv(ProjectKind::Python, &empty_tv).1,
+            "🐍 Python"
+        );
+        assert_eq!(
+            format_project_badge_from_tv(ProjectKind::Go, &empty_tv).1,
+            "🐹 Go"
+        );
+        assert_eq!(
+            format_project_badge_from_tv(ProjectKind::Docker, &empty_tv).1,
+            "🐳 Docker"
+        );
     }
 }

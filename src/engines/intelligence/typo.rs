@@ -150,13 +150,44 @@ pub struct Suggestion {
     pub similarity: f64,
 }
 
-/// Compute Damerau-Levenshtein distance between two strings
-/// Handles insertions, deletions, substitutions, and adjacent transpositions.
-pub fn damerau_levenshtein(s1: &str, s2: &str) -> usize {
-    let chars1: Vec<char> = s1.chars().collect();
-    let chars2: Vec<char> = s2.chars().collect();
-    let len1 = chars1.len();
-    let len2 = chars2.len();
+/// Reusable scratch buffers for zero-allocation Damerau-Levenshtein loops.
+struct DpScratch {
+    chars1: Vec<char>,
+    chars2: Vec<char>,
+    matrix: Vec<usize>,
+    last_row: [usize; 256],
+}
+
+impl Default for DpScratch {
+    fn default() -> Self {
+        Self {
+            chars1: Vec::new(),
+            chars2: Vec::new(),
+            matrix: Vec::new(),
+            last_row: [0usize; 256],
+        }
+    }
+}
+
+#[inline]
+fn str_char_len(s: &str) -> usize {
+    if s.is_ascii() {
+        s.len()
+    } else {
+        s.chars().count()
+    }
+}
+
+/// Core Damerau-Levenshtein distance using caller-supplied flat scratch storage.
+/// Reuses `scratch` allocations across hot candidate loops without per-call heap matrices.
+fn damerau_levenshtein_with_scratch(s1: &str, s2: &str, scratch: &mut DpScratch) -> usize {
+    scratch.chars1.clear();
+    scratch.chars1.extend(s1.chars());
+    scratch.chars2.clear();
+    scratch.chars2.extend(s2.chars());
+
+    let len1 = scratch.chars1.len();
+    let len2 = scratch.chars2.len();
 
     if len1 == 0 {
         return len2;
@@ -165,62 +196,85 @@ pub fn damerau_levenshtein(s1: &str, s2: &str) -> usize {
         return len1;
     }
 
-    let mut d = vec![vec![0usize; len2 + 2]; len1 + 2];
+    let cols = len2 + 2;
+    let needed = (len1 + 2) * cols;
+    if scratch.matrix.len() < needed {
+        scratch.matrix.resize(needed, 0);
+    }
+    let d = &mut scratch.matrix[..needed];
     let max_dist = len1 + len2;
-    d[0][0] = max_dist;
+    d[0] = max_dist;
 
     for i in 0..=len1 {
-        d[i + 1][0] = max_dist;
-        d[i + 1][1] = i;
+        let base = (i + 1) * cols;
+        d[base] = max_dist;
+        d[base + 1] = i;
     }
     for j in 0..=len2 {
-        d[0][j + 1] = max_dist;
-        d[1][j + 1] = j;
+        d[j + 1] = max_dist;
+        d[cols + j + 1] = j;
     }
 
-    let mut last_row = [0usize; 256];
+    scratch.last_row.fill(0);
 
     for i in 1..=len1 {
         let mut db = 0;
+        let row_i = i * cols;
+        let row_i1 = (i + 1) * cols;
+        let ch1 = scratch.chars1[i - 1];
         for j in 1..=len2 {
-            let i1 = last_row[chars2[j - 1] as usize % 256];
+            let ch2 = scratch.chars2[j - 1];
+            let i1 = scratch.last_row[ch2 as usize % 256];
             let j1 = db;
 
-            let cost = if chars1[i - 1] == chars2[j - 1] {
+            let cost = if ch1 == ch2 {
                 db = j;
                 0
             } else {
                 1
             };
 
-            d[i + 1][j + 1] = min(
-                d[i][j] + cost, // substitution
+            let sub_ins_del = min(
+                d[row_i + j] + cost, // substitution
                 min(
-                    d[i + 1][j] + 1, // insertion
-                    d[i][j + 1] + 1, // deletion
+                    d[row_i1 + j] + 1,    // insertion
+                    d[row_i + j + 1] + 1, // deletion
                 ),
             );
 
-            if i1 > 0 && j1 > 0 {
-                d[i + 1][j + 1] = min(
-                    d[i + 1][j + 1],
-                    d[i1][j1] + (i - i1 - 1) + 1 + (j - j1 - 1), // transposition
-                );
-            }
+            d[row_i1 + j + 1] = if i1 > 0 && j1 > 0 {
+                min(
+                    sub_ins_del,
+                    d[i1 * cols + j1] + (i - i1 - 1) + 1 + (j - j1 - 1), // transposition
+                )
+            } else {
+                sub_ins_del
+            };
         }
-        last_row[chars1[i - 1] as usize % 256] = i;
+        scratch.last_row[ch1 as usize % 256] = i;
     }
 
-    d[len1 + 1][len2 + 1]
+    d[(len1 + 1) * cols + (len2 + 1)]
 }
 
-/// Calculate similarity score (0.0 to 1.0) with prefix bonus and first-letter matching priority
+/// Compute Damerau-Levenshtein distance between two strings.
+/// Handles insertions, deletions, substitutions, and adjacent transpositions.
+pub fn damerau_levenshtein(s1: &str, s2: &str) -> usize {
+    let mut scratch = DpScratch::default();
+    damerau_levenshtein_with_scratch(s1, s2, &mut scratch)
+}
+
+/// Calculate similarity score (0.0 to 1.0) with prefix bonus and first-letter matching priority.
 pub fn similarity_score(input: &str, candidate: &str) -> f64 {
     let input_lower = input.to_lowercase();
     let cand_lower = candidate.to_lowercase();
-
     let dist = damerau_levenshtein(&input_lower, &cand_lower);
-    let max_len = max(input_lower.chars().count(), cand_lower.chars().count());
+    similarity_score_inner(&input_lower, &cand_lower, dist)
+}
+
+/// Shared similarity scoring kernel from already-lowercased strings and precomputed DL distance.
+fn similarity_score_inner(input_lower: &str, cand_lower: &str, dist: usize) -> f64 {
+    let max_len = max(str_char_len(input_lower), str_char_len(cand_lower));
     if max_len == 0 {
         return 1.0;
     }
@@ -229,11 +283,11 @@ pub fn similarity_score(input: &str, candidate: &str) -> f64 {
     let mut score = base_score;
 
     // 1. Candidate starts with input (e.g. `ffmedia` for `ffme`) -> HUGE priority boost!
-    if cand_lower.starts_with(&input_lower) {
+    if cand_lower.starts_with(input_lower) {
         score += 0.35;
     }
     // 2. Input starts with candidate (e.g. `ff` for `fff`) -> High priority boost!
-    else if input_lower.starts_with(&cand_lower) {
+    else if input_lower.starts_with(cand_lower) {
         score += 0.25;
     }
     // 3. Prefix matching bonus
@@ -306,37 +360,51 @@ pub fn find_suggestions(input: &str) -> Vec<Suggestion> {
     }
 
     let all_candidates = get_all_candidates();
-    let cmd_len = cmd_part.chars().count();
+    let cmd_len = str_char_len(cmd_part);
+    let cmd_lower = cmd_part.to_lowercase();
+    let cmd_has_upper = cmd_part != cmd_lower;
+    let mut scratch = DpScratch::default();
+    let mut suggestions: Vec<Suggestion> = Vec::new();
 
-    let mut suggestions: Vec<Suggestion> = all_candidates
-        .iter()
-        .filter(|cand| {
-            let cand_len = cand.chars().count();
-            cmd_len.abs_diff(cand_len) <= 3
-        })
-        .filter_map(|cand| {
-            let dist = damerau_levenshtein(cmd_part, cand);
-            if dist > 3 {
-                return None;
-            }
-            let score = similarity_score(cmd_part, cand);
-            if score < 0.40 {
-                return None;
-            }
+    for cand in all_candidates {
+        let cand_len = str_char_len(cand);
+        if cmd_len.abs_diff(cand_len) > 3 {
+            continue;
+        }
 
-            let candidate_full = if trailing_args.is_empty() {
-                cand.to_string()
-            } else {
-                format!("{} {}", cand, trailing_args)
-            };
+        let dist = damerau_levenshtein_with_scratch(cmd_part, cand, &mut scratch);
+        if dist > 3 {
+            continue;
+        }
 
-            Some(Suggestion {
-                candidate: candidate_full,
-                distance: dist,
-                similarity: score,
-            })
-        })
-        .collect();
+        // Preserve exact case-insensitive scoring parity while skipping redundant allocations
+        // and duplicate DP passes when both tokens are already ASCII lowercase.
+        let cand_is_ascii_lower = cand.is_ascii() && !cand.bytes().any(|b| b.is_ascii_uppercase());
+        let score = if !cmd_has_upper && cand_is_ascii_lower {
+            similarity_score_inner(&cmd_lower, cand, dist)
+        } else {
+            let cand_lower = cand.to_lowercase();
+            let lower_dist =
+                damerau_levenshtein_with_scratch(&cmd_lower, &cand_lower, &mut scratch);
+            similarity_score_inner(&cmd_lower, &cand_lower, lower_dist)
+        };
+
+        if score < 0.40 {
+            continue;
+        }
+
+        let candidate_full = if trailing_args.is_empty() {
+            cand.to_string()
+        } else {
+            format!("{} {}", cand, trailing_args)
+        };
+
+        suggestions.push(Suggestion {
+            candidate: candidate_full,
+            distance: dist,
+            similarity: score,
+        });
+    }
 
     // Sort by highest similarity first, then lowest distance, then alphabetically for 100% deterministic output
     suggestions.sort_by(|a, b| {
@@ -516,5 +584,47 @@ mod tests {
         let rendered = render_pretty_suggestion("fff");
         assert!(rendered.contains("Command not found"));
         assert!(rendered.contains("fff"));
+    }
+
+    #[test]
+    fn test_damerau_levenshtein_scratch_parity_cases() {
+        let mut scratch = DpScratch::default();
+        let pairs = [
+            ("", ""),
+            ("", "abc"),
+            ("abc", ""),
+            ("gti", "git"),        // transposition -> 1
+            ("ca", "abc"), // unrestricted DL (optimal string alignment = 3, true DL = 3 here; check symmetry)
+            ("fmedia", "ffmedia"), // insertion -> 1
+            ("ffme", "ffmpeg"), // 2 insertions -> 2
+            ("rustfm", "rustfmt"), // 1
+            ("café", "cafe"), // unicode
+            ("GIT", "git"), // case sensitive -> 3
+        ];
+        for (a, b) in pairs {
+            let expected = similarity_score(a, b);
+            let dist = damerau_levenshtein_with_scratch(a, b, &mut scratch);
+            assert_eq!(
+                dist,
+                damerau_levenshtein(a, b),
+                "dist mismatch for {a} vs {b}"
+            );
+            let a_lower = a.to_lowercase();
+            let b_lower = b.to_lowercase();
+            let ldist = damerau_levenshtein_with_scratch(&a_lower, &b_lower, &mut scratch);
+            let actual = similarity_score_inner(&a_lower, &b_lower, ldist);
+            assert!(
+                (expected - actual).abs() < 1e-12,
+                "score mismatch for {a} vs {b}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mixed_case_suggestion_preserved() {
+        let suggs = find_suggestions("GIT");
+        assert!(suggs
+            .iter()
+            .any(|s| s.candidate == "git" && s.distance == 3));
     }
 }

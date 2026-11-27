@@ -564,6 +564,18 @@ pub struct ToolVersions {
     pub docker: String,
 }
 
+fn parse_node_version(raw: Option<String>) -> String {
+    raw.map(|v| format!("\u{1F7E2} {v}")).unwrap_or_default()
+}
+
+fn parse_npm_version(raw: Option<String>) -> String {
+    raw.map(|v| format!("\u{1F4E6} v{v}")).unwrap_or_default()
+}
+
+fn parse_bun_version(raw: Option<String>) -> String {
+    raw.map(|v| format!("\u{1F950} v{v}")).unwrap_or_default()
+}
+
 fn parse_rust_version(raw: Option<String>) -> String {
     raw.and_then(|s| {
         s.split_whitespace()
@@ -604,14 +616,45 @@ fn parse_docker_version(raw: Option<String>) -> String {
     }
 }
 
+/// Identifier for individual developer runtimes queried lazily on offline fallback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeKind {
+    Rust,
+    Bun,
+    Node,
+    Python,
+    Go,
+}
+
 impl ToolVersions {
+    /// Inspect cached tool versions without cloning all 7 strings or spawning subprocesses
+    /// if the cache is not yet initialized.
+    pub fn with_cached<R>(f: impl FnOnce(&ToolVersions) -> R) -> Option<R> {
+        let lock = TOOL_VERSIONS_CACHE.get()?;
+        let guard = lock.read().ok()?;
+        Some(f(&guard))
+    }
+
+    /// Collect version text for a single runtime binary (used on offline prompt fallback
+    /// when a project marker is detected and the full cache is uninitialized).
+    pub fn collect_single(kind: RuntimeKind) -> String {
+        match kind {
+            RuntimeKind::Rust => parse_rust_version(run_version(&["rustc", "-V"])),
+            RuntimeKind::Bun => parse_bun_version(run_version(&["bun", "-v"])),
+            RuntimeKind::Node => parse_node_version(run_version(&["node", "-v"])),
+            RuntimeKind::Python => parse_python_version(
+                run_version(&["python3", "--version"])
+                    .or_else(|| run_version(&["python", "--version"])),
+            ),
+            RuntimeKind::Go => parse_go_version(run_version(&["go", "version"])),
+        }
+    }
+
     /// Retrieve pre-computed cached tool versions (zero subprocesses on cache hit, < 0.01 ms).
     /// If uninitialized, collects tool versions once and caches them.
     pub fn get_cached() -> Self {
-        if let Some(lock) = TOOL_VERSIONS_CACHE.get() {
-            if let Ok(guard) = lock.read() {
-                return guard.clone();
-            }
+        if let Some(cached) = Self::with_cached(|tv| tv.clone()) {
+            return cached;
         }
         let tv = ToolVersions::collect();
         ToolVersions::update_cache(tv.clone());
@@ -656,9 +699,9 @@ impl ToolVersions {
             },
         );
         ToolVersions {
-            node: node.map(|v| format!("\u{1F7E2} {v}")).unwrap_or_default(),
-            npm: npm.map(|v| format!("\u{1F4E6} v{v}")).unwrap_or_default(),
-            bun: bun.map(|v| format!("\u{1F950} v{v}")).unwrap_or_default(),
+            node: parse_node_version(node),
+            npm: parse_npm_version(npm),
+            bun: parse_bun_version(bun),
             rust: parse_rust_version(rust),
             python: parse_python_version(python),
             go: parse_go_version(go),
@@ -669,24 +712,18 @@ impl ToolVersions {
     /// Fallback single-threaded collect (no rayon feature).
     #[cfg(not(feature = "rayon"))]
     pub fn collect() -> Self {
-        let mut tv = ToolVersions::default();
-        if let Some(v) = run_version(&["node", "-v"]) {
-            tv.node = format!("\u{1F7E2} {v}");
+        ToolVersions {
+            node: parse_node_version(run_version(&["node", "-v"])),
+            npm: parse_npm_version(run_version(&["npm", "-v"])),
+            bun: parse_bun_version(run_version(&["bun", "-v"])),
+            rust: parse_rust_version(run_version(&["rustc", "-V"])),
+            python: parse_python_version(
+                run_version(&["python3", "--version"])
+                    .or_else(|| run_version(&["python", "--version"])),
+            ),
+            go: parse_go_version(run_version(&["go", "version"])),
+            docker: parse_docker_version(run_version(&["docker", "--version"])),
         }
-        if let Some(v) = run_version(&["npm", "-v"]) {
-            tv.npm = format!("\u{1F4E6} v{v}");
-        }
-        if let Some(v) = run_version(&["bun", "-v"]) {
-            tv.bun = format!("\u{1F950} v{v}");
-        }
-        tv.rust = parse_rust_version(run_version(&["rustc", "-V"]));
-        tv.python = parse_python_version(
-            run_version(&["python3", "--version"])
-                .or_else(|| run_version(&["python", "--version"])),
-        );
-        tv.go = parse_go_version(run_version(&["go", "version"]));
-        tv.docker = parse_docker_version(run_version(&["docker", "--version"]));
-        tv
     }
 }
 
@@ -1244,5 +1281,23 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(m2.readonly_display(), " 🔒");
+    }
+
+    #[test]
+    fn test_runtime_version_parsers() {
+        assert_eq!(parse_node_version(Some("v22.5.1".into())), "🟢 v22.5.1");
+        assert_eq!(parse_bun_version(Some("1.1.38".into())), "🥐 v1.1.38");
+        assert_eq!(
+            parse_rust_version(Some("rustc 1.99.1 (abc)".into())),
+            "🦀 v1.99.1"
+        );
+        assert_eq!(
+            parse_python_version(Some("Python 3.12.13".into())),
+            "🐍 v3.12.13"
+        );
+        assert_eq!(
+            parse_go_version(Some("go version go1.23.1 linux/amd64".into())),
+            "🐹 v1.23.1"
+        );
     }
 }

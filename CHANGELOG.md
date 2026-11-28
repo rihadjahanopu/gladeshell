@@ -11,6 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🚀 [Unreleased]
 
+---
+
+## 🚀 [1.3.0] — 2026-11-28
+
+### 🦀 Brush Shell — Full Auto-CD, Command-Not-Found & Persistent History
+
+- 🦀 **Brush `auto_cd` Emulation (`src/init/brush.rs`, `src/init/shared.rs`)**:
+  - Brush 0.5.x executes bare directory paths via `execve()` → `EACCES` (exit 126) or missing command (exit 127) instead of changing directory. Added `_fb_brush_fallback()` called from `PROMPT_COMMAND` that intercepts exit codes 126/127 after a real command ran, checks if the argument is a valid directory, erases Brush's raw `error:` line with ANSI cursor-up sequences, and calls `builtin cd -- "$_trimmed"`. Works for all forms: `Desktop`, `..`, `/tmp`, `~/Desktop`.
+  - Bare directory detection skips known shell builtins and functions via `type -t --` to avoid false positives.
+  - Erase function (`_fb_erase_brush_err`) is a no-op when `TERM=dumb`, stdout is not a TTY, or error length is zero — safe in scripts and CI.
+
+- 🦀 **Brush `command_not_found` Emulation (`src/init/shared.rs`)**:
+  - Brush 0.5.x never invokes `command_not_found_handle()`. The same `_fb_brush_fallback()` intercepts exit 127 for unknown commands, erases Brush's raw error line, and calls `gladeshell correct -- "$trimmed"` to show the native typo-suggestion box (identical UX to Bash/Zsh).
+  - Shared helper `render_bash_not_found_and_brush_compat(shell_label)` generates both `command_not_found_handle` and the two Brush compat functions, used by both `bash.rs` and `brush.rs`.
+  - Bash init (`bash.rs`) activates the Brush fallback branch only when `BRUSH_VERSION` is set → zero overhead for pure GNU Bash users.
+
+- 💾 **Brush Persistent History — SIGHUP-safe (`src/init/brush.rs`, `src/init/bash.rs`)**:
+  - Brush 0.5.x buffers session history in memory and only flushes to `~/.brush_history` on clean `exit`/`Ctrl+D`. Closing a terminal window sends `SIGHUP`, which Brush does not handle, losing the entire session's history.
+  - Added `history -a 2>/dev/null || true` inside `__fb_prompt()` gated on `_fb_ran=1` (a real command executed this cycle), so each command is immediately appended to `$HISTFILE` after it completes. Compatible with `shopt -s histappend` and `HISTCONTROL=ignoreboth:erasedups`.
+  - Opt-out: `export GLADESHELL_BRUSH_HIST_FLUSH=0` disables the per-prompt flush.
+
+- 🧹 **Autosuggest Junk Filter for Internal Hook Lines (`src/plugins/autosuggest.rs`)**:
+  - Lines containing `__fb_prompt`, `_fb_preexec_trap`, `_fb_brush_fallback`, `_fb_erase_brush_err`, or `PROMPT_SETU_RC` are now filtered by `is_junk()` and never surfaced as Reedline/Zsh autosuggestions. Prevents diagnostic probe commands from PTY test sessions leaking into the suggestion list.
+
 ### 🔌 Terminal Shell Integration (`OSC 133`, `OSC 7`, `OSC 777/99`) & First-Class Brush Support
 - 🔌 **Opt-In Semantic Terminal Shell Integration (`src/core/shell_integration.rs`)**:
   - Added built-in `OSC 133` (`A`/`B`/`C`/`D` prompt, command, and exit-code markers), `OSC 7` (`file://` URI-encoded working directory tracking on directory change), and `OSC 777` / `OSC 99` long-running command notifications across **Zsh, Bash, Brush, Fish, and PowerShell**.
@@ -455,6 +479,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.3.0]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.3.0
 [1.2.18]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.2.18
 [1.1.2]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.2
 [1.1.1]: https://github.com/rihadjahanopu/gladeshell/releases/tag/v1.1.1

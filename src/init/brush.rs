@@ -104,6 +104,11 @@ __fb_prompt() {
     _fb_brush_fallback "$exit_code" "$_fb_ran" "$_fb_cmd"
     exit_code=$?
 
+    # ── Persist history immediately (Brush 0.5.x skips HISTFILE save on SIGHUP/window close) ──
+    if [[ "$_fb_ran" -eq 1 && "${GLADESHELL_BRUSH_HIST_FLUSH:-1}" != "0" ]]; then
+        history -a 2>/dev/null || true
+    fi
+
     # ── Long-running command desktop notification (>= 10s by default) ──
     if (( duration >= ${GLADESHELL_NOTIFY_THRESHOLD:-10000} && ${GLADESHELL_NOTIFY_THRESHOLD:-10000} > 0 )); then
         _fb_notify "$exit_code" "$duration" 2>/dev/null || true
@@ -234,6 +239,7 @@ mod tests {
         assert!(script.contains("_fb_init_terminal_integration"));
         assert!(script.contains("_fb_osc_cmd_ran"));
         assert!(script.contains("_fb_brush_fallback"));
+        assert!(script.contains("history -a 2>/dev/null || true"));
         assert!(script.contains("_fb_erase_brush_err"));
         assert!(script.contains("command_not_found_handle"));
         assert!(script.contains("gladeshell correct --"));

@@ -232,6 +232,16 @@ fn is_junk(cmd: &str) -> bool {
         return true;
     }
 
+    // Internal GladeShell hook definitions or harness probes leaked into history
+    if cmd.contains("__fb_prompt")
+        || cmd.contains("_fb_preexec_trap")
+        || cmd.contains("_fb_brush_fallback")
+        || cmd.contains("_fb_erase_brush_err")
+        || cmd.contains("PROMPT_SETU_RC")
+    {
+        return true;
+    }
+
     false
 }
 
@@ -362,6 +372,10 @@ mod tests {
         assert!(is_junk("});"));
         assert!(is_junk("# comment"));
         assert!(is_junk("x")); // single char
+        assert!(is_junk(
+            "unset HOSTNAME; __fb_prompt 2>&1; echo PROMPT_SETU_RC=$?"
+        ));
+        assert!(is_junk("_fb_preexec_trap() { :; }"));
         assert!(!is_junk("git status"));
         assert!(!is_junk("cargo build --release"));
     }

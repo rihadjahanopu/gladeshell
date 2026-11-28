@@ -87,6 +87,9 @@ __fb_prompt() {
     if [[ -n "${BRUSH_VERSION:-}" ]]; then
         _fb_brush_fallback "$exit_code" "$_fb_ran" "$_fb_cmd"
         exit_code=$?
+        if [[ "$_fb_ran" -eq 1 && "${GLADESHELL_BRUSH_HIST_FLUSH:-1}" != "0" ]]; then
+            history -a 2>/dev/null || true
+        fi
     fi
 
     # ── Long-running command desktop notification (>= 10s by default) ──
@@ -186,6 +189,7 @@ mod tests {
         assert!(script.contains("133;C"));
         assert!(script.contains("_fb_emit_osc7"));
         assert!(script.contains("_fb_brush_fallback"));
+        assert!(script.contains("history -a 2>/dev/null || true"));
         assert!(script.contains("command_not_found_handle"));
         assert!(!script.contains("_fb_skip_render"));
         assert!(!script.contains("bind -x"));
